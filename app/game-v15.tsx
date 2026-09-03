@@ -137,7 +137,7 @@ type GameState = {
   materials: Record<string, number>;
   medicines: Record<string, number>;
   claimedContracts: string[];
-  auto: boolean;
+  lastEncounter: string;
   enemyHp: number;
   formation: string;
   logs: string[];
@@ -329,7 +329,7 @@ function freshGame(nation: NationId = "korea", heroName = "行商者"): GameStat
     materials: {},
     medicines: {},
     claimedContracts: [],
-    auto: true,
+    lastEncounter: "尚未遭遇敵人。商隊出航後才可能觸發戰鬥。",
     enemyHp: enemyMax(1, battleMaps[0].hpMultiplier),
     formation: "goose",
     logs: ["V21・商途與四國二十城已融合。出航經商，培養你的十人商團。"],
@@ -492,13 +492,15 @@ function profileFromGame(slot: number, game: GameState): CharacterProfile {
 
 function settleMerchantGame(previous: GameState, now: number): GameState {
   const result = advanceTrade(previous.trade, previous.gold, now);
-  if (!result.trips) return previous;
-  return {
+  if (!result.trips && !result.encounters) return previous;
+  let next = {
     ...previous, trade: result.trade, gold: result.gold,
     hero: grantXp(previous.hero, result.xp),
     mercs: previous.mercs.map((unit) => previous.active.includes(unit.uid) ? grantXp(unit, Math.floor(result.xp * 0.8)) : unit),
-    logs: addLog(previous.logs, "商隊完成 " + result.trips + " 趟交易，淨利 " + format(result.profit) + " 兩；主角與出戰傭兵獲得經驗。"),
+    logs: result.trips ? addLog(previous.logs, "商隊完成 " + result.trips + " 趟交易，淨利 " + format(result.profit) + " 兩；主角與出戰傭兵獲得經驗。") : previous.logs,
   };
+  for (let index = 0; index < result.encounters; index++) next = resolveRoadEncounter(next);
+  return next;
 }
 
 function inheritMerchantPrototype(raw: string): GameState {
@@ -639,6 +641,74 @@ function canonicalizeUnit(unit: Unit) {
   return { ...unit, name: unit.special ? "特殊・" + canonical : canonical, role: template.role, skill: template.skill, image: template.image };
 }
 
+function resolveRoadEncounter(previous: GameState): GameState {
+      const active = previous.active
+        .map((unitUid) => previous.mercs.find((unit) => unit.uid === unitUid))
+        .filter(Boolean) as Unit[];
+      const form = formations.find((item) => item.id === previous.formation) || formations[0];
+      const power = Math.floor((unitPower(previous.hero) + active.reduce((sum, unit) => sum + unitPower(unit), 0)) * form.atk);
+      const sourceTarget = sourceEnemyForMap(previous.battleMap, previous.stage, previous.stage % 10 === 0);
+      const resistance = sourceTarget?.physical || 0;
+      const damage = Math.max(1, Math.floor(power * 0.065 * (1 - Math.min(85, resistance) / 140)));
+      const map = battleMaps.find((entry) => entry.id === previous.battleMap) || battleMaps[0];
+      const health = enemyMax(previous.stage, map.hpMultiplier);
+      const rounds = Math.ceil(health / damage);
+      if (rounds > 30) {
+        const report = "途中遭遇第 " + previous.stage + " 關敵軍，30 回合未能擊退，商隊撤離並繼續跑商。提升裝備與隊伍後再戰。";
+        return { ...previous, enemyHp: health, lastEncounter: report, logs: addLog(previous.logs, report) };
+      }
+      const isBoss = previous.stage % 10 === 0;
+      const selectedMap = battleMaps.find((map) => map.id === previous.battleMap) || battleMaps[0];
+      const reward = Math.floor((260 + previous.stage * 60) * (isBoss ? 9 : 1) * selectedMap.goldMultiplier);
+      const nextStage = previous.stage + 1;
+      const nextKills = previous.kills + 1;
+      let inventory = previous.inventory;
+      let cores = previous.fusionCores;
+      const sourceDefeated = sourceEnemyForMap(selectedMap.id, previous.stage, isBoss);
+      const defeated = sourceDefeated || enemyForStage(previous.stage, selectedMap.enemyRegion);
+      const defeatedRegion = sourceDefeated ? selectedMap.name : (defeated as ReturnType<typeof enemyForStage>).region;
+      const materials = { ...previous.materials };
+      let soulStones = previous.soulStones;
+      let awakeningStones = previous.awakeningStones;
+      let xpReward = isBoss ? 180 : 42;
+      const report = "途中遭遇「" + defeatedRegion + "・" + defeated.name + "」，" + rounds + " 回合獲勝，獲得 " + format(reward) + " 兩。";
+      let logs = addLog(previous.logs, report);
+      if (sourceDefeated) {
+        const material = sourceDefeated.drops[Math.floor(Math.random() * sourceDefeated.drops.length)];
+        materials[material] = (materials[material] || 0) + 1;
+        xpReward = Math.max(42, Math.min(1800, Math.floor(sourceDefeated.xp / 5) + 35));
+        logs = addLog(logs, "52怪物掉落「" + material + "」；原始經驗資料 " + format(sourceDefeated.xp) + "。");
+      }
+      if (nextKills % 4 === 0 || isBoss) {
+        const drop = rollEquipment(previous.stage, isBoss);
+        inventory = [drop, ...inventory];
+        logs = addLog(logs, "獲得 " + drop.rarity + "裝備「" + drop.name + "」，附帶 " + drop.magic.length + " 條魔法屬性。");
+      }
+      if (nextKills % 3 === 0 || isBoss) cores += (isBoss ? 3 : 1) + selectedMap.coreBonus;
+      if (isBoss) {
+        soulStones += 2;
+        if (nextKills % 30 === 0) awakeningStones += 1;
+      }
+      return {
+        ...previous,
+        gold: previous.gold + reward,
+        stage: nextStage,
+        kills: nextKills,
+        lastEncounter: report,
+        enemyHp: enemyMax(nextStage, selectedMap.hpMultiplier),
+        inventory,
+        fusionCores: cores,
+        soulStones,
+        awakeningStones,
+        materials,
+        hero: grantXp(previous.hero, xpReward),
+        mercs: previous.mercs.map((unit) =>
+          previous.active.includes(unit.uid) ? grantXp(unit, Math.floor(xpReward * 0.8)) : unit,
+        ),
+        logs,
+      };
+}
+
 export default function GameV15() {
   const [game, setGame] = useState<GameState>(freshGame);
   const [ready, setReady] = useState(false);
@@ -651,7 +721,6 @@ export default function GameV15() {
   const [selectedUid, setSelectedUid] = useState("hero");
   const [cityService, setCityService] = useState<CityService>("mercenary");
   const [sharedWarehouse, setSharedWarehouse] = useState<Equipment[]>([]);
-  const [pulse, setPulse] = useState(false);
   const loaded = useRef(false);
 
   useEffect(() => {
@@ -718,14 +787,9 @@ export default function GameV15() {
       const raw = localStorage.getItem(profileSaveKey(slot));
       let next = raw ? restoreGame(JSON.parse(raw)) : freshGame(profile.nation, profile.name);
       const now = currentTimestamp();
+      const before = next.gold;
       next = settleMerchantGame(next, now);
-      const away = Math.min(8 * 3600, Math.max(0, (now - next.lastSeen) / 1000));
-      if (away >= 60) {
-        const reward = Math.floor(away * (8 + next.stage * 0.8));
-        next.gold += reward;
-        next.logs = addLog(next.logs, "離線遠征帶回 " + format(reward) + " 兩。");
-        setNotice("離線 " + Math.floor(away / 60) + " 分鐘，獲得 " + format(reward) + " 兩。");
-      }
+      if (now - next.lastSeen >= 60000) setNotice("離線跑商與途中遭遇已結算，資金增加 " + format(next.gold - before) + " 兩（最多 8 小時）。");
       next.lastSeen = now;
       setGame(next);
       setSelectedUid("hero");
@@ -798,69 +862,6 @@ export default function GameV15() {
   const cityWeapons = officialEquipment.filter((item) => item.kind === "weapon").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
   const cityArmors = officialEquipment.filter((item) => item.kind === "armor").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
 
-  function battleStep() {
-    setPulse(true);
-    window.setTimeout(() => setPulse(false), 160);
-    setGame((previous) => {
-      const active = previous.active
-        .map((unitUid) => previous.mercs.find((unit) => unit.uid === unitUid))
-        .filter(Boolean) as Unit[];
-      const form = formations.find((item) => item.id === previous.formation) || formations[0];
-      const power = Math.floor((unitPower(previous.hero) + active.reduce((sum, unit) => sum + unitPower(unit), 0)) * form.atk);
-      const sourceTarget = sourceEnemyForMap(previous.battleMap, previous.stage, previous.stage % 10 === 0);
-      const resistance = sourceTarget?.physical || 0;
-      const damage = Math.max(1, Math.floor(power * (0.052 + Math.random() * 0.022) * (1 - Math.min(85, resistance) / 140)));
-      if (damage < previous.enemyHp) return { ...previous, enemyHp: previous.enemyHp - damage };
-      const isBoss = previous.stage % 10 === 0;
-      const selectedMap = battleMaps.find((map) => map.id === previous.battleMap) || battleMaps[0];
-      const reward = Math.floor((260 + previous.stage * 60) * (isBoss ? 9 : 1) * selectedMap.goldMultiplier);
-      const nextStage = previous.stage + 1;
-      const nextKills = previous.kills + 1;
-      let inventory = previous.inventory;
-      let cores = previous.fusionCores;
-      const sourceDefeated = sourceEnemyForMap(selectedMap.id, previous.stage, isBoss);
-      const defeated = sourceDefeated || enemyForStage(previous.stage, selectedMap.enemyRegion);
-      const defeatedRegion = sourceDefeated ? selectedMap.name : (defeated as ReturnType<typeof enemyForStage>).region;
-      const materials = { ...previous.materials };
-      let soulStones = previous.soulStones;
-      let awakeningStones = previous.awakeningStones;
-      let xpReward = isBoss ? 180 : 42;
-      let logs = addLog(previous.logs, "擊敗「" + defeatedRegion + "・" + defeated.name + "」，獲得 " + format(reward) + " 兩。");
-      if (sourceDefeated) {
-        const material = sourceDefeated.drops[Math.floor(Math.random() * sourceDefeated.drops.length)];
-        materials[material] = (materials[material] || 0) + 1;
-        xpReward = Math.max(42, Math.min(1800, Math.floor(sourceDefeated.xp / 5) + 35));
-        logs = addLog(logs, "52怪物掉落「" + material + "」；原始經驗資料 " + format(sourceDefeated.xp) + "。");
-      }
-      if (nextKills % 4 === 0 || isBoss) {
-        const drop = rollEquipment(previous.stage, isBoss);
-        inventory = [drop, ...inventory];
-        logs = addLog(logs, "獲得 " + drop.rarity + "裝備「" + drop.name + "」，附帶 " + drop.magic.length + " 條魔法屬性。");
-      }
-      if (nextKills % 3 === 0 || isBoss) cores += (isBoss ? 3 : 1) + selectedMap.coreBonus;
-      if (isBoss) {
-        soulStones += 2;
-        if (nextKills % 30 === 0) awakeningStones += 1;
-      }
-      return {
-        ...previous,
-        gold: previous.gold + reward,
-        stage: nextStage,
-        kills: nextKills,
-        enemyHp: enemyMax(nextStage, selectedMap.hpMultiplier),
-        inventory,
-        fusionCores: cores,
-        soulStones,
-        awakeningStones,
-        materials,
-        hero: grantXp(previous.hero, xpReward),
-        mercs: previous.mercs.map((unit) =>
-          previous.active.includes(unit.uid) ? grantXp(unit, Math.floor(xpReward * 0.8)) : unit,
-        ),
-        logs,
-      };
-    });
-  }
 
   function selectBattleMap(mapId: string) {
     const map = battleMaps.find((entry) => entry.id === mapId);
@@ -878,12 +879,6 @@ export default function GameV15() {
       };
     });
   }
-
-  useEffect(() => {
-    if (!ready || activeSlot === null || !game.auto) return;
-    const timer = window.setInterval(battleStep, 850);
-    return () => window.clearInterval(timer);
-  }, [activeSlot, ready, game.auto]);
 
   useEffect(() => {
     if (!ready || activeSlot === null) return;
@@ -1406,7 +1401,7 @@ export default function GameV15() {
       <Tabs defaultValue="trade" className="game-tabs">
         <TabsList className="nav-list v15-nav">
           <TabsTrigger value="trade"><Ship />東海商路</TabsTrigger>
-          <TabsTrigger value="battle"><Swords />戰場</TabsTrigger>
+          <TabsTrigger value="battle"><Swords />遭遇戰報</TabsTrigger>
           <TabsTrigger value="fusion"><Dna />轉職合成</TabsTrigger>
           <TabsTrigger value="squad"><Users />主角與隊伍</TabsTrigger>
           <TabsTrigger value="city"><Castle />四國城市</TabsTrigger>
@@ -1414,14 +1409,14 @@ export default function GameV15() {
         </TabsList>
 
         <TabsContent value="trade" className="tab-panel">
-          <TradePanel trade={game.trade} gold={game.gold} stage={game.stage} escorts={game.active.length} logs={game.logs}
+          <TradePanel trade={game.trade} gold={game.gold} stage={game.stage} escorts={game.active.length} logs={game.logs} lastEncounter={game.lastEncounter}
             onDispatch={sendCaravan} onUpgrade={upgradeCaravan}
             onSelect={(selectedRouteId) => setGame((previous) => ({ ...previous, trade: { ...previous.trade, selectedRouteId } }))}
             onToggleAuto={() => setGame((previous) => ({ ...previous, trade: { ...previous.trade, auto: !previous.trade.auto } }))} />
         </TabsContent>
 
         <TabsContent value="battle" className="tab-panel">
-          <section className={"battlefield map-theme-" + currentMap.theme + " " + (pulse ? "is-attacking" : "")}>
+          <section className={"battlefield map-theme-" + currentMap.theme}>
             <div className="battle-sky v15-battle">
               <div className="stage-mark"><small>{currentMap.name}・{boss ? "世界首領" : "區域遠征"}</small><strong>第 {game.stage} 關</strong></div>
               <div className="squad-sprites">
@@ -1429,7 +1424,7 @@ export default function GameV15() {
                 {activeUnits.map((unit) => <figure className="sprite" key={unit.uid}><img src={unit.image} alt={unit.name} /><figcaption>{unit.name}</figcaption></figure>)}
               </div>
               <div className="versus">VS</div>
-              <figure className={"enemy-sprite " + (boss ? "boss" : "")}><img src={pulse ? enemyArt.attack : enemyArt.idle} alt={enemy.name} /><figcaption><small>{enemyRegion}・{enemyCategory}</small>{enemy.name}</figcaption></figure>
+              <figure className={"enemy-sprite " + (boss ? "boss" : "")}><img src={enemyArt.idle} alt={enemy.name} /><figcaption><small>下一次遭遇目標・{enemyRegion}・{enemyCategory}</small>{enemy.name}</figcaption></figure>
             </div>
             <div className="battle-console">
               <div className="enemy-health">
@@ -1438,10 +1433,7 @@ export default function GameV15() {
               </div>
               {sourcedEnemy && <div className="enemy-source-line"><span>經驗資料 {format(sourcedEnemy.xp)}</span><span>物抗 {sourcedEnemy.physical}%</span><span>法抗 {sourcedEnemy.magic}%</span>{sourcedEnemy.skill && <span>技能・{sourcedEnemy.skill}</span>}<span>掉落・{sourcedEnemy.drops.join("、")}</span></div>}
               <div className="battle-actions">
-                <Button onClick={battleStep}><Swords />手動攻擊</Button>
-                <Button variant={game.auto ? "secondary" : "outline"} onClick={() => setGame((prev) => ({ ...prev, auto: !prev.auto }))}>
-                  {game.auto ? <Pause /> : <Play />}{game.auto ? "暫停自動" : "開始自動"}
-                </Button>
+                <p role="status">{game.trade.caravan ? "跑商途中機率遭遇，每趟 0～10 場，隊伍自動迎戰。" : "商隊尚未出航，不會發生戰鬥。請至東海商路派遣商隊。"}<br />最近戰報：{game.lastEncounter}</p>
               </div>
             </div>
           </section>

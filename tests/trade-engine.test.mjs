@@ -1,10 +1,54 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { advanceTrade, dispatchTrade, freshTrade, OFFLINE_LIMIT, restoreTrade } from '../app/trade-engine.ts';
+import { advanceTrade, dispatchTrade, encounterCount, encounterTimes, freshTrade, OFFLINE_LIMIT, restoreTrade } from '../app/trade-engine.ts';
 
 const now = 1_000_000;
 const initialGold = 120000;
 const launch = () => dispatchTrade(freshTrade(), initialGold, 'hanji', 1, 4, now);
+
+test('each possible encounter count from zero through ten is supported', () => {
+  for (let seed = 0; seed <= 10; seed++) {
+    const launched = dispatchTrade({ ...freshTrade(), auto: false }, initialGold, 'hanji', 1, 4, now, seed);
+    const paid = advanceTrade(launched.trade, launched.gold, now + 18000);
+    assert.equal(paid.encounters, seed);
+    assert.equal(paid.trips, 1);
+    assert.equal(paid.trade.caravan, null);
+  }
+});
+test('encounters trigger during transit, never twice after reload', () => {
+  const launched = dispatchTrade(freshTrade(), initialGold, 'hanji', 1, 4, now, 10);
+  const offsets = encounterTimes(launched.trade.caravan);
+  assert.equal(offsets.length, 10);
+  assert.ok(offsets.every((offset, index) => offset > 0 && offset < 18000 && (!index || offset > offsets[index - 1])));
+  const first = advanceTrade(launched.trade, launched.gold, now + offsets[0]);
+  assert.equal(first.encounters, 1);
+  assert.equal(first.trips, 0);
+  const reloaded = advanceTrade(restoreTrade(first.trade), first.gold, now + offsets[0]);
+  assert.equal(reloaded.encounters, 0);
+  const remaining = advanceTrade({ ...reloaded.trade, auto: false }, reloaded.gold, now + 18000);
+  assert.equal(remaining.encounters, 9);
+});
+test('repeat voyages get a fresh schedule and offline totals stay bounded', () => {
+  const launched = dispatchTrade(freshTrade(), initialGold, 'hanji', 1, 4, now, 10);
+  const next = advanceTrade(launched.trade, launched.gold, now + 18000);
+  assert.notEqual(next.trade.caravan.encounterSeed, 10);
+  assert.equal(next.trade.caravan.encountersResolved, 0);
+  assert.ok(encounterCount(next.trade.caravan.encounterSeed) <= 10);
+  const offline = advanceTrade(launched.trade, launched.gold, now + OFFLINE_LIMIT * 3);
+  assert.ok(offline.encounters <= 16000);
+  assert.equal(advanceTrade(restoreTrade(offline.trade), offline.gold, now + OFFLINE_LIMIT * 3).encounters, 0);
+  assert.equal(advanceTrade(freshTrade(), initialGold, now + OFFLINE_LIMIT).encounters, 0);
+});
+test('old in-flight saves do not spawn retroactive encounters', () => {
+  const launched = launch();
+  const old = structuredClone(launched.trade);
+  delete old.caravan.encounterSeed;
+  delete old.caravan.encountersResolved;
+  const migrated = restoreTrade(old);
+  const paid = advanceTrade({ ...migrated, auto: false }, launched.gold, now + 18000);
+  assert.equal(paid.encounters, 0);
+  assert.equal(paid.trips, 1);
+});
 
 test('dispatch deducts principal and rejects a duplicate voyage', () => {
   const result = launch();
