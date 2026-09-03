@@ -43,6 +43,8 @@ import {
 import { battleMaps } from "./reference-data";
 import { awakeningProfiles, gameplayContracts, officialEquipment, officialGems, OfficialEquipment, sourceEnemyForMap } from "./v17-content";
 import { TradePanel } from "./trade-panel";
+import { VitalBars } from "./vital-bars";
+import { normalizeVitals, recoverVitals, resolveVitalBattle, spellCost, vitalStats } from "./vitals-engine";
 import { advanceTrade, dispatchTrade, freshTrade, MAX_CARGO_LEVEL, restoreTrade, TRADE_ROUTES, upgradeCost, type TradeState } from "./trade-engine";
 
 type EquipmentSlot = "weapon" | "armor" | "helm" | "boots" | "accessory";
@@ -97,6 +99,8 @@ type Unit = {
   agi: number;
   intel: number;
   vit: number;
+  hp?: number;
+  mp?: number;
   equip: EquipmentSet;
 };
 
@@ -170,6 +174,8 @@ const heroNationProfiles: Record<NationId, { title: string; skill: string; image
 };
 
 const medicineCatalog = [
+  { id: "healing", name: "金創藥", price: 600, effect: "主角與出戰傭兵恢復 50% 最大 HP（可救起倒下者）", heroXp: 0, mercXp: 0, hpRestore: 0.5, mpRestore: 0 },
+  { id: "mana", name: "回靈散", price: 800, effect: "主角與出戰傭兵恢復 50% 最大 MP", heroXp: 0, mercXp: 0, hpRestore: 0, mpRestore: 0.5 },
   { id: "ginseng", name: "高麗人參", price: 900, effect: "主角獲得 400 經驗", heroXp: 400, mercXp: 0 },
   { id: "tonic", name: "十全大補湯", price: 1500, effect: "出戰傭兵各獲得 320 經驗", heroXp: 0, mercXp: 320 },
   { id: "vitality", name: "活力丸", price: 2400, effect: "主角與出戰傭兵各獲得 260 經驗", heroXp: 260, mercXp: 260 },
@@ -196,7 +202,7 @@ function emptyEquipment(): EquipmentSet {
 }
 
 function makeBaseUnit(template: BaseMercenary): Unit {
-  return {
+  return normalizeVitals<Unit>({
     uid: uid(template.id),
     templateId: template.id,
     nation: template.nation,
@@ -214,12 +220,12 @@ function makeBaseUnit(template: BaseMercenary): Unit {
     intel: template.intel,
     vit: template.vit,
     equip: emptyEquipment(),
-  };
+  });
 }
 
 function makeGeneralUnit(template: BaseMercenary): Unit {
   const unit = makeBaseUnit(template);
-  return {
+  return recoverVitals<Unit>({
     ...unit,
     tier: 1,
     name: template.tier1,
@@ -229,12 +235,12 @@ function makeGeneralUnit(template: BaseMercenary): Unit {
     agi: Math.floor(unit.agi * 1.35),
     intel: Math.floor(unit.intel * 1.35),
     vit: Math.floor(unit.vit * 1.35),
-  };
+  });
 }
 
 function makeHero(nation: NationId = "korea", name = "行商者"): Hero {
   const profile = heroNationProfiles[nation];
-  return {
+  return normalizeVitals<Hero>({
     uid: "hero",
     templateId: "hero",
     nation,
@@ -253,7 +259,7 @@ function makeHero(nation: NationId = "korea", name = "行商者"): Hero {
     intel: profile.stats[2],
     vit: profile.stats[3],
     equip: emptyEquipment(),
-  };
+  });
 }
 
 function rollEquipment(stage: number, guaranteed = false): Equipment {
@@ -483,6 +489,8 @@ function restoreGame(raw: unknown): GameState {
     claimedContracts: Array.isArray(parsed.claimedContracts) ? parsed.claimedContracts : [],
     lastSeen: Number(parsed.lastSeen) || Date.now(),
   });
+  next.hero = normalizeVitals(next.hero);
+  next.mercs = next.mercs.map(normalizeVitals);
   return next;
 }
 
@@ -646,15 +654,20 @@ function resolveRoadEncounter(previous: GameState): GameState {
         .map((unitUid) => previous.mercs.find((unit) => unit.uid === unitUid))
         .filter(Boolean) as Unit[];
       const form = formations.find((item) => item.id === previous.formation) || formations[0];
-      const power = Math.floor((unitPower(previous.hero) + active.reduce((sum, unit) => sum + unitPower(unit), 0)) * form.atk);
       const sourceTarget = sourceEnemyForMap(previous.battleMap, previous.stage, previous.stage % 10 === 0);
-      const resistance = sourceTarget?.physical || 0;
-      const damage = Math.max(1, Math.floor(power * 0.065 * (1 - Math.min(85, resistance) / 140)));
       const map = battleMaps.find((entry) => entry.id === previous.battleMap) || battleMaps[0];
       const health = enemyMax(previous.stage, map.hpMultiplier);
-      const rounds = Math.ceil(health / damage);
-      if (rounds > 30) {
-        const report = "途中遭遇第 " + previous.stage + " 關敵軍，30 回合未能擊退，商隊撤離並繼續跑商。提升裝備與隊伍後再戰。";
+      const combat = resolveVitalBattle([previous.hero, ...active].map((unit) => ({ uid: unit.uid, name: unit.name, skill: unit.skill, ...vitalStats(unit), power: Math.floor(unitPower(unit) * form.atk), cost: spellCost(unit) })), { hp: health, attack: Math.floor(20 + previous.stage * 5 + Math.sqrt(health) * 1.8), physical: sourceTarget?.physical || 0, magic: sourceTarget?.magic || 0 });
+      const remaining = new globalThis.Map(combat.fighters.map((unit) => [unit.uid, unit]));
+      const applyRemaining = <T extends Unit | Hero,>(unit: T): T => {
+        const fighter = remaining.get(unit.uid);
+        return fighter ? { ...unit, hp: fighter.hp, mp: fighter.mp } : unit;
+      };
+      previous = { ...previous, hero: applyRemaining(previous.hero), mercs: previous.mercs.map(applyRemaining) };
+      const rounds = combat.rounds;
+      const resourceReport = " 施法 " + combat.casts + " 次，消耗 MP " + combat.spentMp + "；普攻 " + combat.attacks + " 次，承受傷害 " + combat.receivedDamage + "。";
+      if (!combat.won) {
+        const report = "途中遭遇第 " + previous.stage + " 關敵軍，" + rounds + " 回合後撤離。" + resourceReport + " 請到客棧或藥店恢復 HP / MP。";
         return { ...previous, enemyHp: health, lastEncounter: report, logs: addLog(previous.logs, report) };
       }
       const isBoss = previous.stage % 10 === 0;
@@ -671,8 +684,9 @@ function resolveRoadEncounter(previous: GameState): GameState {
       let soulStones = previous.soulStones;
       let awakeningStones = previous.awakeningStones;
       let xpReward = isBoss ? 180 : 42;
-      const report = "途中遭遇「" + defeatedRegion + "・" + defeated.name + "」，" + rounds + " 回合獲勝，獲得 " + format(reward) + " 兩。";
+      const report = "途中遭遇「" + defeatedRegion + "・" + defeated.name + "」，" + rounds + " 回合獲勝，獲得 " + format(reward) + " 兩。" + resourceReport;
       let logs = addLog(previous.logs, report);
+      if (combat.spells.length) logs = addLog(logs, combat.spells.join("；"));
       if (sourceDefeated) {
         const material = sourceDefeated.drops[Math.floor(Math.random() * sourceDefeated.drops.length)];
         materials[material] = (materials[material] || 0) + 1;
@@ -1230,9 +1244,9 @@ export default function GameV15() {
       return {
         ...previous,
         gold: previous.gold - cost,
-        hero: grantXp(previous.hero, 700),
-        mercs: previous.mercs.map((unit) => previous.active.includes(unit.uid) ? grantXp(unit, 550) : unit),
-        logs: addLog(previous.logs, "在" + currentCity.name + "客棧休息，主角與出戰傭兵獲得修練經驗。"),
+        hero: recoverVitals(grantXp(previous.hero, 700)),
+        mercs: previous.mercs.map((unit) => recoverVitals(previous.active.includes(unit.uid) ? grantXp(unit, 550) : unit)),
+        logs: addLog(previous.logs, "在" + currentCity.name + "客棧休息，全員 HP / MP 恢復至上限，主角與出戰傭兵獲得修練經驗。"),
       };
     });
   }
@@ -1261,8 +1275,8 @@ export default function GameV15() {
       return {
         ...previous,
         medicines: { ...previous.medicines, [medicine.id]: previous.medicines[medicine.id] - 1 },
-        hero: medicine.heroXp ? grantXp(previous.hero, medicine.heroXp) : previous.hero,
-        mercs: medicine.mercXp ? previous.mercs.map((unit) => previous.active.includes(unit.uid) ? grantXp(unit, medicine.mercXp) : unit) : previous.mercs,
+        hero: recoverVitals(grantXp(previous.hero, medicine.heroXp), "hpRestore" in medicine ? medicine.hpRestore : 0, "mpRestore" in medicine ? medicine.mpRestore : 0),
+        mercs: previous.mercs.map((unit) => previous.active.includes(unit.uid) ? recoverVitals(grantXp(unit, medicine.mercXp), "hpRestore" in medicine ? medicine.hpRestore : 0, "mpRestore" in medicine ? medicine.mpRestore : 0) : unit),
         logs: addLog(previous.logs, "使用「" + medicine.name + "」：" + medicine.effect + "。"),
       };
     });
@@ -1437,6 +1451,11 @@ export default function GameV15() {
               </div>
             </div>
           </section>
+          <section className="panel party-vitals">
+            <div className="panel-title"><Users /><h2>出戰隊伍狀態</h2><span>HP / MP 跨場保留</span></div>
+            <p>HP 歸零暫停參戰；MP 不足改用普通攻擊。客棧恢復全員，藥店可購買金創藥與回靈散。</p>
+            <div className="party-vitals-grid">{[game.hero, ...activeUnits].map((unit) => <article key={unit.uid}><strong>{unit.name} · Lv.{unit.level}</strong><VitalBars unit={unit} /><small>{unit.skill} · {spellCost(unit)} MP / 次</small></article>)}</div>
+          </section>
           <section className="panel battle-map-panel">
             <div className="panel-title"><Map /><h2>戰鬥地圖</h2><span>8 個區域・關卡解鎖</span></div>
             <div className="battle-map-grid">
@@ -1556,6 +1575,8 @@ export default function GameV15() {
                 {selectedUid !== "hero" && <Button variant={game.active.includes(selectedUid) ? "secondary" : "default"} onClick={() => toggleActive(selectedUid)}>{game.active.includes(selectedUid) ? "撤下" : "出戰"}</Button>}
               </div>
               <div className="xp-line"><span>經驗 {selected.xp} / {xpNeed(selected.level)}</span><Progress value={selected.xp / xpNeed(selected.level) * 100} /></div>
+              <VitalBars unit={selected} />
+              <p className="points">魔法技能・{selected.skill}｜每次消耗 <strong>{spellCost(selected)} MP</strong>。魔力不足改用普攻，HP 歸零停止參戰。</p>
               <div className="stat-grid">
                 {(["str", "agi", "intel", "vit"] as const).map((stat) => (
                   <div key={stat}><small>{stat === "str" ? "力量" : stat === "agi" ? "敏捷" : stat === "intel" ? "智力" : "體質"}</small><strong>{selected[stat]}</strong><Button size="icon-xs" variant="outline" disabled={selected.points <= 0} onClick={() => addStat(stat)}>＋</Button></div>
@@ -1639,7 +1660,7 @@ export default function GameV15() {
               <section><h3>共用倉庫・三名角色皆可取用</h3>{sharedWarehouse.length ? sharedWarehouse.map((item) => <article key={item.uid}><img src={item.image} alt="" /><span><strong>{item.name}</strong><small>{item.rarity}・{slotLabels[item.slot]}</small></span><Button size="sm" variant="outline" onClick={() => withdrawFromWarehouse(item.uid)}>取出</Button></article>) : <p>倉庫目前是空的。</p>}</section></div>
             </div>}
 
-            {cityService === "inn" && <div className="city-service-body inn-service"><BedDouble /><div><small>{currentCity.name}客棧</small><h2>商團歇腳與修練</h2><p>支付住宿費後，主角獲得 700 經驗，所有出戰傭兵各獲得 550 經驗。</p><Button onClick={restAtInn}>入住・{format(Math.floor(1800 * currentCity.priceFactor))} 兩</Button></div></div>}
+            {cityService === "inn" && <div className="city-service-body inn-service"><BedDouble /><div><small>{currentCity.name}客棧</small><h2>商團歇腳與修練</h2><p>全員 HP / MP 恢復至上限；主角獲得 700 經驗，出戰傭兵各獲得 550 經驗。</p><Button onClick={restAtInn}>入住・{format(Math.floor(1800 * currentCity.priceFactor))} 兩</Button></div></div>}
 
             {cityService === "pharmacy" && <div className="city-service-body"><div className="panel-title"><Pill /><h2>{currentCity.name}藥店</h2><span>購買後可立即使用</span></div><div className="medicine-grid">{medicineCatalog.map((medicine) => <article key={medicine.id}><Pill /><div><strong>{medicine.name}</strong><small>{medicine.effect}</small><em>持有 {game.medicines[medicine.id] || 0}</em></div><Button size="sm" onClick={() => buyMedicine(medicine.id)}>購買 {format(Math.floor(medicine.price * currentCity.priceFactor))} 兩</Button><Button size="sm" variant="outline" disabled={!game.medicines[medicine.id]} onClick={() => consumeMedicine(medicine.id)}>使用</Button></article>)}</div></div>}
           </section>
