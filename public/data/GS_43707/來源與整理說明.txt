@@ -1,0 +1,5 @@
+資料來源：https://gs.mangot5.com/game/gs/information/detail?contentNo=43707
+擷取日期：2026-09-02
+整理範圍：將帥與傭兵、怪物、轉職怪物、幻獸。
+格式：UTF-8 / CSV 使用 UTF-8 BOM，Windows Excel 可直接開啟。
+備註：印度區官方頁面在目前可讀文字中未列出幻獸名稱，因此保留空陣列，不自行猜測。

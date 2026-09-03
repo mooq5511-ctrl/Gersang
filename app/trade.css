@@ -1,0 +1,110 @@
+.trade-v21 { display: grid; gap: 20px; }
+.trade-hero { display: grid; grid-template-columns: 1fr 1.05fr; overflow: hidden; padding: 0; min-height: 340px; background: linear-gradient(120deg,#1e2b2e,#121e23 65%); border-color: #3c504e; }
+.trade-intro { padding: 38px 36px; position: relative; }
+.trade-intro > small { color: #cda774; letter-spacing: .15em; font-size: 10px; }
+.trade-intro h2 { margin: 20px 0 18px; font-family: "Noto Serif TC", "PMingLiU", serif; font-size: clamp(28px,3.2vw,42px); line-height: 1.42; letter-spacing: .1em; font-weight: 700; }
+.trade-intro h2 em { color: #dcbf88; font-style: normal; }
+.trade-intro p { color: #a4b0b0; font-size: 12px; line-height: 1.9; }
+.trade-tags { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 24px; }
+.trade-tags span { display: flex; gap: 5px; align-items: center; font-size: 10px; color: #b4c9bd; }
+.trade-tags svg { width: 13px; height: 13px; }
+.trade-chart { position: relative; min-height: 340px; overflow: hidden; background: radial-gradient(ellipse at center,#29464044,transparent 70%),repeating-linear-gradient(0deg,transparent,transparent 39px,#8ac4ab08 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,#8ac4ab08 40px); }
+.trade-chart::after { content: ""; position: absolute; width: 46%; height: 44%; border: 1px dashed #caac7270; border-radius: 50%; left: 27%; top: 35%; transform: rotate(-22deg); pointer-events: none; }
+.trade-compass { position: absolute; top: 20px; right: 24px; display: grid; grid-template-columns: 32px 1fr; gap: 2px 9px; color: #8ea59f; font-size: 11px; }
+.trade-compass svg { grid-row: span 2; width: 30px; height: 30px; opacity: .6; }
+.trade-compass small { font-size: 8px; color: #70817e; }
+.trade-island { position: absolute; display: grid; gap: 5px; align-content: center; text-align: center; z-index: 1; background: #29433d; border: 1px solid #71847755; box-shadow: inset 0 0 28px #050d0b55; color: #d9d1b7; }
+.trade-island small { color: #87a493; font-size: 8px; letter-spacing: .2em; }
+.trade-island strong { font-size: 17px; letter-spacing: .25em; font-weight: 600; }
+.trade-island span { color: #a2b4a7; font-size: 9px; }
+.trade-island-china { left: 2%; top: 21%; width: 28%; height: 48%; border-radius: 40% 50% 37% 40%; transform: rotate(-5deg); }
+.trade-island-korea { left: 44%; top: 17%; width: 17%; height: 28%; border-radius: 40% 65% 40% 60%; }
+.trade-island-japan { right: 8%; top: 41%; width: 17%; height: 38%; border-radius: 65% 35% 55% 40%; transform: rotate(17deg); }
+.trade-island-taiwan { left: 30%; bottom: 10%; width: 13%; height: 29%; border-radius: 60% 45% 65% 35%; }
+.trade-ship { position: absolute; z-index: 2; left: 51%; top: 52%; color: #efc879; display: grid; justify-items: center; gap: 4px; }
+.trade-ship svg { width: 29px; height: 29px; filter: drop-shadow(0 0 12px #e8ba5060); }
+.trade-ship span { font-size: 9px; }
+.trade-ship.sailing { animation: trade-float 3s ease-in-out infinite; }
+@keyframes trade-float { 50% { transform: translate(7px,-5px); } }
+.trade-map-caption { position: absolute; bottom: 15px; right: 20px; display: flex; gap: 9px; align-items: center; font-size: 10px; color: #b7c1b5; }
+.trade-map-caption svg { width: 12px; }
+.trade-map-caption b { font-weight: 400; color: #d5b679; border-left: 1px solid #647064; padding-left: 9px; }
+.trade-metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+.trade-metrics article { display: flex; gap: 14px; align-items: center; background: #171f24; padding: 19px 22px; border: 1px solid #2c383d; border-radius: 12px; }
+.trade-metrics svg { width: 22px; color: #bcab85; }
+.trade-metrics article > span { display: grid; gap: 6px; color: #92a4a7; font-size: 11px; }
+.trade-metrics strong { color: #eee0c3; font-size: 24px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.trade-metrics strong small { color: #829093; font-size: 10px; }
+.trade-columns { display: grid; grid-template-columns: minmax(0,1fr) 330px; align-items: start; gap: 20px; }
+.trade-routes { padding: 24px; }
+.trade-route-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; margin-top: 22px; }
+.trade-route { border: 1px solid #334348; padding: 20px; border-radius: 10px; color: #e7dfcf; background: #19242b; text-align: left; cursor: pointer; transition: background .15s,border-color .15s; }
+.trade-route:hover { background: #243338; }
+.trade-route.selected { border-color: #c8b083; background: #28332f; box-shadow: inset 0 0 0 1px #c8b08328; }
+.trade-route:focus-visible { outline: 2px solid #e6c58d; outline-offset: 3px; }
+.trade-route.locked { background: #161e24; }
+.trade-route > div { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.trade-route > div small { color: var(--route-color); font-size: 9px; letter-spacing: .08em; }
+.trade-route > div span { color: #879898; font-size: 9px; }
+.trade-route h3 { display: flex; align-items: center; gap: 14px; font-size: 22px; margin: 19px 0 10px; letter-spacing: .08em; }
+.trade-route h3 svg { width: 19px; color: #768983; }
+.trade-route p { color: #9caeaa; display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.trade-route p svg { width: 13px; }
+.trade-route footer { display: flex; flex-direction: row; gap: 4px; align-items: end; margin: 20px 0 0; padding: 16px 0 0; border-top: 1px solid #4c5e4f50; }
+.trade-route footer span { display: grid; gap: 4px; font-size: 9px; color: #9faca4; }
+.trade-route footer strong { font-size: 16px; color: var(--route-color); font-weight: 500; }
+.trade-route footer > small { text-align: right; color: #8b9a92; font-size: 9px; max-width: 104px; line-height: 1.6; }
+.trade-sidebar { display: grid; gap: 16px; }
+.trade-dispatch,.trade-upgrade { padding: 22px; }
+.trade-live { color: #a5c6a5!important; }
+.trade-destination { display: flex; align-items: center; justify-content: space-between; margin: 26px 0 10px; }
+.trade-destination strong { font-size: 23px; letter-spacing: .12em; }
+.trade-destination svg { width: 20px; color: #8a9d94; }
+.trade-dispatch > p { font-size: 11px; color: #98a8a1; margin-bottom: 15px; }
+.trade-dispatch dl { display: grid; gap: 11px; margin: 22px 0; font-size: 11px; }
+.trade-dispatch dl > div { display: flex; justify-content: space-between; gap: 10px; }
+.trade-dispatch dt { color: #9aa9a2; }
+.trade-dispatch dd { color: #d4d8c9; }
+.trade-dispatch .trade-profit { color: #94caa7; }
+.trade-primary { width: 100%; margin-bottom: 10px; font-size: 11px; }
+.trade-hint { display: block; font-size: 10px; color: #93a49c; line-height: 1.8; margin-top: 3px; }
+.trade-upgrade > p { margin: 14px 0; font-size: 11px; color: #a1afa6; }
+.trade-upgrade > p strong { color: #dec59e; font-size: 28px; font-weight: 500; margin-right: 5px; }
+.trade-upgrade > p span { float: right; padding-top: 12px; font-size: 10px; }
+.trade-upgrade button { width: 100%; }
+.trade-ledger { padding: 24px; }
+.trade-ledger ol { list-style: none; padding: 0; margin: 16px 0 0; }
+.trade-ledger li { display: flex; align-items: baseline; gap: 14px; font-size: 11px; line-height: 1.8; color: #aab7ad; padding: 9px 0; border-top: 1px solid #a8b6a514; }
+.trade-ledger li span { color: #697f73; font-variant-numeric: tabular-nums; font-size: 10px; }
+@media (max-width:1050px) { .trade-columns { grid-template-columns: minmax(0,1fr) 285px; gap: 12px; } .trade-routes { padding: 18px; } .trade-route { padding: 14px; } .trade-route h3 { font-size: 19px; gap: 8px; } .trade-metrics article { padding: 16px; gap: 10px; } .trade-metrics strong { font-size: 21px; } }
+@media (max-width:800px) { .trade-hero { grid-template-columns: 1fr; } .trade-intro { padding: 28px; } .trade-chart { min-height: 300px; } .trade-columns { grid-template-columns: 1fr; } .trade-sidebar { grid-template-columns: 1fr 1fr; align-items: start; } .trade-metrics { grid-template-columns: repeat(2,1fr); } .v15-nav { grid-template-columns: repeat(3,1fr); } }
+@media (max-width:520px) { .trade-sidebar { grid-template-columns: 1fr; } .trade-route-grid { grid-template-columns: 1fr; } .trade-route h3 { font-size: 23px; } .trade-intro h2 { font-size: 30px; } .trade-tags { gap: 10px; } .trade-metrics article { padding: 13px; } .trade-metrics strong { font-size: 20px; } .trade-metrics svg { width: 18px; } .trade-chart { min-height: 275px; } .trade-dispatch dl { font-size: 12px; } }
+@media (prefers-reduced-motion:reduce) { .trade-ship.sailing { animation: none; } }
+
+/* Keep the trading controls prominent and readable on the working surface. */
+.trade-hero { min-height: 280px; }
+.trade-intro { padding: 28px 30px; }
+.trade-intro h2 { font-size: 32px; margin: 12px 0; }
+.trade-intro p { font-size: 14px; line-height: 1.8; margin-bottom: 16px; }
+.trade-intro p strong { color: #aed1af; font-weight: 500; }
+.trade-intro > small,.trade-tags span,.trade-compass span,.trade-compass small,
+.trade-island small,.trade-island span,.trade-ship span,.trade-map-caption,
+.trade-metrics strong small,.trade-route > div small,.trade-route > div span,
+.trade-route footer span,.trade-route footer > small,.trade-hint,.trade-upgrade > p span,
+.trade-ledger li span { font-size: 12px; }
+.trade-metrics article > span,.trade-route p,.trade-dispatch > p,.trade-dispatch dl,
+.trade-primary,.trade-upgrade > p,.trade-ledger li { font-size: 14px; }
+.trade-tags { margin-top: 17px; gap: 12px; }
+.trade-chart { min-height: 280px; }
+.trade-compass { top: 12px; right: 15px; }
+.trade-island { border-radius: 12px; transform: none; }
+.trade-island-china { left: 3%; top: 24%; width: 26%; height: 35%; }
+.trade-island-korea { left: 39%; top: 22%; width: 25%; height: 32%; }
+.trade-island-japan { right: 4%; top: 46%; width: 25%; height: 32%; }
+.trade-island-taiwan { left: 25%; bottom: 5%; width: 25%; height: 32%; }
+.trade-ship { left: 53%; top: 63%; }
+.trade-map-caption { display: none; }
+.trade-route footer > small { max-width: 130px; }
+.trade-primary { height: auto; min-height: 40px; white-space: normal; padding: 10px; }
+.trade-dispatch dl > div { flex-wrap: wrap; }
+@media (max-width:520px) { .trade-intro { padding: 24px; } .trade-intro h2 { font-size: 28px; } .trade-metrics article { gap: 8px; } .trade-metrics article > span { font-size: 12px; } .trade-chart { min-height: 285px; } }

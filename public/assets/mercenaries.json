@@ -1,0 +1,257 @@
+{
+  "source": "BT52Gersang.zip",
+  "character_s32_count": 58,
+  "character_group_count": 12,
+  "roles": [
+    {
+      "group": "MULAN",
+      "id": "mulan",
+      "name": "穆蘭",
+      "job": "武將",
+      "grade": "general",
+      "city": "漢陽",
+      "str": 62,
+      "agi": 75,
+      "intel": 48,
+      "vit": 58,
+      "asset": "char/MULAN_N.S32",
+      "actions": [
+        "char/MULAN_A1.S32",
+        "char/MULAN_A2.S32",
+        "char/MULAN_D.S32",
+        "char/MULAN_N.S32",
+        "char/MULAN_R.S32"
+      ],
+      "cost": 24000
+    },
+    {
+      "group": "MUSUN",
+      "id": "musun",
+      "name": "穆善",
+      "job": "武神",
+      "grade": "general",
+      "city": "漢陽",
+      "str": 82,
+      "agi": 56,
+      "intel": 36,
+      "vit": 78,
+      "asset": "char/MUSUN_N.S32",
+      "actions": [
+        "char/MUSUN_A1.S32",
+        "char/MUSUN_A2.S32",
+        "char/MUSUN_D.S32",
+        "char/MUSUN_N.S32",
+        "char/MUSUN_R.S32"
+      ],
+      "cost": 24000
+    },
+    {
+      "group": "Nobu",
+      "id": "nobu",
+      "name": "信夫",
+      "job": "刀客",
+      "grade": "general",
+      "city": "京都",
+      "str": 74,
+      "agi": 82,
+      "intel": 34,
+      "vit": 61,
+      "asset": "char/Nobu_N.S32",
+      "actions": [
+        "char/Nobu_A.S32",
+        "char/Nobu_A1.S32",
+        "char/Nobu_A1_EFFECT.S32",
+        "char/Nobu_A_EFFECT.S32",
+        "char/Nobu_D.S32",
+        "char/Nobu_D_EFFECT.S32",
+        "char/Nobu_N.S32",
+        "char/Nobu_N_EFFECT.S32",
+        "char/Nobu_R.S32",
+        "char/Nobu_R_EFFECT.S32"
+      ],
+      "cost": 24000
+    },
+    {
+      "group": "PoongRyong",
+      "id": "poong",
+      "name": "風龍",
+      "job": "陰陽師",
+      "grade": "merc",
+      "city": "漢陽",
+      "str": 32,
+      "agi": 44,
+      "intel": 92,
+      "vit": 48,
+      "asset": "char/PoongRyong_N.S32",
+      "actions": [
+        "char/PoongRyong_A1.S32",
+        "char/PoongRyong_D.S32",
+        "char/PoongRyong_N.S32",
+        "char/PoongRyong_R.S32"
+      ],
+      "cost": 7000
+    },
+    {
+      "group": "SuRyong",
+      "id": "su",
+      "name": "水龍",
+      "job": "巫女",
+      "grade": "merc",
+      "city": "南京",
+      "str": 36,
+      "agi": 52,
+      "intel": 88,
+      "vit": 55,
+      "asset": "char/SuRyong_N.S32",
+      "actions": [
+        "char/SuRyong_A1.S32",
+        "char/SuRyong_D.S32",
+        "char/SuRyong_N.S32",
+        "char/SuRyong_R.S32"
+      ],
+      "cost": 7000
+    },
+    {
+      "group": "YoungRang_F",
+      "id": "youngf",
+      "name": "英娘",
+      "job": "巫女",
+      "grade": "merc",
+      "city": "南京",
+      "str": 40,
+      "agi": 67,
+      "intel": 79,
+      "vit": 52,
+      "asset": "char/YoungRang_F_N.S32",
+      "actions": [
+        "char/YoungRang_F_A1.S32",
+        "char/YoungRang_F_D.S32",
+        "char/YoungRang_F_N.S32",
+        "char/YoungRang_F_R.S32"
+      ],
+      "cost": 7000
+    },
+    {
+      "group": "YoungRang_T",
+      "id": "youngt",
+      "name": "英娘・天",
+      "job": "術士",
+      "grade": "general",
+      "city": "北京",
+      "str": 34,
+      "agi": 62,
+      "intel": 86,
+      "vit": 49,
+      "asset": "char/YoungRang_T_N.S32",
+      "actions": [
+        "char/YoungRang_T_A1.S32",
+        "char/YoungRang_T_D.S32",
+        "char/YoungRang_T_N.S32",
+        "char/YoungRang_T_R.S32"
+      ],
+      "cost": 24000
+    },
+    {
+      "group": "Zinmyosu_F",
+      "id": "zinf",
+      "name": "真妙手",
+      "job": "陰陽師",
+      "grade": "merc",
+      "city": "京都",
+      "str": 30,
+      "agi": 46,
+      "intel": 95,
+      "vit": 50,
+      "asset": "char/Zinmyosu_F_N.S32",
+      "actions": [
+        "char/Zinmyosu_F_A1.S32",
+        "char/Zinmyosu_F_A2.S32",
+        "char/Zinmyosu_F_D.S32",
+        "char/Zinmyosu_F_N.S32",
+        "char/Zinmyosu_F_R.S32"
+      ],
+      "cost": 7000
+    },
+    {
+      "group": "Zinmyosu_T",
+      "id": "zint",
+      "name": "真妙手・天",
+      "job": "法師",
+      "grade": "general",
+      "city": "北京",
+      "str": 28,
+      "agi": 43,
+      "intel": 99,
+      "vit": 48,
+      "asset": "char/Zinmyosu_T_N.S32",
+      "actions": [
+        "char/Zinmyosu_T_A1.S32",
+        "char/Zinmyosu_T_A2.S32",
+        "char/Zinmyosu_T_D.S32",
+        "char/Zinmyosu_T_N.S32",
+        "char/Zinmyosu_T_R.S32"
+      ],
+      "cost": 24000
+    },
+    {
+      "group": "pirate_skeleton_bow",
+      "id": "skbow",
+      "name": "海盜骷髏弓手",
+      "job": "特殊弓手",
+      "grade": "special",
+      "city": "釜山",
+      "str": 51,
+      "agi": 71,
+      "intel": 28,
+      "vit": 46,
+      "asset": "char/pirate_skeleton_bow_N.S32",
+      "actions": [
+        "char/pirate_skeleton_bow_A.S32",
+        "char/pirate_skeleton_bow_D.S32",
+        "char/pirate_skeleton_bow_N.S32",
+        "char/pirate_skeleton_bow_R.S32"
+      ],
+      "cost": 18000
+    },
+    {
+      "group": "pirate_skeleton_cannon",
+      "id": "skcannon",
+      "name": "海盜骷髏砲手",
+      "job": "特殊炮手",
+      "grade": "special",
+      "city": "釜山",
+      "str": 68,
+      "agi": 42,
+      "intel": 39,
+      "vit": 58,
+      "asset": "char/pirate_skeleton_cannon_N.S32",
+      "actions": [
+        "char/pirate_skeleton_cannon_A.S32",
+        "char/pirate_skeleton_cannon_D.S32",
+        "char/pirate_skeleton_cannon_N.S32",
+        "char/pirate_skeleton_cannon_R.S32"
+      ],
+      "cost": 18000
+    },
+    {
+      "group": "pirate_skeleton_captain",
+      "id": "skcaptain",
+      "name": "海盜骷髏船長",
+      "job": "特殊將領",
+      "grade": "special",
+      "city": "釜山",
+      "str": 77,
+      "agi": 51,
+      "intel": 33,
+      "vit": 71,
+      "asset": "char/pirate_skeleton_captain_N.S32",
+      "actions": [
+        "char/pirate_skeleton_captain_A.S32",
+        "char/pirate_skeleton_captain_D.S32",
+        "char/pirate_skeleton_captain_N.S32",
+        "char/pirate_skeleton_captain_R.S32"
+      ],
+      "cost": 18000
+    }
+  ]
+}
