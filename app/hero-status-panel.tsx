@@ -1,3 +1,4 @@
+import {rarityPresentation} from './classic-presentation';
 import type { CaravanMember } from './caravan-status';
 import { vitalStats,combatStats } from './vitals-engine';
 import { heroPersonalPower,heroWeightLimit,heroTotalAttributes } from './hero-rules';
@@ -21,7 +22,7 @@ export function HeroStatusPanel({busy=false,hero,gold,credit,weight,xpNeed,alloc
     <section className="hp-equipment" aria-label="六格個人裝備"><h3>隨身裝備</h3><TooltipProvider><div className="hp-six-slots">{HERO_DISPLAY_SLOTS.map(slot=>{
       const item=hero.equip[slot] as (TooltipGear & {image?:string})|null;
       const label=slot==='armor'?'衣服':EQUIPMENT_LABELS[slot];
-      return <div className="hp-slot-wrap" key={slot}><Tooltip><TooltipTrigger onClick={()=>{if(item)unequip(slot)}} className={'hp-gear-slot'+(item?' filled':'')} aria-label={label+'：'+(item?.name||'未裝備')}><span>{item?(item.image?<img src={item.image} alt=""/>:item.name===DIVINE_EQUIPMENT.staff.name?'杖':{weapon:'兵',helm:'盔',armor:'甲',ring1:'戒',ring2:'戒',boots:'靴'}[slot]):label}</span></TooltipTrigger>{item&&<TooltipContent className="hp-gear-tooltip"><strong>{item.name}</strong>{equipmentDetailLines(item).map((line,index)=><span key={index}>{line}</span>)}<em>{equipmentDescription(item)}</em></TooltipContent>}</Tooltip><small>{label}</small></div>;
+      return <div className="hp-slot-wrap" key={slot}><Tooltip><TooltipTrigger onClick={()=>{if(item)unequip(slot)}} className={'hp-gear-slot'+(item?' filled '+rarityPresentation(item.rarity).className:'')} aria-label={label+'：'+(item?.name||'未裝備')}><span>{item?(item.image?<img src={item.image} alt=""/>:item.name===DIVINE_EQUIPMENT.staff.name?'杖':{weapon:'兵',helm:'盔',armor:'甲',ring1:'戒',ring2:'戒',boots:'靴'}[slot]):label}</span></TooltipTrigger>{item&&<TooltipContent className={"hp-gear-tooltip "+rarityPresentation(item.rarity).className}><strong>{item.name}</strong><span className="rarity-caption">{rarityPresentation(item.rarity).label}</span>{equipmentDetailLines(item).map((line,index)=><span key={index}>{line}</span>)}<em>{equipmentDescription(item)}</em></TooltipContent>}</Tooltip><small>{label}</small></div>;
     })}</div></TooltipProvider><small>懸停或鍵盤聚焦查看加成；手套、護身符保留於下方完整裝備區。</small></section>
     <section className="hp-indicators">
       <div className="hp-power"><span>總戰鬥力 <small>（主角）</small></span><strong>{heroPersonalPower(hero).toLocaleString()}</strong></div>

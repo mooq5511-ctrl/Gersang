@@ -15,7 +15,7 @@ export function toggleDivineEquipment<E extends Gear,U extends {level:number;equ
   const available=inventory.some(entry=>entry.uid===item.uid)?inventory:[...inventory,item];
   return equipFromInventory(hero,available,item.uid,slot);
 }
-export type TooltipGear={name?:string;source?:string;atk?:number;def?:number;hp?:number;enhance?:number;requiredLevel?:number;skill?:string;bonus?:{str?:number;agi?:number;vit?:number;intel?:number};resist?:{physical:number;magic:number};magic?:{name?:string;text?:string;stat:string;value:number}[]};
+export type TooltipGear={rarity?:string;name?:string;source?:string;atk?:number;def?:number;hp?:number;enhance?:number;requiredLevel?:number;skill?:string;bonus?:{str?:number;agi?:number;vit?:number;intel?:number};resist?:{physical:number;magic:number};magic?:{name?:string;text?:string;stat:string;value:number}[]};
 /** 所有欄位皆列出，包含非神裝的既有裝備加成與附魔。 */
 export function equipmentDetailLines(item:TooltipGear){
   const lines:string[]=[];
