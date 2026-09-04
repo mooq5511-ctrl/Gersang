@@ -7,8 +7,8 @@ import type {EquipmentSlot} from './equipment-slots';
 import {Tooltip,TooltipContent,TooltipProvider,TooltipTrigger} from '@/components/ui/tooltip';
 
 /** 無獨立計時器或第二份角色資料：所有操作交回遊戲主狀態，再即時重算畫面。 */
-export function HeroStatusPanel({hero,gold,credit,weight,xpNeed,allocate,trade,train,select,unequip}:{
-  hero:CaravanMember;gold:number;credit:number;weight:number;xpNeed:(level:number)=>number;
+export function HeroStatusPanel({busy=false,hero,gold,credit,weight,xpNeed,allocate,trade,train,select,unequip}:{
+  busy?:boolean;hero:CaravanMember;gold:number;credit:number;weight:number;xpNeed:(level:number)=>number;
   allocate:(stat:'str'|'agi'|'vit'|'intel')=>void;trade:()=>void;train:()=>void;select:()=>void;
 
   unequip:(slot:EquipmentSlot)=>void;
@@ -35,6 +35,6 @@ export function HeroStatusPanel({hero,gold,credit,weight,xpNeed,allocate,trade,t
       <div className="hp-vitals">{(['hp','mp'] as const).map(key=>{const max=key==='hp'?vital.maxHp:vital.maxMp;return <label className="hp-meter" key={key}>{key==='hp'?'生命值 HP':'魔法值 MP'}<span>{vital[key]} / {max}</span><progress className={key} max={max} value={vital[key]}/></label>})}</div>
       <label className="hp-meter hp-exp">EXP<span>{hero.xp} / {xpNeed(hero.level)}</span><progress max={xpNeed(hero.level)} value={hero.xp}/></label>
     </section>
-    <footer className="hp-actions"><button onClick={trade} title="獲得 100 兩與 25 信用">模擬經商（賺錢／加信用）</button><button onClick={train} title="100 經驗與 50% 神裝掉落">模擬打怪（經驗／50% 掉寶）</button><small>掛機每秒 +10 兩 · +5 信用</small></footer>
+    <footer className="hp-actions"><button disabled={busy} onClick={trade} title="獲得 100 兩與 25 信用">模擬經商（賺錢／加信用）</button><button disabled={busy} onClick={train} title="100 經驗與 50% 神裝掉落">模擬打怪（經驗／50% 掉寶）</button><small>掛機每秒 +10 兩 · +5 信用（療傷期間暫停）</small></footer>
   </aside>;
 }

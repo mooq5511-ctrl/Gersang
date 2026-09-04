@@ -5,8 +5,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { bandit, isBanditEncounter } from "./bandit";
 import { merchantMercenaries, mercenarySpec, type MercenarySpec } from './mercenary-roster';
 import { CaravanStatus } from './caravan-status';
+import {DungeonPanel} from './dungeon-panel';
+import {dungeonStep,dungeonBusy,freshDungeon,type DungeonState,type DungeonKey} from './dungeon-engine';
 import { settleCaravanIdle } from './caravan-idle';
-import { heroPersonalPower, heroWeightLimit, HERO_INITIAL_ATTRIBUTES } from './hero-rules';
+import { heroPersonalPower, heroWeightLimit, heroTotalAttributes, HERO_INITIAL_ATTRIBUTES } from './hero-rules';
 import {DIVINE_EQUIPMENT} from './divine-equipment';
 import {positionInventory,addInventoryItem,INVENTORY_CAPACITY} from './inventory-layout';
 import {rollInventoryLoot} from './inventory-loot';
@@ -134,6 +136,7 @@ type CharacterProfile = {
 type CityService = "mercenary" | "weapon" | "armor" | "warehouse" | "inn" | "pharmacy";
 
 type GameState = {
+  dungeon?: DungeonState;
   version: 21;
   trade: TradeState;
   credit: number;
@@ -456,6 +459,13 @@ function restoreGame(raw: unknown): GameState {
     claimedContracts: Array.isArray(parsed.claimedContracts) ? parsed.claimedContracts : [],
     lastSeen: Number(parsed.lastSeen) || Date.now(),
   });
+  // 離線不補算副本；重新登入時先療傷，避免重载跳過敗戰懲罰。
+  if (dungeonBusy(parsed.dungeon)) {
+    const pause=Math.max(0,Date.now()-(Number(parsed.lastSeen)||Date.now()));
+    next.dungeon={...freshDungeon(),status:'recovering',stamp:Date.now(),logs:['返回漢陽療傷，離線期間不結算副本獎勵。']};
+    next.idleStamp=Date.now();
+    if(next.trade.caravan)next.trade={...next.trade,caravan:{...next.trade.caravan,startedAt:next.trade.caravan.startedAt+pause}};
+  } else next.dungeon=freshDungeon();
   next.hero = normalizeVitals(next.hero);
   next.mercs = next.mercs.map(normalizeVitals);
   return retainGuildRoster<Equipment, Unit, GameState>(next);
@@ -465,7 +475,35 @@ function profileFromGame(slot: number, game: GameState): CharacterProfile {
   return { slot, name: game.hero.name, nation: game.hero.nation, level: game.hero.level, stage: game.stage, updatedAt: Date.now() };
 }
 
-function settleMerchantGame(previous: GameState, now: number): GameState {
+/** 使用真實主角 HP/MP 與現有背包；勝利只發放一次獎勵。 */
+function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key?:DungeonKey,roll=.99,choice=0):GameState {
+  const total=heroTotalAttributes(previous.hero),v=vitalStats(previous.hero);
+  const attack=Object.values(previous.hero.equip).reduce((sum,item)=>sum+(item?.atk||0),0);
+  const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,int:total.intel,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice);
+  let next={...previous,dungeon:result.state,hero:{...previous.hero,hp:result.hp,mp:result.mp}};
+  if(result.reward){
+    const reward=result.reward;
+    next={...next,hero:grantXp(next.hero,reward.xp),gold:next.gold+reward.gold,kills:next.kills+1,logs:addLog(next.logs,'成功擊敗副本怪物，獲得 '+reward.xp+' 經驗與 '+reward.gold+' 兩。')};
+    const spec=reward.loot?DIVINE_EQUIPMENT[reward.loot as keyof typeof DIVINE_EQUIPMENT]:null;
+    if(spec){
+      const drop:Equipment={uid:'dungeon-'+now+'-'+result.state.serial,name:spec.name,slot:spec.slot,bonus:{...spec.bonus},def:spec.def,atk:0,hp:0,image:'',enhance:0,rarity:'傳說',magic:[],requiredLevel:1,source:'幽冥副本掉落'};
+      const pickup=addInventoryItem(next.inventory,drop),message=pickup.error?'背包已滿，本次掉落無法拾取。':'獲得「'+drop.name+'」！';
+      next={...next,inventory:pickup.inventory,logs:addLog(next.logs,message),dungeon:{...next.dungeon,logs:[message,...next.dungeon.logs].slice(0,40)}};
+    }
+  }
+  return next;
+}
+function settleMerchantGame(previous: GameState, now: number,roll=.99,choice=0): GameState {
+  if(dungeonBusy(previous.dungeon)){
+    // 共用唯一每秒計時器，航程起點平移，暫停期間不累積遭遇或跑商獎勵。
+    const pause=Math.max(0,now-(previous.dungeon!.pauseAt||previous.dungeon!.stamp||now));
+    let next=applyDungeon(previous,'tick',now,undefined,roll,choice);
+    next={...next,dungeon:{...next.dungeon!,pauseAt:now}};
+    if(next.trade.caravan)next={...next,trade:{...next.trade,caravan:{...next.trade.caravan,startedAt:next.trade.caravan.startedAt+pause}}};
+    if(previous.dungeon!.status==='recovering')return {...next,idleStamp:now};
+    const idle=settleCaravanIdle(previous.idleStamp,now);
+    return {...next,idleStamp:idle.stamp,gold:next.gold+idle.gold,credit:next.credit+idle.credit};
+  }
   // 與跑商共用一個每秒計時器，獨立時間戳避免重複領取離線收益。
   const idle = settleCaravanIdle(previous.idleStamp, now);
   if (idle.stamp !== previous.idleStamp) previous = { ...previous, idleStamp: idle.stamp, gold: previous.gold + idle.gold, credit: previous.credit + idle.credit };
@@ -849,13 +887,18 @@ export default function GameV15() {
 
   useEffect(() => {
     if (!ready || activeSlot === null) return;
-    const timer = window.setInterval(() => setGame((previous) => settleMerchantGame(previous, Date.now())), 1000);
+    const timer = window.setInterval(() => {
+      // 在 React 更新函式外抽樣，同一次回合重跑不會改變掉寶結果。
+      const now=Date.now(),roll=Math.random(),choice=Math.random();
+      setGame(previous=>settleMerchantGame(previous,now,roll,choice));
+    }, 1000);
     return () => window.clearInterval(timer);
   }, [ready, activeSlot]);
 
   function sendCaravan(routeId: string) {
     const now = Date.now();
     setGame((previous) => {
+      if(dungeonBusy(previous.dungeon))return {...previous,logs:addLog(previous.logs,'請先結束副本並完成療傷。')};
       const result = dispatchTrade(previous.trade, previous.gold, routeId, previous.stage, previous.active.length, now);
       if (result.error) return { ...previous, logs: addLog(previous.logs, result.error) };
       const route = TRADE_ROUTES.find((item) => item.id === routeId)!;
@@ -916,6 +959,7 @@ export default function GameV15() {
 
 
   function trainSelected() {
+    if(dungeonBusy(game.dungeon)){setNotice('副本或療傷期間暫停此操作，請先完成療傷。');return;}
     if (selectedUid === "hero") return;
     setGame((previous) => {
       if (previous.gold < 5000) {
@@ -964,6 +1008,7 @@ export default function GameV15() {
 
 
   function simulateHeroLoot() {
+    if(dungeonBusy(game.dungeon)){setNotice('副本或療傷期間暫停此操作，請先完成療傷。');return;}
     // 在更新函式外抽樣，React 開發模式重跑更新函式也不會重新抽獎。
     const key=rollInventoryLoot();
     const spec=key?DIVINE_EQUIPMENT[key]:null;
@@ -1063,6 +1108,7 @@ export default function GameV15() {
   }
 
   function restAtInn() {
+    if(dungeonBusy(game.dungeon)){setNotice('副本或療傷期間暫停此操作，請先完成療傷。');return;}
     const cost = Math.floor(1800 * currentCity.priceFactor);
     setGame((previous) => {
       if (previous.gold < cost) {
@@ -1093,6 +1139,7 @@ export default function GameV15() {
   }
 
   function consumeMedicine(medicineId: string) {
+    if(dungeonBusy(game.dungeon)){setNotice('副本或療傷期間暫停此操作，請先完成療傷。');return;}
     const medicine = medicineCatalog.find((entry) => entry.id === medicineId);
     if (!medicine) return;
     setGame((previous) => {
@@ -1141,6 +1188,7 @@ export default function GameV15() {
   }
 
   function claimContract(contractId: string) {
+    if(dungeonBusy(game.dungeon)){setNotice('副本或療傷期間暫停此操作，請先完成療傷。');return;}
     setGame((previous) => {
       const contract = gameplayContracts.find((entry) => entry.id === contractId);
       if (!contract || previous.claimedContracts.includes(contractId)) return previous;
@@ -1310,15 +1358,16 @@ export default function GameV15() {
 
 
         <TabsContent value="squad" className="tab-panel">
-          <CaravanStatus hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit}
+          <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit}
+            battle={<DungeonPanel state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random();setGame(previous=>applyDungeon(previous,action,now,key,roll,choice));}}/>}
             inventory={game.inventory} equipHero={itemUid=>equipItem(itemUid,undefined,'hero')} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
 
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
             maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
-            trade={()=>setGame(previous=>({...previous,gold:previous.gold+100,credit:previous.credit+25,logs:addLog(previous.logs,'模擬經商：獲得 100 兩與 25 信用。')}))}
+            trade={()=>setGame(previous=>dungeonBusy(previous.dungeon)?previous:({...previous,gold:previous.gold+100,credit:previous.credit+25,logs:addLog(previous.logs,'模擬經商：獲得 100 兩與 25 信用。')}))}
             trainHero={simulateHeroLoot}
             hire={()=>{ const index=Math.floor(Math.random()*merchantMercenaries.length); recruitMerchant(merchantMercenaries[index],index); }}
-            train={()=>setGame(previous=>({...previous,hero:grantXp(previous.hero,100),mercs:previous.mercs.map(unit=>grantXp(unit,100)),logs:addLog(previous.logs,'模擬打怪：主角與所有已僱用傭兵各獲得 100 經驗。')}))}
+            train={()=>setGame(previous=>dungeonBusy(previous.dungeon)?previous:({...previous,hero:grantXp(previous.hero,100),mercs:previous.mercs.map(unit=>grantXp(unit,100)),logs:addLog(previous.logs,'模擬打怪：主角與所有已僱用傭兵各獲得 100 經驗。')}))}
             allocate={stat=>setGame(previous=>previous.hero.points>0?({...previous,hero:{...previous.hero,[stat]:previous.hero[stat]+1,points:previous.hero.points-1}}):previous)} />
           <div className="caravan-detail-layout">
             <section className="panel unit-detail">
