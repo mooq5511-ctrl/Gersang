@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>王天下 · 神裝個人面板</title>
+<style>
+/* 單一檔案：樣式、畫面與邏輯皆內嵌，沒有外部字型、圖片或程式依賴。 */
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#100c08;padding:20px;box-sizing:border-box}
+/* 380px 古典木質卡片；窄螢幕可縮小，放大文字時高度自然延伸，不裁切操作。 */
+.hero-personal{box-sizing:border-box;width:380px;max-width:100%;min-height:600px;align-self:start;padding:14px 18px;color:#f0e68c;background:repeating-linear-gradient(2deg,#ffffff02 0 1px,transparent 2px 11px),linear-gradient(135deg,#2a1801,#1a0f01);border:2px solid #b8860b;box-shadow:inset 0 0 0 4px #130c05,0 12px 25px #0005;font-family:Georgia,"PMingLiU",serif;font-size:14px;line-height:1.35;border-radius:4px}.hero-personal *{box-sizing:border-box}.hero-personal p{margin:0}.hero-personal small{font-size:12px;color:#c5b276}.hp-title{display:flex;align-items:center;justify-content:space-between;padding-bottom:9px;border-bottom:1px solid #b8860b66;color:#ffd700}.hp-title strong{font-size:17px;letter-spacing:3px}.hp-title>span{font-size:12px}.hp-identity{display:flex;width:100%;gap:16px;align-items:center;text-align:left;padding:12px 0;border:0;background:none;color:inherit;cursor:pointer}.hp-identity img,.hp-avatar{width:80px;height:80px;flex:none;object-fit:contain;border:1px solid #b8860b;background:#100b03}.hp-avatar{display:grid;place-items:center;font-size:40px;color:#ffd700}.hp-identity>span>*{display:block}.hp-identity strong{font-size:23px;color:#ffd700;margin-bottom:5px}.hp-identity small{margin-top:5px}.hp-indicators{border-top:1px solid #8d681866;border-bottom:1px solid #8d681866;padding:10px 0}.hp-power{display:flex;align-items:center;justify-content:space-between}.hp-power strong{font-size:30px;color:#ffd700;font-variant-numeric:tabular-nums}.hero-personal .hp-gold{color:#ffd700;font-size:19px;margin:10px 0}.hp-weight{display:flex;justify-content:space-between;gap:6px}.hp-meter{display:block;font-size:12px;margin:8px 0 0}.hp-meter>span{float:right;color:#f7ecd1}.hero-personal progress{display:block;appearance:none;width:100%;height:7px;overflow:hidden;border:1px solid #a7894544;border-radius:3px;margin-top:4px;background:#090704}.hero-personal progress::-webkit-progress-bar{background:#090704}.hero-personal progress::-webkit-progress-value{background:linear-gradient(90deg,#72551f,#d4ad59)}.hero-personal progress::-moz-progress-bar{background:#d4ad59}.hero-personal progress.jade::-webkit-progress-value{background:linear-gradient(90deg,#124c47,#20b2aa)}.hero-personal progress.jade::-moz-progress-bar{background:#20b2aa}.hero-personal progress.hp::-webkit-progress-value{background:linear-gradient(90deg,#680b09,#d14a37)}.hero-personal progress.hp::-moz-progress-bar{background:#d14a37}.hero-personal progress.mp::-webkit-progress-value{background:linear-gradient(90deg,#153166,#468fde)}.hero-personal progress.mp::-moz-progress-bar{background:#468fde}.hp-allocation{padding-top:10px}.hp-allocation>p{display:flex;justify-content:space-between;margin-bottom:7px}.hp-allocation strong{color:#ffd700}.hp-stat{display:flex;gap:12px;align-items:center;min-height:33px;border-bottom:1px solid #b8860b22}.hp-stat>strong{margin-left:auto}.hero-personal button:not(.hp-identity){border:1px solid #b8860b;background:linear-gradient(#8b0000,#540000);color:#ffd700;font:inherit;cursor:pointer;border-radius:3px}.hp-stat button{width:27px;height:25px;line-height:1}.hero-personal button:disabled{opacity:.35;cursor:not-allowed}.hero-personal button:focus-visible{outline:2px solid #ffe47c;outline-offset:3px}.hp-vitals{display:grid;grid-template-columns:1fr 1fr;gap:14px}.hp-actions{display:grid;grid-template-columns:1fr;gap:6px;border-top:1px solid #b8860b66;margin-top:12px;padding-top:10px}.hp-actions button{padding:7px 4px;font-size:13px!important}.hp-actions>small{text-align:center}.caravan-status{grid-template-columns:380px minmax(0,1fr);align-items:start}.caravan-team .hero-team-total{color:#ffd700;font-size:18px;margin-bottom:12px}@media(max-width:1000px){.caravan-status{grid-template-columns:1fr}.hero-personal{justify-self:center}}@media(max-width:390px){.hero-personal{padding:12px}.hp-gold{overflow-wrap:anywhere}}
+/* 六格主角裝備：只擴充個人面板，不移除舊八格系統的物品。 */
+.hero-personal{width:450px;background-color:#2a1801}.caravan-status{grid-template-columns:450px minmax(0,1fr)}.hp-equipment{border-top:1px solid #b8860b66;padding:10px 0}.hp-equipment h3{font-size:14px;color:#d6b774;margin:0 0 8px;letter-spacing:3px}.hp-six-slots{display:grid;grid-template-columns:repeat(3,50px);justify-content:center;gap:10px 35px;margin:8px 0 10px}.hp-slot-wrap{position:relative;text-align:center}.hp-slot-wrap>small{display:block;margin-top:4px;font-size:12px}.hero-personal button.hp-gear-slot{display:grid;place-items:center;width:50px;height:50px;padding:3px;border:1px solid #826321;background:linear-gradient(135deg,#160d03,#332409);color:#b3a47a88;box-shadow:inset 0 0 9px #0009;border-radius:2px;font-size:12px}.hero-personal button.hp-gear-slot.filled{border-color:#dfb441;color:#ffd700;font-size:20px;box-shadow:inset 0 0 10px #a9791533}.hp-gear-slot img{width:40px;height:40px;object-fit:contain}.hp-gear-tooltip{display:flex!important;flex-direction:column;align-items:flex-start!important;gap:5px!important;padding:14px!important;max-width:min(270px,85vw)!important;background:#1b1005!important;color:#e9c56d!important;border:1px solid #b8860b!important;box-shadow:0 8px 20px #0009;font-family:Georgia,"PMingLiU",serif;font-size:13px!important}.hp-gear-tooltip>strong{font-size:17px;color:#ffd700}.hp-gear-tooltip>em{border-top:1px solid #98701c88;padding-top:8px;line-height:1.6;color:#d2b774}.hp-defense{padding-top:8px;font-size:13px}.hp-defense>small{margin-left:auto}.standalone-gear-tooltip{display:none;position:absolute;z-index:20;top:50px;left:50%;transform:translateX(-50%);width:230px;padding:14px;color:#ffd700;background:#1b1005;border:1px solid #b8860b;box-shadow:0 8px 20px #0009;text-align:left;white-space:pre-line;font-size:13px;line-height:1.8}.hp-slot-wrap:hover .standalone-gear-tooltip:not([hidden]),.hp-slot-wrap:focus-within .standalone-gear-tooltip:not([hidden]){display:block}.hp-slot-wrap[data-dismissed="true"] .standalone-gear-tooltip{display:none!important}@media(max-width:1050px){.caravan-status{grid-template-columns:1fr}}@media(max-width:420px){.standalone-gear-tooltip{width:190px}.hp-slot-wrap:nth-child(3n+1) .standalone-gear-tooltip{left:0;transform:none}.hp-slot-wrap:nth-child(3n) .standalone-gear-tooltip{left:auto;right:0;transform:none}}
+</style>
+</head>
+<body>
+<main class="hero-personal" aria-label="主角個人面板">
+  <!-- 區塊 A：80×80 頭像框與基本資料。商字為古典圖騰暫代。 -->
+  <header class="hp-title"><span>人物誌</span><strong>主角個人面板</strong><span>商</span></header>
+  <div class="hp-identity"><div class="hp-avatar" aria-label="商人圖騰">商</div><span><strong>王天下</strong><span>朝鮮商客</span><small id="level">Lv. 1</small></span></div>
+<section class="hp-equipment"><h3>隨身裝備</h3><div class="hp-six-slots"><div class="hp-slot-wrap" id="wrap-weapon"><button id="gear-weapon" class="hp-gear-slot" aria-describedby="tip-weapon">武器</button><small>武器</small><div id="tip-weapon" class="standalone-gear-tooltip" role="tooltip" hidden></div></div><div class="hp-slot-wrap" id="wrap-helm"><button id="gear-helm" class="hp-gear-slot" aria-describedby="tip-helm">頭盔</button><small>頭盔</small><div id="tip-helm" class="standalone-gear-tooltip" role="tooltip" hidden></div></div><div class="hp-slot-wrap" id="wrap-armor"><button id="gear-armor" class="hp-gear-slot" aria-describedby="tip-armor">衣服</button><small>衣服</small><div id="tip-armor" class="standalone-gear-tooltip" role="tooltip" hidden></div></div><div class="hp-slot-wrap" id="wrap-ring1"><button id="gear-ring1" class="hp-gear-slot" aria-describedby="tip-ring1">戒指 1</button><small>戒指 1</small><div id="tip-ring1" class="standalone-gear-tooltip" role="tooltip" hidden></div></div><div class="hp-slot-wrap" id="wrap-ring2"><button id="gear-ring2" class="hp-gear-slot" aria-describedby="tip-ring2">戒指 2</button><small>戒指 2</small><div id="tip-ring2" class="standalone-gear-tooltip" role="tooltip" hidden></div></div><div class="hp-slot-wrap" id="wrap-boots"><button id="gear-boots" class="hp-gear-slot" aria-describedby="tip-boots">鞋子</button><small>鞋子</small><div id="tip-boots" class="standalone-gear-tooltip" role="tooltip" hidden></div></div></div><small>懸停或聚焦查看裝備；再次點擊神裝按鈕即可脫下。</small></section>
+  <!-- 區塊 B：所有派生值均由原始屬性計算，避免畫面與實際數值不同步。 -->
+  <section class="hp-indicators">
+    <div class="hp-power"><span>總戰鬥力</span><strong id="power">145</strong></div>
+    <label class="hp-meter" for="credit-bar"><b id="credit-level">信用 Lv. 1</b><span id="credit-value">0 / 100</span><progress id="credit-bar" class="jade" value="0" max="100"></progress></label>
+    <p class="hp-gold" id="gold">持有金：0 兩</p>
+    <p class="hp-weight">負重能力 <span id="weight">0 / 300 斤</span></p>
+  </section>
+  <!-- 區塊 C：四圍加點，沒有剩餘點數時按鈕停用，邏輯中仍再次檢查。 -->
+  <section class="hp-allocation"><p>剩餘屬性點 <strong id="points">0</strong></p>
+    <div class="hp-stat"><span>力量 <small>Str</small></span><strong id="str">20</strong><button data-stat="str" aria-label="增加力量" disabled>＋</button></div>
+    <div class="hp-stat"><span>敏捷 <small>Dex</small></span><strong id="agi">15</strong><button data-stat="agi" aria-label="增加敏捷" disabled>＋</button></div>
+    <div class="hp-stat"><span>體質 <small>Vit</small></span><strong id="vit">20</strong><button data-stat="vit" aria-label="增加體質" disabled>＋</button></div>
+    <div class="hp-stat"><span>智力 <small>Int</small></span><strong id="intel">10</strong><button data-stat="intel" aria-label="增加智力" disabled>＋</button></div>
+    <p class="hp-defense">裝備防禦力 <strong id="defense">0</strong></p><div class="hp-vitals"><label class="hp-meter" for="hp-bar">生命值 HP<span id="hp-value">80 / 80</span><progress id="hp-bar" class="hp" value="80" max="80"></progress></label><label class="hp-meter" for="mp-bar">魔法值 MP<span id="mp-value">40 / 40</span><progress id="mp-bar" class="mp" value="40" max="40"></progress></label></div>
+    <label class="hp-meter hp-exp" for="exp-bar">EXP<span id="exp-value">0 / 102</span><progress id="exp-bar" value="0" max="102"></progress></label>
+  </section>
+  <!-- 區塊 D：兩個按鈕只提供測試獎勵，不會修改正式遊戲的存檔。 -->
+  <footer class="hp-actions"><button id="trade" title="獲得 100 兩與 25 信用">模擬經商（賺錢／加信用）</button><button id="fight" title="獲得 100 經驗">模擬打怪（獲得經驗值）</button><button id="equip-staff" aria-pressed="false">一鍵裝備：高級神仙棒</button><button id="equip-armor" aria-pressed="false">一鍵裝備：海王戰甲</button><small id="message" role="status">掛機每秒 +10 兩 · +5 信用</small></footer>
+</main>
+<script>
+'use strict';
+// 此示範為獨立記憶體狀態：重新開啟會回到初始值，不讀寫正式遊戲存檔。
+const hero={level:1,xp:0,points:0,str:20,agi:15,vit:20,intel:10,gold:0,credit:0,weight:0};
+const statNames=['str','agi','vit','intel'];
+const el=id=>document.getElementById(id);
+const statButtons=Array.from(document.querySelectorAll('[data-stat]'));
+// 完全使用指定公式；允許戰力出現 .5，不以四捨五入改變計算結果。
+// 裝備資料與基礎屬性分開儲存，切換時只改欄位，不對基礎值做加減。
+const equipment={weapon:null,helm:null,armor:null,ring1:null,ring2:null,boots:null};
+const divine={
+  staff:{name:'高級神仙棒',slot:'weapon',symbol:'杖',bonus:{str:10,intel:50},def:0,description:'仙人遺世之杖，凝聚天地靈氣。'},
+  armor:{name:'海王戰甲',slot:'armor',symbol:'甲',bonus:{vit:80},def:100,description:'蘊含深海龍王神力的傳奇戰甲'}
+};
+const slotLabels={weapon:'武器',helm:'頭盔',armor:'衣服',ring1:'戒指 1',ring2:'戒指 2',boots:'鞋子'};
+function totalAttributes(){
+  const total={str:hero.str,agi:hero.agi,vit:hero.vit,intel:hero.intel};
+  for(const item of Object.values(equipment))if(item)for(const key of statNames)total[key]+=item.bonus[key]||0;
+  return total;
+}
+function toggleEquipment(key){
+  const item=divine[key];if(!item)return;
+  equipment[item.slot]=equipment[item.slot]===item?null:item;
+  el('message').textContent=(equipment[item.slot]?'穿上':'脫下')+item.name;
+  render();
+}
+function renderEquipment(){
+  for(const [slot,label] of Object.entries(slotLabels)){
+    const item=equipment[slot],button=el('gear-'+slot),tip=el('tip-'+slot);
+    button.textContent=item?item.symbol:label;button.className='hp-gear-slot'+(item?' filled':'');
+    button.setAttribute('aria-label',label+'：'+(item?item.name:'未裝備'));
+    tip.hidden=!item;
+    if(item){
+      const labels={str:'力量',agi:'敏捷',vit:'體質',intel:'智力'};
+      tip.textContent=[item.name,...Object.entries(item.bonus).map(([key,value])=>labels[key]+' +'+value),...(item.def?['防禦力 +'+item.def]:[]),item.description].join('\n');
+    }
+  }
+  for(const key of ['staff','armor']){
+    const item=divine[key],worn=equipment[item.slot]===item;
+    el('equip-'+key).textContent=(worn?'脫下裝備：':'一鍵裝備：')+item.name;
+    el('equip-'+key).setAttribute('aria-pressed',String(worn));
+  }
+  el('defense').textContent=Object.values(equipment).reduce((sum,item)=>sum+(item?.def||0),0);
+}
+function derived(){const t=totalAttributes();return {power:t.str*2+t.agi*3+t.vit*1.5+t.intel*2+hero.level*10,maxWeight:200+t.str*5,hp:t.vit*4,mp:t.intel*4};}
+// 經驗需求為 80＋等級×22；信用每 100 點升一級，超出部分保留。
+function xpNeed(){return 80+hero.level*22;}
+function gainExperience(amount){
+  hero.xp+=amount;
+  // 迴圈支援一次獲得大量經驗時連續升級，每一級都發放五點。
+  while(hero.xp>=xpNeed()){hero.xp-=xpNeed();hero.level++;hero.points+=5;}
+}
+function setBar(id,value,max){el(id).max=max;el(id).value=Math.min(max,Math.max(0,value));}
+function render(){
+  const value=derived();renderEquipment();
+  el('level').textContent='Lv. '+hero.level;
+  el('power').textContent=value.power.toLocaleString('zh-TW');
+  el('gold').textContent='持有金：'+hero.gold.toLocaleString('zh-TW')+' 兩';
+  el('weight').textContent=hero.weight+' / '+value.maxWeight+' 斤';
+  el('credit-level').textContent='信用 Lv. '+(Math.floor(hero.credit/100)+1);
+  el('credit-value').textContent=(hero.credit%100)+' / 100';setBar('credit-bar',hero.credit%100,100);
+  el('points').textContent=hero.points;
+  statNames.forEach(key=>{el(key).textContent=totalAttributes()[key]+'（基礎 '+hero[key]+'）';});
+  statButtons.forEach(button=>{button.disabled=hero.points<=0;});
+  // 此面板沒有戰鬥扣血，所以顯示滿 HP／MP；正式遊戲版則顯示實際剩餘值。
+  el('hp-value').textContent=value.hp+' / '+value.hp;setBar('hp-bar',value.hp,value.hp);
+  el('mp-value').textContent=value.mp+' / '+value.mp;setBar('mp-bar',value.mp,value.mp);
+  el('exp-value').textContent=hero.xp+' / '+xpNeed();setBar('exp-bar',hero.xp,xpNeed());
+}
+// 僅更新既有節點，計時器不重建按鈕，保留鍵盤焦點與操作狀態。
+statButtons.forEach(button=>button.addEventListener('click',()=>{
+  const key=button.dataset.stat;
+  if(hero.points<=0||!statNames.includes(key))return;
+  hero[key]++;hero.points--;render();
+}));
+el('trade').addEventListener('click',()=>{hero.gold+=100;hero.credit+=25;el('message').textContent='交易完成：+100 兩、+25 信用';render();});
+el('fight').addEventListener('click',()=>{const before=hero.level;gainExperience(100);el('message').textContent=hero.level>before?'升級！每級獲得 5 點屬性點':'獲得 100 經驗';render();});
+// 以實際經過秒數補算背景分頁延遲，最多八小時；時間倒退不倒扣或重複領取。
+// 事件只綁定一次；Escape 可關閉提示窗，重新滑入或聚焦時恢復顯示。
+for(const key of ['staff','armor'])el('equip-'+key).addEventListener('click',()=>toggleEquipment(key));
+for(const slot of Object.keys(slotLabels)){
+  const wrap=el('wrap-'+slot),button=el('gear-'+slot);
+  wrap.addEventListener('mouseenter',()=>wrap.dataset.dismissed='false');
+  button.addEventListener('focus',()=>wrap.dataset.dismissed='false');
+  button.addEventListener('keydown',event=>{if(event.key==='Escape')wrap.dataset.dismissed='true';});
+}
+let lastSettled=Date.now();
+setInterval(()=>{
+  const now=Date.now(),elapsed=Math.max(0,Math.floor((now-lastSettled)/1000)),seconds=Math.min(28800,elapsed);
+  if(seconds===0)return;
+  hero.gold+=seconds*10;hero.credit+=seconds*5;
+  lastSettled=elapsed>28800?now:lastSettled+seconds*1000;
+  render();
+},1000);
+render();
+</script>
+</body></html>

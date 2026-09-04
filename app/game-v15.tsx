@@ -7,6 +7,7 @@ import { merchantMercenaries, mercenarySpec, type MercenarySpec } from './mercen
 import { CaravanStatus } from './caravan-status';
 import { settleCaravanIdle } from './caravan-idle';
 import { heroPersonalPower, heroWeightLimit, HERO_INITIAL_ATTRIBUTES } from './hero-rules';
+import {DIVINE_EQUIPMENT,toggleDivineEquipment,type DivineKey} from './divine-equipment';
 import { backupBeforeGuildMigration, retainGuildRoster } from './guild-migration';
 import { EQUIPMENT_SLOTS, EQUIPMENT_LABELS, emptyEquipmentSlots, itemKind, compatibleSlots, normalizeStoredItem, equipFromInventory, unequipToInventory, migrateSevenSlotSave, backupBeforeEquipmentMigration, type EquipmentSlot, type EquipmentKind } from './equipment-slots';
 import { wearableCatalog, type WearableBase } from './wearable-catalog';
@@ -951,6 +952,18 @@ export default function GameV15() {
     });
   }
 
+  function toggleHeroDivine(key:DivineKey) {
+    const spec=DIVINE_EQUIPMENT[key];
+    const item:Equipment={uid:'divine-test-'+activeSlot+'-'+key,name:spec.name,slot:spec.slot,bonus:{...spec.bonus},def:spec.def,atk:0,hp:0,image:'',enhance:0,rarity:'傳說',magic:[],requiredLevel:1,source:'主角神裝測試'};
+    setGame(previous=>{
+      // 物品已交給傭兵或存入共用倉庫時，必須先取回，不能藉測試按鈕無限複製。
+      if(sharedWarehouse.some(gear=>gear.uid===item.uid)||previous.mercs.some(unit=>Object.values(unit.equip).some(gear=>gear?.uid===item.uid)))return {...previous,logs:addLog(previous.logs,'請先從傭兵或共用倉庫取回「'+item.name+'」。')};
+      const result=toggleDivineEquipment<Equipment,Hero>(previous.hero,previous.inventory,item);
+      if(result.error)return {...previous,logs:addLog(previous.logs,result.error)};
+      return {...previous,hero:normalizeVitals(result.unit),inventory:result.inventory,logs:addLog(previous.logs,(result.unit.equip[spec.slot]?.uid===item.uid?'穿上':'脫下')+'「'+item.name+'」，屬性已重新計算。')};
+    });
+  }
+
   function unequipItem(slot:EquipmentSlot) {
     setGame(previous=>{
       const target=selectedUid==='hero'?previous.hero:previous.mercs.find(unit=>unit.uid===selectedUid);
@@ -1281,6 +1294,7 @@ export default function GameV15() {
 
         <TabsContent value="squad" className="tab-panel">
           <CaravanStatus hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit}
+            toggleGear={toggleHeroDivine}
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
             maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
             trade={()=>setGame(previous=>({...previous,gold:previous.gold+100,credit:previous.credit+25,logs:addLog(previous.logs,'模擬經商：獲得 100 兩與 25 信用。')}))}
