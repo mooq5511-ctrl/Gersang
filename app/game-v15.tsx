@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { bandit, isBanditEncounter } from "./bandit";
 import { mercenarySpec, type MercenarySpec } from './mercenary-roster';
+import { backupBeforeGuildMigration, retainGuildRoster } from './guild-migration';
 import { MercenaryRecruitment, mercenaryPortrait } from './mercenary-recruitment';
 import { resolveMercenaryBattle, type TacticalEnemy } from './mercenary-battle';
 import {
@@ -12,7 +13,6 @@ import {
   Castle,
   Coins,
   Crown,
-  Dna,
   Gem,
   Map,
   PackageOpen,
@@ -26,7 +26,6 @@ import {
   Swords,
   Users,
   Warehouse,
-  WandSparkles,
   Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,18 +33,16 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formations, mercenaries as legacyMercenaries } from "./game-data";
 import {
-  baseMercenaries,
-  BaseMercenary,
   enemyForStage,
   equipmentBases,
-  legendRecipes,
   magicAffixes,
   nations,
   NationId,
   worldCities,
 } from "./v15-data";
 import { battleMaps } from "./reference-data";
-import { awakeningProfiles, gameplayContracts, officialEquipment, officialGems, OfficialEquipment, sourceEnemyForMap } from "./v17-content";
+import { gameplayContracts as legacyContracts, officialEquipment, officialGems, OfficialEquipment, sourceEnemyForMap } from "./v17-content";
+const gameplayContracts = legacyContracts.filter(contract => !['tier1','tier2','awakened'].includes(contract.metric));
 import { TradePanel } from "./trade-panel";
 import { VitalBars } from "./vital-bars";
 import { combatStats, enemyCombatStats, normalizeVitals, recoverVitals, resolveVitalBattle, spellCost, vitalStats } from "./vitals-engine";
@@ -125,7 +122,7 @@ type CharacterProfile = {
   updatedAt: number;
 };
 
-type CityService = "mercenary" | "general" | "weapon" | "armor" | "warehouse" | "inn" | "pharmacy";
+type CityService = "mercenary" | "weapon" | "armor" | "warehouse" | "inn" | "pharmacy";
 
 type GameState = {
   version: 21;
@@ -205,42 +202,6 @@ function emptyEquipment(): EquipmentSet {
   return { weapon: null, armor: null, helm: null, boots: null, accessory: null };
 }
 
-function makeBaseUnit(template: BaseMercenary): Unit {
-  return normalizeVitals<Unit>({
-    uid: uid(template.id),
-    templateId: template.id,
-    nation: template.nation,
-    tier: 0,
-    special: false,
-    name: template.name,
-    role: template.role,
-    skill: template.skill,
-    image: template.image,
-    level: 1,
-    xp: 0,
-    points: 0,
-    str: template.str,
-    agi: template.agi,
-    intel: template.intel,
-    vit: template.vit,
-    equip: emptyEquipment(),
-  });
-}
-
-function makeGeneralUnit(template: BaseMercenary): Unit {
-  const unit = makeBaseUnit(template);
-  return recoverVitals<Unit>({
-    ...unit,
-    tier: 1,
-    name: template.tier1,
-    level: 20,
-    points: 8,
-    str: Math.floor(unit.str * 1.35),
-    agi: Math.floor(unit.agi * 1.35),
-    intel: Math.floor(unit.intel * 1.35),
-    vit: Math.floor(unit.vit * 1.35),
-  });
-}
 
 function makeHero(nation: NationId = "korea", name = "行商者"): Hero {
   const profile = heroNationProfiles[nation];
@@ -315,12 +276,7 @@ function starterEquipment(): Equipment[] {
 }
 
 function freshGame(nation: NationId = "korea", heroName = "行商者"): GameState {
-  const starters = [
-    makeBaseUnit(baseMercenaries[0]),
-    makeBaseUnit(baseMercenaries[8]),
-    makeBaseUnit(baseMercenaries[16]),
-    makeBaseUnit(baseMercenaries[24]),
-  ];
+  const starters: Unit[] = [];
   return {
     version: 21,
     trade: freshTrade(),
@@ -333,9 +289,9 @@ function freshGame(nation: NationId = "korea", heroName = "行商者"): GameStat
     mercs: starters,
     active: starters.map((unit) => unit.uid),
     inventory: starterEquipment(),
-    fusionCores: 6,
-    soulStones: 20,
-    awakeningStones: 1,
+    fusionCores: 0,
+    soulStones: 0,
+    awakeningStones: 0,
     materials: {},
     medicines: {},
     claimedContracts: [],
@@ -481,7 +437,7 @@ function restoreGame(raw: unknown): GameState {
       equip: sanitizeEquip(parsed.hero?.equip),
     },
     mercs: Array.isArray(parsed.mercs)
-      ? parsed.mercs.map((unit) => canonicalizeUnit({ ...unit, equip: sanitizeEquip(unit.equip) } as Unit))
+      ? parsed.mercs.map((unit) => ({ ...unit, equip: sanitizeEquip(unit.equip) } as Unit))
       : next.mercs,
     inventory: Array.isArray(parsed.inventory)
       ? parsed.inventory.map((item) => ({ ...item, bonus: item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }, resist: item.resist || { physical: 0, magic: 0 } }))
@@ -495,7 +451,7 @@ function restoreGame(raw: unknown): GameState {
   });
   next.hero = normalizeVitals(next.hero);
   next.mercs = next.mercs.map(normalizeVitals);
-  return next;
+  return retainGuildRoster<Equipment, Unit, GameState>(next);
 }
 
 function profileFromGame(slot: number, game: GameState): CharacterProfile {
@@ -524,20 +480,12 @@ function inheritMerchantPrototype(raw: string): GameState {
   next.kills = Math.floor(number(old.battlesWon, 0));
   next.enemyHp = enemyMax(next.stage);
   next.trade = restoreTrade({ reputation: number(old.reputation, 0), cargoLevel: number(old.cargoLevel, 1), totalProfit: number(old.totalEarned, 0), selectedRouteId: old.selectedRouteId });
-  if (Array.isArray(old.mercenaries) && old.mercenaries.length) {
-    next.mercs = old.mercenaries.slice(0, 10).map((oldUnit: Record<string, unknown>, index: number): Unit => {
-      const base = makeBaseUnit(baseMercenaries[index % baseMercenaries.length]);
-      const level = Math.max(1, Math.min(200, Math.floor(number(oldUnit.level, 1))));
-      return { ...base, templateId: "merchant-legacy-" + index, nation: "legacy", name: "傳承・" + String(oldUnit.name || base.name), role: String(oldUnit.role || base.role), skill: String(oldUnit.perk || base.skill), level, str: base.str + level * 3, vit: base.vit + level * 2 };
-    });
-    next.active = next.mercs.map((unit) => unit.uid);
-  }
   // The old prototype prepaid its cargo; return that principal when migrating a pending voyage.
   if (old.caravan && typeof old.caravan === "object") {
     const prices: Record<string, number> = { hanji: 36, tea: 54, silk: 82 };
     next.gold += (prices[String(old.caravan.routeId)] || 0) * number(old.caravan.cargo, 0);
   }
-  next.logs = ["原商途進度已融合：保留資金、商譽、貨艙、關卡與傳承護衛。舊航程貨款已退回。"];
+  next.logs = ["原商途進度已融合：保留資金、商譽、貨艙與關卡。舊航程貨款已退回，請至中央傭兵公會招募。"];
   return next;
 }
 
@@ -601,10 +549,7 @@ function unitPower(unit: Unit | Hero) {
 }
 
 function tierName(unit: Unit) {
-  if (unit.tier === 3) return "傳說將帥";
-  if (unit.awakened) return "覺醒將帥";
-  if (unit.special) return "特殊傭兵";
-  return ["基礎傭兵", "一階將帥", "二階將帥"][unit.tier];
+  return mercenarySpec(unit.templateId) ? '公會傭兵' : '主角';
 }
 
 function addLog(logs: string[], message: string) {
@@ -634,24 +579,7 @@ function bonusText(item: Equipment) {
     .join("・");
 }
 
-function findTemplate(id: string) {
-  return baseMercenaries.find((item) => item.id === id);
-}
 
-function promotedName(unit: Unit, tier: 1 | 2) {
-  const template = findTemplate(unit.templateId);
-  if (!template) return unit.name;
-  return tier === 1 ? template.tier1 : template.tier2;
-}
-
-function canonicalizeUnit(unit: Unit) {
-  const template = findTemplate(unit.templateId);
-  if (!template || unit.tier === 3) return unit;
-  const awakening = unit.awakened ? awakeningProfiles[unit.templateId] : null;
-  if (awakening) return { ...unit, name: awakening.name, skill: awakening.skill, physicalResist: awakening.physical, magicResist: awakening.magic };
-  const canonical = unit.tier === 0 ? template.name : unit.tier === 1 ? template.tier1 : template.tier2;
-  return { ...unit, name: unit.special ? "特殊・" + canonical : canonical, role: template.role, skill: template.skill, image: template.image };
-}
 
 function resolveRoadEncounter(previous: GameState): GameState {
       const active = previous.active
@@ -707,11 +635,6 @@ function resolveRoadEncounter(previous: GameState): GameState {
         const drop = rollEquipment(previous.stage, isBoss);
         inventory = [drop, ...inventory];
         logs = addLog(logs, "獲得 " + drop.rarity + "裝備「" + drop.name + "」，附帶 " + drop.magic.length + " 條魔法屬性。");
-      }
-      if (nextKills % 3 === 0 || isBoss) cores += (isBoss ? 3 : 1) + selectedMap.coreBonus;
-      if (isBoss) {
-        soulStones += 2;
-        if (nextKills % 30 === 0) awakeningStones += 1;
       }
       return {
         ...previous,
@@ -809,6 +732,7 @@ export default function GameV15() {
     if (!profile) return;
     try {
       const raw = localStorage.getItem(profileSaveKey(slot));
+      if (raw) backupBeforeGuildMigration(localStorage, profileSaveKey(slot), raw);
       let next = raw ? restoreGame(JSON.parse(raw)) : freshGame(profile.nation, profile.name);
       const now = currentTimestamp();
       const before = next.gold;
@@ -883,8 +807,6 @@ export default function GameV15() {
   const currentCity = worldCities.find((city) => city.id === game.city) || worldCities[0];
   const currentNation = nations.find((nation) => nation.id === currentCity.nation) || nations[0];
   const heroNation = nations.find((nation) => nation.id === game.hero.nation) || nations[0];
-  const currentMercenaries = baseMercenaries.filter((entry) => entry.nation === currentCity.nation && currentCity.mercenarySlots.includes(entry.slot));
-  const currentGenerals = baseMercenaries.filter((entry) => entry.nation === currentCity.nation && currentCity.generalSlots.includes(entry.slot));
   const cityWeapons = officialEquipment.filter((item) => item.kind === "weapon").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
   const cityArmors = officialEquipment.filter((item) => item.kind === "armor").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
 
@@ -950,23 +872,6 @@ export default function GameV15() {
     return () => lifecycle.abort();
   }, [ready, activeSlot]);
 
-  function recruit(template: BaseMercenary, asGeneral = false) {
-    const baseCost = asGeneral ? 48000 : 6000;
-    const cost = Math.floor(baseCost * currentCity.priceFactor);
-    setGame((previous) => {
-      if (previous.gold < cost) {
-        setNotice("招募資金不足。");
-        return previous;
-      }
-      const unit = asGeneral ? makeGeneralUnit(template) : makeBaseUnit(template);
-      return {
-        ...previous,
-        gold: previous.gold - cost,
-        mercs: [...previous.mercs, unit],
-        logs: addLog(previous.logs, "在" + currentCity.name + (asGeneral ? "將領招募所延攬 " : "傭兵招募所招募 ") + unit.name + "。"),
-      };
-    });
-  }
 
   function recruitMerchant(spec: MercenarySpec, index: number) {
     const cost = Math.floor(6000 * currentCity.priceFactor);
@@ -990,149 +895,6 @@ export default function GameV15() {
     });
   }
 
-  function promoteSelected() {
-    if (selectedUid === "hero") return;
-    setGame((previous) => {
-      const unit = previous.mercs.find((entry) => entry.uid === selectedUid);
-      if (!unit || unit.tier >= 2 || unit.nation === "legacy") return previous;
-      const requirement = unit.tier === 0 ? 20 : 35;
-      const cost = unit.tier === 0 ? 15000 : 35000;
-      if (unit.level < requirement) {
-        setNotice("需要達到 " + requirement + " 級。");
-        return previous;
-      }
-      if (previous.gold < cost) {
-        setNotice("轉職資金不足。");
-        return previous;
-      }
-      const nextTier = (unit.tier + 1) as 1 | 2;
-      const multiplier = nextTier === 1 ? 1.35 : 1.42;
-      const evolved = {
-        ...unit,
-        tier: nextTier,
-        name: promotedName(unit, nextTier),
-        str: Math.floor(unit.str * multiplier),
-        agi: Math.floor(unit.agi * multiplier),
-        intel: Math.floor(unit.intel * multiplier),
-        vit: Math.floor(unit.vit * multiplier),
-      };
-      return {
-        ...previous,
-        gold: previous.gold - cost,
-        mercs: previous.mercs.map((entry) => (entry.uid === unit.uid ? evolved : entry)),
-        logs: addLog(previous.logs, unit.name + " 轉職為 " + evolved.name + "。"),
-      };
-    });
-  }
-
-  function specialFusion() {
-    if (selectedUid === "hero") return;
-    setGame((previous) => {
-      const unit = previous.mercs.find((entry) => entry.uid === selectedUid);
-      if (!unit || unit.special || unit.tier === 3) return previous;
-      if (unit.level < 50) {
-        setNotice("傭兵滿 50 級後才能特殊合成。");
-        return previous;
-      }
-      if (previous.gold < 50000 || previous.fusionCores < 3) {
-        setNotice("特殊合成需要 50,000 兩與 3 顆合成核心。");
-        return previous;
-      }
-      const fused = {
-        ...unit,
-        special: true,
-        name: "特殊・" + unit.name,
-        str: Math.floor(unit.str * 1.65),
-        agi: Math.floor(unit.agi * 1.65),
-        intel: Math.floor(unit.intel * 1.65),
-        vit: Math.floor(unit.vit * 1.65),
-      };
-      return {
-        ...previous,
-        gold: previous.gold - 50000,
-        fusionCores: previous.fusionCores - 3,
-        mercs: previous.mercs.map((entry) => (entry.uid === unit.uid ? fused : entry)),
-        logs: addLog(previous.logs, unit.name + " 完成特殊合成，基礎能力大幅提升。"),
-      };
-    });
-  }
-
-  function awakenSelected() {
-    if (selectedUid === "hero") return;
-    setGame((previous) => {
-      const unit = previous.mercs.find((entry) => entry.uid === selectedUid);
-      if (!unit || unit.tier !== 2 || unit.special || unit.awakened) return previous;
-      if (unit.level < 100) {
-        setNotice("二階將帥需要達到 100 級才能覺醒。");
-        return previous;
-      }
-      if (previous.soulStones < 20 || previous.awakeningStones < 1) {
-        setNotice("覺醒需要英雄靈魂石 ×20 與覺醒石 ×1。");
-        return previous;
-      }
-      const profile = awakeningProfiles[unit.templateId];
-      const evolved: Unit = profile
-        ? { ...unit, awakened: true, name: profile.name, skill: profile.skill, str: profile.stats[0], agi: profile.stats[1], intel: profile.stats[2], vit: profile.stats[3], physicalResist: profile.physical, magicResist: profile.magic }
-        : { ...unit, awakened: true, name: "覺醒・" + unit.name, str: Math.floor(unit.str * 1.55), agi: Math.floor(unit.agi * 1.55), intel: Math.floor(unit.intel * 1.55), vit: Math.floor(unit.vit * 1.55), physicalResist: 50, magicResist: 50 };
-      return {
-        ...previous,
-        soulStones: previous.soulStones - 20,
-        awakeningStones: previous.awakeningStones - 1,
-        mercs: previous.mercs.map((entry) => entry.uid === unit.uid ? evolved : entry),
-        logs: addLog(previous.logs, unit.name + " 完成覺醒，習得「" + evolved.skill + "」。"),
-      };
-    });
-  }
-
-  function legendFusion(recipeId: string) {
-    setGame((previous) => {
-      const recipe = legendRecipes.find((entry) => entry.id === recipeId);
-      if (!recipe) return previous;
-      const first = previous.mercs.find(
-        (unit) => unit.templateId === recipe.needs[0] && unit.tier === 2 && unit.level >= 50 && !unit.special,
-      );
-      const second = previous.mercs.find(
-        (unit) => unit.templateId === recipe.needs[1] && unit.tier === 2 && unit.level >= 50 && !unit.special,
-      );
-      if (!first || !second) {
-        setNotice("需要指定的兩名二階將帥，且雙方都要達到 50 級。");
-        return previous;
-      }
-      if (previous.gold < 120000 || previous.fusionCores < 8) {
-        setNotice("傳說合成需要 120,000 兩與 8 顆合成核心。");
-        return previous;
-      }
-      const legend: Unit = {
-        uid: uid(recipe.id),
-        templateId: first.templateId,
-        nation: recipe.nation,
-        tier: 3,
-        special: false,
-        legendId: recipe.id,
-        name: recipe.name,
-        role: "傳說",
-        skill: recipe.skill,
-        image: first.image,
-        level: 50,
-        xp: 0,
-        points: 20,
-        str: Math.floor((first.str + second.str) * 0.82),
-        agi: Math.floor((first.agi + second.agi) * 0.82),
-        intel: Math.floor((first.intel + second.intel) * 0.82),
-        vit: Math.floor((first.vit + second.vit) * 0.82),
-        equip: emptyEquipment(),
-      };
-      const removed = new Set([first.uid, second.uid]);
-      return {
-        ...previous,
-        gold: previous.gold - 120000,
-        fusionCores: previous.fusionCores - 8,
-        mercs: [...previous.mercs.filter((unit) => !removed.has(unit.uid)), legend],
-        active: previous.active.filter((unitUid) => !removed.has(unitUid)),
-        logs: addLog(previous.logs, "兩名二階將帥融合為 " + legend.name + "！"),
-      };
-    });
-  }
 
   function trainSelected() {
     if (selectedUid === "hero") return;
@@ -1344,9 +1106,6 @@ export default function GameV15() {
       return {
         ...previous,
         gold: previous.gold + contract.reward.gold,
-        fusionCores: previous.fusionCores + (contract.reward.cores || 0),
-        soulStones: previous.soulStones + (contract.reward.soul || 0),
-        awakeningStones: previous.awakeningStones + (contract.reward.awakening || 0),
         claimedContracts: [...previous.claimedContracts, contractId],
         logs: addLog(previous.logs, "完成委託「" + contract.name + "」，領取商團獎勵。"),
       };
@@ -1354,11 +1113,6 @@ export default function GameV15() {
   }
 
   const selectedUnit = selected as Unit;
-  const selectedTemplate = selectedUid === "hero" ? null : findTemplate(selectedUnit.templateId);
-  const nextRequirement =
-    selectedUid === "hero" || selectedUnit.tier >= 2 ? null : selectedUnit.tier === 0 ? 20 : 35;
-  const canSpecial = selectedUid !== "hero" && selectedUnit.level >= 50 && !selectedUnit.special && selectedUnit.tier < 3;
-  const canAwaken = selectedUid !== "hero" && selectedUnit.level >= 100 && selectedUnit.tier === 2 && !selectedUnit.special && !selectedUnit.awakened;
 
   if (!ready) return <div className="game-loading">正在整理四國角色欄位…</div>;
 
@@ -1422,9 +1176,6 @@ export default function GameV15() {
         </div>
         <div className="resource-strip v15-resources">
           <div><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
-          <div><Gem /><span>{game.fusionCores}</span><small>合成核心</small></div>
-          <div><Sparkles /><span>{game.soulStones}</span><small>英雄靈魂石</small></div>
-          <div><WandSparkles /><span>{game.awakeningStones}</span><small>覺醒石</small></div>
           <div><Swords /><span>{format(teamPower)}</span><small>總戰力</small></div>
           <div><Users /><span>{game.active.length}/10</span><small>出戰傭兵</small></div>
           <Button className="character-switch" variant="outline" size="sm" onClick={returnToCharacterSelect}><Users />切換角色</Button>
@@ -1437,7 +1188,6 @@ export default function GameV15() {
         <TabsList className="nav-list v15-nav">
           <TabsTrigger value="trade"><Ship />東海商路</TabsTrigger>
           <TabsTrigger value="battle"><Swords />遭遇戰報</TabsTrigger>
-          <TabsTrigger value="fusion"><Dna />轉職合成</TabsTrigger>
           <TabsTrigger value="squad"><Users />主角與隊伍</TabsTrigger>
           <TabsTrigger value="city"><Castle />四國城市</TabsTrigger>
           <TabsTrigger value="contracts"><BookOpen />冒險委託</TabsTrigger>
@@ -1487,7 +1237,7 @@ export default function GameV15() {
                 const unlocked = game.stage >= map.unlockStage;
                 return <button key={map.id} className={(currentMap.id === map.id ? "active " : "") + (unlocked ? "" : "locked")} onClick={() => selectBattleMap(map.id)}>
                   <span className={"map-swatch map-theme-" + map.theme}></span>
-                  <div><small>{map.region}・第 {map.unlockStage} 關</small><strong>{map.name}</strong><p>{map.description}</p><em>生命 ×{map.hpMultiplier}・金錢 ×{map.goldMultiplier}{map.coreBonus ? "・核心 +" + map.coreBonus : ""}</em></div>
+                  <div><small>{map.region}・第 {map.unlockStage} 關</small><strong>{map.name}</strong><p>{map.description}</p><em>生命 ×{map.hpMultiplier}・金錢 ×{map.goldMultiplier}</em></div>
                   <b>{currentMap.id === map.id ? "遠征中" : unlocked ? "前往" : "未解鎖"}</b>
                 </button>;
               })}
@@ -1503,7 +1253,7 @@ export default function GameV15() {
               </div>
             </section>
             <section className="panel log-panel">
-              <div className="panel-title"><BookOpen /><h2>戰鬥與合成紀錄</h2></div>
+              <div className="panel-title"><BookOpen /><h2>商團與戰鬥紀錄</h2></div>
               <div className="log-list">{game.logs.map((log, index) => <p key={index}>{log}</p>)}</div>
             </section>
             <section className="panel loot-panel">
@@ -1513,68 +1263,6 @@ export default function GameV15() {
           </div>
         </TabsContent>
 
-        <TabsContent value="fusion" className="tab-panel">
-          <div className="fusion-layout">
-            <section className="panel fusion-roster">
-              <div className="panel-title"><Users /><h2>選擇傭兵</h2><span>{game.mercs.length} 名</span></div>
-              {game.mercs.map((unit) => (
-                <button key={unit.uid} className={selectedUid === unit.uid ? "unit-row selected" : "unit-row"} onClick={() => setSelectedUid(unit.uid)}>
-                  <img src={unit.image} alt="" /><span><strong>{unit.name}</strong><small>Lv.{unit.level}｜{tierName(unit)}</small></span><em>{format(unitPower(unit))}</em>
-                </button>
-              ))}
-            </section>
-            <section className="panel fusion-workbench">
-              <div className="fusion-selected">
-                <img src={selected.image} alt={selected.name} />
-                <div><small>{selectedUid === "hero" ? "主角不可合成" : tierName(selectedUnit)}</small><h2>{selected.name}</h2><p>Lv.{selected.level}｜{selected.skill}｜戰力 {format(unitPower(selected))}</p></div>
-              </div>
-              {selectedUid === "hero" ? (
-                <div className="fusion-empty"><Crown /><p>主角欄位已獨立，不參與傭兵轉職與合成。</p></div>
-              ) : (
-                <>
-                  <div className="evolution-track">
-                    <div className={selectedUnit.tier >= 0 ? "done" : ""}><small>基礎傭兵</small><strong>{selectedTemplate?.name || selectedUnit.name}</strong><span>Lv.20</span></div>
-                    <b>→</b>
-                    <div className={selectedUnit.tier >= 1 ? "done" : ""}><small>一階將帥</small><strong>{selectedTemplate?.tier1 || "傳承將帥"}</strong><span>Lv.35</span></div>
-                    <b>→</b>
-                    <div className={selectedUnit.tier >= 2 ? "done" : ""}><small>二階將帥</small><strong>{selectedTemplate?.tier2 || selectedUnit.name}</strong><span>Lv.50</span></div>
-                    <b>→</b>
-                    <div className={selectedUnit.awakened ? "done" : ""}><small>改造／覺醒</small><strong>{selectedUnit.awakened ? selectedUnit.name : "覺醒將帥"}</strong><span>Lv.100</span></div>
-                  </div>
-                  <div className="fusion-actions">
-                    {nextRequirement && <Button onClick={promoteSelected}><Zap />轉職下一階</Button>}
-                    <Button variant="outline" onClick={trainSelected}>集訓 +1,500 經驗</Button>
-                    <Button variant="secondary" disabled={!canSpecial} onClick={specialFusion}><WandSparkles />50級特殊合成</Button>
-                    <Button variant="secondary" disabled={!canAwaken} onClick={awakenSelected}><Sparkles />100級將帥覺醒</Button>
-                  </div>
-                  <div className="fusion-costs">
-                    <span>特殊合成：50,000 兩＋核心 ×3</span><span>覺醒：英雄靈魂石 ×20</span><span>覺醒石 ×1</span>
-                  </div>
-                </>
-              )}
-              <div className="legend-section">
-                <div className="panel-title"><Sparkles /><h2>傳說將帥合成</h2><span>兩名指定二階將帥合一</span></div>
-                <div className="legend-grid">
-                  {legendRecipes.map((recipe) => {
-                    const first = findTemplate(recipe.needs[0]);
-                    const second = findTemplate(recipe.needs[1]);
-                    const hasFirst = game.mercs.some((unit) => unit.templateId === recipe.needs[0] && unit.tier === 2 && unit.level >= 50 && !unit.special);
-                    const hasSecond = game.mercs.some((unit) => unit.templateId === recipe.needs[1] && unit.tier === 2 && unit.level >= 50 && !unit.special);
-                    return (
-                      <article className="legend-card" key={recipe.id}>
-                        <div className="legend-pair"><img src={first?.image} alt="" /><b>＋</b><img src={second?.image} alt="" /></div>
-                        <small>{nations.find((nation) => nation.id === recipe.nation)?.name}傳說</small><strong>{recipe.name}</strong><span>{first?.tier2} ＋ {second?.tier2}</span>
-                        <Button size="sm" disabled={!hasFirst || !hasSecond} onClick={() => legendFusion(recipe.id)}>
-                          {hasFirst && hasSecond ? "合成傳說" : "材料未齊"}
-                        </Button>
-                      </article>
-                    );
-                  })}
-                </div>
-              </div>
-            </section>
-          </div>
-        </TabsContent>
 
         <TabsContent value="squad" className="tab-panel">
           <div className="squad-layout v15-squad-layout">
@@ -1585,6 +1273,7 @@ export default function GameV15() {
               </button>
               <div className="panel-title compact"><Users /><h2>傭兵名冊</h2><span>{game.active.length}/10</span></div>
               <div className="compact-roster">
+                {!game.mercs.length && <p>尚無公會傭兵。請到「四國城市 → 中央傭兵公會」招募。</p>}
                 {game.mercs.map((unit) => (
                   <button key={unit.uid} className={selectedUid === unit.uid ? "compact-unit selected" : "compact-unit"} onClick={() => setSelectedUid(unit.uid)}>
                     <img src={unit.image} alt="" /><span><strong>{unit.name}</strong><small>Lv.{unit.level}・{tierName(unit)}</small></span>
@@ -1595,19 +1284,19 @@ export default function GameV15() {
             <section className="panel unit-detail">
               <div className="unit-heading">
                 <img src={selected.image} alt={selected.name} />
-                <div><small>{selectedUid === "hero" ? heroNation.name + "主角" : selectedUnit.nation === "legacy" ? "傳承傭兵" : tierName(selectedUnit)}</small><h2>{selected.name}</h2><p>Lv.{selected.level} {selected.role}｜{selected.skill}｜戰力 {format(unitPower(selected))}</p></div>
+                <div><small>{selectedUid === "hero" ? heroNation.name + "主角" : tierName(selectedUnit)}</small><h2>{selected.name}</h2><p>Lv.{selected.level} {selected.role}｜{selected.skill}｜戰力 {format(unitPower(selected))}</p></div>
                 {selectedUid !== "hero" && <Button variant={game.active.includes(selectedUid) ? "secondary" : "default"} onClick={() => toggleActive(selectedUid)}>{game.active.includes(selectedUid) ? "撤下" : "出戰"}</Button>}
               </div>
               <div className="xp-line"><span>經驗 {selected.xp} / {xpNeed(selected.level)}</span><Progress value={selected.xp / xpNeed(selected.level) * 100} /></div>
+              {selectedUid !== 'hero' && <Button variant="outline" onClick={trainSelected}>集訓 +1,500 經驗・5,000 兩</Button>}
               <VitalBars unit={selected} />
-              <p className="points">攻防已包含能力、等級與裝備加成；陣法另影響實戰攻擊。主動技能・{selected.skill}｜每次消耗 <strong>{spellCost(selected)} MP</strong>。特約傭兵依條件與冷卻施放；武技不耗 MP。魔力不足改用普攻，HP 歸零停止參戰。</p>
+              <p className="points">攻防已包含能力、等級與裝備加成；陣法另影響實戰攻擊。主動技能・{selected.skill}｜每次消耗 <strong>{spellCost(selected)} MP</strong>。公會傭兵依條件與冷卻施放；武技不耗 MP。魔力不足改用普攻，HP 歸零停止參戰。</p>
               <div className="stat-grid">
                 {(["str", "agi", "intel", "vit"] as const).map((stat) => (
                   <div key={stat}><small>{stat === "str" ? "力量" : stat === "agi" ? "敏捷" : stat === "intel" ? "智力" : "體質"}</small><strong>{selected[stat]}</strong><Button size="icon-xs" variant="outline" disabled={selected.points <= 0} onClick={() => addStat(stat)}>＋</Button></div>
                 ))}
               </div>
               <p className="points">可分配能力點：<strong>{selected.points}</strong></p>
-              {selectedUid !== "hero" && selectedUnit.awakened && <p className="points">覺醒抗性：<strong>物理 {selectedUnit.physicalResist || 0}%・魔法 {selectedUnit.magicResist || 0}%</strong>｜覺醒技能：<strong>{selectedUnit.skill}</strong></p>}
               <div className="equipment-title"><Shield /><h3>裝備與額外魔法屬性</h3></div>
               <div className="equipment-grid">
                 {slots.map((slot) => {
@@ -1652,8 +1341,7 @@ export default function GameV15() {
           <section className="panel city-hall" style={{ "--nation-color": currentNation.color } as React.CSSProperties}>
             <div className="city-heading"><div><small>{currentNation.name}・特產 {currentCity.specialty}</small><h2>{currentCity.name}</h2><p>本城設施獨立營業，招募名單、將領與裝備庫存皆依城市不同。</p></div><Castle /></div>
             <div className="city-service-tabs">
-              <button className={cityService === "mercenary" ? "active" : ""} onClick={() => setCityService("mercenary")}><Users />傭兵招募所</button>
-              <button className={cityService === "general" ? "active" : ""} onClick={() => setCityService("general")}><Crown />將領招募所</button>
+              <button className={cityService === "mercenary" ? "active" : ""} onClick={() => setCityService("mercenary")}><Users />中央傭兵公會</button>
               <button className={cityService === "weapon" ? "active" : ""} onClick={() => setCityService("weapon")}><Swords />武器商店</button>
               <button className={cityService === "armor" ? "active" : ""} onClick={() => setCityService("armor")}><Shield />防具商店</button>
               <button className={cityService === "warehouse" ? "active" : ""} onClick={() => setCityService("warehouse")}><Warehouse />倉庫</button>
@@ -1661,16 +1349,8 @@ export default function GameV15() {
               <button className={cityService === "pharmacy" ? "active" : ""} onClick={() => setCityService("pharmacy")}><Pill />藥店</button>
             </div>
 
-            {cityService === "mercenary" && <div className="city-service-body"><div className="panel-title"><Users /><h2>{currentCity.name}傭兵招募所</h2><span>本城 {currentMercenaries.length} 名</span></div><div className="base-merc-grid">{currentMercenaries.map((template) => <article className="base-merc-card" key={template.id}>
-              <img src={template.image} alt={template.name} /><div className="base-merc-info"><small>{template.role}</small><h3>{template.name}</h3><p>技能・{template.skill}</p><div><span>力 {template.str}</span><span>敏 {template.agi}</span><span>智 {template.intel}</span><span>體 {template.vit}</span></div></div>
-              <div className="mini-path"><span>{template.name}</span><b>→</b><span>{template.tier1}</span><b>→</b><span>{template.tier2}</span></div><Button size="sm" onClick={() => recruit(template)}>招募 {format(Math.floor(6000 * currentCity.priceFactor))} 兩</Button>
-            </article>)}</div></div>}
 
             {cityService === 'mercenary' && <MercenaryRecruitment gold={game.gold} cost={Math.floor(6000 * currentCity.priceFactor)} recruit={recruitMerchant} />}
-            {cityService === "general" && <div className="city-service-body"><div className="panel-title"><Crown /><h2>{currentCity.name}將領招募所</h2><span>直接延攬一階將帥</span></div><div className="base-merc-grid">{currentGenerals.map((template) => <article className="base-merc-card general-card" key={template.id}>
-              <img src={template.image} alt={template.tier1} /><div className="base-merc-info"><small>一階將帥・Lv.20</small><h3>{template.tier1}</h3><p>原職・{template.name}｜{template.skill}</p><div><span>力 {Math.floor(template.str * 1.35)}</span><span>敏 {Math.floor(template.agi * 1.35)}</span><span>智 {Math.floor(template.intel * 1.35)}</span><span>體 {Math.floor(template.vit * 1.35)}</span></div></div>
-              <div className="mini-path"><span>{template.tier1}</span><b>→</b><span>{template.tier2}</span></div><Button size="sm" onClick={() => recruit(template, true)}>延攬 {format(Math.floor(48000 * currentCity.priceFactor))} 兩</Button>
-            </article>)}</div></div>}
 
             {(cityService === "weapon" || cityService === "armor") && <div className="city-service-body"><div className="panel-title">{cityService === "weapon" ? <Swords /> : <Shield />}<h2>{currentCity.name}{cityService === "weapon" ? "武器商店" : "防具商店"}</h2><span>本城獨立庫存</span></div>
               <div className="official-item-grid">{(cityService === "weapon" ? cityWeapons : cityArmors).map((record) => {
@@ -1699,7 +1379,7 @@ export default function GameV15() {
         <TabsContent value="contracts" className="tab-panel">
           <section className="panel contract-board">
             <div className="panel-title"><BookOpen /><h2>冒險委託所</h2><span>{game.claimedContracts.length}/{gameplayContracts.length} 已完成</span></div>
-            <p className="section-copy">傭兵、轉職、怪物地圖、物品與裝備資料已轉為實際任務條件；完成後可直接領取養成資源。</p>
+            <p className="section-copy">招募公會傭兵、討伐怪物與收集裝備，完成委託後領取商團資金。</p>
             <div className="contract-grid">{gameplayContracts.map((contract) => {
               const progress = contractProgress(game, contract.metric);
               const completed = progress >= contract.target;
@@ -1709,7 +1389,7 @@ export default function GameV15() {
                 <p>{contract.description}</p>
                 <Progress value={Math.min(100, progress / contract.target * 100)} />
                 <span>{Math.min(progress, contract.target)} / {contract.target}</span>
-                <em>獎勵 {format(contract.reward.gold)} 兩{contract.reward.cores ? "・核心 ×" + contract.reward.cores : ""}{contract.reward.soul ? "・靈魂石 ×" + contract.reward.soul : ""}{contract.reward.awakening ? "・覺醒石 ×" + contract.reward.awakening : ""}</em>
+                <em>獎勵 {format(contract.reward.gold)} 兩</em>
                 <Button size="sm" disabled={!completed || claimed} onClick={() => claimContract(contract.id)}>{claimed ? "已領取" : completed ? "領取獎勵" : "進行中"}</Button>
               </article>;
             })}</div>
@@ -1718,7 +1398,7 @@ export default function GameV15() {
             <div className="panel-title"><Sparkles /><h2>已融入玩法的資料</h2><span>不再使用參考圖鑑</span></div>
             <div>
               <article><Swords /><strong>怪物與地圖</strong><p>敵人名稱、抗性、技能、經驗和材料掉落直接控制戰鬥。</p></article>
-              <article><Users /><strong>傭兵與將帥</strong><p>四國 32 名傭兵使用相符肖像，正式名稱與轉職路線直接進入編隊。</p></article>
+              <article><Users /><strong>中央傭兵公會</strong><p>16 種公會傭兵，搭配被動與主動技能，透過等級、能力點與裝備成長。</p></article>
               <article><Shield /><strong>物品與裝備</strong><p>刀劍、盔甲、等級限制、能力加成和裝備技能進入商店與裝備欄。</p></article>
               <article><Gem /><strong>匠人與寶石</strong><p>五種寶石可實際鑲嵌並提升角色能力。</p></article>
             </div>
