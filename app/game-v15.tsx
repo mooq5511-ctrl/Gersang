@@ -476,10 +476,10 @@ function profileFromGame(slot: number, game: GameState): CharacterProfile {
 }
 
 /** 使用真實主角 HP/MP 與現有背包；勝利只發放一次獎勵。 */
-function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key?:DungeonKey,roll=.99,choice=0):GameState {
+function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key?:DungeonKey,roll=.99,choice=0,spawnRoll=0):GameState {
   const total=heroTotalAttributes(previous.hero),v=vitalStats(previous.hero);
   const attack=Object.values(previous.hero.equip).reduce((sum,item)=>sum+(item?.atk||0),0);
-  const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,int:total.intel,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice);
+  const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,int:total.intel,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice,spawnRoll);
   let next={...previous,dungeon:result.state,hero:{...previous.hero,hp:result.hp,mp:result.mp}};
   if(result.hp===0&&result.state.status==='recovering')next={...next,city:worldCities.find(city=>city.name==='漢陽')?.id||next.city};
   if(result.reward){
@@ -494,11 +494,13 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
   }
   return next;
 }
-function settleMerchantGame(previous: GameState, now: number,roll=.99,choice=0): GameState {
+function settleMerchantGame(previous: GameState, now: number,roll=.99,choice=0,spawnRoll=0): GameState {
   if(dungeonBusy(previous.dungeon)){
+    const battle=previous.dungeon!;
+    if(now-battle.stamp<1000&&!(battle.status==='respawning'&&now>=battle.spawnAt))return previous;
     // 共用唯一每秒計時器，航程起點平移，暫停期間不累積遭遇或跑商獎勵。
     const pause=Math.max(0,now-(previous.dungeon!.pauseAt||previous.dungeon!.stamp||now));
-    let next=applyDungeon(previous,'tick',now,undefined,roll,choice);
+    let next=applyDungeon(previous,'tick',now,undefined,roll,choice,spawnRoll);
     next={...next,dungeon:{...next.dungeon!,pauseAt:now}};
     if(next.trade.caravan)next={...next,trade:{...next.trade,caravan:{...next.trade.caravan,startedAt:next.trade.caravan.startedAt+pause}}};
     if(previous.dungeon!.status==='recovering')return {...next,idleStamp:now};
@@ -773,7 +775,7 @@ export default function GameV15() {
 
   useEffect(() => {
     if (!ready || activeSlot === null) return;
-    localStorage.setItem(profileSaveKey(activeSlot), JSON.stringify({ ...game, lastSeen: Date.now() }));
+    localStorage.setItem(profileSaveKey(activeSlot), JSON.stringify({ ...game, dungeon:game.dungeon?{...game.dungeon,events:undefined}:undefined, lastSeen: Date.now() }));
     const nextProfiles = [...profiles];
     nextProfiles[activeSlot] = profileFromGame(activeSlot, game);
     localStorage.setItem(PROFILE_INDEX, JSON.stringify(nextProfiles));
@@ -832,7 +834,7 @@ export default function GameV15() {
     if (activeSlot === null) return;
     const nextProfiles = [...profiles];
     nextProfiles[activeSlot] = profileFromGame(activeSlot, game);
-    localStorage.setItem(profileSaveKey(activeSlot), JSON.stringify({ ...game, lastSeen: Date.now() }));
+    localStorage.setItem(profileSaveKey(activeSlot), JSON.stringify({ ...game, dungeon:game.dungeon?{...game.dungeon,events:undefined}:undefined, lastSeen: Date.now() }));
     localStorage.setItem(PROFILE_INDEX, JSON.stringify(nextProfiles));
     setProfiles(nextProfiles);
     setActiveSlot(null);
@@ -891,8 +893,9 @@ export default function GameV15() {
     const timer = window.setInterval(() => {
       // 在 React 更新函式外抽樣，同一次回合重跑不會改變掉寶結果。
       const now=Date.now(),roll=Math.random(),choice=Math.random();
-      setGame(previous=>settleMerchantGame(previous,now,roll,choice));
-    }, 1000);
+      const spawnRoll=Math.random();
+      setGame(previous=>settleMerchantGame(previous,now,roll,choice,spawnRoll));
+    }, 50);
     return () => window.clearInterval(timer);
   }, [ready, activeSlot]);
 
@@ -1360,13 +1363,13 @@ export default function GameV15() {
 
         <TabsContent value="squad" className="tab-panel">
           <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit}
-            navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now();setGame(previous=>{
+            navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now(),spawnRoll=Math.random();setGame(previous=>{
               const old=previous.dungeon||freshDungeon();
               if(vitalStats(previous.hero).hp<=0)return {...previous,dungeon:{...freshDungeon(),status:'recovering',stamp:now,pauseAt:old.pauseAt||now,logs:['商隊不幸全滅，已被熱心商旅送回漢陽療傷...']}};
-              const dungeon=teleportDungeon(old,previous.hero.level,heroPersonalPower(previous.hero),now,id);
+              const dungeon=teleportDungeon(old,previous.hero.level,heroPersonalPower(previous.hero),now,id,spawnRoll);
               return dungeon===old?previous:{...previous,dungeon,logs:addLog(previous.logs,dungeon.logs[0])};
             });}}/>}
-            battle={<DungeonPanel state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random();setGame(previous=>applyDungeon(previous,action,now,key,roll,choice));}}/>}
+            battle={<DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random();setGame(previous=>applyDungeon(previous,action,now,key,roll,choice));}}/>}
             inventory={game.inventory} equipHero={itemUid=>equipItem(itemUid,undefined,'hero')} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
 
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
