@@ -6,7 +6,7 @@ export function retainGuildRoster<E extends Item, M extends Member<E>, S extends
   const retained = state.mercs.filter(unit => !!mercenarySpec(unit.templateId));
   const retired = state.mercs.filter(unit => !mercenarySpec(unit.templateId));
   const validIds = new Set(retained.map(unit => unit.uid));
-  const active = [...new Set(state.active)].filter(id => validIds.has(id)).slice(0,10);
+  const active = [...new Set(state.active)].filter(id => validIds.has(id)).slice(0,9);
   const inventory = [...state.inventory];
   const occupied = new Set([...inventory, ...Object.values(state.hero.equip), ...retained.flatMap(unit => Object.values(unit.equip))].filter((item): item is E => !!item).map(item => item.uid));
   let returned = 0;

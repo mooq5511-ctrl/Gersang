@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>商途 · 主角與九席商隊（單檔示範）</title>
+<style>
+/* 全部樣式內嵌，不依賴網路字型、圖片或套件。桌面採 40% / 60%。 */
+*{box-sizing:border-box}body{margin:0;background:#17130e;color:#f4dfac;font-family:Georgia,"PMingLiU",serif;padding:32px}main{max-width:1160px;margin:auto}h1{letter-spacing:5px;color:#e8c27c}h2{margin:6px 0 20px;font-size:24px}small,p{color:#c4af8a;line-height:1.8}button{font:inherit;cursor:pointer;color:#f7d797;background:#65451f;border:1px solid #a7874b;border-radius:4px;padding:9px}button:disabled{opacity:.4;cursor:not-allowed}button:focus-visible{outline:2px solid #ffe2a3;outline-offset:3px}.layout{display:grid;grid-template-columns:2fr 3fr;gap:18px}.wood{min-width:0;background:repeating-linear-gradient(2deg,#ffffff03 0 1px,transparent 2px 9px),linear-gradient(120deg,#3e2723,#2c1a04);padding:22px;border:1px solid #ba9657;box-shadow:inset 0 0 0 5px #20160e;border-radius:7px}.identity{display:flex;align-items:center;gap:20px}.seal{font-size:38px;color:#e6c781;display:grid;place-items:center;width:90px;height:96px;border:1px solid #9d7c40;background:#1e180e}.identity strong{font-size:22px}.identity span{display:block;margin-top:8px;font-size:12px}label{display:block;font-size:12px;margin:12px 0}progress{appearance:none;display:block;width:100%;height:10px;border:1px solid #9b86434d;border-radius:5px;overflow:hidden;margin-top:5px;background:#140f08}progress::-webkit-progress-bar{background:#140f08}progress::-webkit-progress-value{background:linear-gradient(90deg,#2c594b,#99b998)}progress::-moz-progress-bar{background:#90af92}.hp::-webkit-progress-value{background:linear-gradient(90deg,#773b30,#d48c76)}.mp::-webkit-progress-value{background:linear-gradient(90deg,#345d75,#88b3c6)}.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:20px 0}.stats div{display:flex;align-items:center;gap:8px;padding:8px;background:#17100b88}.stats b{margin-left:auto}.stats button{padding:3px 8px}dl>div{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #b89b542f}dd{color:#ebc776;margin:0}#total{font-size:22px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.member,.empty{min-width:0;min-height:226px;border:1px solid #9c7c41;border-radius:4px;padding:12px;background:#17120baa}.member .symbol{text-align:center;font-size:30px;margin:8px 0}.member strong,.member small{display:block}.member small{font-size:11px}.member label{font-size:10px}.empty{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-style:dashed;color:#d4b577}.empty b{font-size:30px}.empty span{font-size:12px;margin:15px 0}.wide{width:100%;margin-top:18px}.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:14px}.slots span{border:1px solid #866c3c;padding:7px;text-align:center;font-size:11px}footer{margin-top:20px;font-size:12px;color:#bca783}@media(max-width:850px){body{padding:15px}.layout{grid-template-columns:1fr}}@media(max-width:480px){.wood{padding:14px}.grid{gap:5px}.member,.empty{padding:6px}.member strong{font-size:12px}.empty span{font-size:11px}}
+</style>
+</head>
+<body><main><small>東海商路 · 以信為本</small><h1>商途 · 九席護商隊</h1>
+<p>可直接開啟的單檔示範；與正式遊戲的存檔分開，不會改動你的遊戲角色。</p>
+<div class="layout"><section class="wood"><h2>主角狀態</h2><div class="identity"><div class="seal" aria-label="商人圖騰">商</div><div><strong>東海行商者</strong><span id="identity"></span></div></div><div id="vitals"></div><div id="stats" class="stats"></div><p id="points"></p><dl><div><dt>主角戰鬥力</dt><dd id="power"></dd></div><div><dt>總商隊戰鬥力</dt><dd id="total"></dd></div><div><dt>持有金</dt><dd id="gold"></dd></div><div><dt>負重</dt><dd id="weight"></dd></div></dl><label id="credit"></label><progress id="creditBar" max="100"></progress><small>每秒 +5 兩、+2 信用。力量增加負重；體質提升 HP；智力提升 MP。</small><h3>八格裝備位置</h3><div class="slots"><span>武器</span><span>頭盔</span><span>盔甲</span><span>鞋子</span><span>戒指Ⅰ</span><span>戒指Ⅱ</span><span>手套</span><span>護身符</span></div></section>
+<section class="wood"><small>中央傭兵公會</small><h2>九席商隊 <small id="count"></small></h2><div class="grid" id="team"></div><button class="wide" id="train">模擬放置打怪 · 全員 +100 經驗</button><p id="notice" role="status">每席 6,000 兩，隨機僱用初始傭兵；最多九人。</p></section></div>
+<footer>致敬版自訂公式，非官方數值。示範不保存進度，重新整理即可重置；正式遊戲另有完整存檔與裝備系統。</footer></main>
+<script>
+'use strict';
+// 單一狀態來源：畫面全部從此物件重新計算，不另外累積總戰力。
+const state={gold:120000,credit:0,hero:{name:'東海行商者',job:'朝鮮商客',level:1,xp:0,points:5,str:10,agi:10,vit:10,intel:10},mercs:[]};
+// 初始模板保留古典東亞護商風格，四圍不同以區分定位。
+const templates=[['朝鮮弓手','遠程弓手',9,15,8,6,'弓'],['巨劍手','前排劍士',16,7,13,5,'劍'],['山城盾衛','護衛',8,6,18,5,'盾'],['陰陽術士','法術師',5,9,8,18,'符'],['行腳郎中','治療',5,10,10,16,'醫'],['東海鏢師','護商武者',13,12,12,7,'鏢']];
+const byId=id=>document.getElementById(id);
+// 升級門檻、四圍衍生生命魔力與戰力均為純計算函式。
+const need=unit=>80+unit.level*22;
+const power=unit=>Math.floor((unit.str*2.2+unit.agi*1.8+unit.vit*2.1+unit.intel*2)*(1+(unit.level-1)*.075));
+const hp=unit=>100+unit.vit*8+unit.level*12;
+const mp=unit=>40+unit.intel*3+unit.level*4;
+function gainXp(unit,amount){
+  if(unit.level>=250)return;
+  unit.xp+=amount;
+  // while 可處理一次領取大量經驗時連升數級，不遺失能力點。
+  while(unit.level<250&&unit.xp>=need(unit)){unit.xp-=need(unit);unit.level++;unit.points+=unit===state.hero?5:3;}
+  if(unit.level===250)unit.xp=0;
+}
+function bars(unit){return '<label>HP '+hp(unit)+' / '+hp(unit)+'<progress class="hp" max="'+hp(unit)+'" value="'+hp(unit)+'"></progress></label><label>MP '+mp(unit)+' / '+mp(unit)+'<progress class="mp" max="'+mp(unit)+'" value="'+mp(unit)+'"></progress></label><label>經驗 '+unit.xp+' / '+need(unit)+'<progress max="'+need(unit)+'" value="'+unit.xp+'"></progress></label>';}
+// UI 字串僅使用內建模板；若改接玩家輸入，應以 textContent 填入。
+function render(){
+  const hero=state.hero;
+  byId('identity').textContent='Lv.'+hero.level+' · '+hero.job;
+  byId('vitals').innerHTML=bars(hero);
+  byId('stats').innerHTML=[['str','力量'],['agi','敏捷'],['vit','體質'],['intel','智力']].map(([key,label])=>'<div>'+label+'<b>'+hero[key]+'</b><button data-stat="'+key+'" aria-label="增加'+label+'" '+(hero.points<1?'disabled':'')+'>＋</button></div>').join('');
+  byId('points').textContent='可分配 '+hero.points+' 點 · 主角升級 +5 點';
+  byId('power').textContent=power(hero).toLocaleString();
+  byId('total').textContent=(power(hero)+state.mercs.reduce((sum,unit)=>sum+power(unit),0)).toLocaleString();
+  byId('gold').textContent=state.gold.toLocaleString()+' 兩';
+  byId('weight').textContent='0 / '+(40+hero.str*5)+' 斤';
+  byId('credit').textContent='信用 Lv.'+(Math.floor(state.credit/100)+1)+' · '+state.credit%100+' / 100';
+  byId('creditBar').value=state.credit%100;
+  byId('count').textContent=state.mercs.length+' / 9';
+  byId('team').innerHTML=Array.from({length:9},(_,i)=>{const unit=state.mercs[i];return unit?'<article class="member"><small>第 '+(i+1)+' 席</small><div class="symbol">'+unit.symbol+'</div><strong>'+unit.name+'</strong><small>Lv.'+unit.level+' · '+unit.job+'</small>'+bars(unit)+'<small>戰力 '+power(unit)+'</small></article>':'<button class="empty" data-hire '+(state.gold<6000?'disabled':'')+'><b>＋</b><span>點擊僱用傭兵</span><small>6,000 兩</small></button>';}).join('');
+}
+// 事件委派只註冊一次，重新 render 不會重複扣款或累積監聽器。
+byId('stats').addEventListener('click',event=>{const button=event.target.closest('[data-stat]');if(!button||state.hero.points<1)return;state.hero[button.dataset.stat]++;state.hero.points--;render();});
+byId('team').addEventListener('click',event=>{
+  if(!event.target.closest('[data-hire]')||state.mercs.length>=9||state.gold<6000)return;
+  const [name,job,str,agi,vit,intel,symbol]=templates[Math.floor(Math.random()*templates.length)];
+  state.gold-=6000;
+  state.mercs.push({name,job,str,agi,vit,intel,symbol,level:1,xp:0,points:0});
+  byId('notice').textContent='已僱用 '+name+'，支付 6,000 兩。';render();
+});
+byId('train').addEventListener('click',()=>{[state.hero,...state.mercs].forEach(unit=>gainXp(unit,100));byId('notice').textContent='全員獲得 100 經驗；達門檻者已自動升級。';render();});
+// 使用實際經過的完整秒數，背景分頁延遲時仍可補算；每次最多 8 小時。
+let last=Date.now();
+setInterval(()=>{const now=Date.now(),elapsed=Math.max(0,Math.floor((now-last)/1000)),seconds=Math.min(28800,elapsed);if(!seconds)return;last=elapsed>28800?now:last+seconds*1000;state.gold+=seconds*5;state.credit+=seconds*2;render();},1000);
+render();
+</script></body></html>

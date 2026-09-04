@@ -2,13 +2,14 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import './trade.css';
+import './caravan-status.css';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: '商途・巨商放置錄 V21',
-  description: '東海商路與 BT52Gersang 融合版：四國二十城、十人傭兵、放置貿易、裝備合成與離線成長。',
+  description: '東海商路與 BT52Gersang 融合版：四國二十城、九人商隊、八格裝備、放置貿易與信用成長。',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

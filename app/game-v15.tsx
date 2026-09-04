@@ -3,8 +3,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { bandit, isBanditEncounter } from "./bandit";
-import { mercenarySpec, type MercenarySpec } from './mercenary-roster';
+import { merchantMercenaries, mercenarySpec, type MercenarySpec } from './mercenary-roster';
+import { CaravanStatus } from './caravan-status';
+import { settleCaravanIdle } from './caravan-idle';
 import { backupBeforeGuildMigration, retainGuildRoster } from './guild-migration';
+import { EQUIPMENT_SLOTS, EQUIPMENT_LABELS, emptyEquipmentSlots, itemKind, compatibleSlots, normalizeStoredItem, equipFromInventory, unequipToInventory, migrateSevenSlotSave, backupBeforeEquipmentMigration, type EquipmentSlot, type EquipmentKind } from './equipment-slots';
+import { wearableCatalog, type WearableBase } from './wearable-catalog';
 import { MercenaryRecruitment, mercenaryPortrait } from './mercenary-recruitment';
 import { resolveMercenaryBattle, type TacticalEnemy } from './mercenary-battle';
 import {
@@ -30,6 +34,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formations, mercenaries as legacyMercenaries } from "./game-data";
 import {
@@ -48,7 +53,6 @@ import { VitalBars } from "./vital-bars";
 import { combatStats, enemyCombatStats, normalizeVitals, recoverVitals, resolveVitalBattle, spellCost, vitalStats } from "./vitals-engine";
 import { advanceTrade, dispatchTrade, freshTrade, MAX_CARGO_LEVEL, restoreTrade, TRADE_ROUTES, upgradeCost, type TradeState } from "./trade-engine";
 
-type EquipmentSlot = "weapon" | "armor" | "helm" | "boots" | "accessory";
 
 type MagicAffix = {
   id: string;
@@ -62,7 +66,7 @@ type MagicAffix = {
 type Equipment = {
   uid: string;
   name: string;
-  slot: EquipmentSlot;
+  slot: EquipmentKind;
   atk: number;
   def: number;
   hp: number;
@@ -127,6 +131,8 @@ type CityService = "mercenary" | "weapon" | "armor" | "warehouse" | "inn" | "pha
 type GameState = {
   version: 21;
   trade: TradeState;
+  credit: number;
+  idleStamp: number;
   gold: number;
   stage: number;
   kills: number;
@@ -158,14 +164,8 @@ const V17_SAVE = "bt52_v17_actual_content";
 const V16_SAVE = "bt52_v16_52jushang_reference";
 const V15_SAVE = "bt52_v15_four_nations";
 const V14_SAVE = "bt52_v14_strategy";
-const slots: EquipmentSlot[] = ["weapon", "armor", "helm", "boots", "accessory"];
-const slotLabels: Record<EquipmentSlot, string> = {
-  weapon: "武器",
-  armor: "防具",
-  helm: "頭盔",
-  boots: "鞋子",
-  accessory: "飾品",
-};
+const slots = EQUIPMENT_SLOTS;
+const slotLabels = EQUIPMENT_LABELS;
 
 const heroNationProfiles: Record<NationId, { title: string; skill: string; image: string; stats: [number, number, number, number] }> = {
   taiwan: { title: "南海商主", skill: "山海號令", image: legacyMercenaries[5].idle, stats: [68, 74, 72, 66] },
@@ -199,7 +199,7 @@ function uid(prefix: string) {
 }
 
 function emptyEquipment(): EquipmentSet {
-  return { weapon: null, armor: null, helm: null, boots: null, accessory: null };
+  return emptyEquipmentSlots<Equipment>();
 }
 
 
@@ -228,7 +228,7 @@ function makeHero(nation: NationId = "korea", name = "行商者"): Hero {
 }
 
 function rollEquipment(stage: number, guaranteed = false): Equipment {
-  const base = equipmentBases[Math.floor(Math.random() * equipmentBases.length)];
+  const base = wearableCatalog[Math.floor(Math.random() * wearableCatalog.length)];
   const magicCount = guaranteed ? Math.min(3, 1 + Math.floor(stage / 20)) : Math.min(3, Math.max(1, Math.floor(stage / 15)));
   const shuffled = [...magicAffixes].sort(() => Math.random() - 0.5).slice(0, magicCount);
   const rarity: Equipment["rarity"] =
@@ -236,7 +236,7 @@ function rollEquipment(stage: number, guaranteed = false): Equipment {
   return {
     uid: uid(base.id),
     name: (rarity === "普通" ? "" : rarity + "・") + base.name,
-    slot: base.slot as EquipmentSlot,
+    slot: base.slot,
     atk: base.atk + stage * 2,
     def: base.def + Math.floor(stage * 1.4),
     hp: base.hp + stage * 6,
@@ -280,6 +280,8 @@ function freshGame(nation: NationId = "korea", heroName = "行商者"): GameStat
   return {
     version: 21,
     trade: freshTrade(),
+    credit: 0,
+    idleStamp: Date.now(),
     gold: 120000,
     stage: 1,
     kills: 0,
@@ -313,11 +315,11 @@ function sanitizeEquip(value: unknown): EquipmentSet {
       equip[slot] = {
         uid: item.uid || uid("migrated"),
         name: item.name || "傳承裝備",
-        slot,
+        slot: itemKind(item.slot || slot),
         atk: Number(item.atk) || 0,
         def: Number(item.def) || 0,
         hp: Number(item.hp) || 0,
-        image: item.image || (candidate as { asset?: string }).asset || equipmentBases[0].image,
+        image: typeof item.image === "string" ? item.image : (candidate as { asset?: string }).asset || equipmentBases[0].image,
         enhance: Number(item.enhance) || 0,
         rarity: item.rarity || "普通",
         magic: Array.isArray(item.magic) ? item.magic as MagicAffix[] : [],
@@ -364,7 +366,7 @@ function migrateV14(raw: unknown): GameState {
     ? (old.inventory as Array<Record<string, unknown>>).map((item) => ({
         uid: String(item.uid || uid("migrated")),
         name: String(item.name || "傳承裝備"),
-        slot: (item.slot || "weapon") as EquipmentSlot,
+        slot: itemKind(item.slot),
         atk: Number(item.atk) || 0,
         def: Number(item.def) || 0,
         hp: Number(item.hp) || 0,
@@ -405,7 +407,7 @@ function migrateV14(raw: unknown): GameState {
       equip: sanitizeEquip(oldHero.equip),
     },
     mercs,
-    active: mercs.slice(0, 10).map((unit) => unit.uid),
+    active: mercs.slice(0, 9).map((unit) => unit.uid),
     inventory: oldInventory,
     formation: typeof old.formation === "string" ? old.formation : base.formation,
     logs: Array.isArray(old.logs) ? (old.logs as string[]).slice(0, 40) : base.logs,
@@ -415,6 +417,7 @@ function migrateV14(raw: unknown): GameState {
 }
 
 function restoreGame(raw: unknown): GameState {
+  raw = migrateSevenSlotSave(raw);
   const next = migrateV14(raw);
   if (!raw || typeof raw !== "object") return next;
   const parsed = raw as Partial<GameState> & { version?: number; hero?: Partial<Hero> };
@@ -426,6 +429,8 @@ function restoreGame(raw: unknown): GameState {
   Object.assign(next, parsed, {
     version: 21,
     trade: restoreTrade(parsed.trade),
+    credit: Number.isFinite(parsed.credit) ? Math.max(0, Math.floor(parsed.credit!)) : 0,
+    idleStamp: Number.isFinite(parsed.idleStamp) && parsed.idleStamp! > 0 ? parsed.idleStamp : Date.now(),
     city: restoredCity,
     hero: {
       ...heroDefaults,
@@ -440,7 +445,7 @@ function restoreGame(raw: unknown): GameState {
       ? parsed.mercs.map((unit) => ({ ...unit, equip: sanitizeEquip(unit.equip) } as Unit))
       : next.mercs,
     inventory: Array.isArray(parsed.inventory)
-      ? parsed.inventory.map((item) => ({ ...item, bonus: item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }, resist: item.resist || { physical: 0, magic: 0 } }))
+      ? parsed.inventory.map((item) => ({ ...normalizeStoredItem(item), bonus: item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }, resist: item.resist || { physical: 0, magic: 0 } }))
       : next.inventory,
     soulStones: Number.isFinite(parsed.soulStones) ? Math.max(0, Number(parsed.soulStones)) : next.soulStones,
     awakeningStones: Number.isFinite(parsed.awakeningStones) ? Math.max(0, Number(parsed.awakeningStones)) : next.awakeningStones,
@@ -459,6 +464,9 @@ function profileFromGame(slot: number, game: GameState): CharacterProfile {
 }
 
 function settleMerchantGame(previous: GameState, now: number): GameState {
+  // 與跑商共用一個每秒計時器，獨立時間戳避免重複領取離線收益。
+  const idle = settleCaravanIdle(previous.idleStamp, now);
+  if (idle.stamp !== previous.idleStamp) previous = { ...previous, idleStamp: idle.stamp, gold: previous.gold + idle.gold, credit: previous.credit + idle.credit };
   const result = advanceTrade(previous.trade, previous.gold, now);
   if (!result.trips && !result.encounters) return previous;
   let next = {
@@ -510,7 +518,7 @@ function grantXp<T extends Unit | Hero>(unit: T, amount: number): T {
   while (level < 250 && xp >= xpNeed(level)) {
     xp -= xpNeed(level);
     level += 1;
-    points += unit.uid === "hero" ? 4 : 3;
+    points += unit.uid === "hero" ? 5 : 3;
   }
   return { ...unit, xp, level, points };
 }
@@ -667,6 +675,7 @@ export default function GameV15() {
   const [notice, setNotice] = useState("");
   const [selectedUid, setSelectedUid] = useState("hero");
   const [cityService, setCityService] = useState<CityService>("mercenary");
+  const [gemSlot, setGemSlot] = useState<EquipmentSlot>('armor');
   const [sharedWarehouse, setSharedWarehouse] = useState<Equipment[]>([]);
   const loaded = useRef(false);
 
@@ -702,7 +711,7 @@ export default function GameV15() {
       }
       queueMicrotask(() => {
         setProfiles(nextProfiles);
-        setSharedWarehouse(savedWarehouse ? JSON.parse(savedWarehouse) : []);
+        setSharedWarehouse(savedWarehouse ? JSON.parse(savedWarehouse).map(normalizeStoredItem) : []);
         setReady(true);
       });
     } catch {
@@ -733,6 +742,7 @@ export default function GameV15() {
     try {
       const raw = localStorage.getItem(profileSaveKey(slot));
       if (raw) backupBeforeGuildMigration(localStorage, profileSaveKey(slot), raw);
+      if (raw) backupBeforeEquipmentMigration(localStorage, profileSaveKey(slot), raw);
       let next = raw ? restoreGame(JSON.parse(raw)) : freshGame(profile.nation, profile.name);
       const now = currentTimestamp();
       const before = next.gold;
@@ -807,8 +817,8 @@ export default function GameV15() {
   const currentCity = worldCities.find((city) => city.id === game.city) || worldCities[0];
   const currentNation = nations.find((nation) => nation.id === currentCity.nation) || nations[0];
   const heroNation = nations.find((nation) => nation.id === game.hero.nation) || nations[0];
-  const cityWeapons = officialEquipment.filter((item) => item.kind === "weapon").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
   const cityArmors = officialEquipment.filter((item) => item.kind === "armor").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
+  const cityWeapons = officialEquipment.filter((item) => item.kind === "weapon").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
 
 
   function selectBattleMap(mapId: string) {
@@ -876,9 +886,9 @@ export default function GameV15() {
   function recruitMerchant(spec: MercenarySpec, index: number) {
     const cost = Math.floor(6000 * currentCity.priceFactor);
     setGame(previous => {
-      if (previous.gold < cost) return previous;
+      if (previous.gold < cost || previous.mercs.length >= 9) return { ...previous, logs: addLog(previous.logs, previous.mercs.length >= 9 ? '商隊已滿九席，無法再僱用。' : '僱用資金不足。') };
       const unit = normalizeVitals<Unit>({ uid: uid('merchant-'+spec.id), templateId: 'merchant-'+spec.id, nation: 'legacy', tier: 0, special: false, name: spec.name, role: spec.role, skill: spec.active, image: mercenaryPortrait(index), level: 1, xp: 0, points: 0, str: spec.ratings[1], agi: spec.ratings[3], vit: spec.ratings[0], intel: spec.mp ? 20 : 10, equip: emptyEquipment() });
-      return { ...previous, gold: previous.gold-cost, mercs: [...previous.mercs,unit], logs: addLog(previous.logs,'招募 '+spec.name+'，請至隊伍頁安排出戰。') };
+      return { ...previous, gold: previous.gold-cost, mercs: [...previous.mercs,unit], active: [...previous.active, unit.uid].slice(0,9), logs: addLog(previous.logs,'招募 '+spec.name+'，已加入護商隊。') };
     });
   }
 
@@ -887,8 +897,8 @@ export default function GameV15() {
       if (previous.active.includes(unitUid)) {
         return { ...previous, active: previous.active.filter((id) => id !== unitUid) };
       }
-      if (previous.active.length >= 10) {
-        setNotice("出戰傭兵最多 10 人，主角不佔欄位。");
+      if (previous.active.length >= 9) {
+        setNotice("出戰傭兵最多 9 人，主角不佔欄位。");
         return previous;
       }
       return { ...previous, active: [...previous.active, unitUid] };
@@ -931,27 +941,33 @@ export default function GameV15() {
     });
   }
 
-  function equipItem(itemUid: string) {
-    const item = game.inventory.find((entry) => entry.uid === itemUid);
-    if (!item) return;
+  function equipItem(itemUid: string, requestedSlot?: EquipmentSlot) {
     setGame((previous) => {
-      const inventory = previous.inventory.filter((entry) => entry.uid !== itemUid);
       const target = selectedUid === "hero" ? previous.hero : previous.mercs.find((unit) => unit.uid === selectedUid);
       if (!target) return previous;
-      if (target.level < (item.requiredLevel || 0)) {
-        setNotice("「" + item.name + "」需要 " + item.requiredLevel + " 級才能裝備。");
-        return previous;
-      }
-      const equip = { ...target.equip };
-      const returned = equip[item.slot];
-      equip[item.slot] = item;
-      if (returned) inventory.push(returned);
-      if (selectedUid === "hero") return { ...previous, inventory, hero: { ...previous.hero, equip } };
-      return {
-        ...previous,
-        inventory,
-        mercs: previous.mercs.map((unit) => (unit.uid === selectedUid ? { ...unit, equip } : unit)),
-      };
+      const result = equipFromInventory<Equipment,Unit|Hero>(target,previous.inventory,itemUid,requestedSlot);
+      if(result.error) { setNotice(result.error); return previous; }
+      const unit=normalizeVitals(result.unit);
+      return selectedUid==='hero' ? {...previous,inventory:result.inventory,hero:unit as Hero} : {...previous,inventory:result.inventory,mercs:previous.mercs.map(old=>old.uid===selectedUid ? unit : old)};
+    });
+  }
+
+  function unequipItem(slot:EquipmentSlot) {
+    setGame(previous=>{
+      const target=selectedUid==='hero'?previous.hero:previous.mercs.find(unit=>unit.uid===selectedUid);
+      if(!target) return previous;
+      const result=unequipToInventory<Equipment,Unit|Hero>(target,previous.inventory,slot);
+      const unit=normalizeVitals(result.unit);
+      return selectedUid==='hero'?{...previous,inventory:result.inventory,hero:unit as Hero}:{...previous,inventory:result.inventory,mercs:previous.mercs.map(old=>old.uid===selectedUid?unit:old)};
+    });
+  }
+
+  function buyWearable(base:WearableBase) {
+    const price=Math.floor(base.price*currentCity.priceFactor);
+    setGame(previous=>{
+      if(previous.gold<price) { setNotice('裝備商店資金不足。'); return previous; }
+      const item:Equipment={...base,uid:uid(base.id),enhance:0,rarity:'普通',magic:[],requiredLevel:1};
+      return {...previous,gold:previous.gold-price,inventory:[item,...previous.inventory],logs:addLog(previous.logs,'購入「'+item.name+'」。')};
     });
   }
 
@@ -1071,9 +1087,9 @@ export default function GameV15() {
     setGame((previous) => {
       const target = selectedUid === "hero" ? previous.hero : previous.mercs.find((unit) => unit.uid === selectedUid);
       if (!target) return previous;
-      const slot = target.equip.weapon ? "weapon" : target.equip.armor ? "armor" : null;
-      if (!slot) {
-        setNotice("請先讓「" + target.name + "」裝備武器或盔甲。");
+      const slot = gemSlot;
+      if (!target.equip[slot]) {
+        setNotice('請先在'+slotLabels[slot]+'欄穿戴裝備。');
         return previous;
       }
       const cost = gem.costs[grade];
@@ -1122,7 +1138,7 @@ export default function GameV15() {
         <section className="character-select-shell">
           <div className="character-select-heading">
             <div className="brand-seal">商</div>
-            <div><small>商途 × BT52Gersang・融合版 V21</small><h1>從一支商隊，走向四海。</h1><p>四國二十城 × 十人傭兵 × 放置貿易。三個角色各自保存進度，共用 30 格裝備倉庫。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
+            <div><small>商途 × BT52Gersang・融合版 V21</small><h1>從一支商隊，走向四海。</h1><p>四國二十城 × 九人傭兵 × 放置貿易。三個角色各自保存進度，共用 30 格裝備倉庫。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
           </div>
           {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
           <div className="character-slot-grid">
@@ -1176,8 +1192,8 @@ export default function GameV15() {
         </div>
         <div className="resource-strip v15-resources">
           <div><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
-          <div><Swords /><span>{format(teamPower)}</span><small>總戰力</small></div>
-          <div><Users /><span>{game.active.length}/10</span><small>出戰傭兵</small></div>
+          <div><Swords /><span>{format(unitPower(game.hero)+game.mercs.reduce((sum,unit)=>sum+unitPower(unit),0))}</span><small>總商隊戰力</small></div>
+          <div><Users /><span>{game.active.length}/9</span><small>出戰傭兵</small></div>
           <Button className="character-switch" variant="outline" size="sm" onClick={returnToCharacterSelect}><Users />切換角色</Button>
         </div>
       </header>
@@ -1265,22 +1281,13 @@ export default function GameV15() {
 
 
         <TabsContent value="squad" className="tab-panel">
-          <div className="squad-layout v15-squad-layout">
-            <aside className="panel hero-dock">
-              <div className="panel-title"><Crown /><h2>主角欄位</h2><span>獨立</span></div>
-              <button className={selectedUid === "hero" ? "hero-portrait selected" : "hero-portrait"} onClick={() => setSelectedUid("hero")}>
-                <img src={game.hero.image} alt="" /><strong>{game.hero.name}</strong><small>{heroNation.name}・Lv.{game.hero.level}・{game.hero.job}</small><span>戰力 {format(unitPower(game.hero))}</span>
-              </button>
-              <div className="panel-title compact"><Users /><h2>傭兵名冊</h2><span>{game.active.length}/10</span></div>
-              <div className="compact-roster">
-                {!game.mercs.length && <p>尚無公會傭兵。請到「四國城市 → 中央傭兵公會」招募。</p>}
-                {game.mercs.map((unit) => (
-                  <button key={unit.uid} className={selectedUid === unit.uid ? "compact-unit selected" : "compact-unit"} onClick={() => setSelectedUid(unit.uid)}>
-                    <img src={unit.image} alt="" /><span><strong>{unit.name}</strong><small>Lv.{unit.level}・{tierName(unit)}</small></span>
-                  </button>
-                ))}
-              </div>
-            </aside>
+          <CaravanStatus hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit}
+            weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
+            maxWeight={40+game.hero.str*5} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
+            hire={()=>{ const index=Math.floor(Math.random()*merchantMercenaries.length); recruitMerchant(merchantMercenaries[index],index); }}
+            train={()=>setGame(previous=>({...previous,hero:grantXp(previous.hero,100),mercs:previous.mercs.map(unit=>grantXp(unit,100)),logs:addLog(previous.logs,'模擬打怪：主角與所有已僱用傭兵各獲得 100 經驗。')}))}
+            allocate={stat=>setGame(previous=>previous.hero.points>0?({...previous,hero:{...previous.hero,[stat]:previous.hero[stat]+1,points:previous.hero.points-1}}):previous)} />
+          <div className="caravan-detail-layout">
             <section className="panel unit-detail">
               <div className="unit-heading">
                 <img src={selected.image} alt={selected.name} />
@@ -1297,14 +1304,15 @@ export default function GameV15() {
                 ))}
               </div>
               <p className="points">可分配能力點：<strong>{selected.points}</strong></p>
-              <div className="equipment-title"><Shield /><h3>裝備與額外魔法屬性</h3></div>
+              <div className="equipment-title"><Shield /><h3>八格裝備與額外魔法屬性</h3></div>
               <div className="equipment-grid">
                 {slots.map((slot) => {
                   const item = selected.equip[slot];
                   return (
                     <article className="equipment-slot magic-slot" key={slot}>
-                      {item ? <img src={item.image} alt="" /> : <Shield />}
+                      {item?.image ? <img src={item.image} alt="" /> : <Shield />}
                       <div><small>{slotLabels[slot]}</small><strong>{item?.name || "未裝備"}</strong>{item && <><span>攻 {item.atk}・防 {item.def}・生命 {item.hp}{bonusText(item) ? "・" + bonusText(item) : ""}</span>{item.skill && <span>裝備技能・{item.skill}</span>}<div className="affix-inline">{item.magic.map((affix) => <em key={affix.id} style={{ color: affix.color }}>{affix.name}：{affix.text}</em>)}</div></>}</div>
+                      {item && <Button size="sm" variant="outline" onClick={()=>unequipItem(slot)}>卸下</Button>}
                     </article>
                   );
                 })}
@@ -1316,9 +1324,9 @@ export default function GameV15() {
             <div className="magic-inventory">
               {game.inventory.map((item) => (
                 <article className={"magic-item rarity-" + item.rarity} key={item.uid}>
-                  <img src={item.image} alt="" />
+                  {item.image ? <img src={item.image} alt="" /> : <Shield />}
                   <div><small>{item.rarity}・{slotLabels[item.slot]}・需求 Lv.{item.requiredLevel || 1}</small><strong>{item.name}</strong><span>攻 {item.atk}　防 {item.def}　生命 {item.hp}{bonusText(item) ? "　" + bonusText(item) : ""}</span>{item.skill && <span>裝備技能・{item.skill}</span>}<div>{item.magic.map((affix) => <em key={affix.id} style={{ color: affix.color }}>{affix.name}｜{affix.text}</em>)}</div></div>
-                  <Button size="sm" onClick={() => equipItem(item.uid)}>裝給{selected.name}</Button>
+                  {compatibleSlots(item.slot).map(slot=><Button key={slot} size="sm" onClick={()=>equipItem(item.uid,slot)}>{slotLabels[slot]}・裝給{selected.name}</Button>)}
                 </article>
               ))}
             </div>
@@ -1357,7 +1365,8 @@ export default function GameV15() {
                 const price = Math.floor(record.price * currentCity.priceFactor);
                 return <article key={record.id}><small>Lv.{record.level}・{record.kind === "weapon" ? "武器" : "防具"}</small><strong>{record.name}</strong><span>{record.atk ? "攻 " + record.atk : "防 " + record.def}{record.skill ? "・" + record.skill : ""}</span><em>{[record.str ? "力+" + record.str : "", record.agi ? "敏+" + record.agi : "", record.intel ? "智+" + record.intel : "", record.vit ? "體+" + record.vit : ""].filter(Boolean).join("・") || "基礎裝備"}</em><Button size="sm" onClick={() => buyOfficialItem(record, price)}>{format(price)} 兩</Button></article>;
               })}</div>
-              {cityService === "weapon" && <div className="enchant-counter"><div><strong>附魔武器櫃</strong><p>購入與目前關卡相符、附帶 1～3 條魔法屬性的隨機裝備。</p></div><Button onClick={buyMagicEquipment}><ShoppingBag />12,000 兩</Button></div>}
+              <div className="official-item-grid">{wearableCatalog.filter(item=>cityService==='weapon'?['weapon','ring','amulet'].includes(item.slot):!['weapon','ring','amulet'].includes(item.slot)).map(item=><article key={item.id}><small>{slotLabels[item.slot]}</small><strong>{item.name}</strong><span>攻 {item.atk} · 防 {item.def} · HP {item.hp}</span><Button onClick={()=>buyWearable(item)}>{format(Math.floor(item.price*currentCity.priceFactor))} 兩</Button></article>)}</div>
+              {cityService === "weapon" && <div className="enchant-counter"><div><strong>附魔裝備櫃</strong><p>購入與目前關卡相符、附帶 1～3 條魔法屬性的隨機裝備。</p></div><Button onClick={buyMagicEquipment}><ShoppingBag />12,000 兩</Button></div>}
             </div>}
 
             {cityService === "warehouse" && <div className="city-service-body warehouse-service"><div className="panel-title"><Warehouse /><h2>三角色共用倉庫</h2><span>{sharedWarehouse.length}/{WAREHOUSE_LIMIT} 格</span></div><Progress value={sharedWarehouse.length / WAREHOUSE_LIMIT * 100} />
@@ -1371,7 +1380,7 @@ export default function GameV15() {
           </section>
 
           <div className="city-auxiliary">
-            <section className="panel gem-workshop"><div className="panel-title"><Gem /><h2>寶石鑲嵌工房</h2><span>目前對象・{selected.name}</span></div><div className="gem-grid">{officialGems.map((gem) => <article key={gem.id}><strong>{gem.name}</strong><small>{gem.label}</small><div>{gem.values.map((value, grade) => <Button key={grade} size="sm" variant="outline" onClick={() => socketGem(gem.id, grade)}>+{value}・{format(gem.costs[grade])}兩</Button>)}</div></article>)}</div></section>
+            <section className="panel gem-workshop"><div className="panel-title"><Gem /><h2>寶石鑲嵌工房</h2><span>目前對象・{selected.name}</span></div><Select value={gemSlot} onValueChange={value=>{if(value) setGemSlot(value as EquipmentSlot)}}><SelectTrigger aria-label="選擇鑲嵌欄位"><SelectValue>{slotLabels[gemSlot]}</SelectValue></SelectTrigger><SelectContent>{slots.map(slot=><SelectItem key={slot} value={slot}>{slotLabels[slot]}</SelectItem>)}</SelectContent></Select><div className="gem-grid">{officialGems.map((gem) => <article key={gem.id}><strong>{gem.name}</strong><small>{gem.label}</small><div>{gem.values.map((value, grade) => <Button key={grade} size="sm" variant="outline" onClick={() => socketGem(gem.id, grade)}>+{value}・{format(gem.costs[grade])}兩</Button>)}</div></article>)}</div></section>
             <section className="panel"><div className="panel-title"><Shield /><h2>陣法</h2></div><div className="formation-list">{formations.map((item) => <button key={item.id} className={game.formation === item.id ? "formation-row active" : "formation-row"} onClick={() => setGame((prev) => ({ ...prev, formation: item.id }))}><span><strong>{item.name}</strong><small>{item.detail}</small></span><em>{game.formation === item.id ? "使用中" : "切換"}</em></button>)}</div></section>
           </div>
         </TabsContent>
@@ -1406,7 +1415,7 @@ export default function GameV15() {
         </TabsContent>
       </Tabs>
 
-      <footer><span>融合版 V21・商途 × BT52Gersang</span><span>4 條放置商路・20 座城市・10 人傭兵隊伍・離線上限 8 小時</span></footer>
+      <footer><span>融合版 V21・商途 × BT52Gersang</span><span>4 條放置商路・20 座城市・9 人傭兵隊伍・離線上限 8 小時</span></footer>
     </main>
   );
 }
