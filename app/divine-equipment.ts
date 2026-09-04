@@ -3,13 +3,15 @@ export const HERO_DISPLAY_SLOTS=['weapon','helm','armor','ring1','ring2','boots'
 export const DIVINE_EQUIPMENT={
   staff:{name:'高級神仙棒',slot:'weapon' as const,description:'仙人遺世之杖，凝聚天地靈氣。',bonus:{str:10,agi:0,vit:0,intel:50},def:0},
   armor:{name:'海王戰甲',slot:'armor' as const,description:'蘊含深海龍王神力的傳奇戰甲',bonus:{str:0,agi:0,vit:80,intel:0},def:100},
+  helmet:{name:'飛虎兜',slot:'helm' as const,description:'虎嘯山林，佩之膽氣倍增，身手矯健。',bonus:{str:0,agi:10,vit:30,intel:0},def:0},
+  boots:{name:'太皇鞋',slot:'boots' as const,description:'御風踏雲，千里商途亦如閒庭信步。',bonus:{str:15,agi:40,vit:0,intel:0},def:0},
 };
 export type DivineKey=keyof typeof DIVINE_EQUIPMENT;
 type Gear={uid:string;slot:EquipmentKind;requiredLevel?:number};
 /** 有穿則卸下；沒有穿則從背包取用。替換原裝備時退回背包，不會銷毀。 */
 export function toggleDivineEquipment<E extends Gear,U extends {level:number;equip:Record<EquipmentSlot,E|null>}>(hero:U,inventory:E[],item:E){
   const slot=item.slot as EquipmentSlot;
-  if(hero.equip[slot]?.uid===item.uid)return {...unequipToInventory(hero,inventory,slot),error:undefined};
+  if(hero.equip[slot]?.uid===item.uid)return unequipToInventory(hero,inventory,slot);
   const available=inventory.some(entry=>entry.uid===item.uid)?inventory:[...inventory,item];
   return equipFromInventory(hero,available,item.uid,slot);
 }

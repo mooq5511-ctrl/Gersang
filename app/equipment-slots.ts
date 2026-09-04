@@ -1,3 +1,4 @@
+import {positionInventory,INVENTORY_CAPACITY,addInventoryItem} from './inventory-layout.ts';
 export const EQUIPMENT_SLOTS = ['weapon','helm','armor','boots','ring1','ring2','gloves','amulet'] as const;
 export type EquipmentSlot = typeof EQUIPMENT_SLOTS[number];
 export type EquipmentKind = 'helm' | 'armor' | 'boots' | 'ring' | 'gloves' | 'amulet' | 'weapon' | 'accessory';
@@ -13,9 +14,10 @@ export function compatibleSlots(kind: unknown): EquipmentSlot[] {
   return normalized==='ring' ? ['ring1','ring2'] : [normalized as EquipmentSlot];
 }
 export const normalizeStoredItem = <T extends {slot?: unknown}>(item:T) => ({...item,slot:itemKind(item.slot)});
-type Wearable = {uid:string;slot:EquipmentKind;requiredLevel?:number};
+type Wearable = {uid:string;slot:EquipmentKind;requiredLevel?:number;bagSlot?:number};
 export function equipFromInventory<E extends Wearable,U extends {level:number;equip:Record<EquipmentSlot,E|null>}>(unit:U,inventory:E[],uid:string,requested?:EquipmentSlot) {
   const fail=(error:string)=>({unit,inventory,error});
+  inventory=positionInventory(inventory);
   const item=inventory.find(entry=>entry.uid===uid);
   if(!item) return fail('物品不在背包中。');
   const allowed=compatibleSlots(item.slot);
@@ -25,13 +27,14 @@ export function equipFromInventory<E extends Wearable,U extends {level:number;eq
   if(Object.values(unit.equip).some(entry=>entry?.uid===uid)) return fail('同一件物品不能重複穿戴。');
   const equip={...unit.equip,[slot]:normalizeStoredItem(item)};
   const next=inventory.filter(entry=>entry.uid!==uid);
-  if(unit.equip[slot]) next.push(unit.equip[slot]!);
+  if(unit.equip[slot]) next.push({...unit.equip[slot]!,bagSlot:item.bagSlot});
   return {unit:{...unit,equip},inventory:next,error:undefined};
 }
 export function unequipToInventory<E extends Wearable,U extends {equip:Record<EquipmentSlot,E|null>}>(unit:U,inventory:E[],slot:EquipmentSlot) {
   const item=unit.equip[slot];
-  if(!item) return {unit,inventory};
-  return {unit:{...unit,equip:{...unit.equip,[slot]:null}},inventory:inventory.some(entry=>entry.uid===item.uid)?inventory:[...inventory,item]};
+  if(!item) return {unit,inventory,error:undefined};
+  if(inventory.length>=INVENTORY_CAPACITY)return {unit,inventory,error:'背包已滿，無法卸下裝備。'};
+  return {unit:{...unit,equip:{...unit.equip,[slot]:null}},inventory:inventory.some(entry=>entry.uid===item.uid)?inventory:addInventoryItem(inventory,item).inventory,error:undefined};
 }
 const record=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value);
 /** Migrate before sanitization so retired slots can never silently discard gear. */

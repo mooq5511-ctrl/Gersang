@@ -1,13 +1,15 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { bandit, isBanditEncounter } from "./bandit";
 import { merchantMercenaries, mercenarySpec, type MercenarySpec } from './mercenary-roster';
 import { CaravanStatus } from './caravan-status';
 import { settleCaravanIdle } from './caravan-idle';
 import { heroPersonalPower, heroWeightLimit, HERO_INITIAL_ATTRIBUTES } from './hero-rules';
-import {DIVINE_EQUIPMENT,toggleDivineEquipment,type DivineKey} from './divine-equipment';
+import {DIVINE_EQUIPMENT} from './divine-equipment';
+import {positionInventory,addInventoryItem,INVENTORY_CAPACITY} from './inventory-layout';
+import {rollInventoryLoot} from './inventory-loot';
 import { backupBeforeGuildMigration, retainGuildRoster } from './guild-migration';
 import { EQUIPMENT_SLOTS, EQUIPMENT_LABELS, emptyEquipmentSlots, itemKind, compatibleSlots, normalizeStoredItem, equipFromInventory, unequipToInventory, migrateSevenSlotSave, backupBeforeEquipmentMigration, type EquipmentSlot, type EquipmentKind } from './equipment-slots';
 import { wearableCatalog, type WearableBase } from './wearable-catalog';
@@ -66,6 +68,7 @@ type MagicAffix = {
 };
 
 type Equipment = {
+  bagSlot?: number;
   uid: string;
   name: string;
   slot: EquipmentKind;
@@ -641,8 +644,9 @@ function resolveRoadEncounter(previous: GameState): GameState {
       }
       if (nextKills % 4 === 0 || isBoss) {
         const drop = rollEquipment(previous.stage, isBoss);
-        inventory = [drop, ...inventory];
-        logs = addLog(logs, "獲得 " + drop.rarity + "裝備「" + drop.name + "」，附帶 " + drop.magic.length + " 條魔法屬性。");
+        const pickup=addInventoryItem(inventory,drop);
+        inventory=pickup.inventory;
+        logs = addLog(logs, pickup.error?'背包已滿，本次戰利品無法拾取。':"獲得 " + drop.rarity + "裝備「" + drop.name + "」，附帶 " + drop.magic.length + " 條魔法屬性。");
       }
       return {
         ...previous,
@@ -665,7 +669,12 @@ function resolveRoadEncounter(previous: GameState): GameState {
 }
 
 export default function GameV15() {
-  const [game, setGame] = useState<GameState>(freshGame);
+  const [game, rawSetGame] = useState<GameState>(freshGame);
+  // 所有存檔與取得路徑共用格位整理：保留已有位置與超額舊物，不截斷陣列。
+  const setGame=useCallback((action:GameState|((previous:GameState)=>GameState))=>rawSetGame(previous=>{
+    const next=typeof action==='function'?action(previous):action;
+    return next===previous?previous:{...next,inventory:positionInventory(next.inventory)};
+  }),[]);
   const [ready, setReady] = useState(false);
   const [profiles, setProfiles] = useState<Array<CharacterProfile | null>>([null, null, null]);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
@@ -941,42 +950,47 @@ export default function GameV15() {
     });
   }
 
-  function equipItem(itemUid: string, requestedSlot?: EquipmentSlot) {
+  function equipItem(itemUid: string, requestedSlot?: EquipmentSlot, targetUid=selectedUid) {
     setGame((previous) => {
-      const target = selectedUid === "hero" ? previous.hero : previous.mercs.find((unit) => unit.uid === selectedUid);
+      const target = targetUid === "hero" ? previous.hero : previous.mercs.find((unit) => unit.uid === targetUid);
       if (!target) return previous;
       const result = equipFromInventory<Equipment,Unit|Hero>(target,previous.inventory,itemUid,requestedSlot);
-      if(result.error) { setNotice(result.error); return previous; }
+      if(result.error) return {...previous,logs:addLog(previous.logs,result.error)};
       const unit=normalizeVitals(result.unit);
-      return selectedUid==='hero' ? {...previous,inventory:result.inventory,hero:unit as Hero} : {...previous,inventory:result.inventory,mercs:previous.mercs.map(old=>old.uid===selectedUid ? unit : old)};
+      const logs=addLog(previous.logs,'已穿戴裝備，原部位裝備已交換回背包。');
+      return targetUid==='hero' ? {...previous,logs,inventory:result.inventory,hero:unit as Hero} : {...previous,logs,inventory:result.inventory,mercs:previous.mercs.map(old=>old.uid===targetUid ? unit : old)};
     });
   }
 
-  function toggleHeroDivine(key:DivineKey) {
-    const spec=DIVINE_EQUIPMENT[key];
-    const item:Equipment={uid:'divine-test-'+activeSlot+'-'+key,name:spec.name,slot:spec.slot,bonus:{...spec.bonus},def:spec.def,atk:0,hp:0,image:'',enhance:0,rarity:'傳說',magic:[],requiredLevel:1,source:'主角神裝測試'};
+
+  function simulateHeroLoot() {
+    // 在更新函式外抽樣，React 開發模式重跑更新函式也不會重新抽獎。
+    const key=rollInventoryLoot();
+    const spec=key?DIVINE_EQUIPMENT[key]:null;
+    const drop:Equipment|null=spec?{uid:uid('loot-'+key),name:spec.name,slot:spec.slot,bonus:{...spec.bonus},def:spec.def,atk:0,hp:0,image:'',enhance:0,rarity:'傳說',magic:[],requiredLevel:1,source:'模擬打怪掉落'}:null;
     setGame(previous=>{
-      // 物品已交給傭兵或存入共用倉庫時，必須先取回，不能藉測試按鈕無限複製。
-      if(sharedWarehouse.some(gear=>gear.uid===item.uid)||previous.mercs.some(unit=>Object.values(unit.equip).some(gear=>gear?.uid===item.uid)))return {...previous,logs:addLog(previous.logs,'請先從傭兵或共用倉庫取回「'+item.name+'」。')};
-      const result=toggleDivineEquipment<Equipment,Hero>(previous.hero,previous.inventory,item);
-      if(result.error)return {...previous,logs:addLog(previous.logs,result.error)};
-      return {...previous,hero:normalizeVitals(result.unit),inventory:result.inventory,logs:addLog(previous.logs,(result.unit.equip[spec.slot]?.uid===item.uid?'穿上':'脫下')+'「'+item.name+'」，屬性已重新計算。')};
+      const pickup=drop?addInventoryItem(previous.inventory,drop):{inventory:previous.inventory,error:undefined};
+      const message='模擬打怪：主角獲得 100 經驗。'+(drop?(pickup.error?'背包已滿，本次掉落無法拾取。':'獲得「'+drop.name+'」！'):'本次未掉落裝備。');
+      return {...previous,hero:grantXp(previous.hero,100),inventory:pickup.inventory,logs:addLog(previous.logs,message)};
     });
   }
 
-  function unequipItem(slot:EquipmentSlot) {
+  function unequipItem(slot:EquipmentSlot,targetUid=selectedUid) {
     setGame(previous=>{
-      const target=selectedUid==='hero'?previous.hero:previous.mercs.find(unit=>unit.uid===selectedUid);
+      const target=targetUid==='hero'?previous.hero:previous.mercs.find(unit=>unit.uid===targetUid);
       if(!target) return previous;
       const result=unequipToInventory<Equipment,Unit|Hero>(target,previous.inventory,slot);
+      if(result.error)return {...previous,logs:addLog(previous.logs,result.error)};
       const unit=normalizeVitals(result.unit);
-      return selectedUid==='hero'?{...previous,inventory:result.inventory,hero:unit as Hero}:{...previous,inventory:result.inventory,mercs:previous.mercs.map(old=>old.uid===selectedUid?unit:old)};
+      const logs=addLog(previous.logs,'裝備已卸下並放入背包空位。');
+      return targetUid==='hero'?{...previous,logs,inventory:result.inventory,hero:unit as Hero}:{...previous,logs,inventory:result.inventory,mercs:previous.mercs.map(old=>old.uid===targetUid?unit:old)};
     });
   }
 
   function buyWearable(base:WearableBase) {
     const price=Math.floor(base.price*currentCity.priceFactor);
     setGame(previous=>{
+      if(previous.inventory.length>=INVENTORY_CAPACITY)return {...previous,logs:addLog(previous.logs,'背包已滿，未扣款。')};
       if(previous.gold<price) { setNotice('裝備商店資金不足。'); return previous; }
       const item:Equipment={...base,uid:uid(base.id),enhance:0,rarity:'普通',magic:[],requiredLevel:1};
       return {...previous,gold:previous.gold-price,inventory:[item,...previous.inventory],logs:addLog(previous.logs,'購入「'+item.name+'」。')};
@@ -986,6 +1000,7 @@ export default function GameV15() {
   function buyMagicEquipment() {
     const cost = 12000;
     setGame((previous) => {
+      if(previous.inventory.length>=INVENTORY_CAPACITY)return {...previous,logs:addLog(previous.logs,'背包已滿，未扣款。')};
       if (previous.gold < cost) {
         setNotice("裝備商店資金不足。");
         return previous;
@@ -1002,6 +1017,7 @@ export default function GameV15() {
 
   function buyOfficialItem(record: OfficialEquipment, price = record.price) {
     setGame((previous) => {
+      if(previous.inventory.length>=INVENTORY_CAPACITY)return {...previous,logs:addLog(previous.logs,'背包已滿，未扣款。')};
       if (previous.gold < price) {
         setNotice("購買「" + record.name + "」的資金不足。");
         return previous;
@@ -1039,6 +1055,7 @@ export default function GameV15() {
   }
 
   function withdrawFromWarehouse(itemUid: string) {
+    if(game.inventory.length>=INVENTORY_CAPACITY){setNotice('背包已滿，無法取出倉庫裝備。');return;}
     const item = sharedWarehouse.find((entry) => entry.uid === itemUid);
     if (!item) return;
     setSharedWarehouse((previous) => previous.filter((entry) => entry.uid !== itemUid));
@@ -1294,11 +1311,12 @@ export default function GameV15() {
 
         <TabsContent value="squad" className="tab-panel">
           <CaravanStatus hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit}
-            toggleGear={toggleHeroDivine}
+            inventory={game.inventory} equipHero={itemUid=>equipItem(itemUid,undefined,'hero')} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
+
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
             maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
             trade={()=>setGame(previous=>({...previous,gold:previous.gold+100,credit:previous.credit+25,logs:addLog(previous.logs,'模擬經商：獲得 100 兩與 25 信用。')}))}
-            trainHero={()=>setGame(previous=>({...previous,hero:grantXp(previous.hero,100),logs:addLog(previous.logs,'模擬打怪：主角獲得 100 經驗。')}))}
+            trainHero={simulateHeroLoot}
             hire={()=>{ const index=Math.floor(Math.random()*merchantMercenaries.length); recruitMerchant(merchantMercenaries[index],index); }}
             train={()=>setGame(previous=>({...previous,hero:grantXp(previous.hero,100),mercs:previous.mercs.map(unit=>grantXp(unit,100)),logs:addLog(previous.logs,'模擬打怪：主角與所有已僱用傭兵各獲得 100 經驗。')}))}
             allocate={stat=>setGame(previous=>previous.hero.points>0?({...previous,hero:{...previous.hero,[stat]:previous.hero[stat]+1,points:previous.hero.points-1}}):previous)} />
@@ -1335,7 +1353,7 @@ export default function GameV15() {
             </section>
           </div>
           <section className="panel inventory-panel">
-            <div className="panel-title"><PackageOpen /><h2>附魔裝備物品欄</h2><span>{game.inventory.length} 件</span></div>
+            <div className="panel-title"><PackageOpen /><h2>背包詳細清單・裝給目前角色</h2><span>{game.inventory.length} 件</span></div>
             <div className="magic-inventory">
               {game.inventory.map((item) => (
                 <article className={"magic-item rarity-" + item.rarity} key={item.uid}>

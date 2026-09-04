@@ -1,15 +1,17 @@
 import type { CaravanMember } from './caravan-status';
 import { vitalStats,combatStats } from './vitals-engine';
 import { heroPersonalPower,heroWeightLimit,heroTotalAttributes } from './hero-rules';
-import {DIVINE_EQUIPMENT,HERO_DISPLAY_SLOTS,equipmentDescription,equipmentDetailLines,type DivineKey,type TooltipGear} from './divine-equipment';
+import {DIVINE_EQUIPMENT,HERO_DISPLAY_SLOTS,equipmentDescription,equipmentDetailLines,type TooltipGear} from './divine-equipment';
 import {EQUIPMENT_LABELS} from './equipment-slots';
+import type {EquipmentSlot} from './equipment-slots';
 import {Tooltip,TooltipContent,TooltipProvider,TooltipTrigger} from '@/components/ui/tooltip';
 
 /** 無獨立計時器或第二份角色資料：所有操作交回遊戲主狀態，再即時重算畫面。 */
-export function HeroStatusPanel({hero,gold,credit,weight,xpNeed,allocate,trade,train,select,toggleGear}:{
+export function HeroStatusPanel({hero,gold,credit,weight,xpNeed,allocate,trade,train,select,unequip}:{
   hero:CaravanMember;gold:number;credit:number;weight:number;xpNeed:(level:number)=>number;
   allocate:(stat:'str'|'agi'|'vit'|'intel')=>void;trade:()=>void;train:()=>void;select:()=>void;
-  toggleGear:(key:DivineKey)=>void;
+
+  unequip:(slot:EquipmentSlot)=>void;
 }) {
   const vital=vitalStats(hero);
   const total=heroTotalAttributes(hero);
@@ -19,7 +21,7 @@ export function HeroStatusPanel({hero,gold,credit,weight,xpNeed,allocate,trade,t
     <section className="hp-equipment" aria-label="六格個人裝備"><h3>隨身裝備</h3><TooltipProvider><div className="hp-six-slots">{HERO_DISPLAY_SLOTS.map(slot=>{
       const item=hero.equip[slot] as (TooltipGear & {image?:string})|null;
       const label=slot==='armor'?'衣服':EQUIPMENT_LABELS[slot];
-      return <div className="hp-slot-wrap" key={slot}><Tooltip><TooltipTrigger className={'hp-gear-slot'+(item?' filled':'')} aria-label={label+'：'+(item?.name||'未裝備')}><span>{item?(item.image?<img src={item.image} alt=""/>:item.name===DIVINE_EQUIPMENT.staff.name?'杖':{weapon:'兵',helm:'盔',armor:'甲',ring1:'戒',ring2:'戒',boots:'靴'}[slot]):label}</span></TooltipTrigger>{item&&<TooltipContent className="hp-gear-tooltip"><strong>{item.name}</strong>{equipmentDetailLines(item).map((line,index)=><span key={index}>{line}</span>)}<em>{equipmentDescription(item)}</em></TooltipContent>}</Tooltip><small>{label}</small></div>;
+      return <div className="hp-slot-wrap" key={slot}><Tooltip><TooltipTrigger onClick={()=>{if(item)unequip(slot)}} className={'hp-gear-slot'+(item?' filled':'')} aria-label={label+'：'+(item?.name||'未裝備')}><span>{item?(item.image?<img src={item.image} alt=""/>:item.name===DIVINE_EQUIPMENT.staff.name?'杖':{weapon:'兵',helm:'盔',armor:'甲',ring1:'戒',ring2:'戒',boots:'靴'}[slot]):label}</span></TooltipTrigger>{item&&<TooltipContent className="hp-gear-tooltip"><strong>{item.name}</strong>{equipmentDetailLines(item).map((line,index)=><span key={index}>{line}</span>)}<em>{equipmentDescription(item)}</em></TooltipContent>}</Tooltip><small>{label}</small></div>;
     })}</div></TooltipProvider><small>懸停或鍵盤聚焦查看加成；手套、護身符保留於下方完整裝備區。</small></section>
     <section className="hp-indicators">
       <div className="hp-power"><span>總戰鬥力 <small>（主角）</small></span><strong>{heroPersonalPower(hero).toLocaleString()}</strong></div>
@@ -33,6 +35,6 @@ export function HeroStatusPanel({hero,gold,credit,weight,xpNeed,allocate,trade,t
       <div className="hp-vitals">{(['hp','mp'] as const).map(key=>{const max=key==='hp'?vital.maxHp:vital.maxMp;return <label className="hp-meter" key={key}>{key==='hp'?'生命值 HP':'魔法值 MP'}<span>{vital[key]} / {max}</span><progress className={key} max={max} value={vital[key]}/></label>})}</div>
       <label className="hp-meter hp-exp">EXP<span>{hero.xp} / {xpNeed(hero.level)}</span><progress max={xpNeed(hero.level)} value={hero.xp}/></label>
     </section>
-    <footer className="hp-actions"><button onClick={trade} title="獲得 100 兩與 25 信用">模擬經商（賺錢／加信用）</button><button onClick={train} title="主角獲得 100 經驗">模擬打怪（獲得經驗值）</button>{(Object.keys(DIVINE_EQUIPMENT) as DivineKey[]).map(key=>{const item=DIVINE_EQUIPMENT[key],worn=(hero.equip[item.slot] as TooltipGear|null)?.name===item.name;return <button key={key} aria-pressed={worn} onClick={()=>toggleGear(key)}>{worn?'脫下裝備：':'一鍵裝備：'}{item.name}</button>})}<small>神裝測試免費；替換裝備退回背包。掛機每秒 +10 兩 · +5 信用</small></footer>
+    <footer className="hp-actions"><button onClick={trade} title="獲得 100 兩與 25 信用">模擬經商（賺錢／加信用）</button><button onClick={train} title="100 經驗與 50% 神裝掉落">模擬打怪（經驗／50% 掉寶）</button><small>掛機每秒 +10 兩 · +5 信用</small></footer>
   </aside>;
 }
