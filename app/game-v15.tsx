@@ -44,7 +44,7 @@ import { battleMaps } from "./reference-data";
 import { awakeningProfiles, gameplayContracts, officialEquipment, officialGems, OfficialEquipment, sourceEnemyForMap } from "./v17-content";
 import { TradePanel } from "./trade-panel";
 import { VitalBars } from "./vital-bars";
-import { normalizeVitals, recoverVitals, resolveVitalBattle, spellCost, vitalStats } from "./vitals-engine";
+import { combatStats, enemyCombatStats, normalizeVitals, recoverVitals, resolveVitalBattle, spellCost, vitalStats } from "./vitals-engine";
 import { advanceTrade, dispatchTrade, freshTrade, MAX_CARGO_LEVEL, restoreTrade, TRADE_ROUTES, upgradeCost, type TradeState } from "./trade-engine";
 
 type EquipmentSlot = "weapon" | "armor" | "helm" | "boots" | "accessory";
@@ -657,7 +657,7 @@ function resolveRoadEncounter(previous: GameState): GameState {
       const sourceTarget = sourceEnemyForMap(previous.battleMap, previous.stage, previous.stage % 10 === 0);
       const map = battleMaps.find((entry) => entry.id === previous.battleMap) || battleMaps[0];
       const health = enemyMax(previous.stage, map.hpMultiplier);
-      const combat = resolveVitalBattle([previous.hero, ...active].map((unit) => ({ uid: unit.uid, name: unit.name, skill: unit.skill, ...vitalStats(unit), power: Math.floor(unitPower(unit) * form.atk), cost: spellCost(unit) })), { hp: health, attack: Math.floor(20 + previous.stage * 5 + Math.sqrt(health) * 1.8), physical: sourceTarget?.physical || 0, magic: sourceTarget?.magic || 0 });
+      const combat = resolveVitalBattle([previous.hero, ...active].map((unit) => ({ uid: unit.uid, name: unit.name, skill: unit.skill, ...vitalStats(unit), ...combatStats(unit), attack: Math.floor(combatStats(unit).attack * form.atk), cost: spellCost(unit) })), { hp: health, ...enemyCombatStats(previous.stage, health, previous.stage % 10 === 0), physical: sourceTarget?.physical || 0, magic: sourceTarget?.magic || 0 });
       const remaining = new globalThis.Map(combat.fighters.map((unit) => [unit.uid, unit]));
       const applyRemaining = <T extends Unit | Hero,>(unit: T): T => {
         const fighter = remaining.get(unit.uid);
@@ -862,6 +862,7 @@ export default function GameV15() {
   const currentMap = battleMaps.find((map) => map.id === game.battleMap) || battleMaps[0];
   const maxEnemyHp = enemyMax(game.stage, currentMap.hpMultiplier);
   const boss = game.stage % 10 === 0;
+  const monsterStats = enemyCombatStats(game.stage, maxEnemyHp, boss);
   const enemyArt = legacyMercenaries[9 + (game.stage % 3)];
   const sourcedEnemy = sourceEnemyForMap(currentMap.id, game.stage, boss);
   const fallbackEnemy = enemyForStage(game.stage, currentMap.enemyRegion);
@@ -1442,6 +1443,7 @@ export default function GameV15() {
             </div>
             <div className="battle-console">
               <div className="enemy-health">
+                <div className="combat-stat-pair"><span>怪物 ATK 攻擊力 <b>{format(monsterStats.attack)}</b></span><span>怪物 DEF 防禦力 <b>{format(monsterStats.defense)}</b></span></div>
                 <div><strong>{boss ? "首領" : "敵軍"}生命</strong><span>{format(game.enemyHp)} / {format(maxEnemyHp)}</span></div>
                 <Progress value={Math.max(0, Math.min(100, game.enemyHp / maxEnemyHp * 100))} className="hp-progress" />
               </div>
@@ -1576,7 +1578,7 @@ export default function GameV15() {
               </div>
               <div className="xp-line"><span>經驗 {selected.xp} / {xpNeed(selected.level)}</span><Progress value={selected.xp / xpNeed(selected.level) * 100} /></div>
               <VitalBars unit={selected} />
-              <p className="points">魔法技能・{selected.skill}｜每次消耗 <strong>{spellCost(selected)} MP</strong>。魔力不足改用普攻，HP 歸零停止參戰。</p>
+              <p className="points">攻防已包含能力、等級、轉職與裝備加成；陣法另影響實戰攻擊。魔法技能・{selected.skill}｜每次消耗 <strong>{spellCost(selected)} MP</strong>。魔力不足改用普攻，HP 歸零停止參戰。</p>
               <div className="stat-grid">
                 {(["str", "agi", "intel", "vit"] as const).map((stat) => (
                   <div key={stat}><small>{stat === "str" ? "力量" : stat === "agi" ? "敏捷" : stat === "intel" ? "智力" : "體質"}</small><strong>{selected[stat]}</strong><Button size="icon-xs" variant="outline" disabled={selected.points <= 0} onClick={() => addStat(stat)}>＋</Button></div>

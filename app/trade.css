@@ -2,6 +2,9 @@
 .unit-vitals { display: grid; gap: 12px; margin: 16px 0; min-width: 0; }
 .unit-vitals span { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; font-size: 14px; }
 .unit-vitals b { font-weight: 500; font-variant-numeric: tabular-nums; }
+.combat-stat-pair { display: grid!important; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px!important; margin-bottom: 8px; }
+.combat-stat-pair > span { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; background: #223038; padding: 10px; border-radius: 7px; font-size: 14px; color: #dbc598; }
+.combat-stat-pair b { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .unit-hp { color: #9bd1a5; }
 .unit-mp { color: #8ebeea; }
 .unit-hp [data-slot="progress-indicator"] { background: #64aa7a; }

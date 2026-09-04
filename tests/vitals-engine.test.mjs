@@ -1,9 +1,38 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { vitalStats, normalizeVitals, recoverVitals, resolveVitalBattle, spellCost } from '../app/vitals-engine.ts';
+import { combatStats, enemyCombatStats, damageAfterDefense, vitalStats, normalizeVitals, recoverVitals, resolveVitalBattle, spellCost } from '../app/vitals-engine.ts';
 const unit = { level: 1, vit: 10, intel: 10, equip: {} };
-const fighter = { uid: 'hero', name: '主角', skill: '法術', hp: 500, mp: 24, power: 100, intelligence: 10, defense: 0, cost: 12 };
-const enemy = { hp: 100000, attack: 1, physical: 0, magic: 0 };
+const fighter = { uid: 'hero', name: '主角', skill: '法術', hp: 500, mp: 24, attack: 100, intelligence: 10, defense: 0, cost: 12 };
+const enemy = { hp: 100000, attack: 1, defense: 0, physical: 0, magic: 0 };
+test('equipment, attributes and promotion increase combat stats', () => {
+  const base = { ...unit, str: 20, agi: 10 };
+  const stats = combatStats(base);
+  const equipped = combatStats({ ...base, equip: { weapon: { atk: 40, def: 20, enhance: 1, magic: [{ stat: 'atk', value: 12 }, { stat: 'def', value: 14 }] } } });
+  assert.ok(equipped.attack > stats.attack && equipped.defense > stats.defense);
+  assert.ok(combatStats({ ...base, str: 50 }).attack > stats.attack);
+  assert.ok(combatStats({ ...base, vit: 50 }).defense > stats.defense);
+  assert.ok(combatStats({ ...base, tier: 2 }).attack > stats.attack);
+});
+test('monster attack and defense scale with stages and bosses', () => {
+  const base = enemyCombatStats(1, 250);
+  const later = enemyCombatStats(10, 1000);
+  const boss = enemyCombatStats(10, 1000, true);
+  assert.ok(later.attack > base.attack && later.defense > base.defense);
+  assert.ok(boss.attack > later.attack && boss.defense > later.defense);
+});
+test('attack increases damage and armor reduces it without healing', () => {
+  assert.ok(damageAfterDefense(200, 50) > damageAfterDefense(100, 50));
+  assert.ok(damageAfterDefense(100, 200) < damageAfterDefense(100, 0));
+  assert.equal(damageAfterDefense(1, 999999, 85), 1);
+});
+test('monster defense and party defense both affect actual encounters', () => {
+  const physical = { ...fighter, mp: 0, hp: 100000 };
+  const normal = resolveVitalBattle([physical], { ...enemy, attack: 100 });
+  const monsterArmor = resolveVitalBattle([physical], { ...enemy, attack: 100, defense: 200 });
+  const partyArmor = resolveVitalBattle([{ ...physical, defense: 200 }], { ...enemy, attack: 100 });
+  assert.ok(monsterArmor.enemyHp > normal.enemyHp);
+  assert.ok(partyArmor.receivedDamage < normal.receivedDamage);
+});
 test('old saves initialize full HP and MP; saved zero stays zero', () => {
   const full = normalizeVitals(unit);
   assert.equal(full.hp, vitalStats(unit).maxHp);
