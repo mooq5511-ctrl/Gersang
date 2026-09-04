@@ -19,8 +19,9 @@ export function vitalStats(unit: VitalUnit) {
     defense += item.def || 0;
     for (const affix of item.magic || []) if (affix.stat === "hp") hpPercent += affix.value;
   }
-  const maxHp = Math.max(1, Math.floor((spec ? spec.ratings[0] * 20 + (unit.level - 1) * 12 + Math.max(0, vitality - spec.ratings[0]) * 8 + equipmentHp : 100 + vitality * 8 + unit.level * 12 + equipmentHp) * (1 + hpPercent / 100)));
-  const maxMp = Math.max(1, Math.floor(spec ? 40 + (unit.level - 1) * 4 + Math.max(0, intelligence - (spec.mp ? 20 : 10)) * 3 : 40 + intelligence * 3 + unit.level * 4));
+  // 主角改用指定的四倍屬性公式，傭兵平衡不變；裝備仍能增加實戰生命與魔力。
+  const maxHp = Math.max(1, Math.floor((unit.templateId==='hero' ? vitality*4+equipmentHp : spec ? spec.ratings[0] * 20 + (unit.level - 1) * 12 + Math.max(0, vitality - spec.ratings[0]) * 8 + equipmentHp : 100 + vitality * 8 + unit.level * 12 + equipmentHp) * (1 + hpPercent / 100)));
+  const maxMp = Math.max(1, Math.floor(unit.templateId==='hero' ? intelligence*4 : spec ? 40 + (unit.level - 1) * 4 + Math.max(0, intelligence - (spec.mp ? 20 : 10)) * 3 : 40 + intelligence * 3 + unit.level * 4));
   const clamp = (value: number | undefined, max: number) => typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(max, Math.floor(value))) : max;
   return { maxHp, maxMp, hp: clamp(unit.hp, maxHp), mp: clamp(unit.mp, maxMp), defense, intelligence };
 }

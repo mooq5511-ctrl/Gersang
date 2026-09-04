@@ -6,6 +6,7 @@ import { bandit, isBanditEncounter } from "./bandit";
 import { merchantMercenaries, mercenarySpec, type MercenarySpec } from './mercenary-roster';
 import { CaravanStatus } from './caravan-status';
 import { settleCaravanIdle } from './caravan-idle';
+import { heroPersonalPower, heroWeightLimit, HERO_INITIAL_ATTRIBUTES } from './hero-rules';
 import { backupBeforeGuildMigration, retainGuildRoster } from './guild-migration';
 import { EQUIPMENT_SLOTS, EQUIPMENT_LABELS, emptyEquipmentSlots, itemKind, compatibleSlots, normalizeStoredItem, equipFromInventory, unequipToInventory, migrateSevenSlotSave, backupBeforeEquipmentMigration, type EquipmentSlot, type EquipmentKind } from './equipment-slots';
 import { wearableCatalog, type WearableBase } from './wearable-catalog';
@@ -203,7 +204,7 @@ function emptyEquipment(): EquipmentSet {
 }
 
 
-function makeHero(nation: NationId = "korea", name = "行商者"): Hero {
+function makeHero(nation: NationId = "korea", name = "王天下"): Hero {
   const profile = heroNationProfiles[nation];
   return normalizeVitals<Hero>({
     uid: "hero",
@@ -212,17 +213,14 @@ function makeHero(nation: NationId = "korea", name = "行商者"): Hero {
     tier: 0,
     special: false,
     name,
-    job: profile.title,
+    job: nation==='korea' ? '朝鮮商客' : profile.title,
     role: "主角",
     skill: profile.skill,
     image: profile.image,
     level: 1,
     xp: 0,
-    points: 6,
-    str: profile.stats[0],
-    agi: profile.stats[1],
-    intel: profile.stats[2],
-    vit: profile.stats[3],
+    points: 0,
+    ...HERO_INITIAL_ATTRIBUTES,
     equip: emptyEquipment(),
   });
 }
@@ -275,14 +273,14 @@ function starterEquipment(): Equipment[] {
   return [rollEquipment(3), rollEquipment(8, true)];
 }
 
-function freshGame(nation: NationId = "korea", heroName = "行商者"): GameState {
+function freshGame(nation: NationId = "korea", heroName = "王天下"): GameState {
   const starters: Unit[] = [];
   return {
     version: 21,
     trade: freshTrade(),
     credit: 0,
     idleStamp: Date.now(),
-    gold: 120000,
+    gold: 0,
     stage: 1,
     kills: 0,
     city: worldCities.find((city) => city.nation === nation)?.id || worldCities[0].id,
@@ -540,6 +538,7 @@ function equipmentPower(item: Equipment | null) {
 }
 
 function unitPower(unit: Unit | Hero) {
+  if(unit.uid==='hero') return heroPersonalPower(unit);
   const flat = slots.reduce((sum, slot) => {
     const bonus = unit.equip[slot]?.bonus;
     return { str: sum.str + (bonus?.str || 0), agi: sum.agi + (bonus?.agi || 0), intel: sum.intel + (bonus?.intel || 0), vit: sum.vit + (bonus?.vit || 0) };
@@ -1283,7 +1282,9 @@ export default function GameV15() {
         <TabsContent value="squad" className="tab-panel">
           <CaravanStatus hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit}
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
-            maxWeight={40+game.hero.str*5} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
+            maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
+            trade={()=>setGame(previous=>({...previous,gold:previous.gold+100,credit:previous.credit+25,logs:addLog(previous.logs,'模擬經商：獲得 100 兩與 25 信用。')}))}
+            trainHero={()=>setGame(previous=>({...previous,hero:grantXp(previous.hero,100),logs:addLog(previous.logs,'模擬打怪：主角獲得 100 經驗。')}))}
             hire={()=>{ const index=Math.floor(Math.random()*merchantMercenaries.length); recruitMerchant(merchantMercenaries[index],index); }}
             train={()=>setGame(previous=>({...previous,hero:grantXp(previous.hero,100),mercs:previous.mercs.map(unit=>grantXp(unit,100)),logs:addLog(previous.logs,'模擬打怪：主角與所有已僱用傭兵各獲得 100 經驗。')}))}
             allocate={stat=>setGame(previous=>previous.hero.points>0?({...previous,hero:{...previous.hero,[stat]:previous.hero[stat]+1,points:previous.hero.points-1}}):previous)} />

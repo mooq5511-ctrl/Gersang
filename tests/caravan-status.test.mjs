@@ -4,12 +4,12 @@ import {readFileSync} from 'node:fs';
 import {settleCaravanIdle} from '../app/caravan-idle.ts';
 import {EQUIPMENT_SLOTS,emptyEquipmentSlots,equipFromInventory,unequipToInventory,migrateSevenSlotSave} from '../app/equipment-slots.ts';
 test('idle pays whole seconds once and retains remainder',()=>{
-  const a=settleCaravanIdle(1000,2500);assert.deepEqual(a,{stamp:2000,gold:5,credit:2});
+  const a=settleCaravanIdle(1000,2500);assert.deepEqual(a,{stamp:2000,gold:10,credit:5});
   assert.equal(settleCaravanIdle(a.stamp,2500).gold,0);
-  assert.equal(settleCaravanIdle(a.stamp,3000).gold,5);
+  assert.equal(settleCaravanIdle(a.stamp,3000).gold,10);
 });
 test('offline caps at eight hours and never repays discarded time',()=>{
-  const a=settleCaravanIdle(1000,100000000);assert.equal(a.gold,28800*5);assert.equal(a.credit,28800*2);
+  const a=settleCaravanIdle(1000,100000000);assert.equal(a.gold,28800*10);assert.equal(a.credit,28800*5);
   assert.equal(settleCaravanIdle(a.stamp,100000000).gold,0);
 });
 test('backward clock and invalid old timestamp give no reward',()=>{
