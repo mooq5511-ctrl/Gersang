@@ -8,7 +8,7 @@ import {InventoryPanel,type BagItem} from './inventory-panel';
 // 此面板只呈現真實遊戲資料；金錢與成長由遊戲唯一計時器結算。
 export type CaravanMember = VitalUnit & { uid:string; name:string; role:string; job?:string; image:string; xp:number; points:number; str:number; agi:number };
 type Props = {
-  battle:ReactNode;busy:boolean;
+  battle:ReactNode;navigation:ReactNode;busy:boolean;
   hero:CaravanMember; mercs:CaravanMember[]; gold:number; credit:number; weight:number; maxWeight:number;
   cost:number; power:(unit:CaravanMember)=>number; xpNeed:(level:number)=>number;
   select:(uid:string)=>void; hire:()=>void; train:()=>void; allocate:(stat:'str'|'agi'|'vit'|'intel')=>void;
@@ -27,6 +27,7 @@ export function CaravanStatus(p:Props) {
   // 信用等級採每級 100 點；戰力使用既有引擎，包含穿戴裝備。
   const total=p.power(p.hero)+p.mercs.reduce((sum,unit)=>sum+p.power(unit),0);
   return <section className="caravan-status" aria-label="主角與商隊狀態">
+    {p.navigation}
     <div className="hero-inventory-layout"><HeroStatusPanel busy={p.busy} hero={p.hero} gold={p.gold} credit={p.credit} weight={p.weight} xpNeed={p.xpNeed} allocate={p.allocate} trade={p.trade} train={p.trainHero} select={()=>p.select(p.hero.uid)} unequip={p.unequipHero}/>{p.battle}<InventoryPanel inventory={p.inventory} equip={p.equipHero} message={p.bagMessage}/></div>
     <section className="caravan-wood caravan-team"><header><small>中央傭兵公會 · 商隊名冊</small><h2>九席護商隊</h2><span>{Math.min(9,p.mercs.length)} / 9 席 · 隨機僱用 {p.cost.toLocaleString()} 兩</span></header>
       <p className="hero-team-total">總商隊戰力 {total.toLocaleString()}</p>

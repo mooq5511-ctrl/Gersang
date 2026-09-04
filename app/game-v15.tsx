@@ -5,8 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { bandit, isBanditEncounter } from "./bandit";
 import { merchantMercenaries, mercenarySpec, type MercenarySpec } from './mercenary-roster';
 import { CaravanStatus } from './caravan-status';
-import {DungeonPanel} from './dungeon-panel';
-import {dungeonStep,dungeonBusy,freshDungeon,type DungeonState,type DungeonKey} from './dungeon-engine';
+import {DungeonPanel,WorldMapNavigation} from './dungeon-panel';
+import {dungeonStep,dungeonBusy,freshDungeon,teleportDungeon,type DungeonState,type DungeonKey} from './dungeon-engine';
 import { settleCaravanIdle } from './caravan-idle';
 import { heroPersonalPower, heroWeightLimit, heroTotalAttributes, HERO_INITIAL_ATTRIBUTES } from './hero-rules';
 import {DIVINE_EQUIPMENT} from './divine-equipment';
@@ -481,6 +481,7 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
   const attack=Object.values(previous.hero.equip).reduce((sum,item)=>sum+(item?.atk||0),0);
   const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,int:total.intel,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice);
   let next={...previous,dungeon:result.state,hero:{...previous.hero,hp:result.hp,mp:result.mp}};
+  if(result.hp===0&&result.state.status==='recovering')next={...next,city:worldCities.find(city=>city.name==='漢陽')?.id||next.city};
   if(result.reward){
     const reward=result.reward;
     next={...next,hero:grantXp(next.hero,reward.xp),gold:next.gold+reward.gold,kills:next.kills+1,logs:addLog(next.logs,'成功擊敗副本怪物，獲得 '+reward.xp+' 經驗與 '+reward.gold+' 兩。')};
@@ -1359,6 +1360,12 @@ export default function GameV15() {
 
         <TabsContent value="squad" className="tab-panel">
           <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit}
+            navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now();setGame(previous=>{
+              const old=previous.dungeon||freshDungeon();
+              if(vitalStats(previous.hero).hp<=0)return {...previous,dungeon:{...freshDungeon(),status:'recovering',stamp:now,pauseAt:old.pauseAt||now,logs:['商隊不幸全滅，已被熱心商旅送回漢陽療傷...']}};
+              const dungeon=teleportDungeon(old,previous.hero.level,heroPersonalPower(previous.hero),now,id);
+              return dungeon===old?previous:{...previous,dungeon,logs:addLog(previous.logs,dungeon.logs[0])};
+            });}}/>}
             battle={<DungeonPanel state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random();setGame(previous=>applyDungeon(previous,action,now,key,roll,choice));}}/>}
             inventory={game.inventory} equipHero={itemUid=>equipItem(itemUid,undefined,'hero')} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
 

@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>大商帝國 · 地域征途</title><style>
+*{box-sizing:border-box}body{margin:0;background:#100b06;color:#f0e68c;font:16px/1.6 Georgia,"PMingLiU",serif;padding:24px}main{max-width:1120px;margin:auto}h1,h2,h3{color:#ffd700;margin:0 0 12px}h1{font-size:24px}h2{font-size:21px}small{font-size:13px;color:#c7b28a}.wood{background:repeating-linear-gradient(3deg,#ffffff02 0 1px,transparent 2px 12px),linear-gradient(135deg,#2a1801,#170e02);border:2px solid #b8860b;padding:18px;box-shadow:inset 0 0 0 4px #140c03}button{font:inherit;font-size:14px;color:#ffd700;background:linear-gradient(#791a0b,#440c04);border:1px solid #b8860b;border-radius:3px;padding:9px;cursor:pointer}button:hover:not(:disabled),button:focus-visible{box-shadow:0 0 15px #ffd70077;outline:1px solid #ffdf73}button:disabled{background:#282828;border-color:#68645d;color:#aaa;cursor:not-allowed}button:disabled small{color:#aaa}.maps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.maps button{text-align:left;display:flex;flex-direction:column;gap:5px}.maps button[aria-pressed=true]:not(:disabled){box-shadow:0 0 14px #ffd70066,inset 0 0 12px #ffcc0022}.columns{margin-top:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}.identity{display:flex;gap:14px;align-items:center}.seal{display:grid;place-items:center;width:70px;height:70px;border:2px double #b8860b;color:#ffd700;font-size:36px;background:#120c05}.identity strong{font-size:24px;color:#ffd700}.identity span{display:block}section+section{margin-top:16px;padding-top:14px;border-top:1px solid #8e681c66}.slots{display:grid;grid-template-columns:repeat(3,56px);gap:12px;justify-content:center}.slots button{width:56px;height:56px;background:#211607;font-size:13px}.bag{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.bag button{aspect-ratio:1;min-width:0;padding:3px;font-size:12px;background:#211607}.filled{border-color:#ffd700!important;box-shadow:inset 0 0 15px #bd842522}.stat{display:flex;align-items:center;gap:9px;margin-top:6px}.stat strong{margin-left:auto}.stat button{padding:1px 8px}.power{font-size:28px;color:#ffd700}.meter{display:block;font-size:14px;margin:9px 0}.meter span{float:right}progress{display:block;appearance:none;width:100%;height:10px;margin-top:5px;border:0;background:#080502}progress::-webkit-progress-bar{background:#080502}progress::-webkit-progress-value{background:linear-gradient(90deg,#867123,#e3c469)}progress::-moz-progress-bar{background:#e3c469}progress.hp::-webkit-progress-value{background:linear-gradient(90deg,#701b18,#dc654d)}progress.hp::-moz-progress-bar{background:#dc654d}progress.mp::-webkit-progress-value{background:linear-gradient(90deg,#16345a,#6babe2)}progress.mp::-moz-progress-bar{background:#6babe2}progress.credit::-webkit-progress-value{background:linear-gradient(90deg,#12483e,#20b2aa)}progress.credit::-moz-progress-bar{background:#20b2aa}.actions{display:grid;gap:8px;margin-top:14px}.enemy{text-align:center}.enemy .seal{margin:auto}.flash{min-height:78px;border-left:3px solid #c39a36;background:#08050388;padding:12px;color:#ffe6a2}.log{max-height:240px;overflow:auto;padding:0;list-style:none;font-size:14px}.log li{border-bottom:1px solid #80652144;padding:7px 0}.tooltip{position:fixed;z-index:5;max-width:280px;background:#170d03;color:#ffd700;border:1px solid #b8860b;padding:12px;white-space:pre-line;box-shadow:0 8px 20px #000a;pointer-events:none;font-size:14px}.muted{font-size:14px;color:#c7b28a}.footer{font-size:14px;color:#c7b28a;margin-top:16px}@media(max-width:960px){.maps{grid-template-columns:1fr 1fr}.columns{grid-template-columns:1fr 1fr}.inventory{grid-column:1/-1}.bag{max-width:350px}}@media(max-width:650px){body{padding:12px}.columns{grid-template-columns:1fr}.inventory{grid-column:auto}.maps{grid-template-columns:1fr}.wood{padding:14px}}
+</style></head><body><main>
+<nav class="wood" aria-label="大商帝國地域傳送（地圖選擇）"><h1>大商帝國地域傳送 <small>地圖選擇</small></h1><p id="requirements"></p><div id="maps" class="maps"></div><p class="muted">點選地域立即開戰。等級與戰鬥力須同時達標；療傷期間無法傳送。</p></nav>
+<div class="columns">
+<aside class="wood"><div class="identity"><div class="seal" aria-hidden="true">商</div><div><strong>王天下</strong><span>朝鮮商客</span><span id="level"></span></div></div>
+<section><h2>隨身裝備</h2><div class="slots" id="equipment"></div></section>
+<section><span>主角總戰鬥力</span><div class="power" id="power"></div><p id="money"></p><p id="weight"></p><label class="meter">信用 <span id="creditText"></span><progress id="creditBar" class="credit" max="100"></progress></label></section>
+<section><h2>四圍屬性 <small id="points"></small></h2><div id="attributes"></div><p id="defense"></p><label class="meter">HP <span id="hpText"></span><progress id="hp" class="hp"></progress></label><label class="meter">MP <span id="mpText"></span><progress id="mp" class="mp"></progress></label><label class="meter">EXP <span id="xpText"></span><progress id="xp"></progress></label></section>
+<div class="actions"><button id="trade">模擬經商 · 100 兩 / 25 信用</button><button id="train">模擬打怪 · 100 經驗 / 50% 掉寶</button></div>
+</aside>
+<section class="wood"><h2 id="zoneName"></h2><p class="muted" id="battleStatus"></p><div class="enemy"><div class="seal" id="enemySeal" aria-hidden="true"></div><h3 id="enemyName"></h3><p id="enemyStats"></p><label class="meter">HP <span id="enemyHpText"></span><progress id="enemyHp" class="hp"></progress></label><label class="meter">MP <span id="enemyMpText"></span><progress id="enemyMp" class="mp"></progress></label></div><p class="flash" id="flash" role="status"></p>
+<div class="actions"><button id="normal">普通攻擊 · 無消耗</button><button id="skill"></button><button id="retreat">撤退療傷</button></div><p class="muted" id="lootInfo"></p><p class="muted">每秒自動交鋒。蛇龍出水消耗 40 MP，冷卻 3 秒；高級神仙棒使傷害翻倍。怪物目前僅使用普通攻擊。</p><h3>戰鬥日誌</h3><ol class="log" id="logs"></ol></section>
+<aside class="wood inventory"><h2>商隊背包 <small id="bagCount"></small></h2><div id="bag" class="bag"></div><p class="muted">點擊背包裝備即可穿戴；點擊身上裝備即可卸下。滑鼠懸停或鍵盤聚焦可查看屬性。滿背包可交換，無空格時不能卸下。</p><p class="flash" id="message" role="status">從漢陽近郊出發，逐步解鎖各地域。</p></aside>
+</div><p class="footer">單檔示範版：HTML、CSS、JavaScript 全部內嵌；重新開啟會重新開始，不讀寫線上遊戲存檔。每秒 +10 兩、+5 信用，療傷期間暫停。</p></main><div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+<script>
+'use strict';
+/* 下列狀態機與線上遊戲共用：地圖陣列、門檻判斷、傷害、掉落及療傷完全一致。 */
+/** 副本狀態機：純函式，不建立計時器、不改動傳入物件，方便驗證每次結算。 */
+const DUNGEONS = {
+    thug: { name: '打手', level: 1, hp: 150, mp: 0, atk: 8, dex: 8, xp: 20, gold: 15, drop: .05, loot: ['boots'] },
+    pirate: { name: '海賊', level: 15, hp: 800, mp: 40, atk: 35, dex: 20, xp: 150, gold: 120, drop: .25, loot: ['boots'] },
+    snowWoman: { name: '雪女', level: 40, hp: 4000, mp: 200, atk: 120, dex: 45, xp: 800, gold: 600, drop: .55, loot: ['helmet', 'staff'] },
+    abyssKing: { name: '閻王', level: 80, hp: 25000, mp: 500, atk: 350, dex: 70, xp: 5000, gold: 3000, drop: .8, loot: ['armor'] },
+    wolf: { name: '幽冥狼', level: 10, hp: 300, mp: 0, atk: 15, dex: 12, xp: 100, gold: 80, drop: .2, loot: ['staff', 'armor', 'helmet', 'boots'] },
+    snake: { name: '冥界大蛇', level: 40, hp: 2500, mp: 100, atk: 65, dex: 30, xp: 500, gold: 350, drop: .55, loot: ['helmet', 'helmet', 'boots', 'boots', 'staff', 'armor'] },
+    king: { name: '閻王', level: 80, hp: 15000, mp: 400, atk: 220, dex: 60, xp: 2400, gold: 2000, drop: .9, loot: ['armor', 'armor', 'staff', 'staff', 'helmet', 'boots'] }
+};
+/** 地圖資料是畫面鎖定與實際傳送的唯一來源；等級、戰鬥力兩條件必須同時滿足。 */
+const WORLD_ZONES = [
+    { id: 'hanyang', name: '漢陽近郊', level: 1, power: 0, enemy: 'thug', mood: '新手區 · 漢陽城外', loot: '極低機率：太皇鞋' },
+    { id: 'geoje', name: '巨濟海底洞窟', level: 15, power: 0, enemy: 'pirate', mood: '中期區 · 潮聲暗湧', loot: '太皇鞋' },
+    { id: 'snow', name: '大雪山冰窟', level: 40, power: 500, enemy: 'snowWoman', mood: '高階區 · 霜雪封山', loot: '飛虎兜、高級神仙棒' },
+    { id: 'abyss', name: '冥界深淵', level: 70, power: 2000, enemy: 'abyssKing', mood: '終極 BOSS 區 · 冥府深處', loot: '海王戰甲' }
+];
+const zoneFor = (id) => WORLD_ZONES.find(zone => zone.id === id) || WORLD_ZONES[0];
+const zoneUnlocked = (zone, level, power) => level >= zone.level && power >= zone.power;
+const zoneRequirement = (zone) => zone.level === 1 ? 'Lv.1 · 無限制' : 'Lv.' + zone.level + (zone.power ? ' 且戰鬥力 ≥ ' + zone.power : '');
+const freshDungeon = () => ({ status: 'idle', zone: 'hanyang', key: 'thug', enemyHp: 150, normalAt: 0, skillAt: 0, spawnAt: 0, stamp: 0, logs: [], serial: 0 });
+const dungeonBusy = (state) => !!state && state.status !== 'idle';
+/** 切圖只更換對手，不補血、不補魔、不發舊怪獎勵，也不清除技能冷卻。
+ * 療傷期間禁止傳送，避免切圖繞過全滅懲罰；只使用原有回合計時器。 */
+function teleportDungeon(old, level, power, now, id) {
+    const zone = WORLD_ZONES.find(entry => entry.id === id);
+    if (!zone || !zoneUnlocked(zone, level, power) || old.status === 'recovering')
+        return old;
+    return { ...old, zone: zone.id, key: zone.enemy, enemyHp: DUNGEONS[zone.enemy].hp, status: 'fighting', stamp: now,
+        pauseAt: dungeonBusy(old) ? old.pauseAt : now, spawnAt: 0, normalAt: Math.max(now, old.normalAt),
+        logs: ['已傳送至 ' + zone.name + '！', ...old.logs].slice(0, 40) };
+}
+function dungeonStep(old, hero, action, now, key = old.key, roll = .99, choice = 0) {
+    const state = { ...old, logs: [...old.logs] };
+    let hp = hero.hp, mp = hero.mp;
+    let reward = null;
+    const log = (message) => { state.logs = [message, ...state.logs].slice(0, 40); };
+    const enemy = () => DUNGEONS[state.key];
+    const recover = () => { state.status = 'recovering'; state.zone = 'hanyang'; state.key = 'thug'; state.enemyHp = DUNGEONS.thug.hp; state.spawnAt = 0; log('商隊不幸全滅，已被熱心商旅送回漢陽療傷...'); };
+    // 先切換狀態再產生獎勵，快速連點或同回合後攻都不會重複結算。
+    const victory = () => { state.status = 'respawning'; state.spawnAt = now + 1000; state.serial++; const e = enemy(); reward = { xp: e.xp, gold: e.gold, loot: roll < e.drop ? e.loot[Math.min(e.loot.length - 1, Math.max(0, Math.floor(choice * e.loot.length)))] : null }; log('成功擊敗 ' + e.name + '！獲得 ' + e.xp + ' 經驗與 ' + e.gold + ' 兩。'); };
+    const hit = (skill = false) => {
+        if (state.status !== 'fighting')
+            return;
+        if (skill) {
+            if (mp < 40 || now < state.skillAt)
+                return;
+            mp -= 40;
+            state.skillAt = now + 3000;
+        }
+        else {
+            if (now < state.normalAt)
+                return;
+            state.normalAt = now + 1000;
+        }
+        const damage = Math.max(1, Math.floor(skill ? (hero.int * 8 + hero.attack * 3) * (hero.staff ? 2 : 1) : hero.str * 2 + hero.attack));
+        state.enemyHp = Math.max(0, state.enemyHp - damage);
+        log((skill ? '主角施放了 [蛇龍出水]' : '主角普通攻擊') + '，造成 ' + damage + ' 點傷害！');
+        if (!state.enemyHp)
+            victory();
+    };
+    const counter = () => { if (state.status !== 'fighting')
+        return; const damage = Math.max(1, enemy().atk - hero.defense); hp = Math.max(0, hp - damage); log(enemy().name + ' 攻擊，受到 ' + damage + ' 點傷害。'); if (!hp)
+        recover(); };
+    if (action === 'start' && state.status === 'idle') {
+        state.key = key;
+        state.enemyHp = DUNGEONS[key].hp;
+        state.stamp = now;
+        state.pauseAt = now;
+        state.normalAt = now;
+        state.skillAt = now;
+        state.status = hp > 0 ? 'fighting' : 'recovering';
+        log('挑戰 ' + DUNGEONS[key].name + '。');
+    }
+    else if (action === 'retreat' && (state.status === 'fighting' || state.status === 'respawning')) {
+        state.status = 'recovering';
+        state.stamp = now;
+        log('撤回漢陽療傷，恢復後再出發。');
+    }
+    else if (action === 'normal')
+        hit();
+    else if (action === 'skill')
+        hit(true);
+    else if (action === 'tick' && now - state.stamp >= 1000) {
+        // 每個前景秒只推進一次，不補發離線戰鬥與掉寶，避免背景頁突然連吃多次傷害。
+        state.stamp = now;
+        if (state.status === 'recovering') {
+            hp = Math.min(hero.maxHp, hp + Math.max(1, Math.ceil(hero.maxHp * .08)));
+            mp = Math.min(hero.maxMp, mp + Math.max(1, Math.ceil(hero.maxMp * .08)));
+            if (hp === hero.maxHp && mp === hero.maxMp) {
+                state.status = 'idle';
+                log('療傷完成，商隊可再次出發。');
+            }
+        }
+        else if (state.status === 'respawning' && now >= state.spawnAt) {
+            state.enemyHp = enemy().hp;
+            state.status = 'fighting';
+            state.normalAt = now;
+            log(enemy().name + ' 再次現身。');
+        }
+        else if (state.status === 'fighting') {
+            if (hp <= 0)
+                recover();
+            else if (hero.dex >= enemy().dex) {
+                hit();
+                counter();
+            }
+            else {
+                counter();
+                hit();
+            }
+        }
+    }
+    return { state, hp, mp, reward };
+}
+
+/** 神裝資料只描述加成；穿戴時重新加總，不能把加成寫回基礎值，避免無限疊加。 */
+const ITEMS={
+ staff:{name:'高級神仙棒',slot:'weapon',str:10,dex:0,vit:0,int:50,def:0,description:'仙人遺世之杖，凝聚天地靈氣。'},
+ armor:{name:'海王戰甲',slot:'armor',str:0,dex:0,vit:80,int:0,def:100,description:'蘊含深海龍王神力的傳奇戰甲。'},
+ helmet:{name:'飛虎兜',slot:'helm',str:0,dex:10,vit:30,int:0,def:0,description:'虎嘯山林，佩之膽氣倍增。'},
+ boots:{name:'太皇鞋',slot:'boots',str:15,dex:40,vit:0,int:0,def:0,description:'御風踏雲，千里商途如閒庭信步。'}
+};
+const SLOTS={weapon:'武器',helm:'頭盔',armor:'衣服',ring1:'戒指 1',ring2:'戒指 2',boots:'鞋子'};
+const ATTRS={str:'力量',dex:'敏捷',vit:'體質',int:'智力'};
+const state={hero:{level:1,xp:0,points:0,str:20,dex:15,vit:20,int:10,hp:80,mp:40},equipment:Object.fromEntries(Object.keys(SLOTS).map(k=>[k,null])),bag:Array(20).fill(null),battle:freshDungeon(),gold:0,credit:0};
+const el=id=>document.getElementById(id),text=(id,value)=>{el(id).textContent=String(value)};
+function stats(){
+ const h=state.hero,t={str:h.str,dex:h.dex,vit:h.vit,int:h.int,def:0};
+ for(const key of Object.values(state.equipment))if(key)for(const attr of Object.keys(t))t[attr]+=ITEMS[key][attr];
+ return {...t,hp:h.hp,mp:h.mp,maxHp:t.vit*4,maxMp:t.int*4,attack:0,defense:Math.floor(8+t.vit*.6+h.level*2+t.def),staff:state.equipment.weapon==='staff',power:t.str*2+t.dex*3+t.vit*1.5+t.int*2+h.level*10};
+}
+function experience(amount){
+ state.hero.xp+=amount;
+ // while 支援單次經驗跨越多級；每一級都確實發放 5 點。
+ while(state.hero.xp>=80+state.hero.level*22){state.hero.xp-=80+state.hero.level*22;state.hero.level++;state.hero.points+=5;}
+}
+function message(value){text('message',value)}
+function pickup(key){const index=state.bag.indexOf(null);if(index<0){message('背包已滿，本次掉落無法拾取。');return false}state.bag[index]=key;message('獲得「'+ITEMS[key].name+'」！');return true}
+function fight(action){
+ const result=dungeonStep(state.battle,stats(),action,Date.now(),undefined,Math.random(),Math.random());
+ state.battle=result.state;state.hero.hp=result.hp;state.hero.mp=result.mp;
+ if(result.reward){experience(result.reward.xp);state.gold+=result.reward.gold;if(result.reward.loot)pickup(result.reward.loot)}
+ render();
+}
+function travel(id){
+ if(state.hero.hp<=0)return;
+ // 即使繞過畫面按鈕，核心函式仍再次檢查等級、戰力與療傷狀態。
+ state.battle=teleportDungeon(state.battle,state.hero.level,stats().power,Date.now(),id);render();
+}
+function equip(index){
+ const key=state.bag[index];if(!key)return;
+ const slot=ITEMS[key].slot,old=state.equipment[slot];
+ // 舊裝備直接退回「剛空出」的原格，20 格已滿也不會丟物品。
+ state.equipment[slot]=key;state.bag[index]=old;clampVitals();hideTooltip();message('已穿戴 '+ITEMS[key].name+'。');render();
+}
+function unequip(slot){
+ const key=state.equipment[slot];if(!key)return;const index=state.bag.indexOf(null);
+ if(index<0){message('背包已滿，無法卸下裝備。');return}
+ state.bag[index]=key;state.equipment[slot]=null;clampVitals();hideTooltip();message('裝備已放回背包。');render();
+}
+function clampVitals(){const s=stats();state.hero.hp=Math.min(state.hero.hp,s.maxHp);state.hero.mp=Math.min(state.hero.mp,s.maxMp)}
+function hideTooltip(){el('tooltip').hidden=true}
+function describe(key){const item=ITEMS[key];return item.name+'\n'+Object.entries({...ATTRS,def:'防禦力'}).filter(([k])=>item[k]).map(([k,n])=>n+' +'+item[k]).join('\n')+'\n'+item.description}
+function tooltip(button,key){
+ button.addEventListener('mouseenter',show);button.addEventListener('focus',show);button.addEventListener('mouseleave',hideTooltip);button.addEventListener('blur',hideTooltip);
+ function show(){const item=key();if(!item)return;const t=el('tooltip');t.textContent=describe(item);t.hidden=false;const rect=button.getBoundingClientRect();t.style.left=Math.max(8,Math.min(rect.left,innerWidth-t.offsetWidth-8))+'px';t.style.top=Math.max(8,Math.min(rect.bottom+8,innerHeight-t.offsetHeight-8))+'px'}
+}
+document.addEventListener('keydown',event=>{if(event.key==='Escape')hideTooltip()});
+/** 控制項只建立一次，之後更新文字、disabled 與進度，不會每秒重建而丟失鍵盤焦點。 */
+const mapButtons=WORLD_ZONES.map(zone=>{const b=document.createElement('button');b.onclick=()=>travel(zone.id);el('maps').append(b);return b});
+const slotButtons={};for(const [slot,name]of Object.entries(SLOTS)){const b=document.createElement('button');b.onclick=()=>unequip(slot);b.setAttribute('aria-label',name);tooltip(b,()=>state.equipment[slot]);el('equipment').append(b);slotButtons[slot]=b}
+const bagButtons=state.bag.map((_,index)=>{const b=document.createElement('button');b.onclick=()=>equip(index);tooltip(b,()=>state.bag[index]);el('bag').append(b);return b});
+const attributeRows={};for(const [key,name]of Object.entries(ATTRS)){const row=document.createElement('div');row.className='stat';const label=document.createElement('span');label.textContent=name;const value=document.createElement('strong');const plus=document.createElement('button');plus.textContent='＋';plus.setAttribute('aria-label','增加'+name);plus.onclick=()=>{if(state.hero.points>0){state.hero[key]++;state.hero.points--;render()}};row.append(label,value,plus);el('attributes').append(row);attributeRows[key]={value,plus}}
+function meter(id,current,max){el(id).max=Math.max(1,max);el(id).value=current}
+function render(){
+ const s=stats(),h=state.hero,b=state.battle,z=zoneFor(b.zone),m=DUNGEONS[b.key],recovering=b.status==='recovering';
+ text('level','Lv. '+h.level);text('power',s.power);text('money','持有金：'+state.gold.toLocaleString()+' 兩');text('weight','負重：'+(state.bag.filter(Boolean).length+Object.values(state.equipment).filter(Boolean).length)*5+' / '+(200+s.str*5));text('points','剩餘 '+h.points+' 點');
+ for(const [k,row]of Object.entries(attributeRows)){row.value.textContent=h[k]+' ＋ '+(s[k]-h[k])+' = '+s[k];row.plus.disabled=h.points<=0}
+ text('defense','防禦力：'+s.defense);text('hpText',h.hp+' / '+s.maxHp);text('mpText',h.mp+' / '+s.maxMp);text('xpText',h.xp+' / '+(80+h.level*22));meter('hp',h.hp,s.maxHp);meter('mp',h.mp,s.maxMp);meter('xp',h.xp,80+h.level*22);text('creditText','Lv.'+(Math.floor(state.credit/100)+1)+' · '+state.credit%100+'/100');meter('creditBar',state.credit%100,100);
+ text('requirements','主角 Lv.'+h.level+' · 戰鬥力 '+s.power);
+ // Disabled 每次 render 都依「當下」等級及戰鬥力重算，升級、加點、裝備後即刻解鎖。
+ WORLD_ZONES.forEach((zone,i)=>{const button=mapButtons[i],locked=!zoneUnlocked(zone,h.level,s.power);button.disabled=locked||recovering;button.setAttribute('aria-pressed',String(z.id===zone.id));button.textContent=(locked?'鎖定 · ':'')+zone.name+' — '+zoneRequirement(zone)});
+ for(const [slot,button]of Object.entries(slotButtons)){const key=state.equipment[slot];button.textContent=key?ITEMS[key].name:SLOTS[slot];button.classList.toggle('filled',!!key);button.setAttribute('aria-label',SLOTS[slot]+'：'+(key?ITEMS[key].name:'未裝備'))}
+ bagButtons.forEach((button,i)=>{const key=state.bag[i];button.textContent=key?ITEMS[key].name:'';button.disabled=!key;button.classList.toggle('filled',!!key);button.setAttribute('aria-label','背包第 '+(i+1)+' 格：'+(key?ITEMS[key].name:'空格'))});
+ text('bagCount',state.bag.filter(Boolean).length+' / 20');text('zoneName',z.name);text('battleStatus',({idle:'整裝待發',fighting:'交鋒中',respawning:'等待下一隻',recovering:'漢陽療傷中'})[b.status]);text('enemySeal',m.name.slice(0,1));text('enemyName',m.name+' · Lv.'+m.level);text('enemyStats','攻擊 '+m.atk+' · 敏捷 '+m.dex);text('enemyHpText',b.enemyHp+' / '+m.hp);text('enemyMpText',m.mp+' / '+m.mp);meter('enemyHp',b.enemyHp,m.hp);meter('enemyMp',m.mp,m.mp);text('flash',b.logs[0]||'選擇漢陽近郊開始旅程。');text('lootInfo','地域掉落 '+m.drop*100+'%：'+z.loot);
+ const now=Date.now(),cooldown=Math.max(0,Math.ceil((b.skillAt-now)/1000));el('normal').disabled=b.status!=='fighting'||now<b.normalAt;el('skill').disabled=b.status!=='fighting'||h.mp<40||cooldown>0;text('skill','蛇龍出水 · '+(h.mp<40?'MP 不足':cooldown?'冷卻 '+cooldown+' 秒':'40 MP / 3 秒冷卻'));el('retreat').disabled=!['fighting','respawning'].includes(b.status);el('train').disabled=recovering;el('trade').disabled=recovering;
+ el('logs').replaceChildren(...b.logs.map(line=>{const li=document.createElement('li');li.textContent=line;return li}));
+}
+el('normal').onclick=()=>fight('normal');el('skill').onclick=()=>fight('skill');el('retreat').onclick=()=>fight('retreat');
+el('train').onclick=()=>{if(state.battle.status==='recovering')return;experience(100);if(Math.random()<.5)pickup(Object.keys(ITEMS)[Math.floor(Math.random()*4)]);else message('獲得 100 經驗，本次未掉落。');render()};
+el('trade').onclick=()=>{if(state.battle.status==='recovering')return;state.gold+=100;state.credit+=25;render()};
+/** 唯一推進戰鬥的計時器；完成療傷的那一秒也不發收益，下一秒才恢復收入。
+ * 傳送只改 state.battle，絕不建立第二個計時器，因此舊地圖不會在背後繼續攻擊。 */
+const timer=setInterval(()=>{const recovering=state.battle.status==='recovering';fight('tick');if(!recovering){state.gold+=10;state.credit+=5}render()},1000);
+window.addEventListener('pagehide',()=>clearInterval(timer),{once:true});
+render();
+</script></body></html>
