@@ -2,6 +2,10 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useRef, useState } from "react";
+import { bandit, isBanditEncounter } from "./bandit";
+import { mercenarySpec, type MercenarySpec } from './mercenary-roster';
+import { MercenaryRecruitment, mercenaryPortrait } from './mercenary-recruitment';
+import { resolveMercenaryBattle, type TacticalEnemy } from './mercenary-battle';
 import {
   BedDouble,
   BookOpen,
@@ -654,10 +658,16 @@ function resolveRoadEncounter(previous: GameState): GameState {
         .map((unitUid) => previous.mercs.find((unit) => unit.uid === unitUid))
         .filter(Boolean) as Unit[];
       const form = formations.find((item) => item.id === previous.formation) || formations[0];
-      const sourceTarget = sourceEnemyForMap(previous.battleMap, previous.stage, previous.stage % 10 === 0);
+      const banditEncounter = isBanditEncounter(previous.battleMap, previous.stage);
+      const sourceTarget = banditEncounter ? bandit : sourceEnemyForMap(previous.battleMap, previous.stage, previous.stage % 10 === 0);
       const map = battleMaps.find((entry) => entry.id === previous.battleMap) || battleMaps[0];
-      const health = enemyMax(previous.stage, map.hpMultiplier);
-      const combat = resolveVitalBattle([previous.hero, ...active].map((unit) => ({ uid: unit.uid, name: unit.name, skill: unit.skill, ...vitalStats(unit), ...combatStats(unit), attack: Math.floor(combatStats(unit).attack * form.atk), cost: spellCost(unit) })), { hp: health, ...enemyCombatStats(previous.stage, health, previous.stage % 10 === 0), physical: sourceTarget?.physical || 0, magic: sourceTarget?.magic || 0 });
+      const health = banditEncounter ? bandit.hp : enemyMax(previous.stage, map.hpMultiplier);
+      const party = [previous.hero, ...active].map((unit) => ({ uid: unit.uid, templateId: unit.templateId, name: unit.name, skill: unit.skill, ...vitalStats(unit), ...combatStats(unit), attack: Math.floor(combatStats(unit).attack * form.atk), cost: spellCost(unit) }));
+      const targetName = sourceTarget?.name || enemyForStage(previous.stage, map.enemyRegion).name;
+      const tactical = active.some(unit => !!mercenarySpec(unit.templateId));
+      const enemy: TacticalEnemy = { name: targetName, hp: health, ...(banditEncounter ? { attack: bandit.attack, defense: bandit.defense, speed: tactical ? bandit.speed * 5 : bandit.speed } : enemyCombatStats(previous.stage, health, previous.stage % 10 === 0)), physical: sourceTarget?.physical || 0, magic: sourceTarget?.magic || 0, bandit: banditEncounter, boss: previous.stage % 10 === 0, kind: /騎/.test(targetName) ? 'cavalry' : /虎|狼|熊|鹿|獸|龜|蛇|狐|馬/.test(targetName) ? 'beast' : 'human', ranged: /弓|砲|術|巫|法/.test(targetName), magicAttack: /術|巫|法/.test(targetName), poison: /蛇|蠍/.test(targetName) };
+      const squad = enemy.boss ? [enemy] : Array.from({length:3},(_,index) => ({ ...enemy, name: targetName+'・'+(index+1), hp: Math.floor(health/3)+(index < health%3 ? 1 : 0), attack: Math.max(1,Math.floor(enemy.attack*0.55)), back: index===2, ranged: index===2 || enemy.ranged }));
+      const combat = tactical ? resolveMercenaryBattle(party, squad, banditEncounter ? 'mountain' : map.theme) : resolveVitalBattle(party.map(unit=>({...unit,speed:5})), { ...enemy, terrain: banditEncounter ? 'mountain' : map.theme });
       const remaining = new globalThis.Map(combat.fighters.map((unit) => [unit.uid, unit]));
       const applyRemaining = <T extends Unit | Hero,>(unit: T): T => {
         const fighter = remaining.get(unit.uid);
@@ -665,9 +675,9 @@ function resolveRoadEncounter(previous: GameState): GameState {
       };
       previous = { ...previous, hero: applyRemaining(previous.hero), mercs: previous.mercs.map(applyRemaining) };
       const rounds = combat.rounds;
-      const resourceReport = " 施法 " + combat.casts + " 次，消耗 MP " + combat.spentMp + "；普攻 " + combat.attacks + " 次，承受傷害 " + combat.receivedDamage + "。";
+      const resourceReport = " 主動技能 " + combat.casts + " 次，消耗 MP " + combat.spentMp + "；普攻 " + combat.attacks + " 次，承受傷害 " + combat.receivedDamage + "。" + (tactical ? ' 敵軍 '+squad.length+' 名；落空 '+combat.misses+' 次。'+combat.spells.slice(0,10).join('；') : '') + (combat.enemySkills.length ? " " + combat.enemySkills.join(" ") : "");
       if (!combat.won) {
-        const report = "途中遭遇第 " + previous.stage + " 關敵軍，" + rounds + " 回合後撤離。" + resourceReport + " 請到客棧或藥店恢復 HP / MP。";
+        const report = "途中遭遇第 " + previous.stage + " 關「" + (sourceTarget?.name || "敵軍") + "」，" + rounds + " 回合後撤離。" + resourceReport + " 請到客棧或藥店恢復 HP / MP。";
         return { ...previous, enemyHp: health, lastEncounter: report, logs: addLog(previous.logs, report) };
       }
       const isBoss = previous.stage % 10 === 0;
@@ -677,7 +687,7 @@ function resolveRoadEncounter(previous: GameState): GameState {
       const nextKills = previous.kills + 1;
       let inventory = previous.inventory;
       let cores = previous.fusionCores;
-      const sourceDefeated = sourceEnemyForMap(selectedMap.id, previous.stage, isBoss);
+      const sourceDefeated = sourceTarget;
       const defeated = sourceDefeated || enemyForStage(previous.stage, selectedMap.enemyRegion);
       const defeatedRegion = sourceDefeated ? selectedMap.name : (defeated as ReturnType<typeof enemyForStage>).region;
       const materials = { ...previous.materials };
@@ -691,7 +701,7 @@ function resolveRoadEncounter(previous: GameState): GameState {
         const material = sourceDefeated.drops[Math.floor(Math.random() * sourceDefeated.drops.length)];
         materials[material] = (materials[material] || 0) + 1;
         xpReward = Math.max(42, Math.min(1800, Math.floor(sourceDefeated.xp / 5) + 35));
-        logs = addLog(logs, "52怪物掉落「" + material + "」；原始經驗資料 " + format(sourceDefeated.xp) + "。");
+        logs = addLog(logs, (banditEncounter ? "山賊掉落「" : "52怪物掉落「") + material + "」；經驗資料 " + format(sourceDefeated.xp) + "。");
       }
       if (nextKills % 4 === 0 || isBoss) {
         const drop = rollEquipment(previous.stage, isBoss);
@@ -860,11 +870,12 @@ export default function GameV15() {
     (unitPower(game.hero) + activeUnits.reduce((sum, unit) => sum + unitPower(unit), 0)) * formation.atk,
   );
   const currentMap = battleMaps.find((map) => map.id === game.battleMap) || battleMaps[0];
-  const maxEnemyHp = enemyMax(game.stage, currentMap.hpMultiplier);
+  const banditEncounter = isBanditEncounter(currentMap.id, game.stage);
+  const maxEnemyHp = banditEncounter ? bandit.hp : enemyMax(game.stage, currentMap.hpMultiplier);
   const boss = game.stage % 10 === 0;
-  const monsterStats = enemyCombatStats(game.stage, maxEnemyHp, boss);
+  const monsterStats = banditEncounter ? bandit : enemyCombatStats(game.stage, maxEnemyHp, boss);
   const enemyArt = legacyMercenaries[9 + (game.stage % 3)];
-  const sourcedEnemy = sourceEnemyForMap(currentMap.id, game.stage, boss);
+  const sourcedEnemy = banditEncounter ? bandit : sourceEnemyForMap(currentMap.id, game.stage, boss);
   const fallbackEnemy = enemyForStage(game.stage, currentMap.enemyRegion);
   const enemy = sourcedEnemy || fallbackEnemy;
   const enemyRegion = sourcedEnemy ? currentMap.name : fallbackEnemy.region;
@@ -954,6 +965,15 @@ export default function GameV15() {
         mercs: [...previous.mercs, unit],
         logs: addLog(previous.logs, "在" + currentCity.name + (asGeneral ? "將領招募所延攬 " : "傭兵招募所招募 ") + unit.name + "。"),
       };
+    });
+  }
+
+  function recruitMerchant(spec: MercenarySpec, index: number) {
+    const cost = Math.floor(6000 * currentCity.priceFactor);
+    setGame(previous => {
+      if (previous.gold < cost) return previous;
+      const unit = normalizeVitals<Unit>({ uid: uid('merchant-'+spec.id), templateId: 'merchant-'+spec.id, nation: 'legacy', tier: 0, special: false, name: spec.name, role: spec.role, skill: spec.active, image: mercenaryPortrait(index), level: 1, xp: 0, points: 0, str: spec.ratings[1], agi: spec.ratings[3], vit: spec.ratings[0], intel: spec.mp ? 20 : 10, equip: emptyEquipment() });
+      return { ...previous, gold: previous.gold-cost, mercs: [...previous.mercs,unit], logs: addLog(previous.logs,'招募 '+spec.name+'，請至隊伍頁安排出戰。') };
     });
   }
 
@@ -1444,11 +1464,13 @@ export default function GameV15() {
             <div className="battle-console">
               <div className="enemy-health">
                 <div className="combat-stat-pair"><span>怪物 ATK 攻擊力 <b>{format(monsterStats.attack)}</b></span><span>怪物 DEF 防禦力 <b>{format(monsterStats.defense)}</b></span></div>
-                <div><strong>{boss ? "首領" : "敵軍"}生命</strong><span>{format(game.enemyHp)} / {format(maxEnemyHp)}</span></div>
-                <Progress value={Math.max(0, Math.min(100, game.enemyHp / maxEnemyHp * 100))} className="hp-progress" />
+                <div><strong>{boss ? "首領" : "敵軍"}生命</strong><span>{format(banditEncounter ? maxEnemyHp : game.enemyHp)} / {format(maxEnemyHp)}</span></div>
+                <Progress value={banditEncounter ? 100 : Math.max(0, Math.min(100, game.enemyHp / maxEnemyHp * 100))} className="hp-progress" />
               </div>
               {sourcedEnemy && <div className="enemy-source-line"><span>經驗資料 {format(sourcedEnemy.xp)}</span><span>物抗 {sourcedEnemy.physical}%</span><span>法抗 {sourcedEnemy.magic}%</span>{sourcedEnemy.skill && <span>技能・{sourcedEnemy.skill}</span>}<span>掉落・{sourcedEnemy.drops.join("、")}</span></div>}
+              {banditEncounter && <div className="enemy-source-line"><span>低階山賊・朝鮮山道</span><span>相對強度（1–10）：生命 3／攻擊 3／防禦 2／移速 5</span><span>移速 {bandit.speed}・較快者先行動；同速時我方先手</span><span>山寨地利：山道、森林、山寨前 2 回合減傷 15%。</span><span>攔路劈砍：第 2 回合起，冷卻 3 回合；130% 傷害，移速 −1 至下回合結束。</span><span>揚沙偷襲：HP 低於 50% 時優先施放，每戰一次；60% 傷害，目標下次攻擊命中率由 100% 降為 80%。武技不耗 MP。</span></div>}
               <div className="battle-actions">
+                {activeUnits.some(unit => !!mercenarySpec(unit.templateId)) && <p>戰術遭遇：{boss ? '首領 1 名' : '敵軍 3 名（前排 2、後排 1）'}。上方生命為敵軍合計，單名攻擊為 {format(boss ? monsterStats.attack : Math.max(1,Math.floor(monsterStats.attack*0.55)))}。技能會自動選擇目標。</p>}
                 <p role="status">{game.trade.caravan ? "跑商途中機率遭遇，每趟 0～10 場，隊伍自動迎戰。" : "商隊尚未出航，不會發生戰鬥。請至東海商路派遣商隊。"}<br />最近戰報：{game.lastEncounter}</p>
               </div>
             </div>
@@ -1578,7 +1600,7 @@ export default function GameV15() {
               </div>
               <div className="xp-line"><span>經驗 {selected.xp} / {xpNeed(selected.level)}</span><Progress value={selected.xp / xpNeed(selected.level) * 100} /></div>
               <VitalBars unit={selected} />
-              <p className="points">攻防已包含能力、等級、轉職與裝備加成；陣法另影響實戰攻擊。魔法技能・{selected.skill}｜每次消耗 <strong>{spellCost(selected)} MP</strong>。魔力不足改用普攻，HP 歸零停止參戰。</p>
+              <p className="points">攻防已包含能力、等級與裝備加成；陣法另影響實戰攻擊。主動技能・{selected.skill}｜每次消耗 <strong>{spellCost(selected)} MP</strong>。特約傭兵依條件與冷卻施放；武技不耗 MP。魔力不足改用普攻，HP 歸零停止參戰。</p>
               <div className="stat-grid">
                 {(["str", "agi", "intel", "vit"] as const).map((stat) => (
                   <div key={stat}><small>{stat === "str" ? "力量" : stat === "agi" ? "敏捷" : stat === "intel" ? "智力" : "體質"}</small><strong>{selected[stat]}</strong><Button size="icon-xs" variant="outline" disabled={selected.points <= 0} onClick={() => addStat(stat)}>＋</Button></div>
@@ -1644,6 +1666,7 @@ export default function GameV15() {
               <div className="mini-path"><span>{template.name}</span><b>→</b><span>{template.tier1}</span><b>→</b><span>{template.tier2}</span></div><Button size="sm" onClick={() => recruit(template)}>招募 {format(Math.floor(6000 * currentCity.priceFactor))} 兩</Button>
             </article>)}</div></div>}
 
+            {cityService === 'mercenary' && <MercenaryRecruitment gold={game.gold} cost={Math.floor(6000 * currentCity.priceFactor)} recruit={recruitMerchant} />}
             {cityService === "general" && <div className="city-service-body"><div className="panel-title"><Crown /><h2>{currentCity.name}將領招募所</h2><span>直接延攬一階將帥</span></div><div className="base-merc-grid">{currentGenerals.map((template) => <article className="base-merc-card general-card" key={template.id}>
               <img src={template.image} alt={template.tier1} /><div className="base-merc-info"><small>一階將帥・Lv.20</small><h3>{template.tier1}</h3><p>原職・{template.name}｜{template.skill}</p><div><span>力 {Math.floor(template.str * 1.35)}</span><span>敏 {Math.floor(template.agi * 1.35)}</span><span>智 {Math.floor(template.intel * 1.35)}</span><span>體 {Math.floor(template.vit * 1.35)}</span></div></div>
               <div className="mini-path"><span>{template.tier1}</span><b>→</b><span>{template.tier2}</span></div><Button size="sm" onClick={() => recruit(template, true)}>延攬 {format(Math.floor(48000 * currentCity.priceFactor))} 兩</Button>

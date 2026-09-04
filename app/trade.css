@@ -111,6 +111,11 @@
 .trade-ledger li span { font-size: 12px; }
 .trade-metrics article > span,.trade-route p,.trade-dispatch > p,.trade-dispatch dl,
 .trade-primary,.trade-upgrade > p,.trade-ledger li { font-size: 14px; }
+.merchant-recruits { padding: 20px; }
+.merchant-recruits > p { font-size: 1rem; line-height: 1.7; margin: 12px 0; }
+.merchant-skill-copy { grid-column: 1 / -1; min-width: 0; }
+.merchant-skill-copy p, .merchant-recruit-card .base-merc-info p { font-size: .875rem; line-height: 1.65; white-space: normal; overflow-wrap: anywhere; margin: 8px 0; }
+.merchant-recruit-card > button { grid-column: 1 / -1; }
 .trade-tags { margin-top: 17px; gap: 12px; }
 .trade-chart { min-height: 280px; }
 .trade-compass { top: 12px; right: 15px; }
