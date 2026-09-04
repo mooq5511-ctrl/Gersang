@@ -22,7 +22,7 @@ test('switch cancels previous fight and pending spawn, retains cooldown and paus
 test('high-zone defeat returns to hanyang with no reward and blocks re-entry during healing',()=>{
  const h={hp:1,mp:40,maxHp:80,maxMp:40,str:20,dex:1,int:10,attack:0,defense:0,staff:false};
  const s=teleportDungeon(freshDungeon(),70,2000,1000,'abyss');const r=dungeonStep(s,h,'tick',2000);
- assert.equal(r.state.zone,'hanyang');assert.equal(r.state.key,'e_cat');assert.equal(r.state.enemyHp,100);assert.equal(r.hp,0);assert.equal(r.reward,null);assert.equal(r.state.logs[0],'商隊不幸全滅，已被熱心商旅送回漢陽療傷...');assert.equal(teleportDungeon(r.state,99,99999,2100,'snow'),r.state);
+ assert.equal(r.state.zone,'hanyang');assert.equal(r.state.key,'e_cat');assert.equal(r.state.enemyHp,100);assert.equal(r.hp,0);assert.equal(r.reward,null);assert.equal(r.state.logs[0],'戰鬥失敗，已自動返回漢陽客棧療傷。');assert.equal(teleportDungeon(r.state,99,99999,2100,'snow'),r.state);
 });
 function demo(){
  const nodes=new Map();

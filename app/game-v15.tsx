@@ -7,6 +7,7 @@ import { merchantMercenaries, mercenarySpec, type MercenarySpec } from './mercen
 import { CaravanStatus } from './caravan-status';
 import {DungeonPanel,WorldMapNavigation} from './dungeon-panel';
 import {dungeonStep,dungeonBusy,freshDungeon,teleportDungeon,type DungeonState,type DungeonKey} from './dungeon-engine';
+import {goToInn,leaveInn,payInn,type PlayerStatus} from './inn-engine';
 import { settleCaravanIdle } from './caravan-idle';
 import { heroPersonalPower, heroWeightLimit, heroTotalAttributes, HERO_INITIAL_ATTRIBUTES } from './hero-rules';
 import {DIVINE_EQUIPMENT} from './divine-equipment';
@@ -24,6 +25,7 @@ import {
   Coins,
   Crown,
   Gem,
+  HeartPulse,
   Map,
   PackageOpen,
   Pause,
@@ -113,6 +115,7 @@ type Unit = {
   vit: number;
   hp?: number;
   mp?: number;
+  maxHp?: number;
   equip: EquipmentSet;
 };
 
@@ -122,6 +125,8 @@ type Hero = Omit<Unit, "nation" | "tier" | "special" | "templateId"> & {
   tier: 0;
   special: false;
   job: string;
+  maxHp: number;
+  status: PlayerStatus;
 };
 
 type CharacterProfile = {
@@ -137,7 +142,7 @@ type CityService = "mercenary" | "weapon" | "armor" | "warehouse" | "inn" | "pha
 
 type GameState = {
   dungeon?: DungeonState;
-  version: 21;
+  version: 22;
   trade: TradeState;
   credit: number;
   idleStamp: number;
@@ -227,6 +232,9 @@ function makeHero(nation: NationId = "korea", name = "王天下"): Hero {
     level: 1,
     xp: 0,
     points: 0,
+    hp: 100,
+    maxHp: 100,
+    status: '正常',
     ...HERO_INITIAL_ATTRIBUTES,
     equip: emptyEquipment(),
   });
@@ -283,7 +291,7 @@ function starterEquipment(): Equipment[] {
 function freshGame(nation: NationId = "korea", heroName = "王天下"): GameState {
   const starters: Unit[] = [];
   return {
-    version: 21,
+    version: 22,
     trade: freshTrade(),
     credit: 0,
     idleStamp: Date.now(),
@@ -305,7 +313,7 @@ function freshGame(nation: NationId = "korea", heroName = "王天下"): GameStat
     lastEncounter: "尚未遭遇敵人。商隊出航後才可能觸發戰鬥。",
     enemyHp: enemyMax(1, battleMaps[0].hpMultiplier),
     formation: "goose",
-    logs: ["V21・商途與四國二十城已融合。出航經商，培養你的十人商團。"],
+    logs: ["V22・戰敗客棧系統已啟用。出航經商，培養你的十人商團。"],
     lastSeen: Date.now(),
   };
 }
@@ -403,6 +411,8 @@ function migrateV14(raw: unknown): GameState {
       ...heroBase,
       job: String(oldHero.job || oldHero.path || heroBase.job),
       level: Number(oldHero.level) || heroBase.level,
+      maxHp:100+(Math.max(1,Number(oldHero.level)||heroBase.level)-1)*20,
+      status:'正常',
       xp: Number(oldHero.xp) || 0,
       points: Number(oldHero.points) || 0,
       str: Number(oldHero.str) || heroBase.str,
@@ -432,7 +442,7 @@ function restoreGame(raw: unknown): GameState {
     ? parsed.city
     : isNationId(parsed.city) ? worldCities.find((city) => city.nation === parsed.city)?.id || next.city : next.city;
   Object.assign(next, parsed, {
-    version: 21,
+    version: 22,
     trade: restoreTrade(parsed.trade),
     credit: Number.isFinite(parsed.credit) ? Math.max(0, Math.floor(parsed.credit!)) : 0,
     idleStamp: Number.isFinite(parsed.idleStamp) && parsed.idleStamp! > 0 ? parsed.idleStamp : Date.now(),
@@ -444,6 +454,8 @@ function restoreGame(raw: unknown): GameState {
       job: Number(parsed.version) >= 19 && parsed.hero?.job ? parsed.hero.job : heroDefaults.job,
       skill: Number(parsed.version) >= 19 && parsed.hero?.skill ? parsed.hero.skill : heroDefaults.skill,
       image: Number(parsed.version) >= 19 && parsed.hero?.image ? parsed.hero.image : heroDefaults.image,
+      maxHp:Number.isFinite(parsed.hero?.maxHp)&&Number(parsed.hero?.maxHp)>0?Math.max(100,Number(parsed.hero?.maxHp)):100+(Math.max(1,Number(parsed.hero?.level)||heroDefaults.level)-1)*20,
+      status:parsed.hero?.status==='客棧中'?'客棧中':'正常',
       equip: sanitizeEquip(parsed.hero?.equip),
     },
     mercs: Array.isArray(parsed.mercs)
@@ -462,10 +474,11 @@ function restoreGame(raw: unknown): GameState {
   // 離線不補算副本；重新登入時先療傷，避免重载跳過敗戰懲罰。
   if (dungeonBusy(parsed.dungeon)) {
     const pause=Math.max(0,Date.now()-(Number(parsed.lastSeen)||Date.now()));
-    next.dungeon={...freshDungeon(),status:'recovering',stamp:Date.now(),logs:['返回漢陽療傷，離線期間不結算副本獎勵。']};
+    next.dungeon={...freshDungeon(),status:'recovering',stamp:Date.now(),innHealAt:Date.now()+2000,logs:['返回漢陽客棧療傷，離線期間不結算副本獎勵。']};
+    next.hero={...next.hero,status:'客棧中'};
     next.idleStamp=Date.now();
     if(next.trade.caravan)next.trade={...next.trade,caravan:{...next.trade.caravan,startedAt:next.trade.caravan.startedAt+pause}};
-  } else next.dungeon=freshDungeon();
+  } else {next.dungeon=freshDungeon();next.hero={...next.hero,status:'正常'};}
   next.hero = normalizeVitals(next.hero);
   next.mercs = next.mercs.map(normalizeVitals);
   return retainGuildRoster<Equipment, Unit, GameState>(next);
@@ -476,12 +489,13 @@ function profileFromGame(slot: number, game: GameState): CharacterProfile {
 }
 
 /** 使用真實主角 HP/MP 與現有背包；勝利只發放一次獎勵。 */
-function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key?:DungeonKey,roll=.99,choice=0,spawnRoll=0):GameState {
+function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key?:DungeonKey,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0):GameState {
   const total=heroTotalAttributes(previous.hero),v=vitalStats(previous.hero);
   const attack=Object.values(previous.hero.equip).reduce((sum,item)=>sum+(item?.atk||0),0);
-  const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,int:total.intel,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice,spawnRoll);
-  let next={...previous,dungeon:result.state,hero:{...previous.hero,hp:result.hp,mp:result.mp}};
-  if(result.hp===0&&result.state.status==='recovering')next={...next,city:worldCities.find(city=>city.name==='漢陽')?.id||next.city};
+  const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,int:total.intel,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice,spawnRoll,retaliationRoll);
+  let next:GameState={...previous,dungeon:result.state,hero:{...previous.hero,hp:result.hp,mp:result.mp}};
+  if(result.state.status==='recovering'&&previous.hero.status!=='客棧中')next=enterGameInn(next,now,result.state.logs[0],result.state);
+  else if(result.state.status==='idle'&&previous.hero.status==='客棧中')next=leaveGameInn(next);
   if(result.reward){
     const reward=result.reward;
     next={...next,hero:grantXp(next.hero,reward.xp),gold:next.gold+reward.gold,kills:next.kills+1,logs:addLog(next.logs,'成功擊敗副本怪物，獲得 '+reward.xp+' 經驗與 '+reward.gold+' 兩。')};
@@ -489,18 +503,19 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
     if(spec){
       const drop:Equipment={uid:'dungeon-'+now+'-'+result.state.serial,name:spec.name,slot:spec.slot,bonus:{...spec.bonus},def:spec.def,atk:0,hp:0,image:'',enhance:0,rarity:'傳說',magic:[],requiredLevel:1,source:'幽冥副本掉落'};
       const pickup=addInventoryItem(next.inventory,drop),message=pickup.error?'背包已滿，本次掉落無法拾取。':'獲得「'+drop.name+'」！';
-      next={...next,inventory:pickup.inventory,logs:addLog(next.logs,message),dungeon:{...next.dungeon,logs:[message,...next.dungeon.logs].slice(0,40)}};
+      next={...next,inventory:pickup.inventory,logs:addLog(next.logs,message),dungeon:{...next.dungeon!,logs:[message,...next.dungeon!.logs].slice(0,40)}};
     }
   }
   return next;
 }
-function settleMerchantGame(previous: GameState, now: number,roll=.99,choice=0,spawnRoll=0): GameState {
+function settleMerchantGame(previous: GameState, now: number,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0): GameState {
   if(dungeonBusy(previous.dungeon)){
     const battle=previous.dungeon!;
-    if(now-battle.stamp<1000&&!(battle.status==='respawning'&&now>=battle.spawnAt))return previous;
+    const due=battle.status==='respawning'?battle.spawnAt:battle.status==='recovering'?(battle.innHealAt||battle.stamp+2000):battle.stamp+1000;
+    if(now<due)return previous;
     // 共用唯一每秒計時器，航程起點平移，暫停期間不累積遭遇或跑商獎勵。
     const pause=Math.max(0,now-(previous.dungeon!.pauseAt||previous.dungeon!.stamp||now));
-    let next=applyDungeon(previous,'tick',now,undefined,roll,choice,spawnRoll);
+    let next=applyDungeon(previous,'tick',now,undefined,roll,choice,spawnRoll,retaliationRoll);
     next={...next,dungeon:{...next.dungeon!,pauseAt:now}};
     if(next.trade.caravan)next={...next,trade:{...next.trade,caravan:{...next.trade.caravan,startedAt:next.trade.caravan.startedAt+pause}}};
     if(previous.dungeon!.status==='recovering')return {...next,idleStamp:now};
@@ -563,6 +578,12 @@ function grantXp<T extends Unit | Hero>(unit: T, amount: number): T {
     level += 1;
     points += unit.uid === "hero" ? 5 : 3;
   }
+  const levelGain=level-unit.level;
+  if(unit.uid==='hero'&&levelGain>0){
+    const baseMax=Number(unit.maxHp)||100+(unit.level-1)*20;
+    const upgraded={...unit,xp,level,points,maxHp:baseMax+levelGain*20};
+    return {...upgraded,hp:vitalStats(upgraded).maxHp} as T;
+  }
   return { ...unit, xp, level, points };
 }
 
@@ -606,6 +627,24 @@ function tierName(unit: Unit) {
 
 function addLog(logs: string[], message: string) {
   return [message, ...logs].slice(0, 40);
+}
+
+function enterGameInn(previous:GameState,now:number,message:string,dungeon=previous.dungeon):GameState{
+  const vital=vitalStats(previous.hero),session=goToInn({hp:vital.hp,maxHp:vital.maxHp,status:previous.hero.status},now);
+  const battle={...(dungeon||freshDungeon()),status:'recovering' as const,zone:'hanyang' as const,stamp:now,spawnAt:0,innHealAt:session.nextHealAt,pauseAt:dungeon?.pauseAt||now};
+  return {...previous,city:worldCities.find(city=>city.name==='漢陽')?.id||previous.city,hero:{...previous.hero,hp:session.player.hp,status:session.player.status},dungeon:battle,idleStamp:now,logs:addLog(previous.logs,message)};
+}
+
+function leaveGameInn(previous:GameState):GameState{
+  const vital=vitalStats(previous.hero),player=leaveInn({hp:vital.hp,maxHp:vital.maxHp,status:previous.hero.status});
+  return {...previous,hero:{...previous.hero,hp:player.hp,status:player.status},dungeon:previous.dungeon?{...previous.dungeon,status:'idle',innHealAt:0,spawnAt:0}:freshDungeon(),logs:addLog(previous.logs,'生命值已全滿，主角離開漢陽客棧。')};
+}
+
+function payGameInn(previous:GameState):GameState{
+  const vital=vitalStats(previous.hero),result=payInn({hp:vital.hp,maxHp:vital.maxHp,status:previous.hero.status},previous.gold);
+  if(result.error)return {...previous,logs:addLog(previous.logs,result.error),dungeon:previous.dungeon?{...previous.dungeon,logs:[result.error,...previous.dungeon.logs].slice(0,40)}:previous.dungeon};
+  const healed={...previous,gold:result.gold,hero:{...previous.hero,hp:result.player.hp,status:result.player.status},logs:addLog(previous.logs,'支付 '+result.cost.toLocaleString('zh-TW')+' 兩，客棧已完成快速治療。')};
+  return leaveGameInn(healed);
 }
 
 function contractProgress(state: GameState, metric: (typeof gameplayContracts)[number]["metric"]) {
@@ -658,7 +697,7 @@ function resolveRoadEncounter(previous: GameState): GameState {
       const resourceReport = " 主動技能 " + combat.casts + " 次，消耗 MP " + combat.spentMp + "；普攻 " + combat.attacks + " 次，承受傷害 " + combat.receivedDamage + "。" + (tactical ? ' 敵軍 '+squad.length+' 名；落空 '+combat.misses+' 次。'+combat.spells.slice(0,10).join('；') : '') + (combat.enemySkills.length ? " " + combat.enemySkills.join(" ") : "");
       if (!combat.won) {
         const report = "途中遭遇第 " + previous.stage + " 關「" + (sourceTarget?.name || "敵軍") + "」，" + rounds + " 回合後撤離。" + resourceReport + " 請到客棧或藥店恢復 HP / MP。";
-        return { ...previous, enemyHp: health, lastEncounter: report, logs: addLog(previous.logs, report) };
+        return enterGameInn({ ...previous, enemyHp: health, lastEncounter: report, logs: addLog(previous.logs, report) },Date.now(),'戰鬥失敗，商隊已自動返回漢陽客棧。');
       }
       const isBoss = previous.stage % 10 === 0;
       const selectedMap = battleMaps.find((map) => map.id === previous.battleMap) || battleMaps[0];
@@ -865,6 +904,8 @@ export default function GameV15() {
   const enemyRegion = sourcedEnemy ? currentMap.name : fallbackEnemy.region;
   const enemyCategory = sourcedEnemy ? (sourcedEnemy.boss ? "首領" : "怪物") : fallbackEnemy.category;
   const currentCity = worldCities.find((city) => city.id === game.city) || worldCities[0];
+  const heroVital=vitalStats(game.hero);
+  const quickHealCost=Math.max(0,heroVital.maxHp-heroVital.hp)*2;
   const currentNation = nations.find((nation) => nation.id === currentCity.nation) || nations[0];
   const heroNation = nations.find((nation) => nation.id === game.hero.nation) || nations[0];
   const cityArmors = officialEquipment.filter((item) => item.kind === "armor").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
@@ -893,8 +934,8 @@ export default function GameV15() {
     const timer = window.setInterval(() => {
       // 在 React 更新函式外抽樣，同一次回合重跑不會改變掉寶結果。
       const now=Date.now(),roll=Math.random(),choice=Math.random();
-      const spawnRoll=Math.random();
-      setGame(previous=>settleMerchantGame(previous,now,roll,choice,spawnRoll));
+      const spawnRoll=Math.random(),retaliationRoll=Math.random();
+      setGame(previous=>settleMerchantGame(previous,now,roll,choice,spawnRoll,retaliationRoll));
     }, 50);
     return () => window.clearInterval(timer);
   }, [ready, activeSlot]);
@@ -1219,7 +1260,7 @@ export default function GameV15() {
         <section className="character-select-shell">
           <div className="character-select-heading">
             <div className="brand-seal">商</div>
-            <div><small>商途 × BT52Gersang・融合版 V21</small><h1>從一支商隊，走向四海。</h1><p>四國二十城 × 九人傭兵 × 放置貿易。三個角色各自保存進度，共用 30 格裝備倉庫。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
+            <div><small>商途 × BT52Gersang・融合版 V22</small><h1>從一支商隊，走向四海。</h1><p>四國二十城 × 九人傭兵 × 放置貿易。三個角色各自保存進度，共用 30 格裝備倉庫。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
           </div>
           {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
           <div className="character-slot-grid">
@@ -1269,10 +1310,11 @@ export default function GameV15() {
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
-          <div><h1>商途・巨商放置錄</h1><p>V21・東海商路 × 四國二十城</p></div>
+          <div><h1>商途・巨商放置錄</h1><p>V22・戰敗自動返回客棧</p></div>
         </div>
         <div className="resource-strip v15-resources">
           <div><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
+          <div className={game.hero.status==='客棧中'?'hp-status at-inn':'hp-status'}><HeartPulse /><span id="p-hp">{heroVital.hp} / {heroVital.maxHp}</span><small>血量 · {game.hero.status}</small></div>
           <div><Swords /><span>{format(unitPower(game.hero)+game.mercs.reduce((sum,unit)=>sum+unitPower(unit),0))}</span><small>總商隊戰力</small></div>
           <div><Users /><span>{game.active.length}/9</span><small>出戰傭兵</small></div>
           <Button className="character-switch" variant="outline" size="sm" onClick={returnToCharacterSelect}><Users />切換角色</Button>
@@ -1280,6 +1322,11 @@ export default function GameV15() {
       </header>
 
       {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
+
+      <section id="inn-zone" className="forced-inn" hidden={game.hero.status!=='客棧中'} aria-live="polite">
+        <BedDouble aria-hidden="true"/><div><small>漢陽客棧</small><h2>戰敗療傷中</h2><p>戰鬥已停止。每 2 秒自動恢復 10 點 HP，生命值全滿後會自動離開客棧。</p><Progress value={heroVital.hp/heroVital.maxHp*100} aria-label="客棧療傷進度"/></div>
+        <Button onClick={()=>setGame(payGameInn)}>💰 付費快速治療<small>{quickHealCost.toLocaleString('zh-TW')} 兩</small></Button>
+      </section>
 
       <Tabs defaultValue="trade" className="game-tabs">
         <TabsList className="nav-list v15-nav">
@@ -1365,11 +1412,11 @@ export default function GameV15() {
           <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit}
             navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now(),spawnRoll=Math.random();setGame(previous=>{
               const old=previous.dungeon||freshDungeon();
-              if(vitalStats(previous.hero).hp<=0)return {...previous,dungeon:{...freshDungeon(),status:'recovering',stamp:now,pauseAt:old.pauseAt||now,logs:['商隊不幸全滅，已被熱心商旅送回漢陽療傷...']}};
+              if(vitalStats(previous.hero).hp<=0)return enterGameInn(previous,now,'生命值不足，已自動返回漢陽客棧。',{...freshDungeon(),pauseAt:old.pauseAt||now});
               const dungeon=teleportDungeon(old,previous.hero.level,heroPersonalPower(previous.hero),now,id,spawnRoll);
               return dungeon===old?previous:{...previous,dungeon,logs:addLog(previous.logs,dungeon.logs[0])};
             });}}/>}
-            battle={<DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random();setGame(previous=>applyDungeon(previous,action,now,key,roll,choice));}}/>}
+            battle={<DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random();setGame(previous=>applyDungeon(previous,action,now,key,roll,choice,0,retaliationRoll));}}/>}
             inventory={game.inventory} equipHero={itemUid=>equipItem(itemUid,undefined,'hero')} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
 
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
@@ -1507,7 +1554,7 @@ export default function GameV15() {
         </TabsContent>
       </Tabs>
 
-      <footer><span>融合版 V21・商途 × BT52Gersang</span><span>4 條放置商路・20 座城市・9 人傭兵隊伍・離線上限 8 小時</span></footer>
+      <footer><span>融合版 V22・商途 × BT52Gersang</span><span>4 條放置商路・20 座城市・9 人傭兵隊伍・離線上限 8 小時</span></footer>
     </main>
   );
 }

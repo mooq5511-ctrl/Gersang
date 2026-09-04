@@ -17,7 +17,7 @@ test('staff and armor increase real resources totals weight power and defense',(
   const hero=makeHero(),a=toggleDivineEquipment(hero,[],gear('staff')),b=toggleDivineEquipment(a.unit,a.inventory,gear('armor'));
   assert.equal(heroPersonalPower(a.unit),265);assert.equal(heroWeightLimit(a.unit),350);assert.equal(vitalStats(a.unit).maxMp,240);
   assert.deepEqual(heroTotalAttributes(b.unit),{str:30,agi:15,vit:100,intel:60});
-  assert.equal(heroPersonalPower(b.unit),385);assert.equal(vitalStats(b.unit).maxHp,400);
+  assert.equal(heroPersonalPower(b.unit),385);assert.equal(vitalStats(b.unit).maxHp,420);
   assert.ok(combatStats(b.unit).defense>=combatStats(hero).defense+100);
   assert.equal(hero.str,20);assert.equal(hero.vit,20);
 });
@@ -42,7 +42,7 @@ test('replaced gear returns safely and save reload preserves bonuses exactly onc
 test('unequipping clamps remaining health to reduced maximum without reviving',()=>{
   const hero=makeHero(),on=toggleDivineEquipment(hero,[],gear('armor'));
   const off=toggleDivineEquipment({...on.unit,hp:400},on.inventory,gear('armor'));
-  assert.equal(normalizeVitals(off.unit).hp,80);
+  assert.equal(normalizeVitals(off.unit).hp,100);
   assert.equal(normalizeVitals({...off.unit,hp:0}).hp,0);
 });
 test('single HTML toggles independently, restores baseline, and keeps paid attributes',()=>{

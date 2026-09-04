@@ -13,7 +13,7 @@ export function WorldMapNavigation({state,level,power,travel}:{state:DungeonStat
   return <Button key={zone.id} className="world-zone-button" aria-pressed={selected} disabled={locked||state.status==='recovering'} onClick={()=>travel(zone.id)}>
    <strong>{locked?'鎖定 · ':selected?'目前 · ':''}{zone.name}</strong><span>{zoneRequirement(zone)}</span><small>{zone.mood}</small>
   </Button>;
- })}</div><p>{state.status==='recovering'?'漢陽療傷中，HP / MP 回滿後可再次傳送。':'點選已解鎖地域立即傳送並開戰；原戰鬥中止，HP / MP 與技能冷卻保留。'}</p>
+ })}</div><p>{state.status==='recovering'?'漢陽客棧療傷中，HP 回滿後可再次傳送。':'點選已解鎖地域立即傳送並開戰；原戰鬥中止，HP / MP 與技能冷卻保留。'}</p>
  </nav>;
 }
 export function DungeonPanel({state,mp,hero,act}:{state:DungeonState;mp:number;hero:CaravanMember;act:(action:'start'|'normal'|'skill'|'retreat',key?:DungeonKey)=>void}){
@@ -25,7 +25,7 @@ export function DungeonPanel({state,mp,hero,act}:{state:DungeonState;mp:number;h
  <p className="impact-ecology">本地怪物：{ecology}</p>
  <BattleArena state={state} hero={hero}/>
  <output className="dungeon-flash" key={state.logs[0]}>{state.logs[0]||'選擇對手，開始自動戰鬥。'}</output>
- <div className="dungeon-actions"><button disabled={!active||state.normalAt>state.stamp} onClick={()=>act('normal')}>普通攻擊<small>無消耗 · 共用自動攻擊冷卻</small></button><button disabled={!active||mp<40||cooldown>0} onClick={()=>act('skill')}>蛇龍出水<small>{mp<40?'MP 不足':cooldown?'冷卻 '+cooldown+' 秒':'40 MP · 冷卻 3 秒'}</small></button><button disabled={!active&&state.status!=='respawning'} onClick={()=>act('retreat')}>撤退療傷</button></div>
+ <div className="dungeon-actions"><button disabled={!active||state.normalAt>state.stamp} onClick={()=>act('normal')}>普通攻擊<small>無消耗 · 共用自動攻擊冷卻</small></button><button disabled={!active||mp<40||cooldown>0} onClick={()=>act('skill')}>蛇龍出水<small>{mp<40?'MP 不足':cooldown?'冷卻 '+cooldown+' 秒':'40 MP · 冷卻 3 秒'}</small></button><button disabled={!active&&state.status!=='respawning'} onClick={()=>act('retreat')}>{state.status==='recovering'?'客棧療傷中':'撤退至客棧'}</button></div>
  <p className="dungeon-help">每秒交鋒，敏捷高者先攻。神仙棒使蛇龍出水傷害加倍。副本期間航程暫停；勝利後 0.5 秒隨機刷新本地怪物，療傷停止收益。</p>
  <details open><summary>戰鬥日誌 · 最近 30 則</summary><ol className="dungeon-log">{state.logs.slice(0,30).map((line,i)=><li key={i} className={battleLogPresentation(line).className}><span className="classic-log-label">{battleLogPresentation(line).label}</span>{line}</li>)}</ol></details>
  </section>;

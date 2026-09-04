@@ -7,15 +7,15 @@ import {vitalStats} from '../app/vitals-engine.ts';
 test('specified initial hero power weight HP and MP',()=>{
   const hero={...HERO_INITIAL_ATTRIBUTES,templateId:'hero',level:1,equip:{}};
   assert.equal(heroPersonalPower(hero),145);assert.equal(heroWeightLimit(hero),300);
-  assert.equal(vitalStats(hero).maxHp,80);assert.equal(vitalStats(hero).maxMp,40);
+  assert.equal(vitalStats(hero).maxHp,100);assert.equal(vitalStats(hero).maxMp,40);
   assert.equal(heroPersonalPower({...hero,vit:21}),146.5);
-  assert.equal(vitalStats({...hero,vit:21}).maxHp,84);
+  assert.equal(vitalStats({...hero,vit:21}).maxHp,104);
   assert.equal(vitalStats({...hero,intel:11}).maxMp,44);
   assert.equal(heroWeightLimit({...hero,str:21}),305);
 });
 test('existing hero health clamps to new max and equipment still contributes',()=>{
   const hero={...HERO_INITIAL_ATTRIBUTES,templateId:'hero',level:1,hp:1000,mp:1000,equip:{armor:{hp:30,bonus:{vit:2,intel:3}}}};
-  const v=vitalStats(hero);assert.equal(v.hp,118);assert.equal(v.mp,52);
+  const v=vitalStats(hero);assert.equal(v.hp,138);assert.equal(v.mp,52);
   assert.equal(vitalStats({...hero,hp:0,mp:0}).hp,0);
 });
 function standalone(){

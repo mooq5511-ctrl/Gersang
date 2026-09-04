@@ -13,8 +13,8 @@ const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: '商途・巨商放置錄 V21',
-  description: '東海商路與 BT52Gersang 融合版：四國二十城、九人商隊、八格裝備、放置貿易與信用成長。',
+  title: '商途・巨商放置錄 V22',
+  description: '東海商路與 BT52Gersang 融合版：戰敗自動返回客棧、四國二十城、九人商隊與放置貿易。',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
