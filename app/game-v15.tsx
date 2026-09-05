@@ -653,7 +653,10 @@ function leaveGameInn(previous:GameState):GameState{
 }
 
 function payGameInn(previous:GameState):GameState{
-  const vital=vitalStats(previous.hero),result=payInn({hp:vital.hp,maxHp:vital.maxHp,status:previous.hero.status},previous.gold);
+  // 舊存檔可能只保存副本療傷狀態；任一狀態顯示在客棧，都允許手動治療並同步角色狀態。
+  const atInn=previous.hero.status==='客棧中'||previous.dungeon?.status==='recovering';
+  if(!atInn)return previous;
+  const vital=vitalStats(previous.hero),result=payInn({hp:vital.hp,maxHp:vital.maxHp,status:'客棧中'},previous.gold);
   if(result.error)return {...previous,logs:addLog(previous.logs,result.error),dungeon:previous.dungeon?{...previous.dungeon,logs:[result.error,...previous.dungeon.logs].slice(0,40)}:previous.dungeon};
   const healed={...previous,gold:result.gold,hero:{...previous.hero,hp:result.player.hp,status:result.player.status},logs:addLog(previous.logs,'支付 '+result.cost.toLocaleString('zh-TW')+' 兩，客棧已完成快速治療。')};
   return leaveGameInn(healed);
@@ -1171,7 +1174,9 @@ export default function GameV15() {
   }
 
   function restAtInn() {
-    if(dungeonBusy(game.dungeon)){setNotice('副本或療傷期間暫停此操作，請先完成療傷。');return;}
+    // 戰敗療傷中再次點擊客棧，直接走付費快速治療；不再被 dungeonBusy 擋住。
+    if(game.hero.status==='客棧中'||game.dungeon?.status==='recovering'){setGame(payGameInn);return;}
+    if(dungeonBusy(game.dungeon)){setNotice('副本戰鬥期間無法入住，請先撤退。');return;}
     const cost = Math.floor(1800 * currentCity.priceFactor);
     setGame((previous) => {
       if (previous.gold < cost) {
@@ -1343,7 +1348,7 @@ export default function GameV15() {
 
       <section id="inn-zone" className="forced-inn" hidden={game.hero.status!=='客棧中'} aria-live="polite">
         <BedDouble aria-hidden="true"/><div><small>漢陽客棧</small><h2>戰敗療傷中</h2><p>戰鬥已停止。每 2 秒自動恢復 10 點 HP，生命值全滿後會自動離開客棧。</p><Progress value={heroVital.hp/heroVital.maxHp*100} aria-label="客棧療傷進度"/></div>
-        <Button onClick={()=>setGame(payGameInn)}>💰 付費快速治療<small>{quickHealCost.toLocaleString('zh-TW')} 兩</small></Button>
+        <Button type="button" onClick={()=>setGame(payGameInn)}>💰 付費快速治療<small>{quickHealCost.toLocaleString('zh-TW')} 兩</small></Button>
       </section>
 
       <Tabs defaultValue="trade" className="game-tabs">
@@ -1532,7 +1537,7 @@ export default function GameV15() {
               <section><h3>共用倉庫・三名角色皆可取用</h3>{sharedWarehouse.length ? sharedWarehouse.map((item) => <article key={item.uid}><img src={item.image} alt="" /><span><strong>{item.name}</strong><small>{item.rarity}・{slotLabels[item.slot]}</small></span><Button size="sm" variant="outline" onClick={() => withdrawFromWarehouse(item.uid)}>取出</Button></article>) : <p>倉庫目前是空的。</p>}</section></div>
             </div>}
 
-            {cityService === "inn" && <div className="city-service-body inn-service"><BedDouble /><div><small>{currentCity.name}客棧</small><h2>商團歇腳與修練</h2><p>全員 HP / MP 恢復至上限；主角獲得 700 經驗，出戰傭兵各獲得 550 經驗。</p><Button onClick={restAtInn}>入住・{format(Math.floor(1800 * currentCity.priceFactor))} 兩</Button></div></div>}
+            {cityService === "inn" && <div className="city-service-body inn-service"><BedDouble /><div><small>{currentCity.name}客棧</small><h2>商團歇腳與修練</h2><p>全員 HP / MP 恢復至上限；主角獲得 700 經驗，出戰傭兵各獲得 550 經驗。</p><Button type="button" onClick={restAtInn}>{game.hero.status==='客棧中'||game.dungeon?.status==='recovering'?'立即療傷・'+format(quickHealCost)+' 兩':'入住・'+format(Math.floor(1800 * currentCity.priceFactor))+' 兩'}</Button></div></div>}
 
             {cityService === "pharmacy" && <div className="city-service-body"><div className="panel-title"><Pill /><h2>{currentCity.name}藥店</h2><span>購買後可立即使用</span></div><div className="medicine-grid">{medicineCatalog.map((medicine) => <article key={medicine.id}><Pill /><div><strong>{medicine.name}</strong><small>{medicine.effect}</small><em>持有 {game.medicines[medicine.id] || 0}</em></div><Button size="sm" onClick={() => buyMedicine(medicine.id)}>購買 {format(Math.floor(medicine.price * currentCity.priceFactor))} 兩</Button><Button size="sm" variant="outline" disabled={!game.medicines[medicine.id]} onClick={() => consumeMedicine(medicine.id)}>使用</Button></article>)}</div></div>}
           </section>

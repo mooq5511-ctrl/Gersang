@@ -41,3 +41,9 @@ test('published interface contains the requested HP and inn controls',()=>{
  const source=readFileSync(new URL('../app/game-v15.tsx',import.meta.url),'utf8');
  assert.match(source,/id="p-hp"/);assert.match(source,/id="inn-zone"/);assert.match(source,/付費快速治療/);assert.match(source,/setGame\(payGameInn\)/);
 });
+
+test('manual inn healing accepts recovering battle state and is not blocked as busy',()=>{
+ const source=readFileSync(new URL('../app/game-v15.tsx',import.meta.url),'utf8');
+ assert.match(source,/previous\.hero\.status==='客棧中'\|\|previous\.dungeon\?\.status==='recovering'/);
+ assert.match(source,/if\(game\.hero\.status==='客棧中'\|\|game\.dungeon\?\.status==='recovering'\)\{setGame\(payGameInn\);return;\}/);
+});
