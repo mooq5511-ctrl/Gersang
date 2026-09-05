@@ -1,28 +1,14 @@
-export const INVENTORY_CAPACITY=20;
+/** 清單背包沒有容量上限；保留常數供舊模組相容。 */
+export const INVENTORY_CAPACITY=Number.POSITIVE_INFINITY;
 export type PositionedItem={uid:string;bagSlot?:number};
-/** 固定格號存於物品，陣列仍相容舊版背包；移走物品後不讓其餘圖示整排位移。 */
+/** 舊格位資料轉為清單順序；不截斷任何舊存檔物品。 */
 export function positionInventory<E extends PositionedItem>(inventory:E[]):E[]{
-  const used=new Set<number>();
-  const result=inventory.map(item=>{
-    const slot=item.bagSlot;
-    if(Number.isInteger(slot)&&slot!>=0&&slot!<20&&!used.has(slot!)){used.add(slot!);return item;}
-    return {...item,bagSlot:undefined};
-  });
-  return result.map(item=>{
-    if(item.bagSlot!==undefined)return item;
-    const slot=Array.from({length:20},(_,i)=>i).find(i=>!used.has(i));
-    if(slot===undefined)return item; // 舊版超額物品保留，絕不截斷或刪除。
-    used.add(slot);return {...item,bagSlot:slot};
-  });
+  return inventory.map((item,index)=>item.bagSlot===index?item:{...item,bagSlot:index});
 }
 export function inventoryGrid<E extends PositionedItem>(inventory:E[]){
-  const positioned=positionInventory(inventory),slots:Array<E|null>=Array(20).fill(null);
-  const overflow:E[]=[];
-  for(const item of positioned){if(item.bagSlot===undefined)overflow.push(item);else slots[item.bagSlot]=item;}
-  return {slots,overflow};
+  return {slots:positionInventory(inventory),overflow:[] as E[]};
 }
-/** 新掉落與購買只能進入空位；滿格時不扣款、不覆蓋物品。 */
+/** 新掉落與購買永遠附加到清單，不再有滿格失敗。 */
 export function addInventoryItem<E extends PositionedItem>(inventory:E[],item:E){
-  if(inventory.length>=INVENTORY_CAPACITY)return {inventory,error:'背包已滿'};
   return {inventory:positionInventory([...positionInventory(inventory),{...item,bagSlot:undefined}]),error:undefined};
 }

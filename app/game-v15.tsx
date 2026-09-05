@@ -11,7 +11,7 @@ import {goToInn,leaveInn,payInn,type PlayerStatus} from './inn-engine';
 import { settleCaravanIdle } from './caravan-idle';
 import { heroPersonalPower, heroWeightLimit, heroTotalAttributes, HERO_INITIAL_ATTRIBUTES } from './hero-rules';
 import {DIVINE_EQUIPMENT} from './divine-equipment';
-import {positionInventory,addInventoryItem,INVENTORY_CAPACITY} from './inventory-layout';
+import {positionInventory,addInventoryItem} from './inventory-layout';
 import {rollInventoryLoot} from './inventory-loot';
 import { backupBeforeGuildMigration, retainGuildRoster } from './guild-migration';
 import { EQUIPMENT_SLOTS, EQUIPMENT_LABELS, emptyEquipmentSlots, itemKind, compatibleSlots, normalizeStoredItem, equipFromInventory, unequipToInventory, migrateSevenSlotSave, backupBeforeEquipmentMigration, type EquipmentSlot, type EquipmentKind } from './equipment-slots';
@@ -1101,7 +1101,6 @@ export default function GameV15() {
   function buyWearable(base:WearableBase) {
     const price=Math.floor(base.price*currentCity.priceFactor);
     setGame(previous=>{
-      if(previous.inventory.length>=INVENTORY_CAPACITY)return {...previous,logs:addLog(previous.logs,'背包已滿，未扣款。')};
       if(previous.gold<price) { setNotice('裝備商店資金不足。'); return previous; }
       const item:Equipment={...base,uid:uid(base.id),enhance:0,rarity:'普通',magic:[],requiredLevel:1};
       return {...previous,gold:previous.gold-price,inventory:[item,...previous.inventory],logs:addLog(previous.logs,'購入「'+item.name+'」。')};
@@ -1111,7 +1110,6 @@ export default function GameV15() {
   function buyMagicEquipment() {
     const cost = 12000;
     setGame((previous) => {
-      if(previous.inventory.length>=INVENTORY_CAPACITY)return {...previous,logs:addLog(previous.logs,'背包已滿，未扣款。')};
       if (previous.gold < cost) {
         setNotice("裝備商店資金不足。");
         return previous;
@@ -1128,7 +1126,6 @@ export default function GameV15() {
 
   function buyOfficialItem(record: OfficialEquipment, price = record.price) {
     setGame((previous) => {
-      if(previous.inventory.length>=INVENTORY_CAPACITY)return {...previous,logs:addLog(previous.logs,'背包已滿，未扣款。')};
       if (previous.gold < price) {
         setNotice("購買「" + record.name + "」的資金不足。");
         return previous;
@@ -1166,7 +1163,6 @@ export default function GameV15() {
   }
 
   function withdrawFromWarehouse(itemUid: string) {
-    if(game.inventory.length>=INVENTORY_CAPACITY){setNotice('背包已滿，無法取出倉庫裝備。');return;}
     const item = sharedWarehouse.find((entry) => entry.uid === itemUid);
     if (!item) return;
     setSharedWarehouse((previous) => previous.filter((entry) => entry.uid !== itemUid));

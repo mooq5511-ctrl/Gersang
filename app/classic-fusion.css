@@ -12,8 +12,7 @@
 .caravan-status .dungeon-log li{overflow-wrap:anywhere}.classic-log-label{display:inline-block;margin-right:6px;font-size:12px;border:1px solid currentColor;padding:0 4px;border-radius:2px}
 .log-win{color:#ffd700;font-weight:bold}.log-lose{color:#ff836a}.log-drop{color:#e990df;font-weight:bold}.log-skill{color:#70e7f3}.log-travel{color:#c6d5af}.log-normal{color:#d2c2a0}
 .caravan-status .world-zone-button[aria-pressed=true]:not(:disabled){background:#ffd700;color:#2a1801;box-shadow:0 0 10px #ffd70088}.caravan-status .world-zone-button[aria-pressed=true]:not(:disabled) small{color:#5c4011}
-.caravan-status .merchant-bag-grid{padding:8px;background:#0004;border-radius:4px;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
-.caravan-status .merchant-bag-slot{background:#1a0f01}.caravan-status .merchant-bag-slot small{font-size:12px}
+.caravan-status .merchant-bag-list{padding:8px;background:#0004;border-radius:4px}
 .caravan-status .rarity-common,.hp-gear-tooltip.rarity-common{--rarity-color:#ddd}
 .caravan-status .rarity-uncommon,.hp-gear-tooltip.rarity-uncommon{--rarity-color:#47d1ba}
 .caravan-status .rarity-rare,.hp-gear-tooltip.rarity-rare{--rarity-color:#65b2ff}

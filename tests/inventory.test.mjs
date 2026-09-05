@@ -8,34 +8,34 @@ import {DIVINE_EQUIPMENT} from '../app/divine-equipment.ts';
 import {heroPersonalPower,HERO_INITIAL_ATTRIBUTES} from '../app/hero-rules.ts';
 const item=(id,bagSlot,slot='weapon')=>({uid:id,bagSlot,slot});
 const hero=()=>({...HERO_INITIAL_ATTRIBUTES,level:1,equip:emptyEquipmentSlots()});
-test('twenty cells preserve holes and next drop fills first empty cell',()=>{
+test('list mode compacts old holes and appends new drops',()=>{
   let inventory=positionInventory([item('a'),item('b'),item('c')]);
   inventory=inventory.filter(x=>x.uid!=='b');
-  const grid=inventoryGrid(inventory);assert.equal(grid.slots.length,20);assert.equal(grid.slots[1],null);assert.equal(grid.slots[2].uid,'c');
-  const next=addInventoryItem(inventory,item('drop'));assert.equal(next.inventory.find(x=>x.uid==='drop').bagSlot,1);
+  const grid=inventoryGrid(inventory);assert.equal(grid.slots.length,2);assert.equal(grid.slots[1].uid,'c');
+  const next=addInventoryItem(inventory,item('drop'));assert.equal(next.inventory.find(x=>x.uid==='drop').bagSlot,2);
 });
-test('old overflow is never deleted and migrates idempotently across JSON save',()=>{
+test('unlimited list preserves old overflow and accepts more items',()=>{
   const items=Array.from({length:25},(_,i)=>item(String(i)));
-  const migrated=positionInventory(items);assert.equal(migrated.length,25);assert.equal(inventoryGrid(migrated).overflow.length,5);
+  const migrated=positionInventory(items);assert.equal(migrated.length,25);assert.equal(inventoryGrid(migrated).overflow.length,0);
   assert.deepEqual(positionInventory(JSON.parse(JSON.stringify(migrated))),migrated);
-  assert.equal(addInventoryItem(migrated,item('new')).error,'背包已滿');
+  const added=addInventoryItem(migrated,item('new'));assert.equal(added.error,undefined);assert.equal(added.inventory.length,26);
 });
 test('invalid or duplicate positions are repaired without losing any unique item',()=>{
   const fixed=positionInventory([item('a',0),item('b',0),item('c',999),item('d',-1)]);
   assert.deepEqual(fixed.map(x=>x.bagSlot),[0,1,2,3]);
 });
-test('full bag still exchanges and returns old gear to clicked cell',()=>{
-  const inventory=positionInventory(Array.from({length:20},(_,i)=>item('bag-'+i)));
+test('large inventory still exchanges equipment without losing items',()=>{
+  const inventory=positionInventory(Array.from({length:200},(_,i)=>item('bag-'+i)));
   const unit=hero();unit.equip.weapon=item('old',19);
   const result=equipFromInventory(unit,inventory,'bag-7');
-  assert.equal(result.error,undefined);assert.equal(result.inventory.length,20);
-  assert.equal(result.unit.equip.weapon.uid,'bag-7');assert.equal(inventoryGrid(result.inventory).slots[7].uid,'old');
+  assert.equal(result.error,undefined);assert.equal(result.inventory.length,200);
+  assert.equal(result.unit.equip.weapon.uid,'bag-7');assert.ok(result.inventory.some(x=>x.uid==='old'));
 });
-test('full bag refuses unequip and incoming loot without changing source data',()=>{
-  const inventory=positionInventory(Array.from({length:20},(_,i)=>item('bag-'+i)));
+test('unlimited bag accepts unequip and incoming loot at any size',()=>{
+  const inventory=positionInventory(Array.from({length:200},(_,i)=>item('bag-'+i)));
   const unit=hero();unit.equip.weapon=item('worn');
-  const off=unequipToInventory(unit,inventory,'weapon');assert.ok(off.error);assert.equal(off.unit,unit);assert.equal(off.inventory,inventory);
-  const drop=addInventoryItem(inventory,item('drop'));assert.ok(drop.error);assert.equal(drop.inventory,inventory);
+  const off=unequipToInventory(unit,inventory,'weapon');assert.equal(off.error,undefined);assert.equal(off.inventory.length,201);
+  const drop=addInventoryItem(inventory,item('drop'));assert.equal(drop.error,undefined);assert.equal(drop.inventory.length,201);
 });
 test('wearing empties a slot then unequipping fills the hole and removes bonuses',()=>{
   const unit=hero(),staff={...DIVINE_EQUIPMENT.staff,uid:'staff',bagSlot:3};

@@ -1,18 +1,17 @@
 import {rarityPresentation} from './classic-presentation';
-import {inventoryGrid} from './inventory-layout';
+import {positionInventory} from './inventory-layout';
 import {equipmentDetailLines,equipmentDescription,type TooltipGear} from './divine-equipment';
 import {Tooltip,TooltipProvider,TooltipTrigger,TooltipContent} from '@/components/ui/tooltip';
 import {EQUIPMENT_LABELS,type EquipmentKind} from './equipment-slots';
 export type BagItem=TooltipGear & {uid:string;name:string;slot:EquipmentKind;image:string;bagSlot?:number};
 export function InventoryPanel({inventory,equip,message}:{inventory:BagItem[];equip:(uid:string)=>void;message:string}){
-  const {slots,overflow}=inventoryGrid(inventory);
-  return <section className="merchant-bag" aria-label="商隊背包"><h2>商隊背包 <small>{slots.filter(Boolean).length} / 20 格</small></h2>
-    <TooltipProvider><div className="merchant-bag-grid">{slots.map((item,index)=><Tooltip key={index}><TooltipTrigger className={'merchant-bag-slot'+(item?' occupied '+rarityPresentation(item.rarity).className:'')} onClick={()=>{if(item)equip(item.uid)}} aria-label={'背包第 '+(index+1)+' 格：'+(item?.name||'空')}>
-      {item?(item.image?<img src={item.image} alt=""/>:<strong>{({weapon:'杖',armor:'甲',helm:'兜',boots:'靴',ring:'戒',amulet:'符',gloves:'套',accessory:'符'} as const)[item.slot]}</strong>):null}<small>{item?EQUIPMENT_LABELS[item.slot]:''}</small>
-    </TooltipTrigger>{item&&<TooltipContent className={"hp-gear-tooltip "+rarityPresentation(item.rarity).className}><strong>{item.name}</strong><span className="rarity-caption">{rarityPresentation(item.rarity).label}</span>{equipmentDetailLines(item).map((line,i)=><span key={i}>{line}</span>)}<em>{equipmentDescription(item)}</em></TooltipContent>}</Tooltip>)}</div></TooltipProvider>
+  const items=positionInventory(inventory);
+  return <section className="merchant-bag" aria-label="商隊背包"><h2>商隊背包 <small>{items.length} 件・無上限</small></h2>
+    <TooltipProvider><div className="merchant-bag-list" role="list">{items.length?items.map((item,index)=><Tooltip key={item.uid}><TooltipTrigger className={'merchant-bag-row '+rarityPresentation(item.rarity).className} onClick={()=>equip(item.uid)} aria-label={'背包第 '+(index+1)+' 件：'+item.name}>
+      <span className="merchant-bag-icon">{item.image?<img src={item.image} alt=""/>:<strong>{({weapon:'杖',armor:'甲',helm:'兜',boots:'靴',ring:'戒',amulet:'符',gloves:'套',accessory:'符'} as const)[item.slot]}</strong>}</span><span className="merchant-bag-copy"><strong>{item.name}</strong><small>{rarityPresentation(item.rarity).label}・{EQUIPMENT_LABELS[item.slot]}</small></span><em>點擊穿戴</em>
+    </TooltipTrigger><TooltipContent className={"hp-gear-tooltip "+rarityPresentation(item.rarity).className}><strong>{item.name}</strong><span className="rarity-caption">{rarityPresentation(item.rarity).label}</span>{equipmentDetailLines(item).map((line,i)=><span key={i}>{line}</span>)}<em>{equipmentDescription(item)}</em></TooltipContent></Tooltip>):<p className="merchant-bag-empty">行囊尚空，出發尋覓神裝。</p>}</div></TooltipProvider>
     <div className="rarity-legend" aria-label="裝備品階">{["普通","稀有","史詩","傳說"].map(rarity=><span key={rarity} className={rarityPresentation(rarity).className}>{rarity}</span>)}</div>
-    <p>左鍵點擊穿戴給主角；已有裝備時交換回原格。點擊主角裝備格可卸下。</p><p>模擬打怪：+100 經驗，50% 機率掉落四種神裝之一。滿格可交換，但不能卸裝或拾取。</p>
+    <p>左鍵點擊清單裝備即可穿戴給主角；已有裝備會自動退回清單。背包容量無上限，掉落、購買與卸裝都不會因空間不足失敗。</p>
     <div className="merchant-bag-message" role="status">{message||'行囊尚空，出發尋覓神裝。'}</div>
-    {overflow.length>0&&<details open><summary>舊物保留區・{overflow.length} 件</summary><p>舊存檔物品完整保留。整理至 20 件以下後才能再拾取。</p>{overflow.map(item=><button key={item.uid} onClick={()=>equip(item.uid)}>{item.name}・穿戴</button>)}</details>}
   </section>;
 }

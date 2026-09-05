@@ -1,4 +1,4 @@
-import {positionInventory,INVENTORY_CAPACITY,addInventoryItem} from './inventory-layout.ts';
+import {positionInventory,addInventoryItem} from './inventory-layout.ts';
 export const EQUIPMENT_SLOTS = ['weapon','helm','armor','boots','ring1','ring2','gloves','amulet'] as const;
 export type EquipmentSlot = typeof EQUIPMENT_SLOTS[number];
 export type EquipmentKind = 'helm' | 'armor' | 'boots' | 'ring' | 'gloves' | 'amulet' | 'weapon' | 'accessory';
@@ -33,7 +33,6 @@ export function equipFromInventory<E extends Wearable,U extends {level:number;eq
 export function unequipToInventory<E extends Wearable,U extends {equip:Record<EquipmentSlot,E|null>}>(unit:U,inventory:E[],slot:EquipmentSlot) {
   const item=unit.equip[slot];
   if(!item) return {unit,inventory,error:undefined};
-  if(inventory.length>=INVENTORY_CAPACITY)return {unit,inventory,error:'背包已滿，無法卸下裝備。'};
   return {unit:{...unit,equip:{...unit.equip,[slot]:null}},inventory:inventory.some(entry=>entry.uid===item.uid)?inventory:addInventoryItem(inventory,item).inventory,error:undefined};
 }
 const record=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value);
