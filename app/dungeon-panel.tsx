@@ -16,7 +16,7 @@ export function WorldMapNavigation({state,level,power,travel}:{state:DungeonStat
    if(!zone)return null;
    const locked=!zoneUnlocked(zone,level,power),selected=zone.id===zoneFor(state.zone).id;
    return <Button key={zone.id} className="world-zone-button" aria-pressed={selected} disabled={locked||state.status==='recovering'} onClick={()=>travel(zone.id)}>
-    <strong>{locked?'鎖定 · ':selected?'目前 · ':''}{zone.name}</strong><span>{zoneRequirement(zone)}</span><small>{stage.type==='dungeon'?'迷宮':'掛機點'} · {stage.monster.name} HP {stage.monster.hp.toLocaleString()}</small><small>掉落：{stage.monster.drops.join('、')}</small>
+    <strong>{locked?'鎖定 · ':selected?'目前 · ':''}{zone.name}</strong><span>{zoneRequirement(zone)}</span><small>{stage.type==='dungeon'?'迷宮':'掛機點'} · {stage.monster.name} HP {stage.monster.hp.toLocaleString()}</small><small>掉落：{stage.monster.drops.map(drop=>drop.item+' '+drop.rate+'%').join('、')}</small>
    </Button>;
   })}</div>
  </section>)}</div><p>{state.status==='recovering'?'漢陽客棧療傷中，HP 回滿後可再次傳送。':'點選已解鎖關卡立即傳送並開戰；原戰鬥中止，HP / MP 與技能冷卻保留。'}</p>
@@ -31,7 +31,7 @@ export function DungeonPanel({state,mp,hero,dps=0,act}:{state:DungeonState;mp:nu
  <p className="impact-ecology">本地怪物：{ecology}</p>
  <div className="battle-phase" aria-live="polite"><span>戰鬥階段：<strong>{state.status==='fighting'?(state.phase||'接敵'):state.status==='respawning'?'整隊':'待命'}</strong></span><span>敵我距離 {state.distance??100} / 100</span><div><i style={{width:(100-(state.distance??100))+'%'}}/></div></div>
  <BattleArena state={state} hero={hero}/>
- <output className="dungeon-flash" key={state.logs[0]}>{state.logs[0]||'選擇對手，開始自動戰鬥。'}</output>
+ <output className={'dungeon-flash'+(state.logs[0]?.startsWith('🎁')?' dungeon-loot-flash':'')} key={state.serial+'-'+state.logs[0]}>{state.logs[0]||'選擇對手，開始自動戰鬥。'}</output>
  <div className="dungeon-actions"><button disabled={!active||state.normalAt>state.stamp} onClick={()=>act('normal')}>普通攻擊<small>無消耗 · 共用自動攻擊冷卻</small></button><button disabled={!active||mp<40||cooldown>0} onClick={()=>act('skill')}>蛇龍出水<small>{mp<40?'MP 不足':cooldown?'冷卻 '+cooldown+' 秒':'40 MP · 冷卻 3 秒'}</small></button><button disabled={!active&&state.status!=='respawning'} onClick={()=>act('retreat')}>{state.status==='recovering'?'客棧療傷中':'撤退至客棧'}</button></div>
  <p className="dungeon-help">部隊先推進接敵，再按前排 → 中排 → 後排承傷；前排輸出 +20%，後排受擊有 50% 閃避。全員倒下才會撤回客棧。勝利後 0.5 秒刷新本地怪物。</p>
  <details open><summary>戰鬥日誌 · 最近 30 則</summary><ol className="dungeon-log">{state.logs.slice(0,30).map((line,i)=><li key={i} className={battleLogPresentation(line).className}><span className="classic-log-label">{battleLogPresentation(line).label}</span>{line}</li>)}</ol></details>

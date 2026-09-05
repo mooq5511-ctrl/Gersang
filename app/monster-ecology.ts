@@ -1,9 +1,11 @@
 /** 隨機地域怪物：沿用已確認示範版的原創數值；舊怪物 ID 留在主資料庫供舊資料相容。 */
 export const ECOLOGY_MONSTERS={
- e_raccoon:{name:'狸',level:1,hp:100,mp:0,atk:6,dex:10,xp:20,gold:15,drop:.05,loot:['boots']},
- e_terracotta:{name:'兵馬俑',level:35,hp:2200,mp:80,atk:70,dex:24,xp:600,gold:420,drop:.35,loot:['helmet','armor']},
- e_mad_cow:{name:'狂牛',level:15,hp:520,mp:0,atk:24,dex:20,xp:90,gold:75,drop:.18,loot:['boots']},
- e_big_eye:{name:'大眼怪',level:25,hp:1200,mp:120,atk:48,dex:28,xp:240,gold:180,drop:.28,loot:['helmet']},
+ e_raccoon:{name:'小狸貓',level:1,hp:60,mp:0,atk:5,dex:10,xp:20,gold:15,drop:.05,loot:['boots']},
+ e_terracotta:{name:'兵馬俑',level:35,hp:300,mp:80,atk:35,dex:24,xp:300,gold:220,drop:.35,loot:['helmet','armor']},
+ e_mad_cow:{name:'狂牛',level:15,hp:120,mp:0,atk:18,dex:20,xp:70,gold:55,drop:.18,loot:['boots']},
+ e_big_eye:{name:'大眼怪',level:10,hp:80,mp:40,atk:12,dex:18,xp:45,gold:35,drop:.18,loot:['helmet']},
+ e_boar:{name:'狂暴山豬',level:20,hp:200,mp:0,atk:28,dex:16,xp:120,gold:90,drop:.25,loot:['staff']},
+ e_miko:{name:'幽靈巫女',level:25,hp:250,mp:160,atk:32,dex:30,xp:160,gold:120,drop:.22,loot:['staff','armor']},
  e_sea_god:{name:'海神',level:45,hp:4400,mp:2000,atk:140,dex:42,xp:1200,gold:900,drop:.55,loot:['staff','armor']},
  e_cat:{name:'狸貓',level:1,hp:100,mp:0,atk:6,dex:10,xp:20,gold:15,drop:.05,loot:['boots']},
  e_mantis:{name:'大螳螂',level:5,hp:180,mp:0,atk:10,dex:18,xp:35,gold:25,drop:.07,loot:['boots']},
@@ -23,7 +25,9 @@ export const ECOLOGY_POOLS={
  hanyang:['e_raccoon'],
  'qin-shi-huang-mausoleum':['e_terracotta'],
  'iwami-silver-mine':['e_mad_cow'],
+ 'fuji-foothills':['e_miko'],
  'datun-mountain':['e_big_eye'],
+ alishan:['e_boar'],
  'undersea-king-cave':['e_sea_god'],
 } as const;
 export function pickZoneMonster(zone:string='hanyang',sample=0){

@@ -511,6 +511,11 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
   if(result.reward){
     const reward=result.reward;
     next={...next,hero:grantXp(next.hero,reward.xp),gold:next.gold+reward.gold,kills:next.kills+1,logs:addLog(next.logs,'成功擊敗副本怪物，獲得 '+reward.xp+' 經驗與 '+reward.gold+' 兩。')};
+    if(reward.materials.length){
+      const materials={...next.materials};
+      for(const material of reward.materials)materials[material]=(materials[material]||0)+1;
+      next={...next,materials,logs:addLog(next.logs,'噴寶：獲得【'+reward.materials.join('】、【')+'】！')};
+    }
     const spec=reward.loot?DIVINE_EQUIPMENT[reward.loot as keyof typeof DIVINE_EQUIPMENT]:null;
     if(spec){
       const drop:Equipment={uid:'dungeon-'+now+'-'+result.state.serial,name:spec.name,slot:spec.slot,bonus:{...spec.bonus},def:spec.def,atk:0,hp:0,image:'',enhance:0,rarity:'傳說',magic:[],requiredLevel:1,source:'幽冥副本掉落'};

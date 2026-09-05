@@ -5,12 +5,12 @@ import {DUNGEONS,dungeonStep,freshDungeon,teleportDungeon} from '../app/dungeon-
 
 const hero={hp:99999,mp:999,maxHp:99999,maxMp:999,str:99999,dex:999,int:999,attack:0,defense:999,staff:false};
 
-test('five world-map stages expose their bound exclusive monsters',()=>{
- assert.ok(Object.keys(ECOLOGY_MONSTERS).length>=17);
+test('seven world-map stages expose their bound exclusive monsters',()=>{
+ assert.ok(Object.keys(ECOLOGY_MONSTERS).length>=19);
  const pools=Object.values(ECOLOGY_POOLS);
  assert.ok(pools.every(pool=>pool.length===1));
- assert.equal(new Set(pools.flat()).size,5);
- assert.deepEqual(Object.values(ECOLOGY_POOLS).flat().map(key=>DUNGEONS[key].name),['狸','兵馬俑','狂牛','大眼怪','海神']);
+ assert.equal(new Set(pools.flat()).size,7);
+ assert.deepEqual(Object.values(ECOLOGY_POOLS).flat().map(key=>DUNGEONS[key].name),['小狸貓','兵馬俑','狂牛','幽靈巫女','大眼怪','狂暴山豬','海神']);
 });
 
 test('stage selection always resolves its bound monster and unknown maps fall back safely',()=>{

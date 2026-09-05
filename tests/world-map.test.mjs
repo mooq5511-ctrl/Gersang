@@ -4,13 +4,13 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {WORLD_ZONES,DUNGEONS,zoneUnlocked,teleportDungeon,freshDungeon,dungeonStep} from '../app/dungeon-engine.ts';
 import {gersangWorldMap,gersangStages} from '../app/gersang-world-map.ts';
-test('gersangWorldMap has four regions, eight cities and five playable stages',()=>{
+test('gersangWorldMap has four regions, eight cities and seven playable stages',()=>{
  assert.deepEqual(Object.values(gersangWorldMap).map(region=>[region.name,region.cities.map(city=>city.name)]),[
   ['朝鮮',['漢陽','平壤']],['日本',['江戶','京都']],['台灣',['台北','台南']],['中國',['南京','北京']]
  ]);
- assert.equal(gersangStages.length,5);
+ assert.equal(gersangStages.length,7);
  assert.deepEqual(WORLD_ZONES.map(z=>[z.name,DUNGEONS[z.enemy].name,DUNGEONS[z.enemy].hp]),[
-  ['漢陽近郊','狸',100],['秦始皇陵','兵馬俑',2200],['石見銀山','狂牛',520],['大屯山','大眼怪',1200],['海底王窟','海神',4400]
+  ['漢陽近郊','小狸貓',60],['秦始皇陵','兵馬俑',300],['石見銀山','狂牛',120],['富士山腳','幽靈巫女',250],['大屯山','大眼怪',80],['阿里山','狂暴山豬',200],['海底王窟','海神',4400]
  ]);
  assert.ok(gersangStages.every(stage=>stage.monster.drops.length>0));
 });
@@ -29,7 +29,14 @@ test('switch cancels previous fight and pending spawn, retains cooldown and paus
 test('high-zone defeat returns to hanyang with no reward and blocks re-entry during healing',()=>{
  const h={hp:1,mp:40,maxHp:80,maxMp:40,str:20,dex:1,int:10,attack:0,defense:0,staff:false};
  const s=teleportDungeon(freshDungeon(),45,700,1000,'undersea-king-cave');const r=dungeonStep(s,h,'tick',2000);
- assert.equal(r.state.zone,'hanyang');assert.equal(r.state.key,'e_raccoon');assert.equal(r.state.enemyHp,100);assert.equal(r.hp,0);assert.equal(r.reward,null);assert.equal(r.state.logs[0],'戰鬥失敗，已自動返回漢陽客棧療傷。');assert.equal(teleportDungeon(r.state,99,99999,2100,'datun-mountain'),r.state);
+ assert.equal(r.state.zone,'hanyang');assert.equal(r.state.key,'e_raccoon');assert.equal(r.state.enemyHp,60);assert.equal(r.hp,0);assert.equal(r.reward,null);assert.equal(r.state.logs[0],'戰鬥失敗，已自動返回漢陽客棧療傷。');assert.equal(teleportDungeon(r.state,99,99999,2100,'datun-mountain'),r.state);
+});
+test('stage drop rates are evaluated and returned with the victory reward',()=>{
+ const h={hp:999,mp:40,maxHp:999,maxMp:40,str:999,dex:99,int:10,attack:0,defense:0,staff:false};
+ const s=teleportDungeon(freshDungeon(),1,0,1000,'hanyang');
+ const hit=dungeonStep(s,h,'normal',1001,undefined,0,0);
+ assert.deepEqual(hit.reward.materials,['舊斧頭','銅錢']);
+ assert.match(hit.state.logs[0],/噴寶/);
 });
 function demo(){
  const nodes=new Map();
