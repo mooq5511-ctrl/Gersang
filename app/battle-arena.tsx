@@ -20,12 +20,12 @@ export function BattleArena({state,hero}:{state:DungeonState;hero:CaravanMember}
  return <div className="impact-stage" ref={root} aria-label="主角與怪物交鋒">
  <span className="impact-versus" aria-hidden="true">對決</span>
  <div className="impact-wrap"><div className="impact-card" data-hit="hero"><div data-motion="hero">
- <img className="impact-portrait" src={hero.image} alt=""/><h3>{hero.name}</h3><p>Lv.{hero.level}</p>
+<div className="impact-portrait impact-sprite impact-sprite-hero" role="img" aria-label={hero.name}><img src={hero.image} alt=""/></div><h3>{hero.name}</h3><p>Lv.{hero.level}</p>
  <label>HP {v.hp} / {v.maxHp}<Progress className="dungeon-hp" value={v.hp/v.maxHp*100} aria-label="主角生命值"/></label>
  <label>MP {v.mp} / {v.maxMp}<Progress className="dungeon-mp" value={v.mp/v.maxMp*100} aria-label="主角魔法值"/></label>
  </div><div className="impact-overlay" data-popup="hero"/></div></div>
  <div className={'impact-wrap'+(state.status==='respawning'?' impact-dead':'')} data-spawn="enemy"><div className="impact-card" data-hit="enemy"><div data-motion="enemy">
- <span className="impact-seal" aria-hidden="true">{monster.name.slice(0,1)}</span><h3>{monster.name}</h3><p>Lv.{monster.level} · 攻擊 {monster.atk}</p>
+<span className="impact-seal impact-sprite impact-sprite-enemy" aria-hidden="true">{monster.name.slice(0,1)}</span><h3>{monster.name}</h3><p>Lv.{monster.level} · 攻擊 {monster.atk}</p>
  <label>HP {state.enemyHp} / {monster.hp}<Progress className="dungeon-hp" value={state.enemyHp/monster.hp*100} aria-label="怪物生命值"/></label>
  <label>MP {monster.mp} / {monster.mp}<Progress className="dungeon-mp" value={monster.mp?100:0} aria-label="怪物魔法值"/></label>
  </div><div className="impact-overlay" data-popup="enemy"/></div></div>
