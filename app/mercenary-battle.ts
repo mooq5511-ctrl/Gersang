@@ -1,5 +1,6 @@
 import { mercenarySpec } from './mercenary-roster.ts';
 import { damageAfterDefense, type Fighter } from './vitals-engine.ts';
+import {positionRank,rearDodge} from './formation-position.ts';
 
 export type TacticalFighter = Fighter & { templateId?: string; maxHp?: number; maxMp?: number; accuracy?: number };
 export type TacticalEnemy = { name: string; hp: number; attack: number; defense: number; physical: number; magic: number; speed?: number; boss?: boolean; bandit?: boolean; kind?: 'beast' | 'cavalry' | 'human'; ranged?: boolean; magicAttack?: boolean; poison?: boolean; back?: boolean };
@@ -12,8 +13,8 @@ export function resolveMercenaryBattle(party: TacticalFighter[], enemies: Tactic
   const create = (unit: TacticalFighter, side: number, index: number, foe?: TacticalEnemy) => ({
     unit, side, foe, spec: side === 0 ? mercenarySpec(unit.templateId) : undefined,
     maxHp: unit.maxHp ?? unit.hp, maxMp: unit.maxMp ?? unit.mp,
-    back: side ? !!foe?.back : !!mercenarySpec(unit.templateId)?.ranged,
-    pos: side ? (foe?.back ? 4 : 3) : (mercenarySpec(unit.templateId)?.ranged ? -1 : 0),
+    back: side ? !!foe?.back : unit.position==='後排'||!!mercenarySpec(unit.templateId)?.ranged,
+    pos: side ? (foe?.back ? 4 : 3) : unit.position==='後排'?-1:unit.position==='中排'?-0.5:0,
     key: side + ':' + index, cooldown: 1, actions: 0, stacks: 0, lastTarget: '', streak: 0,
     survived: false, counterRound: 0, sandUsed: false, nextSlash: 2,
     blind: 0, stun: 0, root: 0, poison: 0, slowFlat: { value: 0, until: 0 },
@@ -37,6 +38,7 @@ export function resolveMercenaryBattle(party: TacticalFighter[], enemies: Tactic
   const defense = (a: Actor) => a.unit.defense * (a.spec?.id === 'shield' && a.unit.hp > a.maxHp * 0.5 ? 1.2 : 1) * (1 - effect(a, 'spearArmor'));
   const lowest = (list: Actor[]) => [...list].sort((a, b) => a.unit.hp / a.maxHp - b.unit.hp / b.maxHp)[0];
   const front = (list: Actor[]) => { const f = list.filter(a => !a.back); return f.length ? f : list; };
+  const formationFront=(list:Actor[])=>{const rank=Math.min(...list.map(a=>positionRank(a.unit.position)));return list.filter(a=>positionRank(a.unit.position)===rank)};
   const heal = (source: Actor, target: Actor, amount: number, skill: string) => {
     if (target.unit.hp <= 0) return;
     const restored = Math.min(target.maxHp - target.unit.hp, Math.floor(amount * (target.spec?.id === 'elephant' ? 0.9 : 1)));
@@ -68,6 +70,7 @@ export function resolveMercenaryBattle(party: TacticalFighter[], enemies: Tactic
       const guard = actors.find(a => a.guardKey === target.key && a.guardUntil >= rounds && a.unit.hp > 0);
       if (guard) { guard.guardKey = ''; target = guard; guardReduction = 0.6; log(guard, '舉盾護商・代受', initial); }
     }
+    if(source.side===1&&rearDodge(target.unit.position,random())){misses++;log(target,'🏹 後排閃避',source);return false}
     const accuracy = Math.min(1, Math.max(0.05, (source.unit.accuracy ?? 1) - source.blind + (source.spec?.id === 'hunter' && woodland ? 0.05 : 0) + (source.spec?.id === 'gunner' && source.lastTarget === target.key && source.streak >= 2 ? 0.1 : 0)));
     source.blind = 0;
     if (source.spec?.id === 'gunner') { source.streak = source.lastTarget === target.key ? source.streak + 1 : 1; source.lastTarget = target.key; }
@@ -104,7 +107,7 @@ export function resolveMercenaryBattle(party: TacticalFighter[], enemies: Tactic
       if (a.stun > 0) { a.stun--; log(a, '暈眩，跳過行動'); continue; }
       const rooted = a.root > 0; if (rooted) a.root--;
       const targets = alive(1 - a.side);
-      let target = front(targets)[0];
+      let target = a.side ? formationFront(targets)[(rounds-1)%formationFront(targets).length] : front(targets)[0];
       const spec = a.spec;
       let use = !!spec && rounds >= a.cooldown && a.unit.mp >= spec.mp;
       let patient = lowest(alive(a.side));

@@ -4,14 +4,15 @@ import type {ReactNode} from 'react';
 
 import type {EquipmentSlot} from './equipment-slots';
 import {InventoryPanel,type BagItem} from './inventory-panel';
+import {BATTLE_POSITIONS,type BattlePosition} from './formation-position';
 
 // 此面板只呈現真實遊戲資料；金錢與成長由遊戲唯一計時器結算。
-export type CaravanMember = VitalUnit & { uid:string; name:string; role:string; job?:string; image:string; xp:number; points:number; str:number; agi:number };
+export type CaravanMember = VitalUnit & { uid:string; name:string; role:string; job?:string; image:string; xp:number; points:number; str:number; agi:number; position:BattlePosition };
 type Props = {
   battle:ReactNode;navigation:ReactNode;busy:boolean;
   hero:CaravanMember; mercs:CaravanMember[]; gold:number; credit:number; weight:number; maxWeight:number;
   cost:number; power:(unit:CaravanMember)=>number; xpNeed:(level:number)=>number;
-  select:(uid:string)=>void; hire:()=>void; train:()=>void; allocate:(stat:'str'|'agi'|'vit'|'intel')=>void;
+  select:(uid:string)=>void; cyclePosition:(uid:string)=>void; hire:()=>void; train:()=>void; allocate:(stat:'str'|'agi'|'vit'|'intel')=>void;
   trade:()=>void; trainHero:()=>void;
 
   inventory:BagItem[];equipHero:(uid:string)=>void;unequipHero:(slot:EquipmentSlot)=>void;bagMessage:string;
@@ -31,8 +32,12 @@ export function CaravanStatus(p:Props) {
     <div className="hero-inventory-layout"><HeroStatusPanel busy={p.busy} hero={p.hero} gold={p.gold} credit={p.credit} weight={p.weight} xpNeed={p.xpNeed} allocate={p.allocate} trade={p.trade} train={p.trainHero} select={()=>p.select(p.hero.uid)} unequip={p.unequipHero}/>{p.battle}<InventoryPanel inventory={p.inventory} equip={p.equipHero} message={p.bagMessage}/></div>
     <section className="caravan-wood caravan-team"><header><small>中央傭兵公會 · 商隊名冊</small><h2>九席護商隊</h2><span>{Math.min(9,p.mercs.length)} / 9 席 · 隨機僱用 {p.cost.toLocaleString()} 兩</span></header>
       <p className="hero-team-total">總商隊戰力 {total.toLocaleString()}</p>
-      <div className="caravan-nine">{Array.from({length:9},(_,index)=>{const unit=p.mercs[index];return unit?<button className="caravan-member" key={unit.uid} onClick={()=>p.select(unit.uid)}><small>第 {index+1} 席</small><img src={unit.image} alt=""/><strong>{unit.name}</strong><span>Lv.{unit.level} · {unit.role}</span><Bars unit={unit}/><em>戰力 {p.power(unit).toLocaleString()}</em></button>:<button className="caravan-empty" key={'empty-'+index} disabled={p.gold<p.cost} onClick={p.hire}><b>＋</b><strong>點擊僱用傭兵</strong><small>{p.gold<p.cost?'資金不足':p.cost.toLocaleString()+' 兩 · 隨機初始傭兵'}</small></button>})}</div>
-      <p>主角基礎 HP＝體質×4、MP＝智力×4，裝備加成另計。主角個人戰力依四圍與等級公式；總商隊戰力另加全部已僱用傭兵。離線收益最多 8 小時。</p>
+      <div className="tactical-formation" aria-label="前中後排戰術位置">{BATTLE_POSITIONS.map(position=>{
+        const members=[p.hero,...p.mercs].filter(unit=>unit.position===position);
+        return <section className={'formation-row formation-'+position} key={position}><header><strong>{position==='前排'?'🛡️':position==='中排'?'⚔️':'🏹'} {position}</strong><span>{position==='前排'?'輸出 +20% · 優先承傷':position==='中排'?'前排倒下後接戰':'最後承傷 · 50% 閃避'}</span></header><div>{members.length?members.map(unit=><article className="formation-member" key={unit.uid}><button className="formation-member-main" onClick={()=>p.select(unit.uid)}><img src={unit.image} alt=""/><span><small>{unit.uid==='hero'?'主角':'公會傭兵'} · Lv.{unit.level}</small><strong>{unit.name}</strong><em>{unit.role}</em></span></button><Bars unit={unit}/><footer><b>戰力 {p.power(unit).toLocaleString()}</b><button className="formation-cycle" onClick={()=>p.cyclePosition(unit.uid)} aria-label={'切換'+unit.name+'的位置'}>🔄 切換位置</button></footer></article>):<p className="formation-vacant">此排目前無人駐守</p>}</div></section>;
+      })}</div>
+      {p.mercs.length<9&&<div className="caravan-hire-row">{Array.from({length:9-p.mercs.length},(_,index)=><button className="caravan-empty" key={'empty-'+index} disabled={p.gold<p.cost} onClick={p.hire}><b>＋</b><strong>點擊僱用傭兵</strong><small>{p.gold<p.cost?'資金不足':p.cost.toLocaleString()+' 兩 · 隨機初始傭兵'}</small></button>)}</div>}
+      <p>敵軍會由前排開始逐排推進；同排多人會輪流承傷。前排輸出提高 20%，後排遭到攻擊時有 50% 機率閃避。主角與所有傭兵全數倒下才算商隊全滅。</p>
       <button className="caravan-train" disabled={p.busy} onClick={p.train}>全隊訓練 · 全員獲得 100 經驗</button><p>點選成員查看能力與裝備。經驗按鈕為測試玩法，不扣金錢；跑商途中戰鬥機制保持不變。</p>
       {p.mercs.length>9&&<div>舊存檔候補（保留角色，不再新增）：{p.mercs.slice(9).map(unit=><button key={unit.uid} onClick={()=>p.select(unit.uid)}>{unit.name} Lv.{unit.level}</button>)}</div>}
     </section>

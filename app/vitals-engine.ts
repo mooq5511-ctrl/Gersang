@@ -1,4 +1,5 @@
 import { mercenarySpec, ratingAccuracy } from './mercenary-roster.ts';
+import {formationTarget,rearDodge,type BattlePosition} from './formation-position.ts';
 export type VitalUnit = {
   templateId?: string;
   level: number; vit: number; intel: number; str?: number; agi?: number; tier?: number; hp?: number; mp?: number; maxHp?:number;
@@ -67,7 +68,7 @@ export function damageAfterDefense(attack: number, defense: number, resistance =
   const armor = Math.max(0, defense);
   return Math.max(1, Math.floor(Math.max(0, attack) * (1 - Math.min(0.75, armor / (armor + 200))) * (1 - Math.min(85, Math.max(0, resistance)) / 100)));
 }
-export type Fighter = { uid: string; name: string; skill: string; hp: number; mp: number; attack: number; intelligence: number; defense: number; cost: number; speed?: number };
+export type Fighter = { uid: string; name: string; skill: string; hp: number; mp: number; attack: number; intelligence: number; defense: number; cost: number; speed?: number; position?:BattlePosition };
 
 /** Each living fighter acts once per round. A spell is charged before its damage is applied. */
 export function resolveVitalBattle(party: Fighter[], enemy: { hp: number; attack: number; defense: number; physical: number; magic: number; speed?: number; bandit?: boolean; terrain?: string }, random = Math.random) {
@@ -94,8 +95,11 @@ export function resolveVitalBattle(party: Fighter[], enemy: { hp: number; attack
       if (enemyHp <= 0 || !fighters.some((unit) => unit.hp > 0)) break;
       const unit = turn.unit;
       if (!unit) {
-        const living = fighters.filter((fighter) => fighter.hp > 0);
-        const target = living[(rounds - 1) % living.length];
+        const target = formationTarget(fighters,rounds-1)!;
+        if(rearDodge(target.position,random())){
+          enemySkills.push('第 '+rounds+' 回合・🏹 [後排] '+target.name+' 閃避敵軍攻擊。');
+          continue;
+        }
         let multiplier = 1;
         if (enemy.bandit && !sandUsed && enemyHp < enemy.hp * 0.5) {
           sandUsed = true;

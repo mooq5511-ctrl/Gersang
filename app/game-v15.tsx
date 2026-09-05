@@ -60,6 +60,7 @@ import { TradePanel } from "./trade-panel";
 import { VitalBars } from "./vital-bars";
 import { combatStats, enemyCombatStats, normalizeVitals, recoverVitals, resolveVitalBattle, spellCost, vitalStats } from "./vitals-engine";
 import { advanceTrade, dispatchTrade, freshTrade, MAX_CARGO_LEVEL, restoreTrade, TRADE_ROUTES, upgradeCost, type TradeState } from "./trade-engine";
+import { formationDamageMultiplier, nextBattlePosition, normalizeBattlePosition, type BattlePosition } from './formation-position';
 
 
 type MagicAffix = {
@@ -116,6 +117,7 @@ type Unit = {
   hp?: number;
   mp?: number;
   maxHp?: number;
+  position: BattlePosition;
   equip: EquipmentSet;
 };
 
@@ -142,7 +144,7 @@ type CityService = "mercenary" | "weapon" | "armor" | "warehouse" | "inn" | "pha
 
 type GameState = {
   dungeon?: DungeonState;
-  version: 22;
+  version: 23;
   trade: TradeState;
   credit: number;
   idleStamp: number;
@@ -235,6 +237,7 @@ function makeHero(nation: NationId = "korea", name = "王天下"): Hero {
     hp: 100,
     maxHp: 100,
     status: '正常',
+    position: '前排',
     ...HERO_INITIAL_ATTRIBUTES,
     equip: emptyEquipment(),
   });
@@ -291,7 +294,7 @@ function starterEquipment(): Equipment[] {
 function freshGame(nation: NationId = "korea", heroName = "王天下"): GameState {
   const starters: Unit[] = [];
   return {
-    version: 22,
+    version: 23,
     trade: freshTrade(),
     credit: 0,
     idleStamp: Date.now(),
@@ -313,7 +316,7 @@ function freshGame(nation: NationId = "korea", heroName = "王天下"): GameStat
     lastEncounter: "尚未遭遇敵人。商隊出航後才可能觸發戰鬥。",
     enemyHp: enemyMax(1, battleMaps[0].hpMultiplier),
     formation: "goose",
-    logs: ["V22・戰敗客棧系統已啟用。出航經商，培養你的十人商團。"],
+    logs: ["V23・前中後排戰術已啟用。調整站位，帶領十人商團迎敵。"],
     lastSeen: Date.now(),
   };
 }
@@ -372,6 +375,7 @@ function migrateV14(raw: unknown): GameState {
       agi: Number(item.agi) || legacy.agi,
       intel: Number(item.intel) || legacy.intel,
       vit: Number(item.vit) || legacy.vit,
+      position: normalizeBattlePosition(item.position, String(item.name || legacy.name), String(item.job || legacy.job)),
       equip: sanitizeEquip(item.equip),
     };
   });
@@ -413,6 +417,7 @@ function migrateV14(raw: unknown): GameState {
       level: Number(oldHero.level) || heroBase.level,
       maxHp:100+(Math.max(1,Number(oldHero.level)||heroBase.level)-1)*20,
       status:'正常',
+      position:'前排',
       xp: Number(oldHero.xp) || 0,
       points: Number(oldHero.points) || 0,
       str: Number(oldHero.str) || heroBase.str,
@@ -442,7 +447,7 @@ function restoreGame(raw: unknown): GameState {
     ? parsed.city
     : isNationId(parsed.city) ? worldCities.find((city) => city.nation === parsed.city)?.id || next.city : next.city;
   Object.assign(next, parsed, {
-    version: 22,
+    version: 23,
     trade: restoreTrade(parsed.trade),
     credit: Number.isFinite(parsed.credit) ? Math.max(0, Math.floor(parsed.credit!)) : 0,
     idleStamp: Number.isFinite(parsed.idleStamp) && parsed.idleStamp! > 0 ? parsed.idleStamp : Date.now(),
@@ -456,10 +461,11 @@ function restoreGame(raw: unknown): GameState {
       image: Number(parsed.version) >= 19 && parsed.hero?.image ? parsed.hero.image : heroDefaults.image,
       maxHp:Number.isFinite(parsed.hero?.maxHp)&&Number(parsed.hero?.maxHp)>0?Math.max(100,Number(parsed.hero?.maxHp)):100+(Math.max(1,Number(parsed.hero?.level)||heroDefaults.level)-1)*20,
       status:parsed.hero?.status==='客棧中'?'客棧中':'正常',
+      position:normalizeBattlePosition(parsed.hero?.position, String(parsed.hero?.name||heroDefaults.name), String(parsed.hero?.role||heroDefaults.role), true),
       equip: sanitizeEquip(parsed.hero?.equip),
     },
     mercs: Array.isArray(parsed.mercs)
-      ? parsed.mercs.map((unit) => ({ ...unit, equip: sanitizeEquip(unit.equip) } as Unit))
+      ? parsed.mercs.map((unit) => ({ ...unit, position:normalizeBattlePosition(unit.position,unit.name,unit.role), equip: sanitizeEquip(unit.equip) } as Unit))
       : next.mercs,
     inventory: Array.isArray(parsed.inventory)
       ? parsed.inventory.map((item) => ({ ...normalizeStoredItem(item), bonus: item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }, resist: item.resist || { physical: 0, magic: 0 } }))
@@ -491,9 +497,12 @@ function profileFromGame(slot: number, game: GameState): CharacterProfile {
 /** 使用真實主角 HP/MP 與現有背包；勝利只發放一次獎勵。 */
 function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key?:DungeonKey,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0):GameState {
   const total=heroTotalAttributes(previous.hero),v=vitalStats(previous.hero);
-  const attack=Object.values(previous.hero.equip).reduce((sum,item)=>sum+(item?.atk||0),0);
-  const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,int:total.intel,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice,spawnRoll,retaliationRoll);
-  let next:GameState={...previous,dungeon:result.state,hero:{...previous.hero,hp:result.hp,mp:result.mp}};
+  const fighters=[previous.hero,...previous.mercs],living=fighters.filter(unit=>vitalStats(unit).hp>0);
+  const attack=living.reduce((sum,unit)=>sum+combatStats(unit).attack*(unit.position==='前排'?1.2:1),0);
+  const party=fighters.map(unit=>{const stats=vitalStats(unit);return{uid:unit.uid,name:unit.name,hp:stats.hp,maxHp:stats.maxHp,position:unit.position}});
+  const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,int:total.intel,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice,spawnRoll,retaliationRoll,party);
+  const remaining=new globalThis.Map(result.party.map(unit=>[unit.uid,unit.hp]));
+  let next:GameState={...previous,dungeon:result.state,hero:{...previous.hero,hp:remaining.get('hero')??result.hp,mp:result.mp},mercs:previous.mercs.map(unit=>({...unit,hp:remaining.get(unit.uid)??unit.hp}))};
   if(result.state.status==='recovering'&&previous.hero.status!=='客棧中')next=enterGameInn(next,now,result.state.logs[0],result.state);
   else if(result.state.status==='idle'&&previous.hero.status==='客棧中')next=leaveGameInn(next);
   if(result.reward){
@@ -637,7 +646,7 @@ function enterGameInn(previous:GameState,now:number,message:string,dungeon=previ
 
 function leaveGameInn(previous:GameState):GameState{
   const vital=vitalStats(previous.hero),player=leaveInn({hp:vital.hp,maxHp:vital.maxHp,status:previous.hero.status});
-  return {...previous,hero:{...previous.hero,hp:player.hp,status:player.status},dungeon:previous.dungeon?{...previous.dungeon,status:'idle',innHealAt:0,spawnAt:0}:freshDungeon(),logs:addLog(previous.logs,'生命值已全滿，主角離開漢陽客棧。')};
+  return {...previous,hero:{...previous.hero,hp:player.hp,status:player.status},mercs:previous.mercs.map(unit=>recoverVitals(unit,1,1)),dungeon:previous.dungeon?{...previous.dungeon,status:'idle',phase:'接敵',distance:100,innHealAt:0,spawnAt:0}:freshDungeon(),logs:addLog(previous.logs,'生命值已全滿，商隊全員離開漢陽客棧。')};
 }
 
 function payGameInn(previous:GameState):GameState{
@@ -681,7 +690,7 @@ function resolveRoadEncounter(previous: GameState): GameState {
       const sourceTarget = banditEncounter ? bandit : sourceEnemyForMap(previous.battleMap, previous.stage, previous.stage % 10 === 0);
       const map = battleMaps.find((entry) => entry.id === previous.battleMap) || battleMaps[0];
       const health = banditEncounter ? bandit.hp : enemyMax(previous.stage, map.hpMultiplier);
-      const party = [previous.hero, ...active].map((unit) => ({ uid: unit.uid, templateId: unit.templateId, name: unit.name, skill: unit.skill, ...vitalStats(unit), ...combatStats(unit), attack: Math.floor(combatStats(unit).attack * form.atk), cost: spellCost(unit) }));
+      const party = [previous.hero, ...active].map((unit) => ({ uid: unit.uid, templateId: unit.templateId, name: unit.name, skill: unit.skill, position:unit.position, ...vitalStats(unit), ...combatStats(unit), attack: Math.floor(combatStats(unit).attack * form.atk * formationDamageMultiplier(unit.position)), cost: spellCost(unit) }));
       const targetName = sourceTarget?.name || enemyForStage(previous.stage, map.enemyRegion).name;
       const tactical = active.some(unit => !!mercenarySpec(unit.templateId));
       const enemy: TacticalEnemy = { name: targetName, hp: health, ...(banditEncounter ? { attack: bandit.attack, defense: bandit.defense, speed: tactical ? bandit.speed * 5 : bandit.speed } : enemyCombatStats(previous.stage, health, previous.stage % 10 === 0)), physical: sourceTarget?.physical || 0, magic: sourceTarget?.magic || 0, bandit: banditEncounter, boss: previous.stage % 10 === 0, kind: /騎/.test(targetName) ? 'cavalry' : /虎|狼|熊|鹿|獸|龜|蛇|狐|馬/.test(targetName) ? 'beast' : 'human', ranged: /弓|砲|術|巫|法/.test(targetName), magicAttack: /術|巫|法/.test(targetName), poison: /蛇|蠍/.test(targetName) };
@@ -984,7 +993,7 @@ export default function GameV15() {
     const cost = Math.floor(6000 * currentCity.priceFactor);
     setGame(previous => {
       if (previous.gold < cost || previous.mercs.length >= 9) return { ...previous, logs: addLog(previous.logs, previous.mercs.length >= 9 ? '商隊已滿九席，無法再僱用。' : '僱用資金不足。') };
-      const unit = normalizeVitals<Unit>({ uid: uid('merchant-'+spec.id), templateId: 'merchant-'+spec.id, nation: 'legacy', tier: 0, special: false, name: spec.name, role: spec.role, skill: spec.active, image: mercenaryPortrait(index), level: 1, xp: 0, points: 0, str: spec.ratings[1], agi: spec.ratings[3], vit: spec.ratings[0], intel: spec.mp ? 20 : 10, equip: emptyEquipment() });
+      const unit = normalizeVitals<Unit>({ uid: uid('merchant-'+spec.id), templateId: 'merchant-'+spec.id, nation: 'legacy', tier: 0, special: false, name: spec.name, role: spec.role, skill: spec.active, image: mercenaryPortrait(index), level: 1, xp: 0, points: 0, str: spec.ratings[1], agi: spec.ratings[3], vit: spec.ratings[0], intel: spec.mp ? 20 : 10, position:normalizeBattlePosition(undefined,spec.name,spec.role), equip: emptyEquipment() });
       return { ...previous, gold: previous.gold-cost, mercs: [...previous.mercs,unit], active: [...previous.active, unit.uid].slice(0,9), logs: addLog(previous.logs,'招募 '+spec.name+'，已加入護商隊。') };
     });
   }
@@ -1049,6 +1058,12 @@ export default function GameV15() {
       const logs=addLog(previous.logs,'已穿戴裝備，原部位裝備已交換回背包。');
       return targetUid==='hero' ? {...previous,logs,inventory:result.inventory,hero:unit as Hero} : {...previous,logs,inventory:result.inventory,mercs:previous.mercs.map(old=>old.uid===targetUid ? unit : old)};
     });
+  }
+
+  function cycleUnitPosition(unitUid:string){
+    setGame(previous=>unitUid==='hero'
+      ? {...previous,hero:{...previous.hero,position:nextBattlePosition(previous.hero.position)},logs:addLog(previous.logs,'🔄 主角調整至'+nextBattlePosition(previous.hero.position)+'。')}
+      : {...previous,mercs:previous.mercs.map(unit=>unit.uid===unitUid?{...unit,position:nextBattlePosition(unit.position)}:unit),logs:addLog(previous.logs,'🔄 商隊成員完成戰術換位。')});
   }
 
 
@@ -1260,7 +1275,7 @@ export default function GameV15() {
         <section className="character-select-shell">
           <div className="character-select-heading">
             <div className="brand-seal">商</div>
-            <div><small>商途 × BT52Gersang・融合版 V22</small><h1>從一支商隊，走向四海。</h1><p>四國二十城 × 九人傭兵 × 放置貿易。三個角色各自保存進度，共用 30 格裝備倉庫。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
+            <div><small>商途 × BT52Gersang・融合版 V23</small><h1>從一支商隊，走向四海。</h1><p>四國二十城 × 九人傭兵 × 前中後排戰術。三個角色各自保存進度，共用 30 格裝備倉庫。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
           </div>
           {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
           <div className="character-slot-grid">
@@ -1310,7 +1325,7 @@ export default function GameV15() {
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
-          <div><h1>商途・巨商放置錄</h1><p>V22・戰敗自動返回客棧</p></div>
+          <div><h1>商途・巨商放置錄</h1><p>V23・前中後排動態戰術</p></div>
         </div>
         <div className="resource-strip v15-resources">
           <div><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
@@ -1412,7 +1427,7 @@ export default function GameV15() {
           <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit}
             navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now(),spawnRoll=Math.random();setGame(previous=>{
               const old=previous.dungeon||freshDungeon();
-              if(vitalStats(previous.hero).hp<=0)return enterGameInn(previous,now,'生命值不足，已自動返回漢陽客棧。',{...freshDungeon(),pauseAt:old.pauseAt||now});
+              if([previous.hero,...previous.mercs].every(unit=>vitalStats(unit).hp<=0))return enterGameInn(previous,now,'商隊全員生命值不足，已自動返回漢陽客棧。',{...freshDungeon(),pauseAt:old.pauseAt||now});
               const dungeon=teleportDungeon(old,previous.hero.level,heroPersonalPower(previous.hero),now,id,spawnRoll);
               return dungeon===old?previous:{...previous,dungeon,logs:addLog(previous.logs,dungeon.logs[0])};
             });}}/>}
@@ -1421,6 +1436,7 @@ export default function GameV15() {
 
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
             maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
+            cyclePosition={cycleUnitPosition}
             trade={()=>setGame(previous=>dungeonBusy(previous.dungeon)?previous:({...previous,gold:previous.gold+100,credit:previous.credit+25,logs:addLog(previous.logs,'模擬經商：獲得 100 兩與 25 信用。')}))}
             trainHero={simulateHeroLoot}
             hire={()=>{ const index=Math.floor(Math.random()*merchantMercenaries.length); recruitMerchant(merchantMercenaries[index],index); }}
@@ -1554,7 +1570,7 @@ export default function GameV15() {
         </TabsContent>
       </Tabs>
 
-      <footer><span>融合版 V22・商途 × BT52Gersang</span><span>4 條放置商路・20 座城市・9 人傭兵隊伍・離線上限 8 小時</span></footer>
+      <footer><span>融合版 V23・商途 × BT52Gersang</span><span>3 排戰術・4 條放置商路・20 座城市・9 人傭兵隊伍・離線上限 8 小時</span></footer>
     </main>
   );
 }
