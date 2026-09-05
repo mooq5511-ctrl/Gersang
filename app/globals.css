@@ -1267,6 +1267,10 @@ footer {
 .magic-item span { color: #8f999b; font-size: 0.63rem; }
 .magic-item div > div { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
 .magic-item em { font-size: 0.6rem; font-style: normal; }
+.magic-item > .magic-item-actions { align-items: stretch; gap: 6px; }
+.magic-item > .magic-item-actions button { width: 100%; white-space: nowrap; }
+.magic-item > .magic-item-actions .equipment-sell-button { border-color: #a85f3d; color: #efbd91; }
+.magic-item > .magic-item-actions .equipment-sell-button:hover { border-color: #e19a61; background: #57251b; color: #ffe0b5; }
 .nation-city-list { display: grid; gap: 8px; }
 .city-atlas { margin-bottom: 12px; }
 .city-country-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
