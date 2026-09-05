@@ -6,7 +6,7 @@ export function createBattleEffects(root:HTMLElement){
  const find=(kind:string,side:string)=>root.querySelector<HTMLElement>('[data-'+kind+'="'+side+'"]');
  function pulse(node:HTMLElement|null,cls:string){
   if(!node)return;
-  const key=(node.dataset.motion||node.dataset.hit||'spawn')+cls;
+  const key=(node.dataset.motion||node.dataset.hit||node.dataset.sprite||'spawn')+cls;
   animations.get(key)?.();node.classList.remove(cls);void node.offsetWidth;node.classList.add(cls);
   const finish=()=>{node.classList.remove(cls);node.removeEventListener('animationend',done);clearTimeout(timer);animations.delete(key)};
   const done=(event:Event)=>{if(event.target===node)finish()};
@@ -16,6 +16,7 @@ export function createBattleEffects(root:HTMLElement){
  function hit(event:BattleEvent){
   const critical=!!event.critical||event.skill;
   pulse(find('motion',event.attacker),'impact-lunge-'+event.attacker);
+  pulse(find('sprite',event.attacker),'impact-sprite-attack');
   pulse(find('hit',event.target),'impact-hit');
   if(critical){
    pulse(root,'impact-screen-shake');
@@ -43,6 +44,7 @@ export function createBattleEffects(root:HTMLElement){
   const target=(data.target==='hero'||data.target==='player')?'hero':attacker==='hero'?'enemy':'hero';
   const critical=!!data.critical||!!data.skill||data.action==='critical_hit';
   pulse(find('motion',attacker),'impact-lunge-'+attacker);
+  pulse(find('sprite',attacker),'impact-sprite-attack');
   if(critical){pulse(root,'impact-screen-shake');pulse(find('motion',attacker),'impact-critical-lunge')}
   pulse(find('hit',target),'impact-hit');
   pulse(find('hit',target),'impact-white-flash');
