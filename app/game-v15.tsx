@@ -6,7 +6,7 @@ import { bandit, isBanditEncounter } from "./bandit";
 import { merchantMercenaries, mercenarySpec, type MercenarySpec } from './mercenary-roster';
 import { CaravanStatus } from './caravan-status';
 import {DungeonPanel,WorldMapNavigation} from './dungeon-panel';
-import {dungeonStep,dungeonBusy,freshDungeon,teleportDungeon,type DungeonState,type DungeonKey} from './dungeon-engine';
+import {dungeonStep,dungeonBusy,freshDungeon,teleportDungeon,WORLD_ZONES,type DungeonState,type DungeonKey} from './dungeon-engine';
 import {goToInn,leaveInn,payInn,type PlayerStatus} from './inn-engine';
 import { settleCaravanIdle } from './caravan-idle';
 import { heroPersonalPower, heroWeightLimit, heroTotalAttributes, HERO_INITIAL_ATTRIBUTES } from './hero-rules';
@@ -61,7 +61,7 @@ import { VitalBars } from "./vital-bars";
 import { combatStats, enemyCombatStats, normalizeVitals, recoverVitals, resolveVitalBattle, spellCost, vitalStats } from "./vitals-engine";
 import { advanceTrade, dispatchTrade, freshTrade, MAX_CARGO_LEVEL, restoreTrade, TRADE_ROUTES, upgradeCost, type TradeState } from "./trade-engine";
 import { formationDamageMultiplier, nextBattlePosition, normalizeBattlePosition, type BattlePosition } from './formation-position';
-import { MATERIAL_PRICES, VILLAGE_WEAPONS, buyVillageWeapon, exchangeAttackBonus, sellAllMaterials, sellMaterial, weaponCost, type ExchangePurchases, type VillageWeaponId } from './village-exchange';
+import { MATERIAL_BUY_PRICES, MATERIAL_PRICES, VILLAGE_WEAPONS, buyMarketMaterial, buyVillageWeapon, exchangeAttackBonus, sellAllMaterials, sellMaterial, weaponCost, type ExchangePurchases, type VillageWeaponId } from './village-exchange';
 import {equipmentSellPrice,sellEquipmentFromInventory} from './equipment-market';
 
 
@@ -147,7 +147,7 @@ type CityService = "mercenary" | "weapon" | "armor" | "warehouse" | "inn" | "pha
 
 type GameState = {
   dungeon?: DungeonState;
-  version: 25;
+  version: 26;
   trade: TradeState;
   credit: number;
   idleStamp: number;
@@ -299,7 +299,7 @@ function starterEquipment(): Equipment[] {
 function freshGame(nation: NationId = "korea", heroName = "王天下"): GameState {
   const starters: Unit[] = [];
   return {
-    version: 25,
+    version: 26,
     trade: freshTrade(),
     credit: 0,
     idleStamp: Date.now(),
@@ -322,7 +322,7 @@ function freshGame(nation: NationId = "korea", heroName = "王天下"): GameStat
     lastEncounter: "尚未遭遇敵人。商隊出航後才可能觸發戰鬥。",
     enemyHp: enemyMax(1, battleMaps[0].hpMultiplier),
     formation: "goose",
-    logs: ["V25・裝備回收已啟用。背包裝備可單件出售，穿戴中裝備受到保護。"],
+    logs: ["V26・全東亞材料交易所已啟用。可出售戰利品，也能按地區買回材料。"],
     lastSeen: Date.now(),
   };
 }
@@ -453,7 +453,7 @@ function restoreGame(raw: unknown): GameState {
     ? parsed.city
     : isNationId(parsed.city) ? worldCities.find((city) => city.nation === parsed.city)?.id || next.city : next.city;
   Object.assign(next, parsed, {
-    version: 25,
+    version: 26,
     trade: restoreTrade(parsed.trade),
     credit: Number.isFinite(parsed.credit) ? Math.max(0, Math.floor(parsed.credit!)) : 0,
     idleStamp: Number.isFinite(parsed.idleStamp) && parsed.idleStamp! > 0 ? parsed.idleStamp : Date.now(),
@@ -921,6 +921,7 @@ export default function GameV15() {
     (unitPower(game.hero) + activeUnits.reduce((sum, unit) => sum + unitPower(unit), 0)) * formation.atk,
   );
   const currentMap = battleMaps.find((map) => map.id === game.battleMap) || battleMaps[0];
+  const currentWorldZone=WORLD_ZONES.find(zone=>zone.id===(game.dungeon?.zone||'hanyang'))||WORLD_ZONES[0];
   const banditEncounter = isBanditEncounter(currentMap.id, game.stage);
   const maxEnemyHp = banditEncounter ? bandit.hp : enemyMax(game.stage, currentMap.hpMultiplier);
   const boss = game.stage % 10 === 0;
@@ -1098,6 +1099,14 @@ export default function GameV15() {
       const result=sellAllMaterials(previous.materials,previous.gold);
       if(!result.earned)return {...previous,logs:addLog(previous.logs,'目前沒有可變賣的怪物素材。')};
       return {...previous,materials:result.materials,gold:result.gold,logs:addLog(previous.logs,'交易所完成全部變賣，獲得 '+format(result.earned)+' 兩。')};
+    });
+  }
+
+  function buyLootMaterial(itemName:string){
+    setGame(previous=>{
+      const result=buyMarketMaterial(previous.materials,previous.gold,itemName);
+      if(result.error)return {...previous,logs:addLog(previous.logs,result.error)};
+      return {...previous,materials:result.materials,gold:result.gold,logs:addLog(previous.logs,'交易所買入「'+itemName+'」×1，支付 '+format(result.spent)+' 兩。')};
     });
   }
 
@@ -1326,7 +1335,7 @@ export default function GameV15() {
         <section className="character-select-shell">
           <div className="character-select-heading">
             <div className="brand-seal">商</div>
-            <div><small>商途 × BT52Gersang・融合版 V25</small><h1>從一支商隊，走向四海。</h1><p>四國二十城 × 九人傭兵 × 前中後排戰術。三個角色各自保存進度，共用 30 格裝備倉庫。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
+            <div><small>商途 × BT52Gersang・融合版 V26</small><h1>從一支商隊，走向四海。</h1><p>四國二十城 × 九人傭兵 × 前中後排戰術。三個角色各自保存進度，共用 30 格裝備倉庫。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
           </div>
           {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
           <div className="character-slot-grid">
@@ -1376,7 +1385,7 @@ export default function GameV15() {
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
-          <div><h1>商途・巨商放置錄</h1><p>V25・裝備回收交易</p></div>
+          <div><h1>商途・巨商放置錄</h1><p>V26・材料雙向交易</p></div>
         </div>
         <div className="resource-strip v15-resources">
           <div><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
@@ -1484,6 +1493,13 @@ export default function GameV15() {
                       <div><strong>{good.name}</strong><small>主角永久攻擊 +{good.atkBonus}｜已鍛造 {bought} 次</small></div>
                       <button onClick={()=>buyExchangeUpgrade(good.id)} disabled={game.gold<cost}>🪙 {format(cost)} 兩</button>
                     </article>;
+                  })}</div>
+                </div>
+                <div className="exchange-market">
+                  <div className="exchange-subtitle"><strong>全東亞材料交易所</strong><small>{currentWorldZone.name}・可買回本地怪物材料</small></div>
+                  <div className="material-market-grid">{currentWorldZone.dropTable.map(item=>{
+                    const price=MATERIAL_BUY_PRICES[item.item]||0;
+                    return <article key={item.item}><div><strong>{item.item}</strong><small>持有 ×{game.materials[item.item]||0}・買價 {format(price)} 兩</small></div><button type="button" disabled={!price||game.gold<price} onClick={()=>buyLootMaterial(item.item)}>買入 1 件</button></article>;
                   })}</div>
                 </div>
               </div>
@@ -1639,7 +1655,7 @@ export default function GameV15() {
         </TabsContent>
       </Tabs>
 
-      <footer><span>融合版 V25・商途 × BT52Gersang</span><span>裝備回收・村莊交易所・永久武器鍛造・3 排戰術・9 人傭兵隊伍</span></footer>
+      <footer><span>融合版 V26・商途 × BT52Gersang</span><span>材料買賣・裝備回收・永久武器鍛造・3 排戰術・9 人傭兵隊伍</span></footer>
     </main>
   );
 }

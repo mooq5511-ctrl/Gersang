@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {MATERIAL_PRICES,VILLAGE_WEAPONS,buyVillageWeapon,exchangeAttackBonus,sellAllMaterials,sellMaterial,weaponCost} from '../app/village-exchange.ts';
+import {MATERIAL_BUY_PRICES,MATERIAL_PRICES,VILLAGE_WEAPONS,buyMarketMaterial,buyVillageWeapon,exchangeAttackBonus,sellAllMaterials,sellMaterial,weaponCost} from '../app/village-exchange.ts';
 import {combatStats} from '../app/vitals-engine.ts';
 
 test('all world materials have a positive village buy price',()=>{
@@ -8,18 +8,27 @@ test('all world materials have a positive village buy price',()=>{
  assert.ok(Object.values(MATERIAL_PRICES).every(price=>price>0));
  assert.equal(MATERIAL_PRICES['舊斧頭'],150);
  assert.equal(MATERIAL_PRICES['高級旗槍'],8000);
+ assert.equal(MATERIAL_PRICES['肉類'],25);
+ assert.equal(MATERIAL_BUY_PRICES['肉類'],50);
 });
 
 test('selling one material pays its price and removes empty stacks',()=>{
  const result=sellMaterial({肉類:2},100,'肉類');
- assert.deepEqual(result.materials,{肉類:1});assert.equal(result.gold,120);assert.equal(result.earned,20);
+ assert.deepEqual(result.materials,{肉類:1});assert.equal(result.gold,125);assert.equal(result.earned,25);
  const last=sellMaterial(result.materials,result.gold,'肉類');
- assert.deepEqual(last.materials,{});assert.equal(last.gold,140);
+ assert.deepEqual(last.materials,{});assert.equal(last.gold,150);
 });
 
 test('sell all preserves unknown legacy materials instead of deleting them',()=>{
  const result=sellAllMaterials({舊斧頭:2,肉類:3,絕版紀念物:4},10);
- assert.deepEqual(result.materials,{絕版紀念物:4});assert.equal(result.earned,360);assert.equal(result.gold,370);
+ assert.deepEqual(result.materials,{絕版紀念物:4});assert.equal(result.earned,375);assert.equal(result.gold,385);
+});
+
+test('market buys one local material for twice its sale price without mutating input',()=>{
+ const materials={肉類:2};const result=buyMarketMaterial(materials,100,'肉類');
+ assert.equal(result.error,null);assert.equal(result.spent,50);assert.equal(result.gold,50);
+ assert.deepEqual(result.materials,{肉類:3});assert.deepEqual(materials,{肉類:2});
+ const short=buyMarketMaterial(materials,49,'肉類');assert.equal(short.gold,49);assert.equal(short.materials,materials);assert.match(short.error,/資金不足/);
 });
 
 test('weapon purchases stack attack and inflate the next price by thirty percent',()=>{

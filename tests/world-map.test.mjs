@@ -17,6 +17,8 @@ test('gersangWorldMap has four regions, eight cities and twelve playable stages'
  ]);
  assert.ok(gersangStages.every(stage=>stage.monster.drops.length>0));
  assert.ok(gersangStages.every(stage=>stage.monster.drops.every(drop=>drop.price>0)));
+ assert.deepEqual(gersangWorldMap.korea.stages[0].monster.drops,[{item:'舊斧頭',rate:12,price:150},{item:'肉類',rate:45,price:25}]);
+ assert.deepEqual(gersangWorldMap.china.stages[2].monster.drops,[{item:'高級旗槍',rate:2,price:8000},{item:'深海珍珠',rate:10,price:500}]);
 });
 test('level AND power boundaries, including both just below threshold',()=>{
  for(const z of WORLD_ZONES){assert.equal(zoneUnlocked(z,z.level,z.power),true);assert.equal(zoneUnlocked(z,z.level-1,99999),false);if(z.power)assert.equal(zoneUnlocked(z,999,z.power-1),false)}

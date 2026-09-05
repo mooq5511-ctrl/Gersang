@@ -5,6 +5,11 @@ export const MATERIAL_PRICES: Record<string, number> = Object.fromEntries(
   gersangStages.flatMap(stage => stage.monster.drops.map(drop => [drop.item, drop.price])),
 );
 
+/** 村莊販售價固定為收購價的兩倍，避免來回買賣產生無限套利。 */
+export const MATERIAL_BUY_PRICES: Record<string, number> = Object.fromEntries(
+  Object.entries(MATERIAL_PRICES).map(([name, sell]) => [name, sell * 2]),
+);
+
 export const VILLAGE_WEAPONS = [
   { id: 'refined-steel-sword', name: '精製鋼劍', baseCost: 500, atkBonus: 8 },
   { id: 'advanced-ring-bow', name: '高級環弓', baseCost: 2500, atkBonus: 25 },
@@ -42,6 +47,13 @@ export function sellAllMaterials(materials: Record<string, number>, gold: number
   const earned = Object.entries(materials).reduce((sum, [name, count]) => sum + (MATERIAL_PRICES[name] || 0) * Math.max(0, Math.floor(count)), 0);
   const unsellable = Object.fromEntries(Object.entries(materials).filter(([name]) => !MATERIAL_PRICES[name]));
   return { materials: unsellable, gold: gold + earned, earned };
+}
+
+export function buyMarketMaterial(materials: Record<string, number>, gold: number, itemName: string) {
+  const price = MATERIAL_BUY_PRICES[itemName];
+  if (!price) return { materials, gold, spent: 0, error: '交易所沒有販售「' + itemName + '」。' };
+  if (gold < price) return { materials, gold, spent: 0, error: '買入「' + itemName + '」的資金不足。' };
+  return { materials: { ...materials, [itemName]: Math.max(0, Math.floor(materials[itemName] || 0)) + 1 }, gold: gold - price, spent: price, error: null };
 }
 
 export function buyVillageWeapon(gold: number, purchases: ExchangePurchases, id: VillageWeaponId) {
