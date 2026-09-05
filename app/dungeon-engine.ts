@@ -17,12 +17,17 @@ export type DungeonKey=keyof typeof DUNGEONS;
 /** 地圖資料是畫面鎖定與實際傳送的唯一來源；等級、戰鬥力兩條件必須同時滿足。 */
 export const WORLD_ZONES=[
  {id:'hanyang',nation:'korea',name:gersangWorldMap.korea.stages[0].name,level:1,power:0,enemy:'e_raccoon',mood:'朝鮮 · 漢陽城外',loot:gersangWorldMap.korea.stages[0].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.korea.stages[0].monster.drops},
- {id:'qin-shi-huang-mausoleum',nation:'korea',name:gersangWorldMap.korea.stages[1].name,level:35,power:450,enemy:'e_terracotta',mood:'朝鮮 · 古陵迷宮',loot:gersangWorldMap.korea.stages[1].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.korea.stages[1].monster.drops},
- {id:'iwami-silver-mine',nation:'japan',name:gersangWorldMap.japan.stages[0].name,level:15,power:150,enemy:'e_mad_cow',mood:'日本 · 銀山礦道',loot:gersangWorldMap.japan.stages[0].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.japan.stages[0].monster.drops},
- {id:'fuji-foothills',nation:'japan',name:gersangWorldMap.japan.stages[1].name,level:25,power:280,enemy:'e_miko',mood:'日本 · 靈峰山腳',loot:gersangWorldMap.japan.stages[1].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.japan.stages[1].monster.drops},
- {id:'datun-mountain',nation:'taiwan',name:gersangWorldMap.taiwan.stages[0].name,level:10,power:80,enemy:'e_big_eye',mood:'台灣 · 火山山徑',loot:gersangWorldMap.taiwan.stages[0].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.taiwan.stages[0].monster.drops},
- {id:'alishan',nation:'taiwan',name:gersangWorldMap.taiwan.stages[1].name,level:20,power:220,enemy:'e_boar',mood:'台灣 · 雲霧山林',loot:gersangWorldMap.taiwan.stages[1].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.taiwan.stages[1].monster.drops},
- {id:'undersea-king-cave',nation:'china',name:gersangWorldMap.china.stages[0].name,level:45,power:700,enemy:'e_sea_god',mood:'中國 · 深海王窟',loot:gersangWorldMap.china.stages[0].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.china.stages[0].monster.drops}
+ {id:'daegwallyeong',nation:'korea',name:gersangWorldMap.korea.stages[1].name,level:12,power:110,enemy:'e_mad_cow',mood:'朝鮮 · 高原牧道',loot:gersangWorldMap.korea.stages[1].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.korea.stages[1].monster.drops},
+ {id:'hallasan',nation:'korea',name:gersangWorldMap.korea.stages[2].name,level:32,power:420,enemy:'e_yellow_dragon',mood:'朝鮮 · 黃龍棲地',loot:gersangWorldMap.korea.stages[2].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.korea.stages[2].monster.drops},
+ {id:'datun-mountain',nation:'taiwan',name:gersangWorldMap.taiwan.stages[0].name,level:8,power:60,enemy:'e_big_eye',mood:'台灣 · 火山山徑',loot:gersangWorldMap.taiwan.stages[0].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.taiwan.stages[0].monster.drops},
+ {id:'alishan',nation:'taiwan',name:gersangWorldMap.taiwan.stages[1].name,level:15,power:150,enemy:'e_boar',mood:'台灣 · 雲霧山林',loot:gersangWorldMap.taiwan.stages[1].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.taiwan.stages[1].monster.drops},
+ {id:'qin-taiwan',nation:'taiwan',name:gersangWorldMap.taiwan.stages[2].name,level:24,power:260,enemy:'e_tomb_raider',mood:'台灣 · 地宮盜影',loot:gersangWorldMap.taiwan.stages[2].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.taiwan.stages[2].monster.drops},
+ {id:'japan-netherworld',nation:'japan',name:gersangWorldMap.japan.stages[0].name,level:10,power:90,enemy:'e_ghost_cat',mood:'日本 · 幽冥鬼域',loot:gersangWorldMap.japan.stages[0].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.japan.stages[0].monster.drops},
+ {id:'iwami-silver-mine',nation:'japan',name:gersangWorldMap.japan.stages[1].name,level:8,power:70,enemy:'e_kappa',mood:'日本 · 銀山礦道',loot:gersangWorldMap.japan.stages[1].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.japan.stages[1].monster.drops},
+ {id:'black-forest',nation:'japan',name:gersangWorldMap.japan.stages[2].name,level:40,power:600,enemy:'e_amakusa',mood:'日本 · 妖氣密林',loot:gersangWorldMap.japan.stages[2].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.japan.stages[2].monster.drops},
+ {id:'nanjing-outskirts',nation:'china',name:gersangWorldMap.china.stages[0].name,level:5,power:40,enemy:'e_poison_moth',mood:'中國 · 南京城外',loot:gersangWorldMap.china.stages[0].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.china.stages[0].monster.drops},
+ {id:'great-wall',nation:'china',name:gersangWorldMap.china.stages[1].name,level:22,power:240,enemy:'e_xiongnu',mood:'中國 · 塞外烽煙',loot:gersangWorldMap.china.stages[1].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.china.stages[1].monster.drops},
+ {id:'yellow-emperor-mausoleum',nation:'china',name:gersangWorldMap.china.stages[2].name,level:36,power:500,enemy:'e_undersea_king',mood:'中國 · 帝陵深處',loot:gersangWorldMap.china.stages[2].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.china.stages[2].monster.drops}
 ] as const;
 export type ZoneId=typeof WORLD_ZONES[number]['id'];
 export const zoneFor=(id?:string)=>WORLD_ZONES.find(zone=>zone.id===id)||WORLD_ZONES[0];
@@ -44,7 +49,7 @@ export function teleportDungeon(old:DungeonState,level:number,power:number,now:n
   pauseAt:dungeonBusy(old)?old.pauseAt:now,spawnAt:0,normalAt:Math.max(now,old.normalAt),
   logs:['已傳送至 '+zone.name+'！',...old.logs].slice(0,40)};
 }
-export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key:DungeonKey=old.key,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0,party:DungeonPartyMember[]=[],passiveDamage=0):{state:DungeonState;hp:number;mp:number;party:DungeonPartyMember[];reward:null|{xp:number;gold:number;loot:string|null;materials:string[]}}{
+export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key:DungeonKey=old.key,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0,party:DungeonPartyMember[]=[],passiveDamage=0,materialRolls:number[]=[1,1,1]):{state:DungeonState;hp:number;mp:number;party:DungeonPartyMember[];reward:null|{xp:number;gold:number;loot:string|null;materials:string[]}}{
  const state={...old,logs:[...old.logs]};let hp=hero.hp,mp=hero.mp;
  const members=(party.length?party:[{uid:'hero',name:'主角',hp,maxHp:hero.maxHp,position:'前排' as const}]).map(member=>({...member}));
  const heroMember=()=>members.find(member=>member.uid==='hero');
@@ -58,7 +63,8 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
  const recover=()=>{syncHero();const inn=goToInn({hp,maxHp:hero.maxHp,status:'正常'},now);state.status='recovering';state.phase='接敵';state.distance=100;state.zone='hanyang';state.key='e_raccoon';state.enemyHp=DUNGEONS.e_raccoon.hp;state.spawnAt=0;state.innHealAt=inn.nextHealAt;state.spawnSerial=(state.spawnSerial||0)+1;log('商隊全員倒下，已撤回漢陽客棧。');log('戰鬥失敗，已自動返回漢陽客棧療傷。')};
  // 先切換狀態再產生獎勵，快速連點或同回合後攻都不會重複結算。
  const victory=()=>{state.status='respawning';state.spawnAt=now+500;state.serial++;const e=enemy(),zone=zoneFor(state.zone);
-  const materials=(zone.enemy===state.key?zone.dropTable:[]).filter((drop,index)=>((roll+choice*(index+1)+index*.381966)%1)*100<drop.rate).map(drop=>drop.item);
+  // 每個品項使用獨立亂數；同一隻怪物可以同時噴出多項素材。
+  const materials=(zone.enemy===state.key?zone.dropTable:[]).filter((drop,index)=>(materialRolls[index]??1)*100<=drop.rate).map(drop=>drop.item);
   reward={xp:e.xp,gold:e.gold,loot:roll<e.drop?e.loot[Math.min(e.loot.length-1,Math.max(0,Math.floor(choice*e.loot.length)))]:null,materials};
   log('成功擊敗 '+e.name+'！獲得 '+e.xp+' 經驗與 '+e.gold+' 兩。');if(materials.length)log('🎁 噴寶：獲得【'+materials.join('】、【')+'】！')};
  const hit=(skill=false)=>{

@@ -4,13 +4,16 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {WORLD_ZONES,DUNGEONS,zoneUnlocked,teleportDungeon,freshDungeon,dungeonStep} from '../app/dungeon-engine.ts';
 import {gersangWorldMap,gersangStages} from '../app/gersang-world-map.ts';
-test('gersangWorldMap has four regions, eight cities and seven playable stages',()=>{
+test('gersangWorldMap has four regions, eight cities and twelve playable stages',()=>{
  assert.deepEqual(Object.values(gersangWorldMap).map(region=>[region.name,region.cities.map(city=>city.name)]),[
-  ['朝鮮',['漢陽','平壤']],['日本',['江戶','京都']],['台灣',['台北','台南']],['中國',['南京','北京']]
+  ['朝鮮',['漢陽','平壤']],['台灣',['台北','台南']],['日本',['江戶','京都']],['中國',['南京','北京']]
  ]);
- assert.equal(gersangStages.length,7);
+ assert.equal(gersangStages.length,12);
  assert.deepEqual(WORLD_ZONES.map(z=>[z.name,DUNGEONS[z.enemy].name,DUNGEONS[z.enemy].hp]),[
-  ['漢陽近郊','小狸貓',60],['秦始皇陵','兵馬俑',300],['石見銀山','狂牛',120],['富士山腳','幽靈巫女',250],['大屯山','大眼怪',80],['阿里山','狂暴山豬',200],['海底王窟','海神',4400]
+  ['漢陽近郊','狸貓',60],['大關嶺','狂牛',160],['漢拏山','黃龍',1200],
+  ['大屯山','大眼怪',70],['阿里山','山豬',150],['秦始皇陵(台)','盜墓者',450],
+  ['冥界','鬼貓',110],['石見銀山','河童',90],['黑森林','天草時貞',2000],
+  ['南京近郊','毒蛾',65],['萬里長城','匈奴騎兵',350],['黃帝陵','海底王',1500]
  ]);
  assert.ok(gersangStages.every(stage=>stage.monster.drops.length>0));
 });
@@ -23,19 +26,19 @@ test('locked, invalid, recovering transfers are identity noops',()=>{
 });
 test('switch cancels previous fight and pending spawn, retains cooldown and pause timestamp',()=>{
  const old={...freshDungeon(),status:'respawning',spawnAt:5000,normalAt:2300,skillAt:4000,pauseAt:1000,serial:2};
- const s=teleportDungeon(old,45,700,2000,'undersea-king-cave',0);
- assert.equal(s.zone,'undersea-king-cave');assert.equal(s.key,'e_sea_god');assert.equal(s.enemyHp,4400);assert.equal(s.status,'fighting');assert.equal(s.spawnAt,0);assert.equal(s.skillAt,4000);assert.equal(s.normalAt,2300);assert.equal(s.pauseAt,1000);assert.equal(s.serial,2);assert.equal(s.logs[0],'已傳送至 海底王窟！');
+ const s=teleportDungeon(old,36,500,2000,'yellow-emperor-mausoleum',0);
+ assert.equal(s.zone,'yellow-emperor-mausoleum');assert.equal(s.key,'e_undersea_king');assert.equal(s.enemyHp,1500);assert.equal(s.status,'fighting');assert.equal(s.spawnAt,0);assert.equal(s.skillAt,4000);assert.equal(s.normalAt,2300);assert.equal(s.pauseAt,1000);assert.equal(s.serial,2);assert.equal(s.logs[0],'已傳送至 黃帝陵！');
 });
 test('high-zone defeat returns to hanyang with no reward and blocks re-entry during healing',()=>{
  const h={hp:1,mp:40,maxHp:80,maxMp:40,str:20,dex:1,int:10,attack:0,defense:0,staff:false};
- const s=teleportDungeon(freshDungeon(),45,700,1000,'undersea-king-cave');const r=dungeonStep(s,h,'tick',2000);
+ const s=teleportDungeon(freshDungeon(),36,500,1000,'yellow-emperor-mausoleum');const r=dungeonStep(s,h,'tick',2000);
  assert.equal(r.state.zone,'hanyang');assert.equal(r.state.key,'e_raccoon');assert.equal(r.state.enemyHp,60);assert.equal(r.hp,0);assert.equal(r.reward,null);assert.equal(r.state.logs[0],'戰鬥失敗，已自動返回漢陽客棧療傷。');assert.equal(teleportDungeon(r.state,99,99999,2100,'datun-mountain'),r.state);
 });
 test('stage drop rates are evaluated and returned with the victory reward',()=>{
  const h={hp:999,mp:40,maxHp:999,maxMp:40,str:999,dex:99,int:10,attack:0,defense:0,staff:false};
  const s=teleportDungeon(freshDungeon(),1,0,1000,'hanyang');
- const hit=dungeonStep(s,h,'normal',1001,undefined,0,0);
- assert.deepEqual(hit.reward.materials,['舊斧頭','銅錢']);
+ const hit=dungeonStep(s,h,'normal',1001,undefined,0,0,0,0,[],0,[0,0,0]);
+ assert.deepEqual(hit.reward.materials,['舊斧頭','肉類']);
  assert.match(hit.state.logs[0],/噴寶/);
 });
 function demo(){

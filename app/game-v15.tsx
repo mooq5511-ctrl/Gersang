@@ -497,13 +497,13 @@ function profileFromGame(slot: number, game: GameState): CharacterProfile {
 }
 
 /** 使用真實主角 HP/MP 與現有背包；勝利只發放一次獎勵。 */
-function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key?:DungeonKey,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0):GameState {
+function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key?:DungeonKey,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0,materialRolls:number[]=[1,1,1]):GameState {
   const total=heroTotalAttributes(previous.hero),v=vitalStats(previous.hero);
   const fighters=[previous.hero,...previous.mercs],living=fighters.filter(unit=>vitalStats(unit).hp>0);
   const attack=living.reduce((sum,unit)=>sum+combatStats(unit).attack*(unit.position==='前排'?1.2:1),0);
   const party=fighters.map(unit=>{const stats=vitalStats(unit);return{uid:unit.uid,name:unit.name,hp:stats.hp,maxHp:stats.maxHp,position:unit.position}});
   const passiveDamage=previous.mercs.reduce((sum,unit)=>sum+(previous.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0);
-  const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,int:total.intel,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice,spawnRoll,retaliationRoll,party,passiveDamage);
+  const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,int:total.intel,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice,spawnRoll,retaliationRoll,party,passiveDamage,materialRolls);
   const remaining=new globalThis.Map(result.party.map(unit=>[unit.uid,unit.hp]));
   let next:GameState={...previous,dungeon:result.state,hero:{...previous.hero,hp:remaining.get('hero')??result.hp,mp:result.mp},mercs:previous.mercs.map(unit=>({...unit,hp:remaining.get(unit.uid)??unit.hp}))};
   if(result.state.status==='recovering'&&previous.hero.status!=='客棧中')next=enterGameInn(next,now,result.state.logs[0],result.state);
@@ -525,14 +525,14 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
   }
   return next;
 }
-function settleMerchantGame(previous: GameState, now: number,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0): GameState {
+function settleMerchantGame(previous: GameState, now: number,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0,materialRolls:number[]=[1,1,1]): GameState {
   if(dungeonBusy(previous.dungeon)){
     const battle=previous.dungeon!;
     const due=battle.status==='respawning'?battle.spawnAt:battle.status==='recovering'?(battle.innHealAt||battle.stamp+2000):battle.stamp+1000;
     if(now<due)return previous;
     // 共用唯一每秒計時器，航程起點平移，暫停期間不累積遭遇或跑商獎勵。
     const pause=Math.max(0,now-(previous.dungeon!.pauseAt||previous.dungeon!.stamp||now));
-    let next=applyDungeon(previous,'tick',now,undefined,roll,choice,spawnRoll,retaliationRoll);
+    let next=applyDungeon(previous,'tick',now,undefined,roll,choice,spawnRoll,retaliationRoll,materialRolls);
     next={...next,dungeon:{...next.dungeon!,pauseAt:now}};
     if(next.trade.caravan)next={...next,trade:{...next.trade,caravan:{...next.trade.caravan,startedAt:next.trade.caravan.startedAt+pause}}};
     if(previous.dungeon!.status==='recovering')return {...next,idleStamp:now};
@@ -954,8 +954,8 @@ export default function GameV15() {
     const timer = window.setInterval(() => {
       // 在 React 更新函式外抽樣，同一次回合重跑不會改變掉寶結果。
       const now=Date.now(),roll=Math.random(),choice=Math.random();
-      const spawnRoll=Math.random(),retaliationRoll=Math.random();
-      setGame(previous=>settleMerchantGame(previous,now,roll,choice,spawnRoll,retaliationRoll));
+      const spawnRoll=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()];
+      setGame(previous=>settleMerchantGame(previous,now,roll,choice,spawnRoll,retaliationRoll,materialRolls));
     }, 50);
     return () => window.clearInterval(timer);
   }, [ready, activeSlot]);
@@ -1440,7 +1440,7 @@ export default function GameV15() {
               const dungeon=teleportDungeon(old,previous.hero.level,heroPersonalPower(previous.hero),now,id,spawnRoll);
               return dungeon===old?previous:{...previous,dungeon,logs:addLog(previous.logs,dungeon.logs[0])};
             });}}/>}
-            battle={<DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random();setGame(previous=>applyDungeon(previous,action,now,key,roll,choice,0,retaliationRoll));}}/>}
+            battle={<DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()];setGame(previous=>applyDungeon(previous,action,now,key,roll,choice,0,retaliationRoll,materialRolls));}}/>}
             inventory={game.inventory} equipHero={itemUid=>equipItem(itemUid,undefined,'hero')} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
 
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
