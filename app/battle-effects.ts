@@ -44,7 +44,8 @@ export function createBattleEffects(root:HTMLElement){
   const target=(data.target==='hero'||data.target==='player')?'hero':attacker==='hero'?'enemy':'hero';
   const critical=!!data.critical||!!data.skill||data.action==='critical_hit';
   pulse(find('motion',attacker),'impact-lunge-'+attacker);
-  pulse(find('sprite',attacker),'impact-sprite-attack');
+  const attackAnimation=attacker==='hero'&&!data.skill?'impact-sprite-normal-attack':'impact-sprite-attack';
+  pulse(find('sprite',attacker),attackAnimation);
   if(critical){pulse(root,'impact-screen-shake');pulse(find('motion',attacker),'impact-critical-lunge')}
   pulse(find('hit',target),'impact-hit');
   pulse(find('hit',target),'impact-white-flash');

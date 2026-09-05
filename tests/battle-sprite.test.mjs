@@ -7,7 +7,11 @@ test('four nations and enemy use generated sprite sheets tied to attack events',
  const effects=readFileSync(new URL('../app/battle-effects.ts',import.meta.url),'utf8');
  const css=readFileSync(new URL('../app/battle-impact.css',import.meta.url),'utf8');
  assert.match(arena,/data-sprite="hero" data-nation=\{hero\.nation\|\|'korea'\}/);
- assert.match(effects,/find\('sprite',attacker\),'impact-sprite-attack'/);
+ assert.match(effects,/find\('sprite',event\.attacker\),'impact-sprite-attack'/);
+ assert.match(effects,/attacker==='hero'&&!data\.skill\?'impact-sprite-normal-attack':'impact-sprite-attack'/);
+ assert.match(css,/hero-normal-attack\.png/);
+ assert.match(css,/steps\(9,end\)/);
+ assert.ok(statSync(new URL('../public/game-assets/hero-normal-attack.png',import.meta.url)).size>1000);
  for(const nation of ['taiwan','korea','japan','china']){
   assert.match(css,new RegExp(nation+'-idle\\.png'));
   assert.match(css,new RegExp(nation+'-attack\\.png'));
