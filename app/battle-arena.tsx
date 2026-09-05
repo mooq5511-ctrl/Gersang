@@ -14,7 +14,7 @@ export function BattleArena({state,hero}:{state:DungeonState;hero:CaravanMember}
  useEffect(()=>{if(!root.current)return;effects.current=createBattleEffects(root.current);return()=>{effects.current?.clear();effects.current=null}},[]);
  useEffect(()=>{
   if(spawn.current!==(state.spawnSerial||0)){effects.current?.spawn();spawn.current=state.spawnSerial||0}
-  for(const event of state.events||[])if(event.id>seen.current){effects.current?.hit(event);seen.current=event.id}
+  for(const event of state.events||[])if(event.id>seen.current){effects.current?.triggerBattleAnimation({attacker:event.attacker,target:event.target,damage:event.amount,skill:event.skill,critical:event.critical});seen.current=event.id}
  },[state.events,state.spawnSerial]);
  const v=vitalStats(hero),monster=DUNGEONS[state.key];
  return <div className="impact-stage" ref={root} aria-label="主角與怪物交鋒">

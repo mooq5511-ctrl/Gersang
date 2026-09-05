@@ -1,4 +1,5 @@
 import type {BattleEvent} from './dungeon-engine';
+export type BattleAnimationData={attacker:string;target?:string;damage:number;action?:string;critical?:boolean;skill?:boolean};
 /** 此控制器只操作特效層：不更改遊戲狀態、不發獎、不控制刷怪時間。 */
 export function createBattleEffects(root:HTMLElement){
  const popups=new Map<HTMLElement,()=>void>(),animations=new Map<string,()=>void>();
@@ -37,5 +38,25 @@ export function createBattleEffects(root:HTMLElement){
    }
   }
  }
- return {hit,clear,spawn:()=>{clear();pulse(find('spawn','enemy'),'impact-arrive')}};
+ function triggerBattleAnimation(data:BattleAnimationData){
+  const attacker=(data.attacker==='enemy'||data.attacker==='monster')?'enemy':'hero';
+  const target=(data.target==='hero'||data.target==='player')?'hero':attacker==='hero'?'enemy':'hero';
+  const critical=!!data.critical||!!data.skill||data.action==='critical_hit';
+  pulse(find('motion',attacker),'impact-lunge-'+attacker);
+  if(critical){pulse(root,'impact-screen-shake');pulse(find('motion',attacker),'impact-critical-lunge')}
+  pulse(find('hit',target),'impact-hit');
+  pulse(find('hit',target),'impact-white-flash');
+  const host=find('popup',target);if(!host)return;
+  const node=document.createElement('span');node.className='impact-number'+(critical?' impact-critical-number':'');node.textContent='-'+Math.max(0,Math.floor(data.damage))+(critical?' !!':'');node.setAttribute('aria-hidden','true');host.appendChild(node);
+  const finish=()=>{node.removeEventListener('animationend',finish);clearTimeout(timer);node.remove();popups.delete(node)};
+  node.addEventListener('animationend',finish);const timer=setTimeout(finish,1300);popups.set(node,finish);
+ }
+ return {hit,triggerBattleAnimation,clear,spawn:()=>{clear();pulse(find('spawn','enemy'),'impact-arrive')}};
+}
+
+/** 後端或外部模組可直接呼叫的資料驅動入口；目前畫面不存在時安全略過。 */
+export function triggerBattleAnimation(data:BattleAnimationData,root?:HTMLElement){
+ const stage=root||document.querySelector<HTMLElement>('.impact-stage');
+ if(!stage)return;
+ createBattleEffects(stage).triggerBattleAnimation(data);
 }
