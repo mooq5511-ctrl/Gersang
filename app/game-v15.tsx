@@ -183,10 +183,11 @@ const slots = EQUIPMENT_SLOTS;
 const slotLabels = EQUIPMENT_LABELS;
 
 const heroNationProfiles: Record<NationId, { title: string; skill: string; image: string; stats: [number, number, number, number] }> = {
-  taiwan: { title: "南海商主", skill: "山海號令", image: legacyMercenaries[5].idle, stats: [68, 74, 72, 66] },
-  china: { title: "絲路巨商", skill: "乾坤商陣", image: legacyMercenaries[4].idle, stats: [72, 64, 78, 68] },
-  korea: { title: "朝鮮大商", skill: "商團號令", image: legacyMercenaries[0].idle, stats: [70, 66, 68, 76] },
-  japan: { title: "御用商人", skill: "疾風號令", image: legacyMercenaries[2].idle, stats: [68, 80, 64, 68] },
+  // 使用遊戲內既有的巨商國籍角色素材；第 8 格對應各國挑夫／商隊角色，最符合主角商人的身份。
+  taiwan: { title: "南海商主", skill: "山海號令", image: "/assets/nations/taiwan_8.webp", stats: [68, 74, 72, 66] },
+  china: { title: "絲路巨商", skill: "乾坤商陣", image: "/assets/nations/china_8.webp", stats: [72, 64, 78, 68] },
+  korea: { title: "朝鮮大商", skill: "商團號令", image: "/assets/nations/korea_8.webp", stats: [70, 66, 68, 76] },
+  japan: { title: "御用商人", skill: "疾風號令", image: "/assets/nations/japan_8.webp", stats: [68, 80, 64, 68] },
 };
 
 const medicineCatalog = [
@@ -458,7 +459,8 @@ function restoreGame(raw: unknown): GameState {
       nation: heroNation,
       job: Number(parsed.version) >= 19 && parsed.hero?.job ? parsed.hero.job : heroDefaults.job,
       skill: Number(parsed.version) >= 19 && parsed.hero?.skill ? parsed.hero.skill : heroDefaults.skill,
-      image: Number(parsed.version) >= 19 && parsed.hero?.image ? parsed.hero.image : heroDefaults.image,
+      // 強制套用國籍對應主角圖，讓既有存檔也會完成圖片置換。
+      image: heroNationProfiles[heroNation].image,
       maxHp:Number.isFinite(parsed.hero?.maxHp)&&Number(parsed.hero?.maxHp)>0?Math.max(100,Number(parsed.hero?.maxHp)):100+(Math.max(1,Number(parsed.hero?.level)||heroDefaults.level)-1)*20,
       status:parsed.hero?.status==='客棧中'?'客棧中':'正常',
       position:normalizeBattlePosition(parsed.hero?.position, String(parsed.hero?.name||heroDefaults.name), String(parsed.hero?.role||heroDefaults.role), true),
