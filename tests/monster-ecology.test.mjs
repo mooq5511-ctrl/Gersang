@@ -5,31 +5,31 @@ import {DUNGEONS,dungeonStep,freshDungeon,teleportDungeon} from '../app/dungeon-
 
 const hero={hp:99999,mp:999,maxHp:99999,maxMp:999,str:99999,dex:999,int:999,attack:0,defense:999,staff:false};
 
-test('four zones each expose three unique monsters, twelve total',()=>{
- assert.equal(Object.keys(ECOLOGY_MONSTERS).length,12);
+test('five world-map stages expose their bound exclusive monsters',()=>{
+ assert.ok(Object.keys(ECOLOGY_MONSTERS).length>=17);
  const pools=Object.values(ECOLOGY_POOLS);
- assert.ok(pools.every(pool=>pool.length===3));
- assert.equal(new Set(pools.flat()).size,12);
- assert.deepEqual(ECOLOGY_POOLS.hanyang.map(key=>DUNGEONS[key].name),['狸貓','大螳螂','山賊打手']);
- assert.deepEqual(ECOLOGY_POOLS.abyss.map(key=>DUNGEONS[key].name),['冥界餓鬼','冥界大蛇','終極 BOSS 閻王']);
+ assert.ok(pools.every(pool=>pool.length===1));
+ assert.equal(new Set(pools.flat()).size,5);
+ assert.deepEqual(Object.values(ECOLOGY_POOLS).flat().map(key=>DUNGEONS[key].name),['狸','兵馬俑','狂牛','大眼怪','海神']);
 });
 
-test('random sample covers all three monsters with clamped boundaries',()=>{
- assert.equal(pickZoneMonster('snow',0),'e_yeti');
- assert.equal(pickZoneMonster('snow',.34),'e_crystal');
- assert.equal(pickZoneMonster('snow',.999),'e_snow');
- assert.equal(pickZoneMonster('snow',5),'e_snow');
- assert.equal(pickZoneMonster('unknown',-.5),'e_cat');
+test('stage selection always resolves its bound monster and unknown maps fall back safely',()=>{
+ assert.equal(pickZoneMonster('hanyang',0),'e_raccoon');
+ assert.equal(pickZoneMonster('qin-shi-huang-mausoleum',.999),'e_terracotta');
+ assert.equal(pickZoneMonster('iwami-silver-mine',5),'e_mad_cow');
+ assert.equal(pickZoneMonster('datun-mountain',-.5),'e_big_eye');
+ assert.equal(pickZoneMonster('undersea-king-cave',.5),'e_sea_god');
+ assert.equal(pickZoneMonster('unknown',-.5),'e_raccoon');
 });
 
 test('victory waits exactly half a second then rolls a new local monster',()=>{
- const state=teleportDungeon(freshDungeon(),70,2000,1000,'abyss',0);
+ const state=teleportDungeon(freshDungeon(),70,2000,1000,'undersea-king-cave',0);
  const win=dungeonStep(state,hero,'normal',1001,undefined,.99,0,.999);
  assert.equal(win.state.status,'respawning');assert.equal(win.state.spawnAt,1501);
  const early=dungeonStep(win.state,hero,'tick',1500,undefined,.99,0,.999);
- assert.equal(early.state.status,'respawning');assert.equal(early.state.key,'e_ghost');
+ assert.equal(early.state.status,'respawning');assert.equal(early.state.key,'e_sea_god');
  const next=dungeonStep(win.state,hero,'tick',1501,undefined,.99,0,.999);
- assert.equal(next.state.status,'fighting');assert.equal(next.state.key,'e_king');assert.equal(next.state.enemyHp,25000);
+ assert.equal(next.state.status,'fighting');assert.equal(next.state.key,'e_sea_god');assert.equal(next.state.enemyHp,4400);
 });
 
 test('damage events identify attacker, target, amount and spell styling',()=>{

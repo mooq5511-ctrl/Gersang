@@ -1,5 +1,10 @@
 /** 隨機地域怪物：沿用已確認示範版的原創數值；舊怪物 ID 留在主資料庫供舊資料相容。 */
 export const ECOLOGY_MONSTERS={
+ e_raccoon:{name:'狸',level:1,hp:100,mp:0,atk:6,dex:10,xp:20,gold:15,drop:.05,loot:['boots']},
+ e_terracotta:{name:'兵馬俑',level:35,hp:2200,mp:80,atk:70,dex:24,xp:600,gold:420,drop:.35,loot:['helmet','armor']},
+ e_mad_cow:{name:'狂牛',level:15,hp:520,mp:0,atk:24,dex:20,xp:90,gold:75,drop:.18,loot:['boots']},
+ e_big_eye:{name:'大眼怪',level:25,hp:1200,mp:120,atk:48,dex:28,xp:240,gold:180,drop:.28,loot:['helmet']},
+ e_sea_god:{name:'海神',level:45,hp:4400,mp:2000,atk:140,dex:42,xp:1200,gold:900,drop:.55,loot:['staff','armor']},
  e_cat:{name:'狸貓',level:1,hp:100,mp:0,atk:6,dex:10,xp:20,gold:15,drop:.05,loot:['boots']},
  e_mantis:{name:'大螳螂',level:5,hp:180,mp:0,atk:10,dex:18,xp:35,gold:25,drop:.07,loot:['boots']},
  e_bandit:{name:'山賊打手',level:10,hp:300,mp:20,atk:16,dex:14,xp:60,gold:40,drop:.1,loot:['boots']},
@@ -13,8 +18,15 @@ export const ECOLOGY_MONSTERS={
  e_snake:{name:'冥界大蛇',level:80,hp:17000,mp:350,atk:290,dex:60,xp:3500,gold:2200,drop:.7,loot:['armor']},
  e_king:{name:'終極 BOSS 閻王',level:100,hp:25000,mp:500,atk:350,dex:70,xp:5000,gold:3000,drop:.8,loot:['armor']}
 } as const;
-export const ECOLOGY_POOLS={hanyang:['e_cat','e_mantis','e_bandit'],geoje:['e_raider','e_star','e_crab'],snow:['e_yeti','e_crystal','e_snow'],abyss:['e_ghost','e_snake','e_king']} as const;
+/** 新五關卡採單一專屬怪物；舊四區怪物仍保留在上方，讓舊存檔可以安全載入。 */
+export const ECOLOGY_POOLS={
+ hanyang:['e_raccoon'],
+ 'qin-shi-huang-mausoleum':['e_terracotta'],
+ 'iwami-silver-mine':['e_mad_cow'],
+ 'datun-mountain':['e_big_eye'],
+ 'undersea-king-cave':['e_sea_god'],
+} as const;
 export function pickZoneMonster(zone:string='hanyang',sample=0){
  const pool=ECOLOGY_POOLS[zone as keyof typeof ECOLOGY_POOLS]||ECOLOGY_POOLS.hanyang;
- return pool[Math.min(2,Math.max(0,Math.floor(sample*3)))];
+ return pool[Math.min(pool.length-1,Math.max(0,Math.floor(sample*pool.length)))];
 }

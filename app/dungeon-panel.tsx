@@ -4,16 +4,22 @@ import {Button} from '@/components/ui/button';
 import type {CaravanMember} from './caravan-status';
 import {BattleArena} from './battle-arena';
 import {ECOLOGY_POOLS} from './monster-ecology';
+import {gersangWorldMap,type GersangNationId} from './gersang-world-map';
 /** 不另外快取解鎖布林值：升級、配點、穿脫裝備引發重繪時，立即用新數值判斷。 */
 export function WorldMapNavigation({state,level,power,travel}:{state:DungeonState;level:number;power:number;travel:(id:ZoneId)=>void}){
  return <nav className="world-zone-nav" aria-label="大商帝國地域傳送（地圖選擇）">
  <header><h2>大商帝國地域傳送 <small>地圖選擇</small></h2><span>主角 Lv.{level} · 戰鬥力 {power.toLocaleString()}</span></header>
- <div className="world-zone-buttons">{WORLD_ZONES.map(zone=>{
-  const locked=!zoneUnlocked(zone,level,power),selected=zone.id===zoneFor(state.zone).id;
-  return <Button key={zone.id} className="world-zone-button" aria-pressed={selected} disabled={locked||state.status==='recovering'} onClick={()=>travel(zone.id)}>
-   <strong>{locked?'鎖定 · ':selected?'目前 · ':''}{zone.name}</strong><span>{zoneRequirement(zone)}</span><small>{zone.mood}</small>
-  </Button>;
- })}</div><p>{state.status==='recovering'?'漢陽客棧療傷中，HP 回滿後可再次傳送。':'點選已解鎖地域立即傳送並開戰；原戰鬥中止，HP / MP 與技能冷卻保留。'}</p>
+ <div className="gersang-region-grid">{Object.values(gersangWorldMap).map(region=><section key={region.id} className={'gersang-region region-'+region.id}>
+  <div className="gersang-region-heading"><strong>{region.name}</strong><span>核心城市：{region.cities.map(city=>city.name).join('・')}</span></div>
+  <div className="world-zone-buttons">{region.stages.map(stage=>{
+   const zone=WORLD_ZONES.find(entry=>entry.name===stage.name&&entry.nation===region.id as GersangNationId);
+   if(!zone)return null;
+   const locked=!zoneUnlocked(zone,level,power),selected=zone.id===zoneFor(state.zone).id;
+   return <Button key={zone.id} className="world-zone-button" aria-pressed={selected} disabled={locked||state.status==='recovering'} onClick={()=>travel(zone.id)}>
+    <strong>{locked?'鎖定 · ':selected?'目前 · ':''}{zone.name}</strong><span>{zoneRequirement(zone)}</span><small>{stage.type==='dungeon'?'迷宮':'掛機點'} · {stage.monster.name} HP {stage.monster.hp.toLocaleString()}</small><small>掉落：{stage.monster.drops.join('、')}</small>
+   </Button>;
+  })}</div>
+ </section>)}</div><p>{state.status==='recovering'?'漢陽客棧療傷中，HP 回滿後可再次傳送。':'點選已解鎖關卡立即傳送並開戰；原戰鬥中止，HP / MP 與技能冷卻保留。'}</p>
  </nav>;
 }
 export function DungeonPanel({state,mp,hero,dps=0,act}:{state:DungeonState;mp:number;hero:CaravanMember;dps?:number;act:(action:'start'|'normal'|'skill'|'retreat',key?:DungeonKey)=>void}){

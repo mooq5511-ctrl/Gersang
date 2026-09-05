@@ -2,6 +2,7 @@
 import {ECOLOGY_MONSTERS,pickZoneMonster} from './monster-ecology.ts';
 import {goToInn,recoverAtInn} from './inn-engine.ts';
 import {formationTarget,rearDodge,type BattlePosition} from './formation-position.ts';
+import {gersangWorldMap} from './gersang-world-map.ts';
 export const DUNGEONS = {
  ...ECOLOGY_MONSTERS,
  thug:{name:'打手',level:1,hp:150,mp:0,atk:8,dex:8,xp:20,gold:15,drop:.05,loot:['boots']},
@@ -15,10 +16,11 @@ export const DUNGEONS = {
 export type DungeonKey=keyof typeof DUNGEONS;
 /** 地圖資料是畫面鎖定與實際傳送的唯一來源；等級、戰鬥力兩條件必須同時滿足。 */
 export const WORLD_ZONES=[
- {id:'hanyang',name:'漢陽近郊',level:1,power:0,enemy:'thug',mood:'新手區 · 漢陽城外',loot:'極低機率：太皇鞋'},
- {id:'geoje',name:'巨濟海底洞窟',level:15,power:0,enemy:'pirate',mood:'中期區 · 潮聲暗湧',loot:'太皇鞋'},
- {id:'snow',name:'大雪山冰窟',level:40,power:500,enemy:'snowWoman',mood:'高階區 · 霜雪封山',loot:'飛虎兜、高級神仙棒'},
- {id:'abyss',name:'冥界深淵',level:70,power:2000,enemy:'abyssKing',mood:'終極 BOSS 區 · 冥府深處',loot:'海王戰甲'}
+ {id:'hanyang',nation:'korea',name:gersangWorldMap.korea.stages[0].name,level:1,power:0,enemy:'e_raccoon',mood:'朝鮮 · 漢陽城外',loot:gersangWorldMap.korea.stages[0].monster.drops.join('、')},
+ {id:'qin-shi-huang-mausoleum',nation:'korea',name:gersangWorldMap.korea.stages[1].name,level:35,power:450,enemy:'e_terracotta',mood:'朝鮮 · 古陵迷宮',loot:gersangWorldMap.korea.stages[1].monster.drops.join('、')},
+ {id:'iwami-silver-mine',nation:'japan',name:gersangWorldMap.japan.stages[0].name,level:15,power:150,enemy:'e_mad_cow',mood:'日本 · 銀山礦道',loot:gersangWorldMap.japan.stages[0].monster.drops.join('、')},
+ {id:'datun-mountain',nation:'taiwan',name:gersangWorldMap.taiwan.stages[0].name,level:25,power:300,enemy:'e_big_eye',mood:'台灣 · 火山山徑',loot:gersangWorldMap.taiwan.stages[0].monster.drops.join('、')},
+ {id:'undersea-king-cave',nation:'china',name:gersangWorldMap.china.stages[0].name,level:45,power:700,enemy:'e_sea_god',mood:'中國 · 深海王窟',loot:gersangWorldMap.china.stages[0].monster.drops.join('、')}
 ] as const;
 export type ZoneId=typeof WORLD_ZONES[number]['id'];
 export const zoneFor=(id?:string)=>WORLD_ZONES.find(zone=>zone.id===id)||WORLD_ZONES[0];
@@ -28,7 +30,7 @@ export type BattleEvent={id:number;attacker:'hero'|'enemy';target:'hero'|'enemy'
 export type DungeonState={events?:BattleEvent[];eventSerial?:number;spawnSerial?:number;innHealAt?:number;status:'idle'|'fighting'|'respawning'|'recovering';phase?:'接敵'|'交戰';distance?:number;damageCursor?:number;zone?:ZoneId;key:DungeonKey;enemyHp:number;normalAt:number;skillAt:number;spawnAt:number;stamp:number;pauseAt?:number;logs:string[];serial:number};
 export type DungeonHero={hp:number;mp:number;maxHp:number;maxMp:number;str:number;dex:number;int:number;attack:number;defense:number;staff:boolean};
 export type DungeonPartyMember={uid:string;name:string;hp:number;maxHp:number;position:BattlePosition};
-export const freshDungeon=():DungeonState=>({status:'idle',phase:'接敵',distance:100,damageCursor:0,zone:'hanyang',key:'e_cat',enemyHp:DUNGEONS.e_cat.hp,normalAt:0,skillAt:0,spawnAt:0,innHealAt:0,stamp:0,logs:[],serial:0,events:[],eventSerial:0,spawnSerial:0});
+export const freshDungeon=():DungeonState=>({status:'idle',phase:'接敵',distance:100,damageCursor:0,zone:'hanyang',key:'e_raccoon',enemyHp:DUNGEONS.e_raccoon.hp,normalAt:0,skillAt:0,spawnAt:0,innHealAt:0,stamp:0,logs:[],serial:0,events:[],eventSerial:0,spawnSerial:0});
 export const dungeonBusy=(state?:DungeonState)=>!!state&&state.status!=='idle';
 /** 切圖只更換對手，不補血、不補魔、不發舊怪獎勵，也不清除技能冷卻。
  * 療傷期間禁止傳送，避免切圖繞過全滅懲罰；只使用原有回合計時器。 */
@@ -51,7 +53,7 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
  const enemy=()=>DUNGEONS[state.key];
  // 事件只記錄已發生的傷害，序號讓 React 重繪時不重播；緩衝最多十二筆。
  const event=(attacker:'hero'|'enemy',amount:number,skill=false,critical=false)=>{const id=(state.eventSerial||0)+1;state.eventSerial=id;state.events=[...(state.events||[]),{id,attacker,target:attacker==='hero'?'enemy' as const:'hero' as const,amount,skill,...(critical?{critical:true}: {})}].slice(-12)};
- const recover=()=>{syncHero();const inn=goToInn({hp,maxHp:hero.maxHp,status:'正常'},now);state.status='recovering';state.phase='接敵';state.distance=100;state.zone='hanyang';state.key='e_cat';state.enemyHp=DUNGEONS.e_cat.hp;state.spawnAt=0;state.innHealAt=inn.nextHealAt;state.spawnSerial=(state.spawnSerial||0)+1;log('商隊全員倒下，已撤回漢陽客棧。');log('戰鬥失敗，已自動返回漢陽客棧療傷。')};
+ const recover=()=>{syncHero();const inn=goToInn({hp,maxHp:hero.maxHp,status:'正常'},now);state.status='recovering';state.phase='接敵';state.distance=100;state.zone='hanyang';state.key='e_raccoon';state.enemyHp=DUNGEONS.e_raccoon.hp;state.spawnAt=0;state.innHealAt=inn.nextHealAt;state.spawnSerial=(state.spawnSerial||0)+1;log('商隊全員倒下，已撤回漢陽客棧。');log('戰鬥失敗，已自動返回漢陽客棧療傷。')};
  // 先切換狀態再產生獎勵，快速連點或同回合後攻都不會重複結算。
  const victory=()=>{state.status='respawning';state.spawnAt=now+500;state.serial++;const e=enemy();reward={xp:e.xp,gold:e.gold,loot:roll<e.drop?e.loot[Math.min(e.loot.length-1,Math.max(0,Math.floor(choice*e.loot.length)))]:null};log('成功擊敗 '+e.name+'！獲得 '+e.xp+' 經驗與 '+e.gold+' 兩。')};
  const hit=(skill=false)=>{
