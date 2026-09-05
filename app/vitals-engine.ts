@@ -2,7 +2,7 @@ import { mercenarySpec, ratingAccuracy } from './mercenary-roster.ts';
 import {formationTarget,rearDodge,type BattlePosition} from './formation-position.ts';
 export type VitalUnit = {
   templateId?: string;
-  level: number; vit: number; intel: number; str?: number; agi?: number; tier?: number; hp?: number; mp?: number; maxHp?:number;
+  level: number; vit: number; intel: number; str?: number; agi?: number; tier?: number; hp?: number; mp?: number; maxHp?:number; flatAttackBonus?:number;
   equip: Record<string, { hp?: number; atk?: number; def?: number; enhance?: number; bonus?: { str?: number; agi?: number; vit?: number; intel?: number }; magic?: { stat: string; value: number }[] } | null>;
 };
 export function vitalStats(unit: VitalUnit) {
@@ -53,10 +53,11 @@ export function combatStats(unit: VitalUnit) {
     for (const affix of item.magic || []) if (Object.hasOwn(percent, affix.stat)) percent[affix.stat as keyof typeof percent] += affix.value;
   }
   const tier = 1 + (unit.tier || 0) * 0.35;
-  const attack = Math.max(1, Math.floor((12 + flat.str * (1 + percent.str / 100) * 0.5 + flat.agi * (1 + percent.agi / 100) * 0.2 + unit.level * 2 + equipmentAttack) * tier * (1 + percent.atk / 100)));
+  const permanentAttack = Math.max(0, unit.flatAttackBonus || 0);
+  const attack = Math.max(1, Math.floor((12 + flat.str * (1 + percent.str / 100) * 0.5 + flat.agi * (1 + percent.agi / 100) * 0.2 + unit.level * 2 + equipmentAttack + permanentAttack) * tier * (1 + percent.atk / 100)));
   const defense = Math.max(0, Math.floor((8 + flat.vit * (1 + percent.vit / 100) * 0.6 + unit.level * 2 + equipmentDefense) * tier * (1 + percent.def / 100)));
   return spec ? {
-    attack: Math.max(1, Math.floor((spec.ratings[1] * 2 + (unit.level - 1) * 2 + Math.max(0, flat.str * (1 + percent.str / 100) - spec.ratings[1]) * 0.5 + equipmentAttack) * tier * (1 + percent.atk / 100))),
+    attack: Math.max(1, Math.floor((spec.ratings[1] * 2 + (unit.level - 1) * 2 + Math.max(0, flat.str * (1 + percent.str / 100) - spec.ratings[1]) * 0.5 + equipmentAttack + permanentAttack) * tier * (1 + percent.atk / 100))),
     defense: Math.max(0, Math.floor((spec.ratings[2] * 2 + (unit.level - 1) * 2 + Math.max(0, flat.vit * (1 + percent.vit / 100) - spec.ratings[0]) * 0.6 + equipmentDefense) * tier * (1 + percent.def / 100))),
     speed: spec.ratings[3], accuracy: ratingAccuracy(spec.ratings[4]),
   } : { attack, defense, speed: 25, accuracy: 1 };

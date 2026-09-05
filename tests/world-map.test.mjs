@@ -13,9 +13,10 @@ test('gersangWorldMap has four regions, eight cities and twelve playable stages'
   ['漢陽近郊','狸貓',60],['大關嶺','狂牛',160],['漢拏山','黃龍',1200],
   ['大屯山','大眼怪',70],['阿里山','山豬',150],['秦始皇陵(台)','盜墓者',450],
   ['冥界','鬼貓',110],['石見銀山','河童',90],['黑森林','天草時貞',2000],
-  ['南京近郊','毒蛾',65],['萬里長城','匈奴騎兵',350],['黃帝陵','海底王',1500]
+  ['南京近郊','毒蛾',65],['萬里長城','匈奴騎兵',350],['黃帝陵','海底王',1200]
  ]);
  assert.ok(gersangStages.every(stage=>stage.monster.drops.length>0));
+ assert.ok(gersangStages.every(stage=>stage.monster.drops.every(drop=>drop.price>0)));
 });
 test('level AND power boundaries, including both just below threshold',()=>{
  for(const z of WORLD_ZONES){assert.equal(zoneUnlocked(z,z.level,z.power),true);assert.equal(zoneUnlocked(z,z.level-1,99999),false);if(z.power)assert.equal(zoneUnlocked(z,999,z.power-1),false)}
@@ -27,7 +28,7 @@ test('locked, invalid, recovering transfers are identity noops',()=>{
 test('switch cancels previous fight and pending spawn, retains cooldown and pause timestamp',()=>{
  const old={...freshDungeon(),status:'respawning',spawnAt:5000,normalAt:2300,skillAt:4000,pauseAt:1000,serial:2};
  const s=teleportDungeon(old,36,500,2000,'yellow-emperor-mausoleum',0);
- assert.equal(s.zone,'yellow-emperor-mausoleum');assert.equal(s.key,'e_undersea_king');assert.equal(s.enemyHp,1500);assert.equal(s.status,'fighting');assert.equal(s.spawnAt,0);assert.equal(s.skillAt,4000);assert.equal(s.normalAt,2300);assert.equal(s.pauseAt,1000);assert.equal(s.serial,2);assert.equal(s.logs[0],'已傳送至 黃帝陵！');
+ assert.equal(s.zone,'yellow-emperor-mausoleum');assert.equal(s.key,'e_undersea_king');assert.equal(s.enemyHp,1200);assert.equal(s.status,'fighting');assert.equal(s.spawnAt,0);assert.equal(s.skillAt,4000);assert.equal(s.normalAt,2300);assert.equal(s.pauseAt,1000);assert.equal(s.serial,2);assert.equal(s.logs[0],'已傳送至 黃帝陵！');
 });
 test('high-zone defeat returns to hanyang with no reward and blocks re-entry during healing',()=>{
  const h={hp:1,mp:40,maxHp:80,maxMp:40,str:20,dex:1,int:10,attack:0,defense:0,staff:false};

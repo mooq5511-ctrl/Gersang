@@ -15,15 +15,15 @@ export const gersangWorldMap = {
     stages: [
       {
         id: "hanyang-outskirts", name: "漢陽近郊", type: "idle", nearCity: "hanyang", recommendedLevel: 1,
-        monster: { id: "raccoon", name: "狸貓", hp: 60, drops: [{ item: "舊斧頭", rate: 6 }, { item: "肉類", rate: 35 }], source: "使用者提供資料" },
+        monster: { id: "raccoon", name: "狸貓", hp: 60, drops: [{ item: "舊斧頭", rate: 10, price: 150 }, { item: "肉類", rate: 40, price: 20 }], source: "使用者提供資料" },
       },
       {
         id: "daegwallyeong", name: "大關嶺", type: "idle", nearCity: "hanyang", recommendedLevel: 12,
-        monster: { id: "mad-cow", name: "狂牛", hp: 160, drops: [{ item: "老舊的月牙槍", rate: 1.5 }, { item: "藍鐵頭盔", rate: 3 }, { item: "牛肉", rate: 30 }], source: "使用者提供資料" },
+        monster: { id: "mad-cow", name: "狂牛", hp: 160, drops: [{ item: "老舊的月牙槍", rate: 5, price: 1200 }, { item: "藍鐵頭盔", rate: 10, price: 400 }, { item: "牛肉", rate: 30, price: 35 }], source: "使用者提供資料" },
       },
       {
         id: "hallasan", name: "漢拏山", type: "dungeon", nearCity: "pyongyang", recommendedLevel: 32,
-        monster: { id: "yellow-dragon", name: "黃龍", hp: 1200, drops: [{ item: "高級環弓", rate: .5 }, { item: "黃龍鱗", rate: 8 }], source: "使用者提供資料" },
+        monster: { id: "yellow-dragon", name: "黃龍", hp: 1200, drops: [{ item: "高級環弓", rate: .5, price: 2500 }, { item: "黃龍鱗", rate: 8, price: 900 }], source: "使用者提供資料" },
       },
     ],
   },
@@ -37,15 +37,15 @@ export const gersangWorldMap = {
     stages: [
       {
         id: "datun-mountain", name: "大屯山", type: "idle", nearCity: "taipei", recommendedLevel: 8,
-        monster: { id: "big-eye-monster", name: "大眼怪", hp: 70, drops: [{ item: "彩色寶珠", rate: 5 }, { item: "大眼怪的眼球", rate: 25 }], source: "使用者提供資料" },
+        monster: { id: "big-eye-monster", name: "大眼怪", hp: 70, drops: [{ item: "彩色寶珠", rate: 12, price: 800 }, { item: "大眼怪眼球", rate: 35, price: 40 }], source: "使用者提供資料" },
       },
       {
         id: "alishan", name: "阿里山", type: "idle", nearCity: "tainan", recommendedLevel: 15,
-        monster: { id: "boar", name: "山豬", hp: 150, drops: [{ item: "老舊的子母槍", rate: 2.5 }, { item: "山豬牙", rate: 20 }], source: "使用者提供資料" },
+        monster: { id: "boar", name: "山豬", hp: 150, drops: [{ item: "老舊的子母槍", rate: 6, price: 1500 }, { item: "山豬牙", rate: 25, price: 90 }], source: "使用者提供資料" },
       },
       {
         id: "qin-taiwan", name: "秦始皇陵(台)", type: "dungeon", nearCity: "tainan", recommendedLevel: 24,
-        monster: { id: "tomb-raider", name: "盜墓者", hp: 450, drops: [{ item: "老舊的銀火繩槍", rate: 1.2 }, { item: "老舊的狐狸娃娃", rate: 2 }], source: "使用者提供資料" },
+        monster: { id: "tomb-raider", name: "盜墓者", hp: 450, drops: [{ item: "老舊的銀火繩槍", rate: 1.2, price: 2000 }, { item: "老舊的狐狸娃娃", rate: 2, price: 1600 }], source: "使用者提供資料" },
       },
     ],
   },
@@ -59,15 +59,15 @@ export const gersangWorldMap = {
     stages: [
       {
         id: "japan-netherworld", name: "冥界", type: "idle", nearCity: "edo", recommendedLevel: 10,
-        monster: { id: "ghost-cat", name: "鬼貓", hp: 110, drops: [{ item: "老舊的梧葉扇", rate: 4.5 }, { item: "貓眼石", rate: 18 }], source: "使用者提供資料" },
+        monster: { id: "ghost-cat", name: "鬼貓", hp: 110, drops: [{ item: "老舊的梧葉扇", rate: 8, price: 2000 }, { item: "貓眼石", rate: 20, price: 120 }], source: "使用者提供資料" },
       },
       {
         id: "iwami-silver-mine", name: "石見銀山", type: "idle", nearCity: "edo", recommendedLevel: 8,
-        monster: { id: "kappa", name: "河童", hp: 90, drops: [{ item: "老舊的短劍", rate: 5 }, { item: "黃瓜", rate: 40 }], source: "使用者提供資料" },
+        monster: { id: "kappa", name: "河童", hp: 90, drops: [{ item: "老舊的短劍", rate: 5, price: 700 }, { item: "黃瓜", rate: 40, price: 10 }], source: "使用者提供資料" },
       },
       {
         id: "black-forest", name: "黑森林", type: "dungeon", nearCity: "kyoto", recommendedLevel: 40,
-        monster: { id: "amakusa-shiro", name: "天草時貞", hp: 2000, drops: [{ item: "老舊的蛇矛", rate: .8 }, { item: "黃金碎片", rate: 5 }], source: "使用者提供資料" },
+        monster: { id: "amakusa-shiro", name: "天草時貞", hp: 2000, drops: [{ item: "老舊的蛇矛", rate: .8, price: 3000 }, { item: "黃金碎片", rate: 5, price: 500 }], source: "使用者提供資料" },
       },
     ],
   },
@@ -81,15 +81,15 @@ export const gersangWorldMap = {
     stages: [
       {
         id: "nanjing-outskirts", name: "南京近郊", type: "idle", nearCity: "nanjing", recommendedLevel: 5,
-        monster: { id: "poison-moth", name: "毒蛾", hp: 65, drops: [{ item: "老舊的投石索", rate: 5.5 }, { item: "毒液結晶", rate: 22 }], source: "使用者提供資料" },
+        monster: { id: "poison-moth", name: "毒蛾", hp: 65, drops: [{ item: "老舊的投石索", rate: 5.5, price: 600 }, { item: "毒液結晶", rate: 22, price: 100 }], source: "使用者提供資料" },
       },
       {
         id: "great-wall", name: "萬里長城", type: "idle", nearCity: "beijing", recommendedLevel: 22,
-        monster: { id: "xiongnu-cavalry", name: "匈奴騎兵", hp: 350, drops: [{ item: "老舊的双月斧", rate: 1.8 }, { item: "馬肉", rate: 25 }], source: "使用者提供資料" },
+        monster: { id: "xiongnu-cavalry", name: "匈奴騎兵", hp: 350, drops: [{ item: "老舊的双月斧", rate: 5, price: 2500 }, { item: "馬肉", rate: 30, price: 35 }], source: "使用者提供資料" },
       },
       {
         id: "yellow-emperor-mausoleum", name: "黃帝陵", type: "dungeon", nearCity: "beijing", recommendedLevel: 36,
-        monster: { id: "undersea-king", name: "海底王", hp: 1500, drops: [{ item: "高級旗槍", rate: .4 }, { item: "深海珍珠", rate: 4 }], source: "使用者提供資料" },
+        monster: { id: "undersea-king", name: "海底王", hp: 1200, drops: [{ item: "高級旗槍", rate: 1, price: 8000 }, { item: "深海珍珠", rate: 8, price: 600 }], source: "使用者提供資料" },
       },
     ],
   },

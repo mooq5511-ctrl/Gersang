@@ -1,0 +1,53 @@
+import { gersangStages } from './gersang-world-map.ts';
+
+/** 地圖掉落物的村莊收購價，直接由同一份地圖資料推導，避免戰利品與商店價格脫節。 */
+export const MATERIAL_PRICES: Record<string, number> = Object.fromEntries(
+  gersangStages.flatMap(stage => stage.monster.drops.map(drop => [drop.item, drop.price])),
+);
+
+export const VILLAGE_WEAPONS = [
+  { id: 'refined-steel-sword', name: '精製鋼劍', baseCost: 500, atkBonus: 8 },
+  { id: 'advanced-ring-bow', name: '高級環弓', baseCost: 2500, atkBonus: 25 },
+  { id: 'general-square-blade', name: '大將軍四角刀', baseCost: 12000, atkBonus: 80 },
+  { id: 'immortal-great-blade', name: '神仙大刀（神兵）', baseCost: 50000, atkBonus: 300 },
+] as const;
+
+export type VillageWeaponId = (typeof VILLAGE_WEAPONS)[number]['id'];
+export type ExchangePurchases = Partial<Record<VillageWeaponId, number>>;
+
+export function weaponCost(id: VillageWeaponId, purchases: ExchangePurchases) {
+  const good = VILLAGE_WEAPONS.find(item => item.id === id)!;
+  return Math.floor(good.baseCost * 1.3 ** Math.max(0, purchases[id] || 0));
+}
+
+/** 村莊武器屬於永久鍛造加成，不占裝備欄，可與穿戴裝備同時生效。 */
+export function exchangeAttackBonus(purchases: ExchangePurchases) {
+  return VILLAGE_WEAPONS.reduce((sum, good) => sum + Math.max(0, purchases[good.id] || 0) * good.atkBonus, 0);
+}
+
+export function sellMaterial(materials: Record<string, number>, gold: number, itemName: string, amount = 1) {
+  const owned = Math.max(0, Math.floor(materials[itemName] || 0));
+  const price = MATERIAL_PRICES[itemName];
+  const quantity = Math.min(owned, Math.max(1, Math.floor(amount)));
+  if (!price || quantity <= 0) return { materials, gold, earned: 0, error: '沒有可出售的「' + itemName + '」。' };
+  const next = { ...materials };
+  const remains = owned - quantity;
+  if (remains > 0) next[itemName] = remains;
+  else delete next[itemName];
+  const earned = price * quantity;
+  return { materials: next, gold: gold + earned, earned, error: null };
+}
+
+export function sellAllMaterials(materials: Record<string, number>, gold: number) {
+  const earned = Object.entries(materials).reduce((sum, [name, count]) => sum + (MATERIAL_PRICES[name] || 0) * Math.max(0, Math.floor(count)), 0);
+  const unsellable = Object.fromEntries(Object.entries(materials).filter(([name]) => !MATERIAL_PRICES[name]));
+  return { materials: unsellable, gold: gold + earned, earned };
+}
+
+export function buyVillageWeapon(gold: number, purchases: ExchangePurchases, id: VillageWeaponId) {
+  const good = VILLAGE_WEAPONS.find(item => item.id === id);
+  if (!good) return { gold, purchases, cost: 0, error: '找不到此村莊武器。' };
+  const cost = weaponCost(id, purchases);
+  if (gold < cost) return { gold, purchases, cost, error: '購買「' + good.name + '」的資金不足。' };
+  return { gold: gold - cost, purchases: { ...purchases, [id]: (purchases[id] || 0) + 1 }, cost, error: null };
+}

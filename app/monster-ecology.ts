@@ -11,7 +11,7 @@ export const ECOLOGY_MONSTERS={
  e_amakusa:{name:'天草時貞',level:40,hp:2000,mp:500,atk:90,dex:45,xp:700,gold:500,drop:.24,loot:['staff','armor']},
  e_poison_moth:{name:'毒蛾',level:5,hp:65,mp:30,atk:10,dex:24,xp:35,gold:28,drop:.14,loot:['boots']},
  e_xiongnu:{name:'匈奴騎兵',level:22,hp:350,mp:40,atk:36,dex:32,xp:180,gold:130,drop:.18,loot:['staff']},
- e_undersea_king:{name:'海底王',level:36,hp:1500,mp:600,atk:75,dex:38,xp:520,gold:380,drop:.2,loot:['staff','armor']},
+ e_undersea_king:{name:'海底王',level:36,hp:1200,mp:600,atk:75,dex:38,xp:520,gold:380,drop:.2,loot:['staff','armor']},
  // 先前版本的關卡怪物 ID 保留，讓既有存檔可載入並自然回到新版地圖。
  e_terracotta:{name:'兵馬俑',level:35,hp:300,mp:80,atk:35,dex:24,xp:300,gold:220,drop:.35,loot:['helmet','armor']},
  e_miko:{name:'幽靈巫女',level:25,hp:250,mp:160,atk:32,dex:30,xp:160,gold:120,drop:.22,loot:['staff','armor']},

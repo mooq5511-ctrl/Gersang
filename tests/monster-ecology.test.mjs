@@ -29,7 +29,7 @@ test('victory waits exactly half a second then rolls a new local monster',()=>{
  const early=dungeonStep(win.state,hero,'tick',1500,undefined,.99,0,.999);
  assert.equal(early.state.status,'respawning');assert.equal(early.state.key,'e_undersea_king');
  const next=dungeonStep(win.state,hero,'tick',1501,undefined,.99,0,.999);
- assert.equal(next.state.status,'fighting');assert.equal(next.state.key,'e_undersea_king');assert.equal(next.state.enemyHp,1500);
+ assert.equal(next.state.status,'fighting');assert.equal(next.state.key,'e_undersea_king');assert.equal(next.state.enemyHp,1200);
 });
 
 test('damage events identify attacker, target, amount and spell styling',()=>{
