@@ -297,7 +297,7 @@ button { font: inherit; }
   width: 100%;
   height: auto !important;
   display: grid !important;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 3px;
   padding: 4px;
   border: 1px solid #ffffff12;
@@ -894,7 +894,7 @@ footer {
   .brand-seal { width: 42px; height: 42px; }
   .resource-strip { display: grid; grid-template-columns: repeat(2, 1fr); width: 100%; }
   .resource-strip > div { min-width: 0; }
-  .nav-list { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .nav-list { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .nav-list button { min-height: 48px; flex-direction: column; gap: 2px; padding-inline: 2px; font-size: 0.68rem; }
   .battle-sky { min-height: 330px; grid-template-columns: 1fr 30px 110px; padding-inline: 2%; }
   .sprite { width: 48px; margin-left: -14px; }

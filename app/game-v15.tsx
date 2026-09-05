@@ -63,6 +63,8 @@ import { advanceTrade, dispatchTrade, freshTrade, MAX_CARGO_LEVEL, restoreTrade,
 import { formationDamageMultiplier, nextBattlePosition, normalizeBattlePosition, type BattlePosition } from './formation-position';
 import { MATERIAL_BUY_PRICES, MATERIAL_PRICES, VILLAGE_WEAPONS, buyMarketMaterial, buyVillageWeapon, exchangeAttackBonus, sellAllMaterials, sellMaterial, weaponCost, type ExchangePurchases, type VillageWeaponId } from './village-exchange';
 import {equipmentSellPrice,sellEquipmentFromInventory} from './equipment-market';
+import { GersangArchive } from './gersang-archive';
+import './gersang-archive.css';
 
 
 type MagicAffix = {
@@ -909,6 +911,21 @@ export default function GameV15() {
     setNotice("");
   }
 
+  function rewardArchiveDiscovery(reward: number, name: string) {
+    setGame(previous => ({ ...previous, gold: previous.gold + reward, logs: addLog(previous.logs, `萬象遠征發現「${name}」，帶回 ${format(reward)} 兩。`) }));
+    setNotice(`萬象遠征發現「${name}」，獎勵已送入目前角色。`);
+  }
+
+  function importLegacyChronicle(payload: Record<string, unknown>) {
+    const legacyGold = Math.max(0, Number(payload.gold) || 0);
+    const legacyStage = Math.max(1, Number(payload.stage) || 1);
+    const legacyWins = Math.max(0, Number(payload.wins) || 0);
+    const legacyLevel = Math.max(1, Number(payload.level) || 1);
+    const legacyJade = Math.max(0, Number(payload.jade) || 0);
+    setGame(previous => ({ ...previous, gold: Math.max(previous.gold, legacyGold), stage: Math.max(previous.stage, legacyStage), kills: Math.max(previous.kills, legacyWins), fusionCores: Math.max(previous.fusionCores, legacyJade), hero: { ...previous.hero, level: Math.max(previous.hero.level, legacyLevel) }, logs: addLog(previous.logs, "《東方商路》舊版資源與進度已合併。") }));
+    setNotice("舊版銀兩、關卡、青玉與角色等級已合併到目前角色。相同存檔重複匯入不會累加。");
+  }
+
   const selected: Unit | Hero =
     selectedUid === "hero"
       ? game.hero
@@ -1335,7 +1352,7 @@ export default function GameV15() {
         <section className="character-select-shell">
           <div className="character-select-heading">
             <div className="brand-seal">商</div>
-            <div><small>商途 × BT52Gersang・融合版 V27</small><h1>從一支商隊，走向四海。</h1><p>四國二十城 × 九人傭兵 × 前中後排戰術。三個角色各自保存進度，共用 30 格裝備倉庫。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
+            <div><small>商途 × BT52Gersang × 東方商路・融合版 V28</small><h1>從一支商隊，走向六萬種可能。</h1><p>四國二十城 × 九人傭兵 × 前中後排戰術 × 60,888 筆 Gersang 素材。三個角色各自保存進度，共用 30 格裝備倉庫。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
           </div>
           {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
           <div className="character-slot-grid">
@@ -1385,7 +1402,7 @@ export default function GameV15() {
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
-          <div><h1>商途・巨商放置錄</h1><p>V27・戰利品背包整合</p></div>
+          <div><h1>商途・巨商放置錄</h1><p>V28・東方萬象融合</p></div>
         </div>
         <div className="resource-strip v15-resources">
           <div><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
@@ -1410,6 +1427,7 @@ export default function GameV15() {
           <TabsTrigger value="squad"><Users />主角與隊伍</TabsTrigger>
           <TabsTrigger value="city"><Castle />四國城市</TabsTrigger>
           <TabsTrigger value="contracts"><BookOpen />冒險委託</TabsTrigger>
+          <TabsTrigger value="archive"><Sparkles />萬象圖鑑</TabsTrigger>
         </TabsList>
 
         <TabsContent value="trade" className="tab-panel">
@@ -1647,9 +1665,13 @@ export default function GameV15() {
             </div>
           </section>
         </TabsContent>
+
+        <TabsContent value="archive" className="tab-panel">
+          <GersangArchive slot={activeSlot} onReward={rewardArchiveDiscovery} onLegacyImport={importLegacyChronicle} />
+        </TabsContent>
       </Tabs>
 
-      <footer><span>融合版 V27・商途 × BT52Gersang</span><span>材料背包・裝備回收・永久武器鍛造・3 排戰術・9 人傭兵隊伍</span></footer>
+      <footer><span>融合版 V28・商途 × BT52Gersang × 東方商路</span><span>四國二十城・萬象遠征・60,888 素材圖鑑・共用倉庫・3 排戰術・9 人傭兵隊伍</span></footer>
     </main>
   );
 }
