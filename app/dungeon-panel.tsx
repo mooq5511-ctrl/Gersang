@@ -16,12 +16,12 @@ export function WorldMapNavigation({state,level,power,travel}:{state:DungeonStat
  })}</div><p>{state.status==='recovering'?'漢陽客棧療傷中，HP 回滿後可再次傳送。':'點選已解鎖地域立即傳送並開戰；原戰鬥中止，HP / MP 與技能冷卻保留。'}</p>
  </nav>;
 }
-export function DungeonPanel({state,mp,hero,act}:{state:DungeonState;mp:number;hero:CaravanMember;act:(action:'start'|'normal'|'skill'|'retreat',key?:DungeonKey)=>void}){
+export function DungeonPanel({state,mp,hero,dps=0,act}:{state:DungeonState;mp:number;hero:CaravanMember;dps?:number;act:(action:'start'|'normal'|'skill'|'retreat',key?:DungeonKey)=>void}){
  const monster=DUNGEONS[state.key],zone=zoneFor(state.zone),active=state.status==='fighting'&&state.phase==='交戰',cooldown=Math.max(0,Math.ceil((state.skillAt-state.stamp)/1000));
  const ecology=ECOLOGY_POOLS[zone.id].map(key=>DUNGEONS[key].name+' Lv.'+DUNGEONS[key].level).join(' ／ ');
  return <section className="dungeon-panel" aria-label="動態戰鬥">
  <header><small>{zone.mood}</small><h2>{zone.name}</h2><span>{{idle:'整裝待發',fighting:'交鋒中',respawning:'等待下一隻',recovering:'漢陽療傷中'}[state.status]}</span></header>
- <p className="dungeon-help">地域掉寶 {monster.drop*100}% · {zone.loot}</p>
+ <p className="dungeon-help">地域掉寶 {monster.drop*100}% · {zone.loot} · 商隊自動 DPS {dps}</p>
  <p className="impact-ecology">本地怪物：{ecology}</p>
  <div className="battle-phase" aria-live="polite"><span>戰鬥階段：<strong>{state.status==='fighting'?(state.phase||'接敵'):state.status==='respawning'?'整隊':'待命'}</strong></span><span>敵我距離 {state.distance??100} / 100</span><div><i style={{width:(100-(state.distance??100))+'%'}}/></div></div>
  <BattleArena state={state} hero={hero}/>

@@ -40,7 +40,7 @@ export function teleportDungeon(old:DungeonState,level:number,power:number,now:n
   pauseAt:dungeonBusy(old)?old.pauseAt:now,spawnAt:0,normalAt:Math.max(now,old.normalAt),
   logs:['已傳送至 '+zone.name+'！',...old.logs].slice(0,40)};
 }
-export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key:DungeonKey=old.key,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0,party:DungeonPartyMember[]=[]):{state:DungeonState;hp:number;mp:number;party:DungeonPartyMember[];reward:null|{xp:number;gold:number;loot:string|null}}{
+export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key:DungeonKey=old.key,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0,party:DungeonPartyMember[]=[],passiveDamage=0):{state:DungeonState;hp:number;mp:number;party:DungeonPartyMember[];reward:null|{xp:number;gold:number;loot:string|null}}{
  const state={...old,logs:[...old.logs]};let hp=hero.hp,mp=hero.mp;
  const members=(party.length?party:[{uid:'hero',name:'主角',hp,maxHp:hero.maxHp,position:'前排' as const}]).map(member=>({...member}));
  const heroMember=()=>members.find(member=>member.uid==='hero');
@@ -80,7 +80,7 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
    state.key=pickZoneMonster(state.zone,spawnRoll);state.events=[];state.spawnSerial=(state.spawnSerial||0)+1;state.enemyHp=enemy().hp;state.status='fighting';state.phase='接敵';state.distance=100;state.normalAt=Math.max(now,state.normalAt);log('下一支部隊出現，商隊開始推進。');
   }else if(state.status==='fighting'){
    if(allDown())recover();
-   else {if(state.phase!=='交戰'){state.phase='交戰';state.distance=0;log('部隊向前推進，遭遇敵方【'+enemy().name+'大軍】！')}if(hero.dex>=enemy().dex){hit();counter()}else{counter();hit()}}
+   else {if(state.phase!=='交戰'){state.phase='交戰';state.distance=0;log('部隊向前推進，遭遇敵方【'+enemy().name+'大軍】！')}if(passiveDamage>0&&state.enemyHp>0){const d=Math.max(1,Math.floor(passiveDamage));state.enemyHp=Math.max(0,state.enemyHp-d);event('hero',d);log('🏹 商隊被動火力造成 '+d+' 點傷害（每秒 DPS）。');if(!state.enemyHp)victory()}if(state.status==='fighting'&&state.enemyHp>0){if(hero.dex>=enemy().dex){hit();counter()}else{counter();hit()}}}
   }
  }
  syncHero();return {state,hp,mp,party:members,reward};
