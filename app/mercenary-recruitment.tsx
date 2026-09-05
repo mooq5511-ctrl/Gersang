@@ -1,8 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { merchantMercenaries, ratingAccuracy, type MercenarySpec } from './mercenary-roster';
-import { baseMercenaries } from './v15-data';
-const portraitIndices = [3,1,4,2,17,18,20,16,10,11,1,14,0,12,27,13];
-export const mercenaryPortrait = (index: number) => baseMercenaries[portraitIndices[index] ?? 0].image;
+import { gersangMercenaryArt } from './gersang-visuals';
+export const mercenaryPortrait = (index: number) => gersangMercenaryArt(index);
 export function MercenaryRecruitment({ gold, cost, recruit }: { gold: number; cost: number; recruit: (spec: MercenarySpec, index: number) => void }) {
   return <section className="merchant-recruits" aria-labelledby="merchant-recruits-title">
     <h2 id="merchant-recruits-title">中央傭兵公會・16 種傭兵</h2>

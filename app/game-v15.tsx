@@ -17,6 +17,7 @@ import { backupBeforeGuildMigration, retainGuildRoster } from './guild-migration
 import { EQUIPMENT_SLOTS, EQUIPMENT_LABELS, emptyEquipmentSlots, itemKind, compatibleSlots, normalizeStoredItem, equipFromInventory, unequipToInventory, migrateSevenSlotSave, backupBeforeEquipmentMigration, type EquipmentSlot, type EquipmentKind } from './equipment-slots';
 import { wearableCatalog, type WearableBase } from './wearable-catalog';
 import { MercenaryRecruitment, mercenaryPortrait } from './mercenary-recruitment';
+import { gersangBuildingArt, gersangHeroArt, gersangItemArt, gersangUnitArt } from './gersang-visuals';
 import { resolveMercenaryBattle, type TacticalEnemy } from './mercenary-battle';
 import {
   BedDouble,
@@ -149,7 +150,7 @@ type CityService = "mercenary" | "weapon" | "armor" | "warehouse" | "inn" | "pha
 
 type GameState = {
   dungeon?: DungeonState;
-  version: 27;
+  version: 29;
   trade: TradeState;
   credit: number;
   idleStamp: number;
@@ -189,11 +190,10 @@ const slots = EQUIPMENT_SLOTS;
 const slotLabels = EQUIPMENT_LABELS;
 
 const heroNationProfiles: Record<NationId, { title: string; skill: string; image: string; stats: [number, number, number, number] }> = {
-  // 使用遊戲內既有的巨商國籍角色素材；第 8 格對應各國挑夫／商隊角色，最符合主角商人的身份。
-  taiwan: { title: "南海商主", skill: "山海號令", image: "/assets/nations/taiwan_8.webp", stats: [68, 74, 72, 66] },
-  china: { title: "絲路巨商", skill: "乾坤商陣", image: "/assets/nations/china_8.webp", stats: [72, 64, 78, 68] },
-  korea: { title: "朝鮮大商", skill: "商團號令", image: "/assets/nations/korea_8.webp", stats: [70, 66, 68, 76] },
-  japan: { title: "御用商人", skill: "疾風號令", image: "/assets/nations/japan_8.webp", stats: [68, 80, 64, 68] },
+  taiwan: { title: "南海商主", skill: "山海號令", image: gersangHeroArt.taiwan, stats: [68, 74, 72, 66] },
+  china: { title: "絲路巨商", skill: "乾坤商陣", image: gersangHeroArt.china, stats: [72, 64, 78, 68] },
+  korea: { title: "朝鮮大商", skill: "商團號令", image: gersangHeroArt.korea, stats: [70, 66, 68, 76] },
+  japan: { title: "御用商人", skill: "疾風號令", image: gersangHeroArt.japan, stats: [68, 80, 64, 68] },
 };
 
 const medicineCatalog = [
@@ -301,7 +301,7 @@ function starterEquipment(): Equipment[] {
 function freshGame(nation: NationId = "korea", heroName = "王天下"): GameState {
   const starters: Unit[] = [];
   return {
-    version: 27,
+    version: 29,
     trade: freshTrade(),
     credit: 0,
     idleStamp: Date.now(),
@@ -324,7 +324,7 @@ function freshGame(nation: NationId = "korea", heroName = "王天下"): GameStat
     lastEncounter: "尚未遭遇敵人。商隊出航後才可能觸發戰鬥。",
     enemyHp: enemyMax(1, battleMaps[0].hpMultiplier),
     formation: "goose",
-    logs: ["V27・戰利品材料已收入無上限商隊背包，可直接逐件或全部出售。"],
+    logs: ["V29・人物、傭兵、物品與城市建築已統一為 Gersang 原始轉碼素材。"],
     lastSeen: Date.now(),
   };
 }
@@ -343,7 +343,7 @@ function sanitizeEquip(value: unknown): EquipmentSet {
         atk: Number(item.atk) || 0,
         def: Number(item.def) || 0,
         hp: Number(item.hp) || 0,
-        image: typeof item.image === "string" ? item.image : (candidate as { asset?: string }).asset || equipmentBases[0].image,
+        image: gersangItemArt(itemKind(item.slot || slot)),
         enhance: Number(item.enhance) || 0,
         rarity: item.rarity || "普通",
         magic: Array.isArray(item.magic) ? item.magic as MagicAffix[] : [],
@@ -356,6 +356,25 @@ function sanitizeEquip(value: unknown): EquipmentSet {
     }
   }
   return equip;
+}
+
+function applyGersangVisuals(state: GameState): GameState {
+  const mapEquipment = (item: Equipment): Equipment => ({ ...item, image: gersangItemArt(itemKind(item.slot)) });
+  const mapEquipmentSet = (equip: EquipmentSet): EquipmentSet => {
+    const mapped = emptyEquipment();
+    for (const slot of slots) mapped[slot] = equip[slot] ? mapEquipment(equip[slot]!) : null;
+    return mapped;
+  };
+  return {
+    ...state,
+    hero: { ...state.hero, image: heroNationProfiles[state.hero.nation].image, equip: mapEquipmentSet(state.hero.equip) },
+    mercs: state.mercs.map((unit, index) => ({
+      ...unit,
+      image: gersangUnitArt(unit.templateId, unit.name, index),
+      equip: mapEquipmentSet(unit.equip),
+    })),
+    inventory: state.inventory.map(mapEquipment),
+  };
 }
 
 function migrateV14(raw: unknown): GameState {
@@ -395,7 +414,7 @@ function migrateV14(raw: unknown): GameState {
         atk: Number(item.atk) || 0,
         def: Number(item.def) || 0,
         hp: Number(item.hp) || 0,
-        image: String(item.image || item.asset || equipmentBases[0].image),
+        image: gersangItemArt(itemKind(item.slot)),
         enhance: Number(item.enhance) || 0,
         rarity: "稀有" as const,
         magic: [magicAffixes[indexHash(String(item.name || "")) % magicAffixes.length] as MagicAffix],
@@ -446,7 +465,7 @@ function migrateV14(raw: unknown): GameState {
 
 function restoreGame(raw: unknown): GameState {
   raw = migrateSevenSlotSave(raw);
-  const next = migrateV14(raw);
+  let next = migrateV14(raw);
   if (!raw || typeof raw !== "object") return next;
   const parsed = raw as Partial<GameState> & { version?: number; hero?: Partial<Hero> };
   const heroNation = isNationId(parsed.hero?.nation) ? parsed.hero.nation : next.hero.nation;
@@ -455,7 +474,7 @@ function restoreGame(raw: unknown): GameState {
     ? parsed.city
     : isNationId(parsed.city) ? worldCities.find((city) => city.nation === parsed.city)?.id || next.city : next.city;
   Object.assign(next, parsed, {
-    version: 27,
+    version: 29,
     trade: restoreTrade(parsed.trade),
     credit: Number.isFinite(parsed.credit) ? Math.max(0, Math.floor(parsed.credit!)) : 0,
     idleStamp: Number.isFinite(parsed.idleStamp) && parsed.idleStamp! > 0 ? parsed.idleStamp : Date.now(),
@@ -474,7 +493,7 @@ function restoreGame(raw: unknown): GameState {
       equip: sanitizeEquip(parsed.hero?.equip),
     },
     mercs: Array.isArray(parsed.mercs)
-      ? parsed.mercs.map((unit) => ({ ...unit, position:normalizeBattlePosition(unit.position,unit.name,unit.role), equip: sanitizeEquip(unit.equip) } as Unit))
+      ? parsed.mercs.map((unit, index) => ({ ...unit, image:gersangUnitArt(unit.templateId,unit.name,index), position:normalizeBattlePosition(unit.position,unit.name,unit.role), equip: sanitizeEquip(unit.equip) } as Unit))
       : next.mercs,
     inventory: Array.isArray(parsed.inventory)
       ? parsed.inventory.map((item) => ({ ...normalizeStoredItem(item), bonus: item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }, resist: item.resist || { physical: 0, magic: 0 } }))
@@ -499,6 +518,7 @@ function restoreGame(raw: unknown): GameState {
   next.hero = { ...next.hero, flatAttackBonus: exchangeAttackBonus(next.exchangePurchases) };
   next.hero = normalizeVitals(next.hero);
   next.mercs = next.mercs.map(normalizeVitals);
+  next = applyGersangVisuals(next);
   return retainGuildRoster<Equipment, Unit, GameState>(next);
 }
 
@@ -783,7 +803,7 @@ export default function GameV15() {
   // 所有存檔與取得路徑共用格位整理：保留已有位置與超額舊物，不截斷陣列。
   const setGame=useCallback((action:GameState|((previous:GameState)=>GameState))=>rawSetGame(previous=>{
     const next=typeof action==='function'?action(previous):action;
-    return next===previous?previous:{...next,inventory:positionInventory(next.inventory)};
+    return next===previous?previous:applyGersangVisuals({...next,inventory:positionInventory(next.inventory)});
   }),[]);
   const [ready, setReady] = useState(false);
   const [profiles, setProfiles] = useState<Array<CharacterProfile | null>>([null, null, null]);
@@ -830,7 +850,7 @@ export default function GameV15() {
       }
       queueMicrotask(() => {
         setProfiles(nextProfiles);
-        setSharedWarehouse(savedWarehouse ? JSON.parse(savedWarehouse).map(normalizeStoredItem) : []);
+        setSharedWarehouse(savedWarehouse ? JSON.parse(savedWarehouse).map(normalizeStoredItem).map((item: Equipment) => ({...item,image:gersangItemArt(itemKind(item.slot))})) : []);
         setReady(true);
       });
     } catch {
@@ -1352,7 +1372,7 @@ export default function GameV15() {
         <section className="character-select-shell">
           <div className="character-select-heading">
             <div className="brand-seal">商</div>
-            <div><small>商途 × BT52Gersang × 東方商路・融合版 V28</small><h1>從一支商隊，走向六萬種可能。</h1><p>四國二十城 × 九人傭兵 × 前中後排戰術 × 60,888 筆 Gersang 素材。三個角色各自保存進度，共用 30 格裝備倉庫。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
+            <div><small>商途 × BT52Gersang × 東方商路・融合版 V29</small><h1>從一支商隊，走向六萬種可能。</h1><p>四國二十城 × 九人傭兵 × 前中後排戰術 × 60,888 筆 Gersang 素材。人物、物品、建築與戰場已套用原始遊戲美術。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
           </div>
           {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
           <div className="character-slot-grid">
@@ -1402,7 +1422,7 @@ export default function GameV15() {
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
-          <div><h1>商途・巨商放置錄</h1><p>V28・東方萬象融合</p></div>
+          <div><h1>商途・巨商放置錄</h1><p>V29・原畫萬象融合</p></div>
         </div>
         <div className="resource-strip v15-resources">
           <div><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
@@ -1599,7 +1619,7 @@ export default function GameV15() {
           </section>
 
           <section className="panel city-hall" style={{ "--nation-color": currentNation.color } as React.CSSProperties}>
-            <div className="city-heading"><div><small>{currentNation.name}・特產 {currentCity.specialty}</small><h2>{currentCity.name}</h2><p>本城設施獨立營業，招募名單、將領與裝備庫存皆依城市不同。</p></div><Castle /></div>
+            <div className="city-heading"><div><small>{currentNation.name}・特產 {currentCity.specialty}</small><h2>{currentCity.name}</h2><p>本城設施獨立營業，招募名單、將領與裝備庫存皆依城市不同。</p></div><img className="city-building-art" src={gersangBuildingArt(currentNation.id, cityService)} alt={`${currentCity.name}${cityService}`} /></div>
             <div className="city-service-tabs">
               <button className={cityService === "mercenary" ? "active" : ""} onClick={() => setCityService("mercenary")}><Users />中央傭兵公會</button>
               <button className={cityService === "weapon" ? "active" : ""} onClick={() => setCityService("weapon")}><Swords />武器商店</button>
@@ -1615,9 +1635,9 @@ export default function GameV15() {
             {(cityService === "weapon" || cityService === "armor") && <div className="city-service-body"><div className="panel-title">{cityService === "weapon" ? <Swords /> : <Shield />}<h2>{currentCity.name}{cityService === "weapon" ? "武器商店" : "防具商店"}</h2><span>本城獨立庫存</span></div>
               <div className="official-item-grid">{(cityService === "weapon" ? cityWeapons : cityArmors).map((record) => {
                 const price = Math.floor(record.price * currentCity.priceFactor);
-                return <article key={record.id}><small>Lv.{record.level}・{record.kind === "weapon" ? "武器" : "防具"}</small><strong>{record.name}</strong><span>{record.atk ? "攻 " + record.atk : "防 " + record.def}{record.skill ? "・" + record.skill : ""}</span><em>{[record.str ? "力+" + record.str : "", record.agi ? "敏+" + record.agi : "", record.intel ? "智+" + record.intel : "", record.vit ? "體+" + record.vit : ""].filter(Boolean).join("・") || "基礎裝備"}</em><Button size="sm" onClick={() => buyOfficialItem(record, price)}>{format(price)} 兩</Button></article>;
+                return <article key={record.id}><img src={gersangItemArt(record.kind === "weapon" ? "weapon" : "armor")} alt="" /><small>Lv.{record.level}・{record.kind === "weapon" ? "武器" : "防具"}</small><strong>{record.name}</strong><span>{record.atk ? "攻 " + record.atk : "防 " + record.def}{record.skill ? "・" + record.skill : ""}</span><em>{[record.str ? "力+" + record.str : "", record.agi ? "敏+" + record.agi : "", record.intel ? "智+" + record.intel : "", record.vit ? "體+" + record.vit : ""].filter(Boolean).join("・") || "基礎裝備"}</em><Button size="sm" onClick={() => buyOfficialItem(record, price)}>{format(price)} 兩</Button></article>;
               })}</div>
-              <div className="official-item-grid">{wearableCatalog.filter(item=>cityService==='weapon'?['weapon','ring','amulet'].includes(item.slot):!['weapon','ring','amulet'].includes(item.slot)).map(item=><article key={item.id}><small>{slotLabels[item.slot]}</small><strong>{item.name}</strong><span>攻 {item.atk} · 防 {item.def} · HP {item.hp}</span><Button onClick={()=>buyWearable(item)}>{format(Math.floor(item.price*currentCity.priceFactor))} 兩</Button></article>)}</div>
+              <div className="official-item-grid">{wearableCatalog.filter(item=>cityService==='weapon'?['weapon','ring','amulet'].includes(item.slot):!['weapon','ring','amulet'].includes(item.slot)).map(item=><article key={item.id}><img src={gersangItemArt(item.slot)} alt="" /><small>{slotLabels[item.slot]}</small><strong>{item.name}</strong><span>攻 {item.atk} · 防 {item.def} · HP {item.hp}</span><Button onClick={()=>buyWearable(item)}>{format(Math.floor(item.price*currentCity.priceFactor))} 兩</Button></article>)}</div>
               {cityService === "weapon" && <div className="enchant-counter"><div><strong>附魔裝備櫃</strong><p>購入與目前關卡相符、附帶 1～3 條魔法屬性的隨機裝備。</p></div><Button onClick={buyMagicEquipment}><ShoppingBag />12,000 兩</Button></div>}
             </div>}
 
@@ -1671,7 +1691,7 @@ export default function GameV15() {
         </TabsContent>
       </Tabs>
 
-      <footer><span>融合版 V28・商途 × BT52Gersang × 東方商路</span><span>四國二十城・萬象遠征・60,888 素材圖鑑・共用倉庫・3 排戰術・9 人傭兵隊伍</span></footer>
+      <footer><span>融合版 V29・商途 × BT52Gersang × 東方商路</span><span>原畫人物・原始物品・四國建築・萬象遠征・60,888 素材圖鑑</span></footer>
     </main>
   );
 }
