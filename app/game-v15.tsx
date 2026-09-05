@@ -147,7 +147,7 @@ type CityService = "mercenary" | "weapon" | "armor" | "warehouse" | "inn" | "pha
 
 type GameState = {
   dungeon?: DungeonState;
-  version: 26;
+  version: 27;
   trade: TradeState;
   credit: number;
   idleStamp: number;
@@ -299,7 +299,7 @@ function starterEquipment(): Equipment[] {
 function freshGame(nation: NationId = "korea", heroName = "王天下"): GameState {
   const starters: Unit[] = [];
   return {
-    version: 26,
+    version: 27,
     trade: freshTrade(),
     credit: 0,
     idleStamp: Date.now(),
@@ -322,7 +322,7 @@ function freshGame(nation: NationId = "korea", heroName = "王天下"): GameStat
     lastEncounter: "尚未遭遇敵人。商隊出航後才可能觸發戰鬥。",
     enemyHp: enemyMax(1, battleMaps[0].hpMultiplier),
     formation: "goose",
-    logs: ["V26・全東亞材料交易所已啟用。可出售戰利品，也能按地區買回材料。"],
+    logs: ["V27・戰利品材料已收入無上限商隊背包，可直接逐件或全部出售。"],
     lastSeen: Date.now(),
   };
 }
@@ -453,7 +453,7 @@ function restoreGame(raw: unknown): GameState {
     ? parsed.city
     : isNationId(parsed.city) ? worldCities.find((city) => city.nation === parsed.city)?.id || next.city : next.city;
   Object.assign(next, parsed, {
-    version: 26,
+    version: 27,
     trade: restoreTrade(parsed.trade),
     credit: Number.isFinite(parsed.credit) ? Math.max(0, Math.floor(parsed.credit!)) : 0,
     idleStamp: Number.isFinite(parsed.idleStamp) && parsed.idleStamp! > 0 ? parsed.idleStamp : Date.now(),
@@ -1335,7 +1335,7 @@ export default function GameV15() {
         <section className="character-select-shell">
           <div className="character-select-heading">
             <div className="brand-seal">商</div>
-            <div><small>商途 × BT52Gersang・融合版 V26</small><h1>從一支商隊，走向四海。</h1><p>四國二十城 × 九人傭兵 × 前中後排戰術。三個角色各自保存進度，共用 30 格裝備倉庫。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
+            <div><small>商途 × BT52Gersang・融合版 V27</small><h1>從一支商隊，走向四海。</h1><p>四國二十城 × 九人傭兵 × 前中後排戰術。三個角色各自保存進度，共用 30 格裝備倉庫。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
           </div>
           {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
           <div className="character-slot-grid">
@@ -1385,7 +1385,7 @@ export default function GameV15() {
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
-          <div><h1>商途・巨商放置錄</h1><p>V26・材料雙向交易</p></div>
+          <div><h1>商途・巨商放置錄</h1><p>V27・戰利品背包整合</p></div>
         </div>
         <div className="resource-strip v15-resources">
           <div><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
@@ -1476,15 +1476,8 @@ export default function GameV15() {
               <div className="log-list">{game.logs.map((log, index) => <p key={index}>{log}</p>)}</div>
             </section>
             <section className="panel loot-panel village-exchange">
-              <div className="panel-title"><PackageOpen /><h2>村莊交易所・戰利品變賣</h2><span>{Object.values(game.materials).reduce((sum, value) => sum + value, 0)} 件｜永久攻擊 +{exchangeAttackBonus(game.exchangePurchases)}</span></div>
+              <div className="panel-title"><PackageOpen /><h2>村莊交易所</h2><span>材料請至商隊背包出售｜永久攻擊 +{exchangeAttackBonus(game.exchangePurchases)}</span></div>
               <div className="exchange-layout">
-                <div className="exchange-materials">
-                  <div className="exchange-subtitle"><strong>怪物素材清單</strong><button onClick={sellEveryLoot} disabled={!Object.values(game.materials).some(Boolean)}>全部售出</button></div>
-                  <div className="exchange-scroll">{Object.entries(game.materials).length ? Object.entries(game.materials).map(([name, count]) => <article key={name}>
-                    <div><strong>{name}</strong><small>持有 ×{count}・單價 {format(MATERIAL_PRICES[name]||0)} 兩</small></div>
-                    <button onClick={()=>sellLoot(name)} disabled={count<=0||!MATERIAL_PRICES[name]}>售出 1 件</button>
-                  </article>) : <p className="exchange-empty">在四國掛機地圖擊敗怪物後，戰利品會自動收入這份無上限清單。</p>}</div>
-                </div>
                 <div className="exchange-weapons">
                   <div className="exchange-subtitle"><strong>村莊武器鍛造</strong><small>可重複購買，每次漲價 30%</small></div>
                   <div className="weapon-upgrade-grid">{VILLAGE_WEAPONS.map(good=>{
@@ -1517,7 +1510,8 @@ export default function GameV15() {
               return dungeon===old?previous:{...previous,dungeon,logs:addLog(previous.logs,dungeon.logs[0])};
             });}}/>}
             battle={<DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()];setGame(previous=>applyDungeon(previous,action,now,key,roll,choice,0,retaliationRoll,materialRolls));}}/>}
-            inventory={game.inventory} equipHero={itemUid=>equipItem(itemUid,undefined,'hero')} sellInventory={sellInventoryEquipment} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
+            inventory={game.inventory} materials={game.materials} materialPrices={MATERIAL_PRICES}
+            equipHero={itemUid=>equipItem(itemUid,undefined,'hero')} sellInventory={sellInventoryEquipment} sellMaterial={sellLoot} sellAllMaterials={sellEveryLoot} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
 
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
             maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
@@ -1655,7 +1649,7 @@ export default function GameV15() {
         </TabsContent>
       </Tabs>
 
-      <footer><span>融合版 V26・商途 × BT52Gersang</span><span>材料買賣・裝備回收・永久武器鍛造・3 排戰術・9 人傭兵隊伍</span></footer>
+      <footer><span>融合版 V27・商途 × BT52Gersang</span><span>材料背包・裝備回收・永久武器鍛造・3 排戰術・9 人傭兵隊伍</span></footer>
     </main>
   );
 }

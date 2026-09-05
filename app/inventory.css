@@ -38,6 +38,116 @@
   font-size: 13px;
   color: #baa475;
 }
+.merchant-material-section {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #b8860b66;
+}
+.merchant-bag-subhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.merchant-bag-subhead > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.merchant-bag-subhead strong {
+  color: #f3cf69;
+  font-size: 15px;
+}
+.merchant-bag-subhead small {
+  color: #9f8b66;
+  font-size: 11px;
+}
+.merchant-bag-subhead > button,
+.merchant-material-row > button {
+  border: 1px solid #9b5b35;
+  border-radius: 4px;
+  background: linear-gradient(#5e291d, #30140e);
+  color: #ffd27a;
+  cursor: pointer;
+}
+.merchant-bag-subhead > button {
+  padding: 7px 10px;
+  font-size: 12px;
+}
+.merchant-bag-subhead > button:hover,
+.merchant-material-row > button:hover {
+  border-color: #d89b58;
+  background: #65291d;
+}
+.merchant-bag-subhead > button:disabled,
+.merchant-material-row > button:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+.merchant-material-list {
+  display: flex;
+  max-height: 225px;
+  flex-direction: column;
+  gap: 5px;
+  padding: 4px;
+  overflow: auto;
+  scrollbar-color: #9a742e #120b04;
+}
+.merchant-material-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 76px;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 5px 7px;
+  border: 1px solid #68501f;
+  border-radius: 4px;
+  background: linear-gradient(100deg, #100b05, #25190b);
+}
+.merchant-material-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #88702f;
+  background: #090603;
+  color: #d7b85f;
+  font-weight: 700;
+}
+.merchant-material-row > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.merchant-material-row strong {
+  overflow: hidden;
+  color: #ead7a5;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.merchant-material-row small {
+  color: #a99774;
+  font-size: 11px;
+}
+.merchant-material-row > button {
+  align-self: stretch;
+  padding: 4px;
+  font-size: 11px;
+}
+.merchant-material-empty {
+  margin: 0 !important;
+  padding: 18px 10px !important;
+  border: 1px dashed #68501f;
+  color: #8f7b58 !important;
+  text-align: center;
+}
+.merchant-equipment-subhead {
+  margin: 0 4px 8px;
+}
 .merchant-bag-list {
   display: flex;
   flex-direction: column;
