@@ -1093,20 +1093,20 @@ export default function GameV15() {
   }
 
 
-  function addStat(stat: "str" | "agi" | "intel" | "vit") {
+  function addStat(stat: "str" | "agi" | "intel" | "vit", amount = 1) {
     setGame((previous) => {
       if (selectedUid === "hero") {
-        if (previous.hero.points <= 0) return previous;
+        if (previous.hero.points < amount) return previous;
         return {
           ...previous,
-          hero: { ...previous.hero, [stat]: previous.hero[stat] + 1, points: previous.hero.points - 1 },
+          hero: { ...previous.hero, [stat]: previous.hero[stat] + amount, points: previous.hero.points - amount },
         };
       }
       return {
         ...previous,
         mercs: previous.mercs.map((unit) =>
-          unit.uid === selectedUid && unit.points > 0
-            ? { ...unit, [stat]: unit[stat] + 1, points: unit.points - 1 }
+          unit.uid === selectedUid && unit.points >= amount
+            ? { ...unit, [stat]: unit[stat] + amount, points: unit.points - amount }
             : unit,
         ),
       };
@@ -1449,6 +1449,7 @@ export default function GameV15() {
   return (
     <main className="game-shell v15-shell classic-live-game">
       <div className="classic-live-quicknav" aria-label="快速功能">
+        <button type="button" className="map-selector-button" onClick={() => setActiveTab("battle")} title="選擇戰鬥地圖"><Map /><span>地圖選擇</span></button>
         <button type="button" onClick={() => setActiveTab("squad")} title="背包與隊伍"><PackageOpen /></button>
         <button type="button" onClick={() => setActiveTab("contracts")} title="冒險委託"><BookOpen /></button>
         <button type="button" onClick={() => setActiveTab("map")} title="斜角城鎮"><Map /></button>

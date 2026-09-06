@@ -12,7 +12,7 @@ import {Tooltip,TooltipContent,TooltipProvider,TooltipTrigger} from '@/component
 /** 無獨立計時器或第二份角色資料：所有操作交回遊戲主狀態，再即時重算畫面。 */
 export function HeroStatusPanel({busy=false,compact=false,hero,gold,credit,weight,xpNeed,allocate,trade,train,select,unequip}:{
   busy?:boolean;compact?:boolean;hero:CaravanMember;gold:number;credit:number;weight:number;xpNeed:(level:number)=>number;
-  allocate:(stat:'str'|'agi'|'vit'|'intel')=>void;trade:()=>void;train:()=>void;select:()=>void;
+  allocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void;trade:()=>void;train:()=>void;select:()=>void;
 
   unequip:(slot:EquipmentSlot)=>void;
 }) {
@@ -34,7 +34,7 @@ export function HeroStatusPanel({busy=false,compact=false,hero,gold,credit,weigh
       <p className="hp-weight">負重能力 <span>{weight.toFixed(1)} / {heroWeightLimit(hero)} 斤{weight>heroWeightLimit(hero)?' · 超重':''}</span></p>
     </section>
     {!compact&&<section className="hp-allocation"><p>剩餘屬性點 <strong>{hero.points}</strong></p>
-      {([['str','力量','Str'],['agi','敏捷','Dex'],['vit','體質','Vit'],['intel','智力','Int']] as const).map(([key,name,en])=><div className="hp-stat" key={key}><span>{name} <small>{en}</small></span><small>{hero[key]} ＋ {total[key]-hero[key]}</small><strong>{total[key]}</strong><button aria-label={'增加'+name} disabled={hero.points<=0} onClick={()=>allocate(key)}>＋</button></div>)}
+      {([['str','力量','Str'],['agi','敏捷','Dex'],['vit','體質','Vit'],['intel','智力','Int']] as const).map(([key,name,en])=><div className="hp-stat" key={key}><span>{name} <small>{en}</small></span><small>{hero[key]} ＋ {total[key]-hero[key]}</small><strong>{total[key]}</strong><button aria-label={'增加'+name} disabled={hero.points<=0} onClick={()=>allocate(key)}>＋</button><button aria-label={'增加100點'+name} disabled={hero.points<100} onClick={()=>allocate(key,100)}>＋100</button></div>)}
       <p className="hp-defense">防禦力 <strong>{combatStats(hero).defense}</strong><small>四圍顯示：基礎＋裝備＝總值</small></p>
       <div className="hp-vitals">{(['hp','mp'] as const).map(key=>{const max=key==='hp'?vital.maxHp:vital.maxMp;return <label className="hp-meter" key={key}>{key==='hp'?'生命值 HP':'魔法值 MP'}<span>{vital[key]} / {max}</span><progress className={key} max={max} value={vital[key]}/></label>})}</div>
       <label className="hp-meter hp-exp">EXP<span>{hero.level>=LEVEL_CAP?'已達 Lv.260':`${hero.xp.toLocaleString()} / ${xpNeed(hero.level).toLocaleString()}`}</span>{hero.level<LEVEL_CAP&&<progress max={xpNeed(hero.level)} value={hero.xp}/>}</label>
