@@ -57,6 +57,7 @@ import { gameplayContracts as legacyContracts, officialEquipment, officialGems, 
 const gameplayContracts = legacyContracts.filter(contract => !['tier1','tier2','awakened'].includes(contract.metric));
 import { TradePanel } from "./trade-panel";
 import { VitalBars } from "./vital-bars";
+import { IsometricWorldMap } from "./isometric-world-map";
 import { combatStats, enemyCombatStats, normalizeVitals, recoverVitals, resolveVitalBattle, spellCost, vitalStats } from "./vitals-engine";
 import { advanceTrade, dispatchTrade, freshTrade, MAX_CARGO_LEVEL, restoreTrade, TRADE_ROUTES, upgradeCost, type TradeState } from "./trade-engine";
 import { formationDamageMultiplier, nextBattlePosition, normalizeBattlePosition, type BattlePosition } from './formation-position';
@@ -805,7 +806,7 @@ function resolveRoadEncounter(previous: GameState): GameState {
 
 export default function GameV15() {
   const [game, rawSetGame] = useState<GameState>(freshGame);
-  const [activeTab, setActiveTab] = useState("battle");
+  const [activeTab, setActiveTab] = useState("map");
   // 所有存檔與取得路徑共用格位整理：保留已有位置與超額舊物，不截斷陣列。
   const setGame=useCallback((action:GameState|((previous:GameState)=>GameState))=>rawSetGame(previous=>{
     const next=typeof action==='function'?action(previous):action;
@@ -907,6 +908,7 @@ export default function GameV15() {
       setGame(next);
       setSelectedUid("hero");
       setCityService("mercenary");
+      setActiveTab("map");
       setActiveSlot(slot);
     } catch {
       setNotice("此角色存檔讀取失敗。");
@@ -929,6 +931,7 @@ export default function GameV15() {
     setGame(next);
     setCityService("mercenary");
     setSelectedUid("hero");
+    setActiveTab("map");
     setActiveSlot(creatorSlot);
     setCreatorSlot(null);
     setCharacterName("");
@@ -1450,7 +1453,7 @@ export default function GameV15() {
       <div className="classic-live-quicknav" aria-label="快速功能">
         <button type="button" onClick={() => setActiveTab("squad")} title="背包與隊伍"><PackageOpen /></button>
         <button type="button" onClick={() => setActiveTab("contracts")} title="冒險委託"><BookOpen /></button>
-        <button type="button" onClick={() => setActiveTab("city")} title="四國城市"><Map /></button>
+        <button type="button" onClick={() => setActiveTab("map")} title="斜角城鎮"><Map /></button>
         <button type="button" onClick={() => setActiveTab("archive")} title="萬象圖鑑"><Sparkles /></button>
       </div>
       <header className="topbar">
@@ -1491,6 +1494,7 @@ export default function GameV15() {
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value)} className="game-tabs">
         <TabsList className="nav-list v15-nav">
+          <TabsTrigger value="map"><Map />斜角城鎮</TabsTrigger>
           <TabsTrigger value="trade"><Ship />東海商路</TabsTrigger>
           <TabsTrigger value="battle"><Swords />遭遇戰報</TabsTrigger>
           <TabsTrigger value="squad"><Users />主角與隊伍</TabsTrigger>
@@ -1498,6 +1502,14 @@ export default function GameV15() {
           <TabsTrigger value="contracts"><BookOpen />冒險委託</TabsTrigger>
           <TabsTrigger value="archive"><Sparkles />萬象圖鑑</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="map" className="tab-panel isometric-map-tab">
+          <IsometricWorldMap cityName={currentCity.name} heroImage={game.hero.image} onEnter={(destination) => {
+            if (destination === "city") { setCityService("mercenary"); setActiveTab("city"); }
+            else if (destination === "trade") setActiveTab("trade");
+            else setActiveTab("squad");
+          }} />
+        </TabsContent>
 
         <TabsContent value="trade" className="tab-panel">
           <TradePanel trade={game.trade} gold={game.gold} stage={game.stage} escorts={game.active.length} logs={game.logs} lastEncounter={game.lastEncounter}

@@ -55,12 +55,26 @@
 .classic-live-log p { margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 .classic-live-game .game-tabs { position:static; margin:0; }
-.classic-live-game .nav-list { position:absolute; z-index:42; right:6px; bottom:6px; width:calc(32% - 8px); height:calc(15.5% - 12px)!important; display:grid!important; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(2,1fr); padding:3px; border-color:#6b6048; border-radius:0; background:#11130f!important; }
+.classic-live-game .nav-list { position:absolute; z-index:42; right:6px; bottom:6px; width:calc(32% - 8px); height:calc(15.5% - 12px)!important; display:grid!important; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,1fr); padding:3px; border-color:#6b6048; border-radius:0; background:#11130f!important; }
 .classic-live-game .nav-list button { min-height:0; padding:3px; font-size:9px; }
 .classic-live-game .nav-list button svg { width:14px; }
 .classic-live-game .tab-panel { position:absolute; z-index:10; top:0; right:0; bottom:15.5%; left:8.2%; margin:0; padding:12px 58px 18px 14px; overflow:auto; scrollbar-color:#887345 #11150f; background:linear-gradient(90deg,rgba(5,9,5,.34),rgba(5,8,5,.08) 45%,rgba(5,8,5,.26)); }
 .classic-live-game .tab-panel > .panel,.classic-live-game .tab-panel > .battlefield,.classic-live-game .tab-panel > section { backdrop-filter:blur(3px); }
 .classic-live-game .battle-sky { min-height:330px; }
+
+.classic-live-game .isometric-map-tab { padding:0; overflow:hidden; background:#315f63; }
+.isometric-world { position:relative; width:100%; height:100%; min-height:420px; overflow:hidden; background:#315f63; }
+.isometric-world-canvas,.isometric-world-canvas canvas { display:block; width:100%!important; height:100%!important; }
+.isometric-world-heading { position:absolute; top:12px; left:14px; z-index:5; display:grid; grid-template-columns:auto auto; align-items:baseline; gap:0 8px; min-width:150px; padding:8px 11px; border:1px solid #a88d55; background:#0b1715dc; box-shadow:0 4px 14px #0008; pointer-events:none; }
+.isometric-world-heading small { grid-column:1/-1; color:#a99d81; font-size:10px; }
+.isometric-world-heading strong { color:#f0d47d; font-family:serif; font-size:18px; letter-spacing:2px; }
+.isometric-world-heading span { color:#c9c1ab; font-size:10px; }
+.isometric-destinations { position:absolute; z-index:5; top:12px; right:12px; display:flex; gap:5px; }
+.isometric-destinations button { display:grid; min-width:82px; padding:7px 10px; border:1px solid #8c7954; background:linear-gradient(#3a382bdf,#121914ed); color:#e9ddbc; box-shadow:inset 0 0 0 1px #11170f,0 3px 9px #0008; cursor:pointer; }
+.isometric-destinations button:hover,.isometric-destinations button:focus-visible { border-color:#e1bd59; color:#ffdf76; outline:none; }
+.isometric-destinations b { font-size:12px; }
+.isometric-destinations span { color:#aaa18c; font-size:9px; }
+.isometric-status { position:absolute; z-index:5; left:50%; bottom:15px; translate:-50% 0; min-width:110px; padding:6px 12px; border:1px solid #ffffff22; border-radius:999px; background:#0b1b1bd9; color:#f2e5c5; text-align:center; font-size:11px; box-shadow:0 4px 14px #0008; pointer-events:none; }
 
 @media (max-width:780px) {
   .classic-live-game { min-height:540px; }
@@ -71,6 +85,10 @@
   .classic-live-identity img { width:34px; height:34px; }
   .classic-live-resources,.classic-live-log { padding:3px; }
   .classic-live-game .nav-list { right:3px; bottom:3px; width:calc(33% - 5px); height:calc(15.5% - 6px)!important; }
+  .isometric-world-heading { top:7px; left:7px; }
+  .isometric-destinations { top:7px; right:7px; gap:2px; }
+  .isometric-destinations button { min-width:54px; padding:5px; }
+  .isometric-destinations span { display:none; }
 }
 
 .game-frame {
