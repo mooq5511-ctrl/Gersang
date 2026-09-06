@@ -17,8 +17,7 @@ export function AbilityPanel({ hero, allocate }: { hero: CaravanMember; allocate
   const vital = vitalStats(hero);
   const combat = combatStats(hero);
   const rows = [['力量', hero.str], ['敏捷', hero.agi], ['體力', hero.vit], ['智力', hero.intel], ['攻擊力', combat.attack], ['防禦力', combat.defense], ['命中', hero.agi + hero.level], ['迴避', Math.floor(hero.agi * 0.6 + hero.level)], ['生命力', `${vital.hp} / ${vital.maxHp}`], ['魔法力', `${vital.mp} / ${vital.maxMp}`]] as const;
-  return <section className="ability-panel" aria-label="主角屬性面板">
-    <header className="ability-window-title"><span>能力資訊</span><small>主角屬性</small></header>
+  return <section className="ability-panel ability-panel-embedded" aria-label="主角能力值">
     <div className="ability-window-body">
       <section className="ability-character" aria-label="主角與能力槽"><div className="ability-portrait"><img src={hero.image} alt={hero.name}/><span>Lv. {hero.level}</span></div><div className="ability-slots" role="tablist" aria-label="能力節點">{nodes.map((node) => <button type="button" role="tab" aria-selected={selected === node.key} className={selected === node.key ? 'selected' : ''} key={node.key} onClick={() => setSelected(node.key)}><img src={node.asset} alt=""/><span>{node.label}</span></button>)}</div></section>
       <section className="ability-attributes" aria-label="主角數值">{rows.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</section>
