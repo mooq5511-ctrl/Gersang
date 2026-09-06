@@ -12,17 +12,12 @@ const mercenaryIds = [
   "blade", "monk", "healer", "cannon", "escort", "hunter", "elephant", "priest",
 ] as const;
 
-const eliteMercenaryArt: Record<string, string> = {
-  swordmaster: "/assets/mercenary-portraits/japan_7.gif",
-  sanada: "/assets/mercenary-portraits/japan_8.gif",
-};
-
 export const gersangMercenaryArt = (index: number) =>
-  `/game-assets/merc-${mercenaryIds[((index % mercenaryIds.length) + mercenaryIds.length) % mercenaryIds.length]}-0.png`;
+  `/game-assets/cute-merc-${mercenaryIds[((index % mercenaryIds.length) + mercenaryIds.length) % mercenaryIds.length]}-0.png`;
 
 export function gersangUnitArt(templateId: string | undefined, name: string, fallbackIndex = 0) {
   const id = templateId?.replace(/^merchant-/, "");
-  if (id && eliteMercenaryArt[id]) return eliteMercenaryArt[id];
+  if (id === "swordmaster" || id === "sanada") return `/game-assets/cute-merc-${id}-0.png`;
   const exact = mercenaryIds.indexOf(id as (typeof mercenaryIds)[number]);
   if (exact >= 0) return gersangMercenaryArt(exact);
   const hash = Array.from(name).reduce((sum, char) => (sum * 31 + (char.codePointAt(0) || 0)) >>> 0, fallbackIndex);
