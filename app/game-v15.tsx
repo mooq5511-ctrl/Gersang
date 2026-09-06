@@ -1449,7 +1449,6 @@ export default function GameV15() {
   return (
     <main className="game-shell v15-shell classic-live-game">
       <div className="classic-live-quicknav" aria-label="快速功能">
-        <button type="button" className="map-selector-button" onClick={() => setActiveTab("battle")} title="選擇戰鬥地圖"><Map /><span>地圖選擇</span></button>
         <button type="button" onClick={() => setActiveTab("squad")} title="背包與隊伍"><PackageOpen /></button>
         <button type="button" onClick={() => setActiveTab("contracts")} title="冒險委託"><BookOpen /></button>
         <button type="button" onClick={() => setActiveTab("map")} title="斜角城鎮"><Map /></button>
@@ -1495,7 +1494,7 @@ export default function GameV15() {
         <TabsList className="nav-list v15-nav">
           <TabsTrigger value="map"><Map />斜角城鎮</TabsTrigger>
           <TabsTrigger value="trade"><Ship />東海商路</TabsTrigger>
-          <TabsTrigger value="battle"><Swords />遭遇戰報</TabsTrigger>
+          <TabsTrigger value="battle"><Map />地圖選擇</TabsTrigger>
           <TabsTrigger value="raid"><Crown />雷霆祭壇</TabsTrigger>
           <TabsTrigger value="squad"><Users />主角與隊伍</TabsTrigger>
           <TabsTrigger value="city"><Castle />四國城市</TabsTrigger>
