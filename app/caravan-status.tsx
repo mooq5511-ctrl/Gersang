@@ -33,7 +33,7 @@ export function CaravanStatus(p:Props) {
   const total=p.power(p.hero)+p.mercs.reduce((sum,unit)=>sum+p.power(unit),0);
   return <section className="caravan-status" aria-label="主角與商隊狀態">
     {p.navigation}
-    <div className="hero-inventory-layout"><HeroStatusPanel busy={p.busy} hero={p.hero} gold={p.gold} credit={p.credit} weight={p.weight} xpNeed={p.xpNeed} allocate={p.allocate} trade={p.trade} train={p.trainHero} select={()=>p.select(p.hero.uid)} unequip={p.unequipHero}/>{p.battle}<InventoryPanel inventory={p.inventory} materials={p.materials} materialPrices={p.materialPrices} equip={p.equipHero} sell={p.sellInventory} sellMaterial={p.sellMaterial} sellAllMaterials={p.sellAllMaterials} message={p.bagMessage}/></div>
+    <div className="hero-inventory-layout"><HeroStatusPanel busy={p.busy} hero={p.hero} gold={p.gold} credit={p.credit} weight={p.weight} xpNeed={p.xpNeed} allocate={p.allocate} trade={p.trade} train={p.trainHero} select={()=>p.select(p.hero.uid)} unequip={p.unequipHero}/>{p.battle}<InventoryPanel inventory={p.inventory} materials={p.materials} materialPrices={p.materialPrices} equip={p.equipHero} sell={p.sellInventory} sellMaterial={p.sellMaterial} sellAllMaterials={p.sellAllMaterials} message={p.bagMessage} weight={p.weight} maxWeight={p.maxWeight}/></div>
     <AbilityPanel hero={p.hero} allocate={p.allocate}/>
     <section className="caravan-wood caravan-team"><header><small>中央傭兵公會 · 商隊名冊</small><h2>九席護商隊</h2><span>{Math.min(9,p.mercs.length)} / 9 席 · 隨機僱用 {p.cost.toLocaleString()} 兩</span></header>
       <p className="hero-team-total">總商隊戰力 {total.toLocaleString()}</p>
