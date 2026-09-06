@@ -59,6 +59,7 @@ import { TradePanel } from "./trade-panel";
 import { VitalBars } from "./vital-bars";
 import { IsometricWorldMap } from "./isometric-world-map";
 import { ThunderAltarRaid } from "./thunder-altar-raid";
+import { LEVEL_CAP, progressForLevel, xpForNextLevel } from "./level-progression";
 import { combatStats, enemyCombatStats, normalizeVitals, recoverVitals, resolveVitalBattle, spellCost, vitalStats } from "./vitals-engine";
 import { advanceTrade, dispatchTrade, freshTrade, MAX_CARGO_LEVEL, restoreTrade, TRADE_ROUTES, upgradeCost, type TradeState } from "./trade-engine";
 import { formationDamageMultiplier, nextBattlePosition, normalizeBattlePosition, type BattlePosition } from './formation-position';
@@ -151,7 +152,7 @@ type CityService = "mercenary" | "weapon" | "armor" | "warehouse" | "inn" | "pha
 
 type GameState = {
   dungeon?: DungeonState;
-  version: 29;
+  version: 30;
   trade: TradeState;
   credit: number;
   idleStamp: number;
@@ -302,7 +303,7 @@ function starterEquipment(): Equipment[] {
 function freshGame(nation: NationId = "korea", heroName = "王天下"): GameState {
   const starters: Unit[] = [];
   return {
-    version: 29,
+    version: 30,
     trade: freshTrade(),
     credit: 0,
     idleStamp: Date.now(),
@@ -325,7 +326,7 @@ function freshGame(nation: NationId = "korea", heroName = "王天下"): GameStat
     lastEncounter: "尚未遭遇敵人。商隊出航後才可能觸發戰鬥。",
     enemyHp: enemyMax(1, battleMaps[0].hpMultiplier),
     formation: "goose",
-    logs: ["V29・人物、傭兵、物品與城市建築已統一為 Gersang 原始轉碼素材。"],
+    logs: ["V30・主角與傭兵已套用巨商 Lv.1～260 經驗與信用度成長表。"],
     lastSeen: Date.now(),
   };
 }
@@ -479,7 +480,7 @@ function restoreGame(raw: unknown): GameState {
     ? parsed.city
     : isNationId(parsed.city) ? worldCities.find((city) => city.nation === parsed.city)?.id || next.city : next.city;
   Object.assign(next, parsed, {
-    version: 29,
+    version: 30,
     trade: restoreTrade(parsed.trade),
     credit: Number.isFinite(parsed.credit) ? Math.max(0, Math.floor(parsed.credit!)) : 0,
     idleStamp: Number.isFinite(parsed.idleStamp) && parsed.idleStamp! > 0 ? parsed.idleStamp : Date.now(),
@@ -487,6 +488,7 @@ function restoreGame(raw: unknown): GameState {
     hero: {
       ...heroDefaults,
       ...parsed.hero,
+      level: Math.min(LEVEL_CAP, Math.max(1, Number(parsed.hero?.level) || heroDefaults.level)),
       nation: heroNation,
       job: Number(parsed.version) >= 19 && parsed.hero?.job ? parsed.hero.job : heroDefaults.job,
       skill: Number(parsed.version) >= 19 && parsed.hero?.skill ? parsed.hero.skill : heroDefaults.skill,
@@ -498,7 +500,7 @@ function restoreGame(raw: unknown): GameState {
       equip: sanitizeEquip(parsed.hero?.equip),
     },
     mercs: Array.isArray(parsed.mercs)
-      ? parsed.mercs.map((unit, index) => ({ ...unit, image:gersangUnitArt(unit.templateId,unit.name,index), position:normalizeBattlePosition(unit.position,unit.name,unit.role), equip: sanitizeEquip(unit.equip) } as Unit))
+      ? parsed.mercs.map((unit, index) => ({ ...unit, level: Math.min(LEVEL_CAP, Math.max(1, Number(unit.level) || 1)), image:gersangUnitArt(unit.templateId,unit.name,index), position:normalizeBattlePosition(unit.position,unit.name,unit.role), equip: sanitizeEquip(unit.equip) } as Unit))
       : next.mercs,
     inventory: Array.isArray(parsed.inventory)
       ? parsed.inventory.map((item) => ({ ...normalizeStoredItem(item), bonus: item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }, resist: item.resist || { physical: 0, magic: 0 } }))
@@ -620,14 +622,14 @@ function enemyMax(stage: number, mapMultiplier = 1) {
 }
 
 function xpNeed(level: number) {
-  return 80 + level * 22;
+  return xpForNextLevel(level);
 }
 
 function grantXp<T extends Unit | Hero>(unit: T, amount: number): T {
   let xp = unit.xp + amount;
   let level = unit.level;
   let points = unit.points;
-  while (level < 250 && xp >= xpNeed(level)) {
+  while (level < LEVEL_CAP && xp >= xpNeed(level)) {
     xp -= xpNeed(level);
     level += 1;
     points += unit.uid === "hero" ? 5 : 3;
@@ -970,6 +972,8 @@ export default function GameV15() {
     selectedUid === "hero"
       ? game.hero
       : game.mercs.find((unit) => unit.uid === selectedUid) || game.hero;
+  const selectedProgress = progressForLevel(selected.level);
+  const selectedXpNeed = xpNeed(selected.level);
   const activeUnits = game.active
     .map((unitUid) => game.mercs.find((unit) => unit.uid === unitUid))
     .filter(Boolean) as Unit[];
@@ -1388,7 +1392,7 @@ export default function GameV15() {
         <section className="character-select-shell">
           <div className="character-select-heading">
             <div className="brand-seal">商</div>
-            <div><small>商途 × BT52Gersang × 東方商路・融合版 V29</small><h1>從一支商隊，走向六萬種可能。</h1><p>四國二十城 × 五名傭兵上陣 × 前中後排戰術 × 60,888 筆 Gersang 素材。人物、物品、建築與戰場已套用原始遊戲美術。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
+            <div><small>商途 × BT52Gersang × 東方商路・融合版 V30</small><h1>從一支商隊，走向六萬種可能。</h1><p>四國二十城 × 五名傭兵上陣 × 前中後排戰術 × 60,888 筆 Gersang 素材。人物、物品、建築與戰場已套用原始遊戲美術。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
           </div>
           {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
           <div className="character-slot-grid">
@@ -1460,7 +1464,7 @@ export default function GameV15() {
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
-          <div><h1>商途・巨商放置錄</h1><p>V29・原畫萬象融合</p></div>
+          <div><h1>商途・巨商放置錄</h1><p>V30・雷霆祭壇與等級曲線</p></div>
         </div>
         <div className="resource-strip v15-resources">
           <div><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
@@ -1642,7 +1646,8 @@ export default function GameV15() {
                 <div><small>{selectedUid === "hero" ? heroNation.name + "主角" : tierName(selectedUnit)}</small><h2>{selected.name}</h2><p>Lv.{selected.level} {selected.role}｜{selected.skill}｜戰力 {format(unitPower(selected))}</p></div>
                 {selectedUid !== "hero" && <Button variant={game.active.includes(selectedUid) ? "secondary" : "default"} onClick={() => toggleActive(selectedUid)}>{game.active.includes(selectedUid) ? "撤下" : "出戰"}</Button>}
               </div>
-              <div className="xp-line"><span>經驗 {selected.xp} / {xpNeed(selected.level)}</span><Progress value={selected.xp / xpNeed(selected.level) * 100} /></div>
+              <div className="xp-line"><span>{selected.level >= LEVEL_CAP ? "已達等級上限 Lv.260" : `經驗 ${selected.xp.toLocaleString()} / ${selectedXpNeed.toLocaleString()}`}</span>{selected.level < LEVEL_CAP && <Progress value={selected.xp / selectedXpNeed * 100} />}</div>
+              <p className="points">巨商等級資料：累積經驗 <strong>{selectedProgress.totalXp.toLocaleString()}</strong>｜本級信用度 <strong>{selectedProgress.credit}</strong>｜累積信用度 <strong>{selectedProgress.totalCredit.toLocaleString()}</strong></p>
               {selectedUid !== 'hero' && <Button variant="outline" onClick={trainSelected}>集訓 +1,500 經驗・5,000 兩</Button>}
               <VitalBars unit={selected} />
               <p className="points">攻防已包含能力、等級與裝備加成；陣法另影響實戰攻擊。主動技能・{selected.skill}｜每次消耗 <strong>{spellCost(selected)} MP</strong>。公會傭兵依條件與冷卻施放；武技不耗 MP。魔力不足改用普攻，HP 歸零停止參戰。</p>
@@ -1742,7 +1747,7 @@ export default function GameV15() {
         </TabsContent>
       </Tabs>
 
-      <footer><span>融合版 V29・商途 × BT52Gersang × 東方商路</span><span>原畫人物・原始物品・四國建築・萬象遠征・60,888 素材圖鑑</span></footer>
+      <footer><span>融合版 V30・商途 × BT52Gersang × 東方商路</span><span>原畫人物・原始物品・四國建築・萬象遠征・60,888 素材圖鑑</span></footer>
     </main>
   );
 }

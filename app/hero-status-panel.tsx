@@ -6,6 +6,7 @@ import { heroPersonalPower,heroWeightLimit,heroTotalAttributes } from './hero-ru
 import {DIVINE_EQUIPMENT,HERO_DISPLAY_SLOTS,equipmentDescription,equipmentDetailLines,type TooltipGear} from './divine-equipment';
 import {EQUIPMENT_LABELS} from './equipment-slots';
 import type {EquipmentSlot} from './equipment-slots';
+import {LEVEL_CAP,progressForLevel} from './level-progression';
 import {Tooltip,TooltipContent,TooltipProvider,TooltipTrigger} from '@/components/ui/tooltip';
 
 /** 無獨立計時器或第二份角色資料：所有操作交回遊戲主狀態，再即時重算畫面。 */
@@ -17,6 +18,7 @@ export function HeroStatusPanel({busy=false,compact=false,hero,gold,credit,weigh
 }) {
   const vital=vitalStats(hero);
   const total=heroTotalAttributes(hero);
+  const levelData=progressForLevel(hero.level);
   return <aside className={'hero-personal iron-character'+(compact?' compact':'')} aria-label="主角個人面板">
     {!compact&&<header className="hp-title"><span>人物誌</span><strong>角色狀態</strong><span>商</span></header>}
     {!compact&&<button className="hp-identity" onClick={select} title="查看主角八格裝備"><img src={hero.image} alt="主角頭像"/><span><strong>{hero.name}</strong><span>{hero.job||hero.role}</span><small>Lv. {hero.level}</small></span></button>}
@@ -35,7 +37,8 @@ export function HeroStatusPanel({busy=false,compact=false,hero,gold,credit,weigh
       {([['str','力量','Str'],['agi','敏捷','Dex'],['vit','體質','Vit'],['intel','智力','Int']] as const).map(([key,name,en])=><div className="hp-stat" key={key}><span>{name} <small>{en}</small></span><small>{hero[key]} ＋ {total[key]-hero[key]}</small><strong>{total[key]}</strong><button aria-label={'增加'+name} disabled={hero.points<=0} onClick={()=>allocate(key)}>＋</button></div>)}
       <p className="hp-defense">防禦力 <strong>{combatStats(hero).defense}</strong><small>四圍顯示：基礎＋裝備＝總值</small></p>
       <div className="hp-vitals">{(['hp','mp'] as const).map(key=>{const max=key==='hp'?vital.maxHp:vital.maxMp;return <label className="hp-meter" key={key}>{key==='hp'?'生命值 HP':'魔法值 MP'}<span>{vital[key]} / {max}</span><progress className={key} max={max} value={vital[key]}/></label>})}</div>
-      <label className="hp-meter hp-exp">EXP<span>{hero.xp} / {xpNeed(hero.level)}</span><progress max={xpNeed(hero.level)} value={hero.xp}/></label>
+      <label className="hp-meter hp-exp">EXP<span>{hero.level>=LEVEL_CAP?'已達 Lv.260':`${hero.xp.toLocaleString()} / ${xpNeed(hero.level).toLocaleString()}`}</span>{hero.level<LEVEL_CAP&&<progress max={xpNeed(hero.level)} value={hero.xp}/>}</label>
+      <p className="hp-defense">巨商信用度 <strong>{levelData.totalCredit.toLocaleString()}</strong><small>本級 +{levelData.credit}｜累積經驗 {levelData.totalXp.toLocaleString()}</small></p>
     </section>}
     <footer className="hp-actions"><button disabled={busy} onClick={trade} title="獲得 100 兩與 25 信用">模擬經商（賺錢／加信用）</button><button disabled={busy} onClick={train} title="100 經驗與 50% 神裝掉落">模擬打怪（經驗／50% 掉寶）</button><small>掛機每秒 +10 兩 · +5 信用（療傷期間暫停）</small></footer>
   </aside>;
