@@ -37,7 +37,6 @@ export function CaravanStatus(p:Props) {
   const selectedRoster=[p.hero,...p.mercs].find(unit=>unit.uid===selectedRosterUid)||p.hero;
   const chooseRoster=(unit:CaravanMember)=>{setSelectedRosterUid(unit.uid);setActiveWindow(null);p.select(unit.uid);};
   return <section className="caravan-status" aria-label="主角與商隊狀態">
-    {p.navigation}
     <aside className="party-window-roster" aria-label="主角與傭兵"><strong>隊伍</strong>{[p.hero,...p.mercs].slice(0,9).map(unit=><button type="button" className={selectedRoster.uid===unit.uid?'selected':''} key={unit.uid} onClick={()=>chooseRoster(unit)} aria-label={'選擇'+unit.name}><img src={unit.image} alt=""/><span>{unit.uid==='hero'?'主':'傭'}</span></button>)}</aside>
     <nav className="party-context-menu" aria-label="角色功能"><strong>{selectedRoster.name}</strong><button type="button" aria-pressed={activeWindow==='stats'} onClick={()=>setActiveWindow('stats')}>能力值</button><button type="button" aria-pressed={activeWindow==='inventory'} onClick={()=>setActiveWindow('inventory')}>背包</button></nav>
     <div className="hero-inventory-layout battle-only">{p.battle}</div>
