@@ -23,6 +23,6 @@ export function AbilityPanel({ hero, allocate }: { hero: CaravanMember; allocate
       <section className="ability-attributes" aria-label="主角數值">{rows.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</section>
     </div>
     <div className="ability-description"><div className="ability-point-slot"><img src="/game-assets/ability/AbilityPointSlot-0.png" alt=""/><strong>{hero.points}</strong></div><p><strong>{active.subtitle}</strong><span>選擇「{active.label}」後，可投入能力點並立即套用至角色屬性。</span></p></div>
-    <footer className="ability-actions"><small>可用能力點：{hero.points}</small><button type="button" disabled={hero.points <= 0} onClick={() => allocate(active.key)}>投入 1 點</button><button type="button" disabled={hero.points < 100} onClick={() => allocate(active.key,100)}>投入 100 點</button></footer>
+    <footer className="ability-actions"><small>可用能力點：{hero.points}</small><button type="button" disabled={hero.points <= 0} onClick={() => allocate(active.key)}>投入 1 點</button><button type="button" disabled={hero.points <= 0} onClick={() => allocate(active.key,100)}>投入 100 點</button></footer>
   </section>;
 }

@@ -1105,17 +1105,18 @@ export default function GameV15() {
   function addStat(stat: "str" | "agi" | "intel" | "vit", amount = 1) {
     setGame((previous) => {
       if (selectedUid === "hero") {
-        if (previous.hero.points < amount) return previous;
+        if (previous.hero.points <= 0) return previous;
+        const spend = Math.min(previous.hero.points, amount);
         return {
           ...previous,
-          hero: { ...previous.hero, [stat]: previous.hero[stat] + amount, points: previous.hero.points - amount },
+          hero: { ...previous.hero, [stat]: previous.hero[stat] + spend, points: previous.hero.points - spend },
         };
       }
       return {
         ...previous,
         mercs: previous.mercs.map((unit) =>
-          unit.uid === selectedUid && unit.points >= amount
-            ? { ...unit, [stat]: unit[stat] + amount, points: unit.points - amount }
+          unit.uid === selectedUid && unit.points > 0
+            ? { ...unit, [stat]: unit[stat] + Math.min(unit.points, amount), points: Math.max(0, unit.points - amount) }
             : unit,
         ),
       };
