@@ -1562,6 +1562,7 @@ export default function GameV15() {
               })}
             </div>
             {sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・依關卡輪替"}</strong></div><span>點選卡片切換目標</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id && !enemy.boss).map(enemy => <button type="button" key={enemy.name} className={game.selectedMonster === enemy.name ? "active" : ""} onClick={() => setGame(previous => ({ ...previous, selectedMonster: enemy.name, enemyHp: enemy.hp || previous.enemyHp, logs: addLog(previous.logs, `指定遭遇怪物：${enemy.name}。`) }))}><div><strong>{enemy.name}</strong><em>{game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>掉落：{enemy.drops.join("、")}</p></button>)}</div></section>}
+            <DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()];setGame(previous=>applyDungeon(previous,action,now,key,roll,choice,0,retaliationRoll,materialRolls));}}/>
           </section>
           <div className="battle-grid">
             <section className="panel log-panel">
@@ -1595,7 +1596,7 @@ export default function GameV15() {
               const dungeon=teleportDungeon(old,previous.hero.level,heroPersonalPower(previous.hero),now,id,spawnRoll);
               return dungeon===old?previous:{...previous,dungeon,logs:addLog(previous.logs,dungeon.logs[0])};
             });}}/>}
-            battle={<DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()];setGame(previous=>applyDungeon(previous,action,now,key,roll,choice,0,retaliationRoll,materialRolls));}}/>}
+            battle={null}
             inventory={game.inventory} materials={game.materials} materialPrices={MATERIAL_PRICES}
             equipSelected={(itemUid,targetUid)=>equipItem(itemUid,undefined,targetUid)} sellInventory={sellInventoryEquipment} sellMaterial={sellLoot} sellAllMaterials={sellEveryLoot} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
 
