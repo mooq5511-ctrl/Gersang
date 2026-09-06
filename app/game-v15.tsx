@@ -1538,9 +1538,8 @@ export default function GameV15() {
             </div>
           </section>
           <section className="panel party-vitals">
-            <div className="panel-title"><Users /><h2>出戰隊伍狀態</h2><span>HP / MP 跨場保留</span></div>
-            <p>HP 歸零暫停參戰；MP 不足改用普通攻擊。客棧恢復全員，藥店可購買金創藥與回靈散。</p>
-            <div className="party-vitals-grid">{[game.hero, ...activeUnits].map((unit) => <article key={unit.uid}><strong>{unit.name} · Lv.{unit.level}</strong><VitalBars unit={unit} /><small>{unit.skill} · {spellCost(unit)} MP / 次</small></article>)}</div>
+            <div className="panel-title"><Users /><h2>出戰隊伍</h2><span>簡易數值</span></div>
+            <div className="combat-stat-pair"><span>出戰人數 <b>{1 + activeUnits.length}</b></span><span>總戰力 <b>{format(unitPower(game.hero) + activeUnits.reduce((sum, unit) => sum + unitPower(unit), 0))}</b></span><span>總 HP <b>{format([game.hero, ...activeUnits].reduce((sum, unit) => sum + vitalStats(unit).hp, 0))}</b></span><span>總 MP <b>{format([game.hero, ...activeUnits].reduce((sum, unit) => sum + vitalStats(unit).mp, 0))}</b></span><span>主角狀態 <b>{game.hero.status}</b></span></div>
           </section>
           <section className="panel battle-map-panel">
             <div className="panel-title"><Map /><h2>戰鬥地圖</h2><span>8 個區域・關卡解鎖</span></div>
