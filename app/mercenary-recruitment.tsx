@@ -1,3 +1,4 @@
+/* eslint-disable next/no-img-element */
 import { Button } from '@/components/ui/button';
 import { merchantMercenaries, ratingAccuracy, type MercenarySpec } from './mercenary-roster';
 import { gersangMercenaryArt } from './gersang-visuals';

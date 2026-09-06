@@ -77,7 +77,7 @@
 .trade-destination { display: flex; align-items: center; justify-content: space-between; margin: 26px 0 10px; }
 .trade-destination strong { font-size: 23px; letter-spacing: .12em; }
 .trade-destination svg { width: 20px; color: #8a9d94; }
-.trade-dispatch > p { font-size: 11px; color: #98a8a1; margin-bottom: 15px; }
+.trade-dispatch > p,.trade-dispatch > output { display:block; font-size: 11px; color: #98a8a1; margin-bottom: 15px; }
 .trade-dispatch dl { display: grid; gap: 11px; margin: 22px 0; font-size: 11px; }
 .trade-dispatch dl > div { display: flex; justify-content: space-between; gap: 10px; }
 .trade-dispatch dt { color: #9aa9a2; }
@@ -90,6 +90,7 @@
 .trade-upgrade > p span { float: right; padding-top: 12px; font-size: 10px; }
 .trade-upgrade button { width: 100%; }
 .trade-ledger { padding: 24px; }
+.trade-ledger > output { display:block; color:#aab7ad; font-size:14px; line-height:1.8; }
 .trade-ledger ol { list-style: none; padding: 0; margin: 16px 0 0; }
 .trade-ledger li { display: flex; align-items: baseline; gap: 14px; font-size: 11px; line-height: 1.8; color: #aab7ad; padding: 9px 0; border-top: 1px solid #a8b6a514; }
 .trade-ledger li span { color: #697f73; font-variant-numeric: tabular-nums; font-size: 10px; }

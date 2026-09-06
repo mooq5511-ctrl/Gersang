@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, Compass, Database, Download, PackageOpen, Search, Sparkles, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 
 type AssetRow = [path: string, ext: string, category: string, size: number];
 type AssetCatalog = { total: number; categories: Record<string, number>; extensions: Record<string, number>; assets: AssetRow[] };
@@ -88,7 +87,7 @@ export function GersangArchive({ slot, onReward, onLegacyImport }: { slot: numbe
 
     <section className="panel archive-catalog">
       <div className="panel-title"><BookOpen /><h2>Gersang 萬象圖鑑</h2><span>{catalog ? `${format(filtered.length)} / ${format(catalog.total)}` : "讀取中"}</span></div>
-      <div className="archive-toolbar"><label><Search /><Input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="搜尋名稱、路徑或格式" aria-label="搜尋素材" /></label><select value={category} onChange={(event) => { setCategory(event.target.value); setPage(0); }} aria-label="素材分類">{CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></div>
+      <div className="archive-toolbar"><div><Search /><Input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="搜尋名稱、路徑或格式" aria-label="搜尋素材" /></div><select value={category} onChange={(event) => { setCategory(event.target.value); setPage(0); }} aria-label="素材分類">{CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></div>
       {loadError ? <div className="archive-empty">素材索引暫時無法載入。</div> : !catalog ? <div className="archive-empty">正在展開素材卷宗…</div> : <><div className="archive-grid">{visible.map((asset) => <article key={asset[0]}><div><img src={`/game-assets/${PREVIEWS[asset[2]] || "element-0.png"}`} alt="分類代表預覽" /><b>{asset[1]}</b></div><span><small>{asset[2]}・{format(asset[3] / 1024)} KB</small><strong title={asset[0]}>{shortName(asset[0])}</strong><em>{asset[0]}</em></span></article>)}</div>{visible.length === 0 && <div className="archive-empty">找不到符合條件的素材。</div>}<div className="archive-pages"><Button variant="outline" disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>上一頁</Button><span>第 {page + 1} / {pageCount} 頁</span><Button variant="outline" disabled={page >= pageCount - 1} onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))}>下一頁</Button></div></>}
     </section>
   </div>;

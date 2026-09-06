@@ -18,12 +18,12 @@ test('backward clock and invalid old timestamp give no reward',()=>{
 });
 test('eight slots include a weapon and two distinct rings',()=>{
   assert.equal(EQUIPMENT_SLOTS.length,8);
-  let unit={level:1,equip:emptyEquipmentSlots()};
-  let inv=[{uid:'a',slot:'ring'},{uid:'b',slot:'ring'},{uid:'sword',slot:'weapon'}];
-  let a=equipFromInventory(unit,inv,'a','ring1');let b=equipFromInventory(a.unit,a.inventory,'b','ring2');
+  const unit={level:1,equip:emptyEquipmentSlots()};
+  const inv=[{uid:'a',slot:'ring'},{uid:'b',slot:'ring'},{uid:'sword',slot:'weapon'}];
+  const a=equipFromInventory(unit,inv,'a','ring1');const b=equipFromInventory(a.unit,a.inventory,'b','ring2');
   assert.equal(b.unit.equip.ring1.uid,'a');assert.equal(b.unit.equip.ring2.uid,'b');
   assert.ok(equipFromInventory(b.unit,b.inventory,'a','ring2').error);
-  let c=equipFromInventory(b.unit,b.inventory,'sword','weapon');assert.equal(c.unit.equip.weapon.uid,'sword');
+  const c=equipFromInventory(b.unit,b.inventory,'sword','weapon');assert.equal(c.unit.equip.weapon.uid,'sword');
   assert.equal(unequipToInventory(c.unit,c.inventory,'weapon').inventory.length,1);
 });
 test('migration retains weapon, maps accessory and is idempotent',()=>{
@@ -31,7 +31,7 @@ test('migration retains weapon, maps accessory and is idempotent',()=>{
   const next=migrateSevenSlotSave(old);assert.equal(next.hero.equip.weapon.uid,'w');assert.equal(next.hero.equip.amulet.uid,'a');
   assert.deepEqual(migrateSevenSlotSave(next),next);
 });
-test('integration enforces nine, grants five hero points and trains all hired units',()=>{
+test('integration keeps nine roster seats, grants five hero points and trains all hired units',()=>{
   const text=readFileSync(new URL('../app/game-v15.tsx',import.meta.url),'utf8');
   assert.match(text,/previous.mercs.length >= 9/);assert.match(text,/unit.uid === "hero" \? 5 : 3/);
   assert.match(text,/mercs:previous.mercs.map\(unit=>grantXp\(unit,100\)\)/);

@@ -1,3 +1,4 @@
+/* eslint-disable next/no-img-element */
 import { useState } from 'react';
 import type { CaravanMember } from './caravan-status';
 

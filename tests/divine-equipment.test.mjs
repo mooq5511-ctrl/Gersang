@@ -24,7 +24,7 @@ test('staff and armor increase real resources totals weight power and defense',(
 test('repeated toggles never stack bonuses or duplicate inventory',()=>{
   let hero=makeHero(),inventory=[];
   for(let i=0;i<20;i++){
-    let result=toggleDivineEquipment(hero,inventory,gear('staff'));hero=result.unit;inventory=result.inventory;
+    const result=toggleDivineEquipment(hero,inventory,gear('staff'));hero=result.unit;inventory=result.inventory;
     assert.equal(heroPersonalPower(hero),i%2?145:265);
     assert.equal([...inventory,...Object.values(hero.equip).filter(Boolean)].filter(item=>item.uid==='test-staff').length,1);
   }

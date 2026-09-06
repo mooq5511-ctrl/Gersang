@@ -20,7 +20,7 @@ export function BattleArena({state,hero}:{state:DungeonState;hero:CaravanMember 
  return <div className={'impact-stage'+(state.status==='fighting'?' impact-stage-fighting':'')} ref={root} aria-label="主角與怪物交鋒">
  <span className="impact-versus" aria-hidden="true">對決</span>
  <div className="impact-wrap"><div className="impact-card" data-hit="hero"><div data-motion="hero">
-<div className="impact-portrait impact-sprite impact-sprite-hero" data-sprite="hero" data-nation={hero.nation||'korea'} role="img" aria-label={hero.name}><img src={hero.image} alt=""/></div><h3>{hero.name}</h3><p>Lv.{hero.level}</p>
+<div className="impact-portrait impact-sprite impact-sprite-hero" data-sprite="hero" data-nation={hero.nation||'korea'}><img src={hero.image} alt={hero.name}/></div><h3>{hero.name}</h3><p>Lv.{hero.level}</p>
  <label>HP {v.hp} / {v.maxHp}<Progress className="dungeon-hp" value={v.hp/v.maxHp*100} aria-label="主角生命值"/></label>
  <label>MP {v.mp} / {v.maxMp}<Progress className="dungeon-mp" value={v.mp/v.maxMp*100} aria-label="主角魔法值"/></label>
  </div><div className="impact-overlay" data-popup="hero"/></div></div>

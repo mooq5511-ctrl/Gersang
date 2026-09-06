@@ -13,7 +13,7 @@ import { heroPersonalPower, heroWeightLimit, heroTotalAttributes, HERO_INITIAL_A
 import {DIVINE_EQUIPMENT} from './divine-equipment';
 import {positionInventory,addInventoryItem} from './inventory-layout';
 import {rollInventoryLoot} from './inventory-loot';
-import { backupBeforeGuildMigration, retainGuildRoster } from './guild-migration';
+import { ACTIVE_MERCENARY_LIMIT, backupBeforeGuildMigration, retainGuildRoster } from './guild-migration';
 import { EQUIPMENT_SLOTS, EQUIPMENT_LABELS, emptyEquipmentSlots, itemKind, compatibleSlots, normalizeStoredItem, equipFromInventory, unequipToInventory, migrateSevenSlotSave, backupBeforeEquipmentMigration, type EquipmentSlot, type EquipmentKind } from './equipment-slots';
 import { wearableCatalog, type WearableBase } from './wearable-catalog';
 import { MercenaryRecruitment, mercenaryPortrait } from './mercenary-recruitment';
@@ -29,7 +29,6 @@ import {
   HeartPulse,
   Map,
   PackageOpen,
-  Pause,
   Pill,
   Play,
   Shield,
@@ -39,7 +38,6 @@ import {
   Swords,
   Users,
   Warehouse,
-  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -65,6 +63,7 @@ import { formationDamageMultiplier, nextBattlePosition, normalizeBattlePosition,
 import { MATERIAL_BUY_PRICES, MATERIAL_PRICES, VILLAGE_WEAPONS, buyMarketMaterial, buyVillageWeapon, exchangeAttackBonus, sellAllMaterials, sellMaterial, weaponCost, type ExchangePurchases, type VillageWeaponId } from './village-exchange';
 import {equipmentSellPrice,sellEquipmentFromInventory} from './equipment-market';
 import { GersangArchive } from './gersang-archive';
+import { parseStoredArray, preserveCorruptStorage } from './storage-guards';
 import './gersang-archive.css';
 
 
@@ -358,6 +357,10 @@ function sanitizeEquip(value: unknown): EquipmentSet {
   return equip;
 }
 
+function safeLegacyText(value: unknown, fallback: string | number) {
+  return typeof value === "string" || typeof value === "number" ? String(value) : String(fallback);
+}
+
 function applyGersangVisuals(state: GameState): GameState {
   const mapEquipment = (item: Equipment): Equipment => ({ ...item, image: gersangItemArt(itemKind(item.slot)) });
   const mapEquipmentSet = (equip: EquipmentSet): EquipmentSet => {
@@ -387,12 +390,12 @@ function migrateV14(raw: unknown): GameState {
     const legacy = legacyMercenaries.find((entry) => entry.id === item.id) || legacyMercenaries[index % legacyMercenaries.length];
     return {
       uid: uid("legacy"),
-      templateId: "legacy-" + String(item.id || index),
+      templateId: "legacy-" + safeLegacyText(item.id, index),
       nation: "legacy" as const,
       tier: 2 as const,
       special: true,
-      name: "傳承・" + String(item.name || legacy.name),
-      role: String(item.job || legacy.job),
+      name: "傳承・" + safeLegacyText(item.name, legacy.name),
+      role: safeLegacyText(item.job, legacy.job),
       skill: legacy.skill,
       image: legacy.idle,
       level: Number(item.level) || 1,
@@ -402,14 +405,14 @@ function migrateV14(raw: unknown): GameState {
       agi: Number(item.agi) || legacy.agi,
       intel: Number(item.intel) || legacy.intel,
       vit: Number(item.vit) || legacy.vit,
-      position: normalizeBattlePosition(item.position, String(item.name || legacy.name), String(item.job || legacy.job)),
+      position: normalizeBattlePosition(item.position, safeLegacyText(item.name, legacy.name), safeLegacyText(item.job, legacy.job)),
       equip: sanitizeEquip(item.equip),
     };
   });
   const oldInventory = Array.isArray(old.inventory)
     ? (old.inventory as Array<Record<string, unknown>>).map((item) => ({
-        uid: String(item.uid || uid("migrated")),
-        name: String(item.name || "傳承裝備"),
+        uid: safeLegacyText(item.uid, uid("migrated")),
+        name: safeLegacyText(item.name, "傳承裝備"),
         slot: itemKind(item.slot),
         atk: Number(item.atk) || 0,
         def: Number(item.def) || 0,
@@ -417,7 +420,7 @@ function migrateV14(raw: unknown): GameState {
         image: gersangItemArt(itemKind(item.slot)),
         enhance: Number(item.enhance) || 0,
         rarity: "稀有" as const,
-        magic: [magicAffixes[indexHash(String(item.name || "")) % magicAffixes.length] as MagicAffix],
+        magic: [magicAffixes[indexHash(safeLegacyText(item.name, "")) % magicAffixes.length] as MagicAffix],
       }))
     : base.inventory;
   const cityMap: Record<string, string> = {
@@ -431,7 +434,7 @@ function migrateV14(raw: unknown): GameState {
   const migratedCity = cityMap[String(old.city)] || (isNationId(old.city) ? worldCities.find((city) => city.nation === old.city)?.id : null) || worldCities[0].id;
   const migratedCityData = worldCities.find((city) => city.id === migratedCity) || worldCities[0];
   const heroNation = isNationId(oldHero.nation) ? oldHero.nation : migratedCityData.nation;
-  const heroBase = makeHero(heroNation, String(oldHero.name || base.hero.name));
+  const heroBase = makeHero(heroNation, safeLegacyText(oldHero.name, base.hero.name));
   return {
     ...base,
     gold: Number(old.gold) || base.gold,
@@ -440,7 +443,7 @@ function migrateV14(raw: unknown): GameState {
     city: migratedCity,
     hero: {
       ...heroBase,
-      job: String(oldHero.job || oldHero.path || heroBase.job),
+      job: safeLegacyText(oldHero.job ?? oldHero.path, heroBase.job),
       level: Number(oldHero.level) || heroBase.level,
       maxHp:100+(Math.max(1,Number(oldHero.level)||heroBase.level)-1)*20,
       status:'正常',
@@ -454,7 +457,7 @@ function migrateV14(raw: unknown): GameState {
       equip: sanitizeEquip(oldHero.equip),
     },
     mercs,
-    active: mercs.slice(0, 9).map((unit) => unit.uid),
+    active: mercs.slice(0, ACTIVE_MERCENARY_LIMIT).map((unit) => unit.uid),
     inventory: oldInventory,
     formation: typeof old.formation === "string" ? old.formation : base.formation,
     logs: Array.isArray(old.logs) ? (old.logs as string[]).slice(0, 40) : base.logs,
@@ -529,10 +532,12 @@ function profileFromGame(slot: number, game: GameState): CharacterProfile {
 /** 使用真實主角 HP/MP 與現有背包；勝利只發放一次獎勵。 */
 function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key?:DungeonKey,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0,materialRolls:number[]=[1,1,1]):GameState {
   const total=heroTotalAttributes(previous.hero),v=vitalStats(previous.hero);
-  const fighters=[previous.hero,...previous.mercs],living=fighters.filter(unit=>vitalStats(unit).hp>0);
+  const activeIds=new Set(previous.active.slice(0,ACTIVE_MERCENARY_LIMIT));
+  const deployedMercs=previous.mercs.filter(unit=>activeIds.has(unit.uid));
+  const fighters=[previous.hero,...deployedMercs],living=fighters.filter(unit=>vitalStats(unit).hp>0);
   const attack=living.reduce((sum,unit)=>sum+combatStats(unit).attack*(unit.position==='前排'?1.2:1),0);
   const party=fighters.map(unit=>{const stats=vitalStats(unit);return{uid:unit.uid,name:unit.name,hp:stats.hp,maxHp:stats.maxHp,position:unit.position}});
-  const passiveDamage=previous.mercs.reduce((sum,unit)=>sum+(previous.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0);
+  const passiveDamage=deployedMercs.reduce((sum,unit)=>sum+Math.max(0,Math.floor(combatStats(unit).attack*0.18)),0);
   const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,int:total.intel,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice,spawnRoll,retaliationRoll,party,passiveDamage,materialRolls);
   const remaining=new globalThis.Map(result.party.map(unit=>[unit.uid,unit.hp]));
   let next:GameState={...previous,dungeon:result.state,hero:{...previous.hero,hp:remaining.get('hero')??result.hp,mp:result.mp},mercs:previous.mercs.map(unit=>({...unit,hp:remaining.get(unit.uid)??unit.hp}))};
@@ -755,13 +760,13 @@ function resolveRoadEncounter(previous: GameState): GameState {
       const nextStage = previous.stage + 1;
       const nextKills = previous.kills + 1;
       let inventory = previous.inventory;
-      let cores = previous.fusionCores;
+      const cores = previous.fusionCores;
       const sourceDefeated = sourceTarget;
       const defeated = sourceDefeated || enemyForStage(previous.stage, selectedMap.enemyRegion);
       const defeatedRegion = sourceDefeated ? selectedMap.name : (defeated as ReturnType<typeof enemyForStage>).region;
       const materials = { ...previous.materials };
-      let soulStones = previous.soulStones;
-      let awakeningStones = previous.awakeningStones;
+      const soulStones = previous.soulStones;
+      const awakeningStones = previous.awakeningStones;
       let xpReward = isBoss ? 180 : 42;
       const report = "途中遭遇「" + defeatedRegion + "・" + defeated.name + "」，" + rounds + " 回合獲勝，獲得 " + format(reward) + " 兩。" + resourceReport;
       let logs = addLog(previous.logs, report);
@@ -816,6 +821,7 @@ export default function GameV15() {
   const [cityService, setCityService] = useState<CityService>("mercenary");
   const [gemSlot, setGemSlot] = useState<EquipmentSlot>('armor');
   const [sharedWarehouse, setSharedWarehouse] = useState<Equipment[]>([]);
+  const warehouseWritable = useRef(true);
   const loaded = useRef(false);
 
   useEffect(() => {
@@ -824,7 +830,7 @@ export default function GameV15() {
     try {
       const savedProfiles = localStorage.getItem(PROFILE_INDEX);
       const savedWarehouse = localStorage.getItem(SHARED_WAREHOUSE_SAVE);
-      let nextProfiles: Array<CharacterProfile | null> = savedProfiles ? JSON.parse(savedProfiles) : [null, null, null];
+      let nextProfiles: Array<CharacterProfile | null> = parseStoredArray<CharacterProfile | null>(savedProfiles);
       nextProfiles = [0, 1, 2].map((slot) => {
         const profile = nextProfiles[slot];
         return profile && isNationId(profile.nation) ? { ...profile, slot } : null;
@@ -848,9 +854,18 @@ export default function GameV15() {
           }
         }
       }
+      let nextWarehouse: Equipment[] = [];
+      let warehouseError = false;
+      try {
+        nextWarehouse = parseStoredArray<Equipment>(savedWarehouse).map(normalizeStoredItem).map((item) => ({...item,image:gersangItemArt(itemKind(item.slot))}));
+      } catch {
+        warehouseError = true;
+        warehouseWritable.current = preserveCorruptStorage(localStorage, SHARED_WAREHOUSE_SAVE, savedWarehouse);
+      }
       queueMicrotask(() => {
         setProfiles(nextProfiles);
-        setSharedWarehouse(savedWarehouse ? JSON.parse(savedWarehouse).map(normalizeStoredItem).map((item: Equipment) => ({...item,image:gersangItemArt(itemKind(item.slot))})) : []);
+        setSharedWarehouse(nextWarehouse);
+        if (warehouseError) setNotice(warehouseWritable.current ? "共用倉庫資料異常，原始資料已備份並重建空倉庫。" : "共用倉庫資料異常且無法備份，已停止寫入以保護原始資料。");
         setReady(true);
       });
     } catch {
@@ -872,7 +887,7 @@ export default function GameV15() {
 
   useEffect(() => {
     if (!ready) return;
-    localStorage.setItem(SHARED_WAREHOUSE_SAVE, JSON.stringify(sharedWarehouse.slice(0, WAREHOUSE_LIMIT)));
+    if (warehouseWritable.current) localStorage.setItem(SHARED_WAREHOUSE_SAVE, JSON.stringify(sharedWarehouse.slice(0, WAREHOUSE_LIMIT)));
   }, [ready, sharedWarehouse]);
 
   function enterCharacter(slot: number) {
@@ -953,10 +968,6 @@ export default function GameV15() {
   const activeUnits = game.active
     .map((unitUid) => game.mercs.find((unit) => unit.uid === unitUid))
     .filter(Boolean) as Unit[];
-  const formation = formations.find((item) => item.id === game.formation) || formations[0];
-  const teamPower = Math.floor(
-    (unitPower(game.hero) + activeUnits.reduce((sum, unit) => sum + unitPower(unit), 0)) * formation.atk,
-  );
   const currentMap = battleMaps.find((map) => map.id === game.battleMap) || battleMaps[0];
   const currentWorldZone=WORLD_ZONES.find(zone=>zone.id===(game.dungeon?.zone||'hanyang'))||WORLD_ZONES[0];
   const banditEncounter = isBanditEncounter(currentMap.id, game.stage);
@@ -1004,9 +1015,9 @@ export default function GameV15() {
       setGame(previous=>settleMerchantGame(previous,now,roll,choice,spawnRoll,retaliationRoll,materialRolls));
     }, 50);
     return () => window.clearInterval(timer);
-  }, [ready, activeSlot]);
+  }, [ready, activeSlot, setGame]);
 
-  function sendCaravan(routeId: string) {
+  const sendCaravan = useCallback((routeId: string) => {
     const now = Date.now();
     setGame((previous) => {
       if(dungeonBusy(previous.dungeon))return {...previous,logs:addLog(previous.logs,'請先結束副本並完成療傷。')};
@@ -1015,7 +1026,7 @@ export default function GameV15() {
       const route = TRADE_ROUTES.find((item) => item.id === routeId)!;
       return { ...previous, gold: result.gold, trade: result.trade, logs: addLog(previous.logs, route.from + " → " + route.to + "：商隊裝載「" + route.good + "」啟航。") };
     });
-  }
+  }, [setGame]);
 
   function upgradeCaravan() {
     setGame((previous) => {
@@ -1043,7 +1054,7 @@ export default function GameV15() {
       },
     }, { signal: lifecycle.signal })).catch(() => undefined);
     return () => lifecycle.abort();
-  }, [ready, activeSlot]);
+  }, [ready, activeSlot, sendCaravan]);
 
 
   function recruitMerchant(spec: MercenarySpec, index: number) {
@@ -1051,7 +1062,7 @@ export default function GameV15() {
     setGame(previous => {
       if (previous.gold < cost || previous.mercs.length >= 9) return { ...previous, logs: addLog(previous.logs, previous.mercs.length >= 9 ? '商隊已滿九席，無法再僱用。' : '僱用資金不足。') };
       const unit = normalizeVitals<Unit>({ uid: uid('merchant-'+spec.id), templateId: 'merchant-'+spec.id, nation: 'legacy', tier: 0, special: false, name: spec.name, role: spec.role, skill: spec.active, image: mercenaryPortrait(index), level: 1, xp: 0, points: 0, str: spec.ratings[1], agi: spec.ratings[3], vit: spec.ratings[0], intel: spec.mp ? 20 : 10, position:normalizeBattlePosition(undefined,spec.name,spec.role), equip: emptyEquipment() });
-      return { ...previous, gold: previous.gold-cost, mercs: [...previous.mercs,unit], active: [...previous.active, unit.uid].slice(0,9), logs: addLog(previous.logs,'招募 '+spec.name+'，已加入護商隊。') };
+      return { ...previous, gold: previous.gold-cost, mercs: [...previous.mercs,unit], active: [...previous.active, unit.uid].slice(0,ACTIVE_MERCENARY_LIMIT), logs: addLog(previous.logs,'招募 '+spec.name+'，已加入護商隊。') };
     });
   }
 
@@ -1060,8 +1071,8 @@ export default function GameV15() {
       if (previous.active.includes(unitUid)) {
         return { ...previous, active: previous.active.filter((id) => id !== unitUid) };
       }
-      if (previous.active.length >= 9) {
-        setNotice("出戰傭兵最多 9 人，主角不佔欄位。");
+      if (previous.active.length >= ACTIVE_MERCENARY_LIMIT) {
+        setNotice("出戰傭兵最多 5 人，主角不佔欄位。");
         return previous;
       }
       return { ...previous, active: [...previous.active, unitUid] };
@@ -1372,7 +1383,7 @@ export default function GameV15() {
         <section className="character-select-shell">
           <div className="character-select-heading">
             <div className="brand-seal">商</div>
-            <div><small>商途 × BT52Gersang × 東方商路・融合版 V29</small><h1>從一支商隊，走向六萬種可能。</h1><p>四國二十城 × 九人傭兵 × 前中後排戰術 × 60,888 筆 Gersang 素材。人物、物品、建築與戰場已套用原始遊戲美術。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
+            <div><small>商途 × BT52Gersang × 東方商路・融合版 V29</small><h1>從一支商隊，走向六萬種可能。</h1><p>四國二十城 × 五名傭兵上陣 × 前中後排戰術 × 60,888 筆 Gersang 素材。人物、物品、建築與戰場已套用原始遊戲美術。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
           </div>
           {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
           <div className="character-slot-grid">
@@ -1400,11 +1411,11 @@ export default function GameV15() {
           {creatorSlot !== null && (
             <section className="character-creator">
               <div className="panel-title"><Crown /><h2>建立角色・欄位 {creatorSlot + 1}</h2><span>選定後仍可遊歷四國</span></div>
-              <label className="character-name-field"><span>角色名稱</span><input autoFocus maxLength={12} value={characterName} onChange={(event) => setCharacterName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") createCharacter(); }} placeholder="輸入 1～12 個字" /></label>
+              <label className="character-name-field"><span>角色名稱</span><input maxLength={12} value={characterName} onChange={(event) => setCharacterName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") createCharacter(); }} placeholder="輸入 1～12 個字" /></label>
               <div className="creator-nations">
                 {nations.map((nation) => {
                   const profile = heroNationProfiles[nation.id];
-                  return <button type="button" key={nation.id} className={characterNation === nation.id ? "active" : ""} style={{ "--nation-color": nation.color } as React.CSSProperties} onClick={() => setCharacterNation(nation.id)}>
+                  return <button type="button" key={nation.id} aria-label={`選擇${nation.name}角色`} className={characterNation === nation.id ? "active" : ""} style={{ "--nation-color": nation.color } as React.CSSProperties} onClick={() => setCharacterNation(nation.id)}>
                     <img src={profile.image} alt="" /><span><strong>{nation.name}</strong><small>{profile.title}・{nation.capital}</small><em>{profile.skill}</em></span>
                   </button>;
                 })}
@@ -1428,7 +1439,7 @@ export default function GameV15() {
           <div><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
           <div className={game.hero.status==='客棧中'?'hp-status at-inn':'hp-status'}><HeartPulse /><span id="p-hp">{heroVital.hp} / {heroVital.maxHp}</span><small>血量 · {game.hero.status}</small></div>
           <div><Swords /><span>{format(unitPower(game.hero)+game.mercs.reduce((sum,unit)=>sum+unitPower(unit),0))}</span><small>總商隊戰力</small></div>
-          <div><Users /><span>{game.active.length}/9</span><small>出戰傭兵</small></div>
+          <div><Users /><span>{game.active.length}/{ACTIVE_MERCENARY_LIMIT}</span><small>出戰傭兵</small></div>
           <Button className="character-switch" variant="outline" size="sm" onClick={returnToCharacterSelect}><Users />切換角色</Button>
         </div>
       </header>
@@ -1478,7 +1489,7 @@ export default function GameV15() {
               {banditEncounter && <div className="enemy-source-line"><span>低階山賊・朝鮮山道</span><span>相對強度（1–10）：生命 3／攻擊 3／防禦 2／移速 5</span><span>移速 {bandit.speed}・較快者先行動；同速時我方先手</span><span>山寨地利：山道、森林、山寨前 2 回合減傷 15%。</span><span>攔路劈砍：第 2 回合起，冷卻 3 回合；130% 傷害，移速 −1 至下回合結束。</span><span>揚沙偷襲：HP 低於 50% 時優先施放，每戰一次；60% 傷害，目標下次攻擊命中率由 100% 降為 80%。武技不耗 MP。</span></div>}
               <div className="battle-actions">
                 {activeUnits.some(unit => !!mercenarySpec(unit.templateId)) && <p>戰術遭遇：{boss ? '首領 1 名' : '敵軍 3 名（前排 2、後排 1）'}。上方生命為敵軍合計，單名攻擊為 {format(boss ? monsterStats.attack : Math.max(1,Math.floor(monsterStats.attack*0.55)))}。技能會自動選擇目標。</p>}
-                <p role="status">{game.trade.caravan ? "跑商途中機率遭遇，每趟 0～10 場，隊伍自動迎戰。" : "商隊尚未出航，不會發生戰鬥。請至東海商路派遣商隊。"}<br />最近戰報：{game.lastEncounter}</p>
+                <output>{game.trade.caravan ? "跑商途中機率遭遇，每趟 0～10 場，隊伍自動迎戰。" : "商隊尚未出航，不會發生戰鬥。請至東海商路派遣商隊。"}<br />最近戰報：{game.lastEncounter}</output>
               </div>
             </div>
           </section>
@@ -1543,7 +1554,8 @@ export default function GameV15() {
           <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit}
             navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now(),spawnRoll=Math.random();setGame(previous=>{
               const old=previous.dungeon||freshDungeon();
-              if([previous.hero,...previous.mercs].every(unit=>vitalStats(unit).hp<=0))return enterGameInn(previous,now,'商隊全員生命值不足，已自動返回漢陽客棧。',{...freshDungeon(),pauseAt:old.pauseAt||now});
+              const deployed=[previous.hero,...previous.mercs.filter(unit=>previous.active.slice(0,ACTIVE_MERCENARY_LIMIT).includes(unit.uid))];
+              if(deployed.every(unit=>vitalStats(unit).hp<=0))return enterGameInn(previous,now,'出戰隊伍生命值不足，已自動返回漢陽客棧。',{...freshDungeon(),pauseAt:old.pauseAt||now});
               const dungeon=teleportDungeon(old,previous.hero.level,heroPersonalPower(previous.hero),now,id,spawnRoll);
               return dungeon===old?previous:{...previous,dungeon,logs:addLog(previous.logs,dungeon.logs[0])};
             });}}/>}

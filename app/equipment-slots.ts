@@ -47,7 +47,8 @@ export function migrateSevenSlotSave(raw:unknown):unknown {
     const previous=record(unit.equip)?unit.equip:{};
     for(const key of [...EQUIPMENT_SLOTS,...Object.keys(previous).filter(key=>!EQUIPMENT_SLOTS.includes(key as EquipmentSlot))]) {
       const value=previous[key];if(!record(value)) continue;
-      const item={...value,uid:String(value.uid||'migrated-'+owner+'-'+key),slot:itemKind(value.slot??key)};
+      const fallbackUid='migrated-'+owner+'-'+key;
+      const item={...value,uid:typeof value.uid==='string'||typeof value.uid==='number'?String(value.uid):fallbackUid,slot:itemKind(value.slot??key)};
       const allowed=compatibleSlots(item.slot);
       const desired=key==='accessory'?'amulet':key==='ring'?(equip.ring1?'ring2':'ring1'):key;
       if(equipped.has(item.uid)) continue;

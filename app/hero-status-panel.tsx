@@ -1,3 +1,4 @@
+/* eslint-disable next/no-img-element */
 import {rarityPresentation} from './classic-presentation';
 import type { CaravanMember } from './caravan-status';
 import { vitalStats,combatStats } from './vitals-engine';

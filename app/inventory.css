@@ -88,6 +88,8 @@
 }
 .merchant-material-list {
   display: flex;
+  margin: 0;
+  list-style: none;
   max-height: 225px;
   flex-direction: column;
   gap: 5px;
@@ -150,6 +152,8 @@
 }
 .merchant-bag-list {
   display: flex;
+  margin: 0;
+  list-style: none;
   flex-direction: column;
   gap: 7px;
   max-height: 520px;
@@ -261,6 +265,7 @@
   margin: 15px 0;
 }
 .merchant-bag-message {
+  display: block;
   padding: 12px;
   border-left: 3px solid #b8860b;
   background: #08060366;

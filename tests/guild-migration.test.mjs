@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { retainGuildRoster, backupBeforeGuildMigration } from '../app/guild-migration.ts';
+import { ACTIVE_MERCENARY_LIMIT, retainGuildRoster, backupBeforeGuildMigration } from '../app/guild-migration.ts';
 const sword={uid:'sword',atk:30}, helm={uid:'helm',def:20};
 const member=(uid,templateId,equip={})=>({uid,templateId,equip,level:40,hp:123,mp:12,xp:88,points:9});
 const state=()=>({gold:321,stage:12,hero:{uid:'hero',equip:{helm}},mercs:[member('old','korea-1',{weapon:sword}),member('guild','merchant-spear')],active:['old','guild'],inventory:[],logs:[],trade:{totalProfit:999}});
@@ -27,6 +27,14 @@ test('guild stats, gear and deployment choices are preserved',()=>{
   const s=state();s.mercs[1].equip={weapon:helm};s.active=['guild','guild','ghost','old'];
   const next=retainGuildRoster(s);assert.equal(next.mercs[0],s.mercs[1]);assert.deepEqual(next.active,['guild']);
   assert.equal(next.mercs[0].hp,123);assert.equal(next.mercs[0].mp,12);
+});
+test('migration keeps at most five deployed mercenaries',()=>{
+  const s=state();
+  s.mercs=Array.from({length:7},(_,index)=>member('guild-'+index,'merchant-spear'));
+  s.active=s.mercs.map(unit=>unit.uid);
+  const next=retainGuildRoster(s);
+  assert.equal(ACTIVE_MERCENARY_LIMIT,5);
+  assert.deepEqual(next.active,s.active.slice(0,ACTIVE_MERCENARY_LIMIT));
 });
 test('backup captures original slot once and never overwrites it',()=>{
   const data=new Map(),storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v)};
