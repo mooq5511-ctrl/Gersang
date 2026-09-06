@@ -1,5 +1,5 @@
 /* eslint-disable next/no-img-element */
-import { vitalStats, type VitalUnit } from './vitals-engine';
+import { combatStats, vitalStats, type VitalUnit } from './vitals-engine';
 import { HeroStatusPanel } from './hero-status-panel';
 import type {ReactNode} from 'react';
 import {useState} from 'react';
@@ -8,6 +8,7 @@ import {EQUIPMENT_SLOTS,EQUIPMENT_LABELS,type EquipmentSlot} from './equipment-s
 import {InventoryPanel,type BagItem} from './inventory-panel';
 import {type BattlePosition} from './formation-position';
 import { AbilityPanel } from './ability-panel';
+import { LEVEL_CAP, progressForLevel } from './level-progression';
 
 // 此面板只呈現真實遊戲資料；金錢與成長由遊戲唯一計時器結算。
 export type CaravanMember = VitalUnit & { uid:string; name:string; role:string; job?:string; image:string; xp:number; points:number; str:number; agi:number; position:BattlePosition };
@@ -39,7 +40,11 @@ export function CaravanStatus(p:Props) {
 
 function MercenaryStatusWindow({unit,power}:{unit:CaravanMember;power:(unit:CaravanMember)=>number}){
   const vital=vitalStats(unit);
-  return <section className="mercenary-status"><div className="mercenary-status-identity"><img src={unit.image} alt={unit.name}/><span><strong>{unit.name}</strong><small>{unit.role} · Lv. {unit.level}</small></span></div><dl><div><dt>生命力</dt><dd>{vital.hp} / {vital.maxHp}</dd></div><div><dt>魔法力</dt><dd>{vital.mp} / {vital.maxMp}</dd></div><div><dt>力量</dt><dd>{unit.str}</dd></div><div><dt>敏捷</dt><dd>{unit.agi}</dd></div><div><dt>體力</dt><dd>{unit.vit}</dd></div><div><dt>智力</dt><dd>{unit.intel}</dd></div><div><dt>戰鬥力</dt><dd>{power(unit).toLocaleString()}</dd></div></dl><p>傭兵能力值會隨等級、裝備與戰鬥狀態即時更新。</p></section>;
+  const combat=combatStats(unit),levelData=progressForLevel(unit.level);
+  return <section className="hero-personal iron-character compact mercenary-status"><div className="mercenary-status-identity"><img src={unit.image} alt={unit.name}/><span><strong>{unit.name}</strong><small>{unit.role} · Lv. {unit.level}</small></span></div>
+    <section className="hp-indicators"><div className="hp-power"><span>總戰鬥力</span><strong>{power(unit).toLocaleString()}</strong></div><p className="hp-gold">定位：{unit.role}</p></section>
+    <section className="hp-allocation"><div className="hp-stat"><span>力量 <small>Str</small></span><small>基礎能力</small><strong>{unit.str}</strong></div><div className="hp-stat"><span>敏捷 <small>Dex</small></span><small>基礎能力</small><strong>{unit.agi}</strong></div><div className="hp-stat"><span>體質 <small>Vit</small></span><small>基礎能力</small><strong>{unit.vit}</strong></div><div className="hp-stat"><span>智力 <small>Int</small></span><small>基礎能力</small><strong>{unit.intel}</strong></div><p className="hp-defense">防禦力 <strong>{combat.defense}</strong><small>已包含等級與裝備加成</small></p><div className="hp-vitals"><label className="hp-meter">生命值 HP<span>{vital.hp} / {vital.maxHp}</span><progress className="hp" max={vital.maxHp} value={vital.hp}/></label><label className="hp-meter">魔法值 MP<span>{vital.mp} / {vital.maxMp}</span><progress className="mp" max={vital.maxMp} value={vital.mp}/></label></div><label className="hp-meter hp-exp">EXP<span>{unit.level>=LEVEL_CAP?'已達 Lv.260':`${unit.xp.toLocaleString()} / ${levelData.xpToNext.toLocaleString()}`}</span>{unit.level<LEVEL_CAP&&<progress max={levelData.xpToNext} value={unit.xp}/>}</label><p className="hp-defense">巨商信用度 <strong>{levelData.totalCredit.toLocaleString()}</strong><small>本級 +{levelData.credit}｜累積經驗 {levelData.totalXp.toLocaleString()}</small></p></section>
+  </section>;
 }
 
 type WindowEquipment={image?:string;name:string;atk?:number;def?:number;hp?:number;magic?:{id:string;name:string;text:string;color:string}[]};

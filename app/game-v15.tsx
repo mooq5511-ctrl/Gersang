@@ -685,7 +685,7 @@ function unitPower(unit: Unit | Hero) {
 }
 
 function tierName(unit: Unit) {
-  return mercenarySpec(unit.templateId) ? '公會傭兵' : '主角';
+  return mercenarySpec(unit.templateId) ? '傭兵' : '主角';
 }
 
 function addLog(logs: string[], message: string) {
@@ -1670,7 +1670,7 @@ export default function GameV15() {
               <p className="points">巨商等級資料：累積經驗 <strong>{selectedProgress.totalXp.toLocaleString()}</strong>｜本級信用度 <strong>{selectedProgress.credit}</strong>｜累積信用度 <strong>{selectedProgress.totalCredit.toLocaleString()}</strong></p>
               {selectedUid !== 'hero' && <Button variant="outline" onClick={trainSelected}>集訓 +1,500 經驗・5,000 兩</Button>}
               <VitalBars unit={selected} />
-              <p className="points">攻防已包含能力、等級與裝備加成；陣法另影響實戰攻擊。主動技能・{selected.skill}｜每次消耗 <strong>{spellCost(selected)} MP</strong>。公會傭兵依條件與冷卻施放；武技不耗 MP。魔力不足改用普攻，HP 歸零停止參戰。</p>
+              <p className="points">攻防已包含能力、等級與裝備加成；陣法另影響實戰攻擊。主動技能・{selected.skill}｜每次消耗 <strong>{spellCost(selected)} MP</strong>。傭兵依條件與冷卻施放；武技不耗 MP。魔力不足改用普攻，HP 歸零停止參戰。</p>
               <div className="stat-grid">
                 {(["str", "agi", "intel", "vit"] as const).map((stat) => (
                   <div key={stat}><small>{stat === "str" ? "力量" : stat === "agi" ? "敏捷" : stat === "intel" ? "智力" : "體質"}</small><strong>{selected[stat]}</strong><Button size="icon-xs" variant="outline" disabled={selected.points <= 0} onClick={() => addStat(stat)}>＋</Button></div>
