@@ -17,7 +17,7 @@ export function BattleArena({state,hero}:{state:DungeonState;hero:CaravanMember 
   for(const event of state.events||[])if(event.id>seen.current){effects.current?.triggerBattleAnimation({attacker:event.attacker,target:event.target,damage:event.amount,skill:event.skill,critical:event.critical});seen.current=event.id}
  },[state.events,state.spawnSerial]);
  const v=vitalStats(hero),monster=DUNGEONS[state.key];
- const monsterArt:Record<string,string>={狸貓:'/assets/sprites/enemy-idle.png',倭寇:'/assets/characters/char_049_pirate_skeleton_bow_R.png',鐵炮倭寇:'/assets/characters/char_053_pirate_skeleton_cannon_R.png',山賊:'/assets/characters/char_056_pirate_skeleton_captain_N.png',海賊:'/assets/characters/char_057_pirate_skeleton_captain_R.png',鐵鉤海賊:'/assets/characters/char_055_pirate_skeleton_bow_R.png'};
+ const monsterArt:Record<string,string>={狸貓:'/assets/sprites/enemy-idle.png',倭寇:'/assets/characters/char_049_pirate_skeleton_bow_R.png',鐵炮倭寇:'/assets/characters/char_053_pirate_skeleton_cannon_R.png',山賊:'/assets/characters/char_056_pirate_skeleton_captain_N.png',海賊:'/assets/characters/char_057_pirate_skeleton_captain_R.png',鐵鉤海賊:'/assets/characters/char_055_pirate_skeleton_captain_D.png'};
  return <div className={'impact-stage'+(state.status==='fighting'?' impact-stage-fighting':'')} ref={root} aria-label="主角與怪物交鋒">
  <span className="impact-versus" aria-hidden="true">對決</span>
  <div className="impact-wrap"><div className="impact-card" data-hit="hero"><div data-motion="hero">
