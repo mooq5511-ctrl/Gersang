@@ -6,7 +6,8 @@ import importlib.util
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
+# 此專案位於 <遊戲根目錄>/char/east-sea-merchant-idle，因此需回到遊戲根目錄。
+ROOT = Path(__file__).resolve().parents[3]
 OUT = Path(__file__).resolve().parents[1] / "public" / "game-assets"
 DECODER = ROOT / "idle-game" / "scripts" / "extract_agf.py"
 
@@ -61,6 +62,14 @@ BUILDINGS = {
     "armor": "GBarrack",
 }
 
+# 原始客戶端的野外地圖素材。這些會轉成網頁可用的 PNG，原檔不會被修改。
+MAP_ASSETS = {
+    "map-shallow": ("Assets/Textures/Tiles/Legacy/normal/normal_shallow.AGF", [0]),
+    "map-korea-pond": ("Assets/Textures/Objects/korea-pond.AGF", [0]),
+    "map-china-tree": ("Assets/Textures/Objects/chinatree.AGF", [0]),
+    "map-field-portal": ("Assets/Textures/Objects/fieldportal.AGF", [0]),
+}
+
 
 def find_case_insensitive(folder: Path, name: str) -> Path:
     lowered = name.lower()
@@ -84,7 +93,10 @@ def main() -> None:
         for service, suffix in BUILDINGS.items():
             agf.extract(find_case_insensitive(village_dir / nation, nation + suffix + ".AGF"), [0], f"building-{nation.lower()}-{service}")
 
-    print(f"Extracted {len(CHARACTERS)} character, {len(ITEMS)} item, and {len(BUILDINGS) * 4} building images")
+    for stem, (relative, frames) in MAP_ASSETS.items():
+        agf.extract(ROOT / relative, frames, stem)
+
+    print(f"Extracted {len(CHARACTERS)} character, {len(ITEMS)} item, {len(BUILDINGS) * 4} building images, and {len(MAP_ASSETS)} map images")
 
 
 if __name__ == "__main__":

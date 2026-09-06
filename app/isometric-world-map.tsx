@@ -101,6 +101,13 @@ export function IsometricWorldMap({
 
         preload() {
           this.load.image("map-hero", heroImage);
+          this.load.image("map-reference-field", "/game-assets/reference-field.png");
+          this.load.image("map-shallow", "/game-assets/map-shallow-0.png");
+          this.load.image("map-pond", "/game-assets/map-korea-pond-0.png");
+          this.load.image("map-tree", "/game-assets/map-china-tree-0.png");
+          this.load.image("map-portal", "/game-assets/map-field-portal-0.png");
+          this.load.image("map-inn", "/game-assets/building-korea-inn-0.png");
+          this.load.image("map-market", "/game-assets/building-korea-market-0.png");
         }
 
         create() {
@@ -141,12 +148,9 @@ export function IsometricWorldMap({
           this.children.removeAll();
           this.originX = this.scale.width / 2;
           this.originY = Math.max(36, (this.scale.height - ROWS * TILE_H) / 2 - 8);
-          const bg = this.add.graphics().setDepth(-20);
-          bg.fillGradientStyle(0x8eb6ad, 0x8eb6ad, 0x315f63, 0x315f63, 1);
-          bg.fillRect(0, 0, this.scale.width, this.scale.height);
-          for (let y = 10; y < this.scale.height; y += 22) {
-            bg.lineStyle(1, 0xd6ebe2, 0.13); bg.lineBetween(0, y, this.scale.width, y - 26);
-          }
+          this.add.image(this.scale.width / 2, this.scale.height / 2, "map-reference-field")
+            .setDisplaySize(this.scale.width, this.scale.height).setDepth(-20);
+          this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x102b26, 0.2).setDepth(-19);
 
           const roads = new Set<string>();
           for (let i = 0; i < COLS; i++) { roads.add(`${i},4`); roads.add(`${i},10`); }
@@ -154,9 +158,12 @@ export function IsometricWorldMap({
           const ground = this.add.graphics();
           for (let row = 0; row < ROWS; row++) for (let col = 0; col < COLS; col++) {
             const point = this.iso(col, row);
-            const color = roads.has(`${col},${row}`) ? 0xb3a37d : (col + row) % 3 ? 0x678d57 : 0x759a62;
-            this.diamond(ground, point.x, point.y, color);
-            ground.lineStyle(1, 0x3d684b, 0.52);
+            const isRoad = roads.has(`${col},${row}`);
+            if (!isRoad && (col + row) % 2 === 0) {
+              this.add.image(point.x, point.y + TILE_H / 2, "map-shallow").setDisplaySize(TILE_W, TILE_H).setDepth(0);
+            }
+            this.diamond(ground, point.x, point.y, isRoad ? 0x9c8c6e : 0x416b4e, isRoad ? 0.9 : 0.18);
+            ground.lineStyle(1, isRoad ? 0x5c513e : 0x6b9b6a, isRoad ? 0.7 : 0.3);
             ground.strokePoints([
               new Phaser.Geom.Point(point.x, point.y), new Phaser.Geom.Point(point.x + TILE_W / 2, point.y + TILE_H / 2),
               new Phaser.Geom.Point(point.x, point.y + TILE_H), new Phaser.Geom.Point(point.x - TILE_W / 2, point.y + TILE_H / 2),
@@ -175,44 +182,29 @@ export function IsometricWorldMap({
 
         private drawHouse(col: number, row: number, wall: number, roof: number) {
           const point = this.iso(col + 0.5, row + 0.45);
-          const g = this.add.graphics().setDepth(120 + (col + row + 2) * 10);
-          g.fillStyle(wall); g.fillRect(point.x - 38, point.y - 34, 76, 55);
-          g.fillStyle(0x203736); g.fillRect(point.x - 9, point.y - 5, 18, 26);
-          g.fillStyle(0xefd088); g.fillRect(point.x - 30, point.y - 16, 14, 12); g.fillRect(point.x + 16, point.y - 16, 14, 12);
-          g.fillStyle(roof); g.fillPoints([new Phaser.Geom.Point(point.x, point.y - 73), new Phaser.Geom.Point(point.x + 54, point.y - 31), new Phaser.Geom.Point(point.x, point.y - 12), new Phaser.Geom.Point(point.x - 54, point.y - 31)], true);
+          this.add.image(point.x, point.y - 24, "map-inn").setOrigin(0.5, 1).setDisplaySize(108, 94).setDepth(120 + (col + row + 2) * 10);
         }
 
         private drawPond(col: number, row: number) {
-          const g = this.add.graphics().setDepth(30);
-          for (let r = row; r < row + 2; r++) for (let c = col; c < col + 2; c++) {
-            const point = this.iso(c, r); this.diamond(g, point.x, point.y, 0x3e858c);
-            g.lineStyle(2, 0xb0dfd4, 0.4); g.lineBetween(point.x - 17, point.y + 17, point.x + 12, point.y + 17);
-          }
+          const point = this.iso(col + 0.5, row + 0.5);
+          this.add.image(point.x, point.y + 15, "map-pond").setOrigin(0.5, 0.5).setDisplaySize(190, 126).setDepth(30);
         }
 
         private drawMarket(col: number, row: number) {
           const point = this.iso(col + 0.5, row + 0.5);
-          const g = this.add.graphics().setDepth(120 + (col + row + 2) * 10);
-          g.fillStyle(0x65402f); g.fillRect(point.x - 44, point.y - 18, 88, 40);
-          g.fillStyle(0xe0b761); g.fillRect(point.x - 50, point.y - 50, 100, 18);
-          for (let x = -42; x < 48; x += 20) { g.fillStyle(x % 40 ? 0xaa392f : 0xf0cf86); g.fillRect(point.x + x, point.y - 50, 12, 18); }
+          this.add.image(point.x, point.y - 10, "map-market").setOrigin(0.5, 1).setDisplaySize(118, 92).setDepth(120 + (col + row + 2) * 10);
         }
 
         private drawTrees(col: number, row: number) {
           [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([dc, dr]) => {
             const point = this.iso(col + dc, row + dr);
-            const g = this.add.graphics().setDepth(120 + (col + row + dc + dr) * 10);
-            g.fillStyle(0x413128); g.fillRect(point.x - 5, point.y - 27, 10, 44);
-            g.fillStyle(0x315b40); g.fillCircle(point.x, point.y - 37, 23); g.fillCircle(point.x - 12, point.y - 27, 16); g.fillCircle(point.x + 13, point.y - 28, 16);
+            this.add.image(point.x, point.y - 6, "map-tree").setOrigin(0.5, 1).setDisplaySize(74, 76).setDepth(120 + (col + row + dc + dr) * 10);
           });
         }
 
         private drawGate(col: number, row: number) {
           const point = this.iso(col + 1, row);
-          const g = this.add.graphics().setDepth(120 + (col + row + 2) * 10);
-          g.fillStyle(0x6c4c34); g.fillRect(point.x - 53, point.y - 50, 16, 68); g.fillRect(point.x + 37, point.y - 50, 16, 68);
-          g.fillStyle(0x7e2e28); g.fillRect(point.x - 62, point.y - 65, 124, 20);
-          g.fillStyle(0xd1aa54); g.fillRect(point.x - 20, point.y - 61, 40, 12);
+          this.add.image(point.x, point.y - 6, "map-portal").setOrigin(0.5, 1).setDisplaySize(128, 102).setDepth(120 + (col + row + 2) * 10);
         }
 
         private drawDestination(id: Destination, color: number) {
