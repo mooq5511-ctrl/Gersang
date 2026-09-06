@@ -13,7 +13,7 @@ const nodes: { key: StatKey; label: string; subtitle: string }[] = [
 export function AbilityPanel({ hero, allocate }: { hero: CaravanMember; allocate: (stat: StatKey) => void }) {
   const [selected, setSelected] = useState<StatKey>('str');
   const active = nodes.find((node) => node.key === selected) ?? nodes[0];
-  return <section className="ability-panel caravan-wood" aria-label="主角能力樹">
+  return <section className="ability-panel" aria-label="主角能力樹">
     <header className="ability-header"><div><small>Ability Archive · 角色成長</small><h2>主角能力樹</h2><p>把能力點投入節點，立即套用到現有四圍與戰力計算。</p></div><div className="ability-points"><img src="/game-assets/ability/AbilityPointSlot-0.png" alt=""/><strong>{hero.points}</strong><span>可用能力點</span></div></header>
     <div className="ability-body">
       <div className="ability-art"><img src="/game-assets/ability/MainAblityImage_2nd_1-0.png" alt="能力樹背景"/><div className="ability-gauge"><img src="/game-assets/ability/AbilityGauge-0.png" alt=""/><span>{Math.min(100, hero.level * 5)}%</span></div></div>
