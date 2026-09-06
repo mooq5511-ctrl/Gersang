@@ -14,9 +14,9 @@ type InventoryPanelProps={
   sell:(uid:string)=>void;
   sellMaterial:(name:string)=>void;
   sellAllMaterials:()=>void;
-  message:string;weight:number;maxWeight:number;
+  message:string;weight:number;maxWeight:number;targetName:string;
 };
-export function InventoryPanel({inventory,materials,materialPrices,equip,sell,sellMaterial,sellAllMaterials,message,weight,maxWeight}:InventoryPanelProps){
+export function InventoryPanel({inventory,materials,materialPrices,equip,sell,sellMaterial,sellAllMaterials,message,weight,maxWeight,targetName}:InventoryPanelProps){
   const items=positionInventory(inventory);
   const materialEntries=Object.entries(materials).filter(([,count])=>count>0).sort(([a],[b])=>a.localeCompare(b,'zh-Hant'));
   const materialCount=materialEntries.reduce((sum,[,count])=>sum+count,0);
@@ -32,6 +32,7 @@ export function InventoryPanel({inventory,materials,materialPrices,equip,sell,se
     <TooltipProvider><ul className="merchant-bag-list">{items.length?items.map((item,index)=><li className="merchant-bag-entry" key={item.uid}><Tooltip><TooltipTrigger className={'merchant-bag-row '+rarityPresentation(item.rarity).className} onClick={()=>equip(item.uid)} aria-label={'背包第 '+(index+1)+' 件：'+item.name}>
       <span className="merchant-bag-icon">{item.image?<img src={item.image} alt=""/>:<strong>{({weapon:'杖',armor:'甲',helm:'兜',boots:'靴',ring:'戒',amulet:'符',gloves:'套',accessory:'符'} as const)[item.slot]}</strong>}</span><span className="merchant-bag-copy"><strong>{item.name}</strong><small>{rarityPresentation(item.rarity).label}・{EQUIPMENT_LABELS[item.slot]}</small></span><em>點擊穿戴</em>
     </TooltipTrigger><TooltipContent className={"hp-gear-tooltip "+rarityPresentation(item.rarity).className}><strong>{item.name}</strong><span className="rarity-caption">{rarityPresentation(item.rarity).label}</span>{equipmentDetailLines(item).map((line,i)=><span key={i}>{line}</span>)}<em>{equipmentDescription(item)}</em></TooltipContent></Tooltip><button className="merchant-bag-sell" type="button" onClick={()=>sell(item.uid)} aria-label={'出售'+item.name}>出售<strong>{equipmentSellPrice(item).toLocaleString()} 兩</strong></button></li>):<li className="merchant-bag-empty">行囊尚空，出發尋覓神裝。</li>}</ul></TooltipProvider>
+    <section className="merchant-bag-details" aria-label="背包詳細清單"><div className="merchant-bag-subhead"><div><strong>背包詳細清單</strong><small>裝給目前角色・{targetName}</small></div></div>{items.length?<ul>{items.map(item=><li key={item.uid} className={'merchant-detail-entry '+rarityPresentation(item.rarity).className}><span className="merchant-bag-icon">{item.image?<img src={item.image} alt=""/>:<strong>裝</strong>}</span><div><strong>{item.name}</strong><small>{rarityPresentation(item.rarity).label}・{EQUIPMENT_LABELS[item.slot]}</small>{equipmentDetailLines(item).slice(0,2).map(line=><em key={line}>{line}</em>)}</div><button type="button" onClick={()=>equip(item.uid)}>裝給{targetName}</button><button type="button" onClick={()=>sell(item.uid)}>出售</button></li>)}</ul>:<p>尚無可穿戴裝備。</p>}</section>
     <div className="rarity-legend" aria-label="裝備品階">{["普通","稀有","史詩","傳說"].map(rarity=><span key={rarity} className={rarityPresentation(rarity).className}>{rarity}</span>)}</div>
     <p>材料與裝備共用無上限行囊。穿戴中的裝備必須先卸下，因此不會被誤賣。</p>
     <output className="merchant-bag-message">{message||'行囊尚空，出發尋覓戰利品。'}</output><footer className="merchant-bag-bottom"><span>負重</span><strong>{weight.toFixed(1)} / {maxWeight}</strong></footer>

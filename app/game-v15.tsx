@@ -1561,7 +1561,7 @@ export default function GameV15() {
             });}}/>}
             battle={<DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()];setGame(previous=>applyDungeon(previous,action,now,key,roll,choice,0,retaliationRoll,materialRolls));}}/>}
             inventory={game.inventory} materials={game.materials} materialPrices={MATERIAL_PRICES}
-            equipHero={itemUid=>equipItem(itemUid,undefined,'hero')} sellInventory={sellInventoryEquipment} sellMaterial={sellLoot} sellAllMaterials={sellEveryLoot} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
+            equipSelected={(itemUid,targetUid)=>equipItem(itemUid,undefined,targetUid)} sellInventory={sellInventoryEquipment} sellMaterial={sellLoot} sellAllMaterials={sellEveryLoot} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
 
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
             maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
@@ -1588,33 +1588,8 @@ export default function GameV15() {
                 ))}
               </div>
               <p className="points">可分配能力點：<strong>{selected.points}</strong></p>
-              <div className="equipment-title"><Shield /><h3>八格裝備與額外魔法屬性</h3></div>
-              <div className="equipment-grid">
-                {slots.map((slot) => {
-                  const item = selected.equip[slot];
-                  return (
-                    <article className="equipment-slot magic-slot" key={slot}>
-                      {item?.image ? <img src={item.image} alt="" /> : <Shield />}
-                      <div><small>{slotLabels[slot]}</small><strong>{item?.name || "未裝備"}</strong>{item && <><span>攻 {item.atk}・防 {item.def}・生命 {item.hp}{bonusText(item) ? "・" + bonusText(item) : ""}</span>{item.skill && <span>裝備技能・{item.skill}</span>}<div className="affix-inline">{item.magic.map((affix) => <em key={affix.id} style={{ color: affix.color }}>{affix.name}：{affix.text}</em>)}</div></>}</div>
-                      {item && <Button size="sm" variant="outline" onClick={()=>unequipItem(slot)}>卸下</Button>}
-                    </article>
-                  );
-                })}
-              </div>
             </section>
           </div>
-          <section className="panel inventory-panel">
-            <div className="panel-title"><PackageOpen /><h2>背包詳細清單・裝給目前角色</h2><span>{game.inventory.length} 件</span></div>
-            <div className="magic-inventory">
-              {game.inventory.map((item) => (
-                <article className={"magic-item rarity-" + item.rarity} key={item.uid}>
-                  {item.image ? <img src={item.image} alt="" /> : <Shield />}
-                  <div><small>{item.rarity}・{slotLabels[item.slot]}・需求 Lv.{item.requiredLevel || 1}</small><strong>{item.name}</strong><span>攻 {item.atk}　防 {item.def}　生命 {item.hp}{bonusText(item) ? "　" + bonusText(item) : ""}</span>{item.skill && <span>裝備技能・{item.skill}</span>}<div>{item.magic.map((affix) => <em key={affix.id} style={{ color: affix.color }}>{affix.name}｜{affix.text}</em>)}</div></div>
-                  <div className="magic-item-actions">{compatibleSlots(item.slot).map(slot=><Button key={slot} size="sm" onClick={()=>equipItem(item.uid,slot)}>{slotLabels[slot]}・裝給{selected.name}</Button>)}<Button size="sm" variant="outline" className="equipment-sell-button" onClick={()=>sellInventoryEquipment(item.uid)}>出售・{format(equipmentSellPrice(item))} 兩</Button></div>
-                </article>
-              ))}
-            </div>
-          </section>
         </TabsContent>
 
         <TabsContent value="city" className="tab-panel">
