@@ -1448,12 +1448,6 @@ export default function GameV15() {
 
   return (
     <main className="game-shell v15-shell classic-live-game">
-      <div className="classic-live-quicknav" aria-label="快速功能">
-        <button type="button" onClick={() => setActiveTab("squad")} title="背包與隊伍"><PackageOpen /></button>
-        <button type="button" onClick={() => setActiveTab("contracts")} title="冒險委託"><BookOpen /></button>
-        <button type="button" onClick={() => setActiveTab("map")} title="斜角城鎮"><Map /></button>
-        <button type="button" onClick={() => setActiveTab("archive")} title="萬象圖鑑"><Sparkles /></button>
-      </div>
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
