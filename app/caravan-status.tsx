@@ -2,6 +2,7 @@
 import { vitalStats, type VitalUnit } from './vitals-engine';
 import { HeroStatusPanel } from './hero-status-panel';
 import type {ReactNode} from 'react';
+import {useState} from 'react';
 
 import type {EquipmentSlot} from './equipment-slots';
 import {InventoryPanel,type BagItem} from './inventory-panel';
@@ -31,9 +32,14 @@ function Bars({unit}:{unit:CaravanMember}) {
 export function CaravanStatus(p:Props) {
   // 信用等級採每級 100 點；戰力使用既有引擎，包含穿戴裝備。
   const total=p.power(p.hero)+p.mercs.reduce((sum,unit)=>sum+p.power(unit),0);
+  const [characterOpen,setCharacterOpen]=useState(true);
+  const [inventoryOpen,setInventoryOpen]=useState(true);
   return <section className="caravan-status" aria-label="主角與商隊狀態">
     {p.navigation}
-    <div className="hero-inventory-layout"><HeroStatusPanel busy={p.busy} hero={p.hero} gold={p.gold} credit={p.credit} weight={p.weight} xpNeed={p.xpNeed} allocate={p.allocate} trade={p.trade} train={p.trainHero} select={()=>p.select(p.hero.uid)} unequip={p.unequipHero}/>{p.battle}<InventoryPanel inventory={p.inventory} materials={p.materials} materialPrices={p.materialPrices} equip={p.equipHero} sell={p.sellInventory} sellMaterial={p.sellMaterial} sellAllMaterials={p.sellAllMaterials} message={p.bagMessage} weight={p.weight} maxWeight={p.maxWeight}/></div>
+    <div className="caravan-window-controls" aria-label="視窗控制"><button type="button" aria-pressed={characterOpen} onClick={()=>setCharacterOpen(open=>!open)}>人物</button><button type="button" aria-pressed={inventoryOpen} onClick={()=>setInventoryOpen(open=>!open)}>行囊</button></div>
+    <div className="hero-inventory-layout battle-only">{p.battle}</div>
+    {characterOpen&&<section className="floating-game-window floating-character" aria-label="角色資訊窗"><header><strong>角色狀態</strong><button type="button" onClick={()=>setCharacterOpen(false)} aria-label="關閉角色資訊窗">×</button></header><HeroStatusPanel busy={p.busy} hero={p.hero} gold={p.gold} credit={p.credit} weight={p.weight} xpNeed={p.xpNeed} allocate={p.allocate} trade={p.trade} train={p.trainHero} select={()=>p.select(p.hero.uid)} unequip={p.unequipHero}/></section>}
+    {inventoryOpen&&<section className="floating-game-window floating-inventory" aria-label="行囊窗"><header><strong>行囊</strong><button type="button" onClick={()=>setInventoryOpen(false)} aria-label="關閉行囊窗">×</button></header><InventoryPanel inventory={p.inventory} materials={p.materials} materialPrices={p.materialPrices} equip={p.equipHero} sell={p.sellInventory} sellMaterial={p.sellMaterial} sellAllMaterials={p.sellAllMaterials} message={p.bagMessage} weight={p.weight} maxWeight={p.maxWeight}/></section>}
     <AbilityPanel hero={p.hero} allocate={p.allocate}/>
     <section className="caravan-wood caravan-team"><header><small>中央傭兵公會 · 商隊名冊</small><h2>九席護商隊</h2><span>{Math.min(9,p.mercs.length)} / 9 席 · 隨機僱用 {p.cost.toLocaleString()} 兩</span></header>
       <p className="hero-team-total">總商隊戰力 {total.toLocaleString()}</p>
