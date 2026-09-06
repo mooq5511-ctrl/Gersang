@@ -1411,7 +1411,7 @@ export default function GameV15() {
         <section className="character-select-shell">
           <div className="character-select-heading">
             <div className="brand-seal">商</div>
-            <div><small>放置 RPG × 東方商路</small><h1>放置你的巨商魂</h1><p>四國二十城、五名傭兵與前中後排戰術；在商路與雷霆祭壇中持續培養你的隊伍。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
+            <div><small>放置 RPG × 東方商路</small><h1>放置你的巨商魂</h1></div>
           </div>
           {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
           <div className="character-slot-grid">
