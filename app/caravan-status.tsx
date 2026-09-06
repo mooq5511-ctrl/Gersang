@@ -32,14 +32,17 @@ function Bars({unit}:{unit:CaravanMember}) {
 export function CaravanStatus(p:Props) {
   // 信用等級採每級 100 點；戰力使用既有引擎，包含穿戴裝備。
   const total=p.power(p.hero)+p.mercs.reduce((sum,unit)=>sum+p.power(unit),0);
-  const [characterOpen,setCharacterOpen]=useState(true);
-  const [inventoryOpen,setInventoryOpen]=useState(true);
+  const [selectedRosterUid,setSelectedRosterUid]=useState(p.hero.uid);
+  const [activeWindow,setActiveWindow]=useState<'stats'|'inventory'|null>(null);
+  const selectedRoster=[p.hero,...p.mercs].find(unit=>unit.uid===selectedRosterUid)||p.hero;
+  const chooseRoster=(unit:CaravanMember)=>{setSelectedRosterUid(unit.uid);setActiveWindow(null);p.select(unit.uid);};
   return <section className="caravan-status" aria-label="主角與商隊狀態">
     {p.navigation}
-    <div className="caravan-window-controls" aria-label="視窗控制"><button type="button" aria-pressed={characterOpen} onClick={()=>setCharacterOpen(open=>!open)}>人物</button><button type="button" aria-pressed={inventoryOpen} onClick={()=>setInventoryOpen(open=>!open)}>行囊</button></div>
+    <aside className="party-window-roster" aria-label="主角與傭兵"><strong>隊伍</strong>{[p.hero,...p.mercs].slice(0,9).map(unit=><button type="button" className={selectedRoster.uid===unit.uid?'selected':''} key={unit.uid} onClick={()=>chooseRoster(unit)} aria-label={'選擇'+unit.name}><img src={unit.image} alt=""/><span>{unit.uid==='hero'?'主':'傭'}</span></button>)}</aside>
+    <nav className="party-context-menu" aria-label="角色功能"><strong>{selectedRoster.name}</strong><button type="button" aria-pressed={activeWindow==='stats'} onClick={()=>setActiveWindow('stats')}>能力值</button><button type="button" aria-pressed={activeWindow==='inventory'} onClick={()=>setActiveWindow('inventory')}>背包</button></nav>
     <div className="hero-inventory-layout battle-only">{p.battle}</div>
-    {characterOpen&&<section className="floating-game-window floating-character" aria-label="角色資訊窗"><header><strong>角色狀態</strong><button type="button" onClick={()=>setCharacterOpen(false)} aria-label="關閉角色資訊窗">×</button></header><HeroStatusPanel busy={p.busy} hero={p.hero} gold={p.gold} credit={p.credit} weight={p.weight} xpNeed={p.xpNeed} allocate={p.allocate} trade={p.trade} train={p.trainHero} select={()=>p.select(p.hero.uid)} unequip={p.unequipHero}/></section>}
-    {inventoryOpen&&<section className="floating-game-window floating-inventory" aria-label="行囊窗"><header><strong>行囊</strong><button type="button" onClick={()=>setInventoryOpen(false)} aria-label="關閉行囊窗">×</button></header><InventoryPanel inventory={p.inventory} materials={p.materials} materialPrices={p.materialPrices} equip={p.equipHero} sell={p.sellInventory} sellMaterial={p.sellMaterial} sellAllMaterials={p.sellAllMaterials} message={p.bagMessage} weight={p.weight} maxWeight={p.maxWeight}/></section>}
+    {activeWindow==='stats'&&<section className="floating-game-window floating-character" aria-label="角色能力值"><header><strong>{selectedRoster.name}・能力值</strong><button type="button" onClick={()=>setActiveWindow(null)} aria-label="關閉能力值">×</button></header>{selectedRoster.uid==='hero'?<HeroStatusPanel busy={p.busy} hero={p.hero} gold={p.gold} credit={p.credit} weight={p.weight} xpNeed={p.xpNeed} allocate={p.allocate} trade={p.trade} train={p.trainHero} select={()=>p.select(p.hero.uid)} unequip={p.unequipHero}/>:<MercenaryStatusWindow unit={selectedRoster} power={p.power}/>}</section>}
+    {activeWindow==='inventory'&&<section className="floating-game-window floating-inventory" aria-label="行囊窗"><header><strong>{selectedRoster.name}・背包</strong><button type="button" onClick={()=>setActiveWindow(null)} aria-label="關閉背包">×</button></header><InventoryPanel inventory={p.inventory} materials={p.materials} materialPrices={p.materialPrices} equip={p.equipHero} sell={p.sellInventory} sellMaterial={p.sellMaterial} sellAllMaterials={p.sellAllMaterials} message={p.bagMessage} weight={p.weight} maxWeight={p.maxWeight}/></section>}
     <AbilityPanel hero={p.hero} allocate={p.allocate}/>
     <section className="caravan-wood caravan-team"><header><small>中央傭兵公會 · 商隊名冊</small><h2>九席護商隊</h2><span>{Math.min(9,p.mercs.length)} / 9 席 · 隨機僱用 {p.cost.toLocaleString()} 兩</span></header>
       <p className="hero-team-total">總商隊戰力 {total.toLocaleString()}</p>
@@ -53,4 +56,9 @@ export function CaravanStatus(p:Props) {
       {p.mercs.length>9&&<div>舊存檔候補（保留角色，不再新增）：{p.mercs.slice(9).map(unit=><button key={unit.uid} onClick={()=>p.select(unit.uid)}>{unit.name} Lv.{unit.level}</button>)}</div>}
     </section>
   </section>;
+}
+
+function MercenaryStatusWindow({unit,power}:{unit:CaravanMember;power:(unit:CaravanMember)=>number}){
+  const vital=vitalStats(unit);
+  return <section className="mercenary-status"><div className="mercenary-status-identity"><img src={unit.image} alt={unit.name}/><span><strong>{unit.name}</strong><small>{unit.role} · Lv. {unit.level}</small></span></div><dl><div><dt>生命力</dt><dd>{vital.hp} / {vital.maxHp}</dd></div><div><dt>魔法力</dt><dd>{vital.mp} / {vital.maxMp}</dd></div><div><dt>力量</dt><dd>{unit.str}</dd></div><div><dt>敏捷</dt><dd>{unit.agi}</dd></div><div><dt>體力</dt><dd>{unit.vit}</dd></div><div><dt>智力</dt><dd>{unit.intel}</dd></div><div><dt>戰鬥力</dt><dd>{power(unit).toLocaleString()}</dd></div></dl><p>傭兵能力值會隨等級、裝備與戰鬥狀態即時更新。</p></section>;
 }
