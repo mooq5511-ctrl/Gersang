@@ -1079,7 +1079,7 @@ export default function GameV15() {
     const cost = Math.floor(6000 * currentCity.priceFactor);
     setGame(previous => {
       if (previous.gold < cost || previous.mercs.length >= 9) return { ...previous, logs: addLog(previous.logs, previous.mercs.length >= 9 ? '商隊已滿九席，無法再僱用。' : '僱用資金不足。') };
-      const unit = normalizeVitals<Unit>({ uid: uid('merchant-'+spec.id), templateId: 'merchant-'+spec.id, nation: 'legacy', tier: 0, special: false, name: spec.name, role: spec.role, skill: spec.active, image: mercenaryPortrait(index), level: 1, xp: 0, points: 0, str: spec.ratings[1], agi: spec.ratings[3], vit: spec.ratings[0], intel: spec.mp ? 20 : 10, position:normalizeBattlePosition(undefined,spec.name,spec.role), equip: emptyEquipment() });
+      const unit = normalizeVitals<Unit>({ uid: uid('merchant-'+spec.id), templateId: 'merchant-'+spec.id, nation: 'legacy', tier: 0, special: false, name: spec.name, role: spec.role, skill: spec.active, image: mercenaryPortrait(spec.id,index), level: 1, xp: 0, points: 0, str: spec.ratings[1], agi: spec.ratings[3], vit: spec.ratings[0], intel: spec.mp ? 20 : 10, position:normalizeBattlePosition(undefined,spec.name,spec.role), equip: emptyEquipment() });
       return { ...previous, gold: previous.gold-cost, mercs: [...previous.mercs,unit], active: [...previous.active, unit.uid].slice(0,ACTIVE_MERCENARY_LIMIT), logs: addLog(previous.logs,'招募 '+spec.name+'，已加入護商隊。') };
     });
   }
