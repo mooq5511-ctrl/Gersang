@@ -101,10 +101,6 @@ export function IsometricWorldMap({
 
         preload() {
           this.load.image("map-hero", heroImage);
-          this.load.image("map-reference-field", "/game-assets/reference-field.png");
-          this.load.image("map-shallow", "/game-assets/map-shallow-0.png");
-          this.load.image("map-pond", "/game-assets/map-korea-pond-0.png");
-          this.load.image("map-tree", "/game-assets/map-china-tree-0.png");
           this.load.image("map-portal", "/game-assets/map-field-portal-0.png");
           this.load.image("map-inn", "/game-assets/building-korea-inn-0.png");
           this.load.image("map-market", "/game-assets/building-korea-market-0.png");
@@ -148,10 +144,6 @@ export function IsometricWorldMap({
           this.children.removeAll();
           this.originX = this.scale.width / 2;
           this.originY = Math.max(36, (this.scale.height - ROWS * TILE_H) / 2 - 8);
-          this.add.image(this.scale.width / 2, this.scale.height / 2, "map-reference-field")
-            .setDisplaySize(this.scale.width, this.scale.height).setDepth(-20);
-          this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x102b26, 0.2).setDepth(-19);
-
           const roads = new Set<string>();
           for (let i = 0; i < COLS; i++) { roads.add(`${i},4`); roads.add(`${i},10`); }
           for (let i = 0; i < ROWS; i++) roads.add(`6,${i}`);
@@ -159,10 +151,7 @@ export function IsometricWorldMap({
           for (let row = 0; row < ROWS; row++) for (let col = 0; col < COLS; col++) {
             const point = this.iso(col, row);
             const isRoad = roads.has(`${col},${row}`);
-            if (!isRoad && (col + row) % 2 === 0) {
-              this.add.image(point.x, point.y + TILE_H / 2, "map-shallow").setDisplaySize(TILE_W, TILE_H).setDepth(0);
-            }
-            this.diamond(ground, point.x, point.y, isRoad ? 0x9c8c6e : 0x416b4e, isRoad ? 0.9 : 0.18);
+            this.diamond(ground, point.x, point.y, isRoad ? 0x9c8c6e : 0x416b4e, isRoad ? 0.9 : 1);
             ground.lineStyle(1, isRoad ? 0x5c513e : 0x6b9b6a, isRoad ? 0.7 : 0.3);
             ground.strokePoints([
               new Phaser.Geom.Point(point.x, point.y), new Phaser.Geom.Point(point.x + TILE_W / 2, point.y + TILE_H / 2),
@@ -171,9 +160,7 @@ export function IsometricWorldMap({
           }
           this.drawHouse(1, 1, 0x7f3229, 0xc8783d);
           this.drawHouse(8, 1, 0x365d70, 0xcfa557);
-          this.drawPond(4, 5);
           this.drawMarket(8, 8);
-          this.drawTrees(2, 8);
           this.drawGate(7, 9);
           this.drawDestination("city", 0xd7a647);
           this.drawDestination("trade", 0x65b4b0);
@@ -185,21 +172,9 @@ export function IsometricWorldMap({
           this.add.image(point.x, point.y - 24, "map-inn").setOrigin(0.5, 1).setDisplaySize(108, 94).setDepth(120 + (col + row + 2) * 10);
         }
 
-        private drawPond(col: number, row: number) {
-          const point = this.iso(col + 0.5, row + 0.5);
-          this.add.image(point.x, point.y + 15, "map-pond").setOrigin(0.5, 0.5).setDisplaySize(190, 126).setDepth(30);
-        }
-
         private drawMarket(col: number, row: number) {
           const point = this.iso(col + 0.5, row + 0.5);
           this.add.image(point.x, point.y - 10, "map-market").setOrigin(0.5, 1).setDisplaySize(118, 92).setDepth(120 + (col + row + 2) * 10);
-        }
-
-        private drawTrees(col: number, row: number) {
-          [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([dc, dr]) => {
-            const point = this.iso(col + dc, row + dr);
-            this.add.image(point.x, point.y - 6, "map-tree").setOrigin(0.5, 1).setDisplaySize(74, 76).setDepth(120 + (col + row + dc + dr) * 10);
-          });
         }
 
         private drawGate(col: number, row: number) {

@@ -58,6 +58,7 @@ const gameplayContracts = legacyContracts.filter(contract => !['tier1','tier2','
 import { TradePanel } from "./trade-panel";
 import { VitalBars } from "./vital-bars";
 import { IsometricWorldMap } from "./isometric-world-map";
+import { ThunderAltarRaid } from "./thunder-altar-raid";
 import { combatStats, enemyCombatStats, normalizeVitals, recoverVitals, resolveVitalBattle, spellCost, vitalStats } from "./vitals-engine";
 import { advanceTrade, dispatchTrade, freshTrade, MAX_CARGO_LEVEL, restoreTrade, TRADE_ROUTES, upgradeCost, type TradeState } from "./trade-engine";
 import { formationDamageMultiplier, nextBattlePosition, normalizeBattlePosition, type BattlePosition } from './formation-position';
@@ -1497,6 +1498,7 @@ export default function GameV15() {
           <TabsTrigger value="map"><Map />斜角城鎮</TabsTrigger>
           <TabsTrigger value="trade"><Ship />東海商路</TabsTrigger>
           <TabsTrigger value="battle"><Swords />遭遇戰報</TabsTrigger>
+          <TabsTrigger value="raid"><Crown />雷霆祭壇</TabsTrigger>
           <TabsTrigger value="squad"><Users />主角與隊伍</TabsTrigger>
           <TabsTrigger value="city"><Castle />四國城市</TabsTrigger>
           <TabsTrigger value="contracts"><BookOpen />冒險委託</TabsTrigger>
@@ -1597,6 +1599,18 @@ export default function GameV15() {
               </div>
             </section>
           </div>
+        </TabsContent>
+
+        <TabsContent value="raid" className="tab-panel">
+          <ThunderAltarRaid
+            credit={game.credit}
+            power={unitPower(game.hero) + game.mercs.filter(unit => game.active.includes(unit.uid)).reduce((sum, unit) => sum + unitPower(unit), 0)}
+            materials={game.materials}
+            onEnter={() => setGame(previous => ({ ...previous, credit: previous.credit - 50_000, logs: addLog(previous.logs, "進入「神仙谷・雷霆祭壇」，支付 50,000 信用值。") }))}
+            onRefund={() => setGame(previous => ({ ...previous, credit: previous.credit + 25_000, logs: addLog(previous.logs, "雷霆祭壇挑戰失敗，退回 25,000 信用值。") }))}
+            onMaterials={(materials) => setGame(previous => ({ ...previous, materials, logs: addLog(previous.logs, "雷霆祭壇戰利品已加入背包。") }))}
+            onNotice={setNotice}
+          />
         </TabsContent>
 
 
