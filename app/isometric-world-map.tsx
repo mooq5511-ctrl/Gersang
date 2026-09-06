@@ -8,7 +8,7 @@ const TILE_W = 72;
 const TILE_H = 36;
 
 type Cell = { col: number; row: number };
-type Destination = "city" | "trade" | "battle";
+type Destination = "city" | "trade" | "battle" | "raid";
 
 const blocked = new Set([
   "1,1", "1,2", "2,1", "2,2",
@@ -22,6 +22,7 @@ const destinations: Record<Destination, Cell & { label: string }> = {
   city: { col: 3, row: 4, label: "市集" },
   trade: { col: 7, row: 3, label: "港口" },
   battle: { col: 7, row: 9, label: "城門" },
+  raid: { col: 3, row: 7, label: "雷霆祭壇" },
 };
 
 const cellKey = (cell: Cell) => `${cell.col},${cell.row}`;
@@ -162,9 +163,11 @@ export function IsometricWorldMap({
           this.drawHouse(8, 1, 0x365d70, 0xcfa557);
           this.drawMarket(8, 8);
           this.drawGate(7, 9);
+          this.drawGate(3, 7);
           this.drawDestination("city", 0xd7a647);
           this.drawDestination("trade", 0x65b4b0);
           this.drawDestination("battle", 0xc96649);
+          this.drawDestination("raid", 0x9170e8);
         }
 
         private drawHouse(col: number, row: number, wall: number, roof: number) {
@@ -273,6 +276,7 @@ export function IsometricWorldMap({
         <button type="button" onClick={() => navigate("city")}><b>市集</b><span>商店與客棧</span></button>
         <button type="button" onClick={() => navigate("trade")}><b>港口</b><span>東海商路</span></button>
         <button type="button" onClick={() => navigate("battle")}><b>城門</b><span>野外與副本</span></button>
+        <button type="button" onClick={() => navigate("raid")}><b>雷霆祭壇</b><span>神仙谷首領戰</span></button>
       </nav>
       <output className="isometric-status" aria-live="polite">{status}</output>
     </section>

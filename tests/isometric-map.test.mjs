@@ -13,12 +13,15 @@ test("Phaser isometric map is the default live game scene", () => {
   assert.match(game, /TabsTrigger value="map"/);
 });
 
-test("map connects all three destinations to existing game tabs", () => {
+test("map connects its destinations to existing game tabs and the Thunder Altar raid", () => {
   assert.match(map, /city: \{ col: 3, row: 4, label: "市集" \}/);
   assert.match(map, /trade: \{ col: 7, row: 3, label: "港口" \}/);
   assert.match(map, /battle: \{ col: 7, row: 9, label: "城門" \}/);
+  assert.match(map, /raid: \{ col: 3, row: 7, label: "雷霆祭壇" \}/);
   assert.match(game, /destination === "city"/);
   assert.match(game, /destination === "trade"/);
+  assert.match(game, /destination === "raid"/);
+  assert.match(game, /setActiveTab\("raid"\)/);
   assert.match(game, /else setActiveTab\("squad"\)/);
 });
 

@@ -1513,6 +1513,7 @@ export default function GameV15() {
           <IsometricWorldMap cityName={currentCity.name} heroImage={game.hero.image} onEnter={(destination) => {
             if (destination === "city") { setCityService("mercenary"); setActiveTab("city"); }
             else if (destination === "trade") setActiveTab("trade");
+            else if (destination === "raid") setActiveTab("raid");
             else setActiveTab("squad");
           }} />
         </TabsContent>
