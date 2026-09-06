@@ -1,5 +1,5 @@
-import GameV15 from "./game-v15";
+import ClassicMapInterface from "./classic-map-interface";
 
 export default function Home() {
-  return <GameV15 />;
+  return <ClassicMapInterface />;
 }
