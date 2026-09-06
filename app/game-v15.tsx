@@ -684,10 +684,6 @@ function unitPower(unit: Unit | Hero) {
   return Math.floor((base + equipment) * (1 + (unit.level - 1) * 0.075) * (1 + tier * 0.25) * special * awakened);
 }
 
-function tierName(unit: Unit) {
-  return mercenarySpec(unit.templateId) ? '傭兵' : '主角';
-}
-
 function addLog(logs: string[], message: string) {
   return [message, ...logs].slice(0, 40);
 }
@@ -980,8 +976,6 @@ export default function GameV15() {
     selectedUid === "hero"
       ? game.hero
       : game.mercs.find((unit) => unit.uid === selectedUid) || game.hero;
-  const selectedProgress = progressForLevel(selected.level);
-  const selectedXpNeed = xpNeed(selected.level);
   const activeUnits = game.active
     .map((unitUid) => game.mercs.find((unit) => unit.uid === unitUid))
     .filter(Boolean) as Unit[];
@@ -1098,22 +1092,6 @@ export default function GameV15() {
     });
   }
 
-
-  function trainSelected() {
-    if(dungeonBusy(game.dungeon)){setNotice('副本或療傷期間暫停此操作，請先完成療傷。');return;}
-    if (selectedUid === "hero") return;
-    setGame((previous) => {
-      if (previous.gold < 5000) {
-        setNotice("集訓需要 5,000 兩。");
-        return previous;
-      }
-      return {
-        ...previous,
-        gold: previous.gold - 5000,
-        mercs: previous.mercs.map((unit) => (unit.uid === selectedUid ? grantXp(unit, 1500) : unit)),
-      };
-    });
-  }
 
   function addStat(stat: "str" | "agi" | "intel" | "vit") {
     setGame((previous) => {
@@ -1392,8 +1370,6 @@ export default function GameV15() {
     });
   }
 
-  const selectedUnit = selected as Unit;
-
   if (!ready) return <div className="game-loading">正在整理四國角色欄位…</div>;
 
   if (!loginEntered) {
@@ -1658,27 +1634,7 @@ export default function GameV15() {
             trainHero={simulateHeroLoot}
             hire={()=>{ const index=Math.floor(Math.random()*merchantMercenaries.length); recruitMerchant(merchantMercenaries[index],index); }}
             train={()=>setGame(previous=>dungeonBusy(previous.dungeon)?previous:({...previous,hero:grantXp(previous.hero,100),mercs:previous.mercs.map(unit=>grantXp(unit,100)),logs:addLog(previous.logs,'模擬打怪：主角與所有已僱用傭兵各獲得 100 經驗。')}))}
-            allocate={stat=>setGame(previous=>previous.hero.points>0?({...previous,hero:{...previous.hero,[stat]:previous.hero[stat]+1,points:previous.hero.points-1}}):previous)} />
-          <div className="caravan-detail-layout">
-            <section className="panel unit-detail">
-              <div className="unit-heading">
-                <img src={selected.image} alt={selected.name} />
-                <div><small>{selectedUid === "hero" ? heroNation.name + "主角" : tierName(selectedUnit)}</small><h2>{selected.name}</h2><p>Lv.{selected.level} {selected.role}｜{selected.skill}｜戰力 {format(unitPower(selected))}</p></div>
-                {selectedUid !== "hero" && <Button variant={game.active.includes(selectedUid) ? "secondary" : "default"} onClick={() => toggleActive(selectedUid)}>{game.active.includes(selectedUid) ? "撤下" : "出戰"}</Button>}
-              </div>
-              <div className="xp-line"><span>{selected.level >= LEVEL_CAP ? "已達等級上限 Lv.260" : `經驗 ${selected.xp.toLocaleString()} / ${selectedXpNeed.toLocaleString()}`}</span>{selected.level < LEVEL_CAP && <Progress value={selected.xp / selectedXpNeed * 100} />}</div>
-              <p className="points">巨商等級資料：累積經驗 <strong>{selectedProgress.totalXp.toLocaleString()}</strong>｜本級信用度 <strong>{selectedProgress.credit}</strong>｜累積信用度 <strong>{selectedProgress.totalCredit.toLocaleString()}</strong></p>
-              {selectedUid !== 'hero' && <Button variant="outline" onClick={trainSelected}>集訓 +1,500 經驗・5,000 兩</Button>}
-              <VitalBars unit={selected} />
-              <p className="points">攻防已包含能力、等級與裝備加成；陣法另影響實戰攻擊。主動技能・{selected.skill}｜每次消耗 <strong>{spellCost(selected)} MP</strong>。傭兵依條件與冷卻施放；武技不耗 MP。魔力不足改用普攻，HP 歸零停止參戰。</p>
-              <div className="stat-grid">
-                {(["str", "agi", "intel", "vit"] as const).map((stat) => (
-                  <div key={stat}><small>{stat === "str" ? "力量" : stat === "agi" ? "敏捷" : stat === "intel" ? "智力" : "體質"}</small><strong>{selected[stat]}</strong><Button size="icon-xs" variant="outline" disabled={selected.points <= 0} onClick={() => addStat(stat)}>＋</Button></div>
-                ))}
-              </div>
-              <p className="points">可分配能力點：<strong>{selected.points}</strong></p>
-            </section>
-          </div>
+            allocate={addStat} />
         </TabsContent>
 
         <TabsContent value="city" className="tab-panel">
