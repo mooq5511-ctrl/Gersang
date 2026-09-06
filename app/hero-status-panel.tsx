@@ -18,7 +18,7 @@ export function HeroStatusPanel({busy=false,hero,gold,credit,weight,xpNeed,alloc
   const vital=vitalStats(hero);
   const total=heroTotalAttributes(hero);
   return <aside className="hero-personal iron-character" aria-label="主角個人面板">
-    <header className="hp-title"><span>人物誌</span><strong>主角個人面板</strong><span>商</span></header>
+    <header className="hp-title"><span>人物誌</span><strong>角色狀態</strong><span>商</span></header>
     <button className="hp-identity" onClick={select} title="查看主角八格裝備"><img src={hero.image} alt="主角頭像"/><span><strong>{hero.name}</strong><span>{hero.job||hero.role}</span><small>Lv. {hero.level}</small></span></button>
     <section className="hp-equipment" aria-label="六格個人裝備"><h3>隨身裝備</h3><TooltipProvider><div className="hp-six-slots">{HERO_DISPLAY_SLOTS.map(slot=>{
       const item=hero.equip[slot] as (TooltipGear & {image?:string})|null;
