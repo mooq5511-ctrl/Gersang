@@ -6,7 +6,7 @@ import { bandit, isBanditEncounter } from "./bandit";
 import { merchantMercenaries, mercenarySpec, type MercenarySpec } from './mercenary-roster';
 import { CaravanStatus } from './caravan-status';
 import {DungeonPanel,WorldMapNavigation} from './dungeon-panel';
-import {dungeonStep,dungeonBusy,freshDungeon,teleportDungeon,WORLD_ZONES,type DungeonState,type DungeonKey} from './dungeon-engine';
+import {DUNGEONS,dungeonStep,dungeonBusy,freshDungeon,teleportDungeon,WORLD_ZONES,type DungeonState,type DungeonKey} from './dungeon-engine';
 import {goToInn,leaveInn,payInn,type PlayerStatus} from './inn-engine';
 import { settleCaravanIdle } from './caravan-idle';
 import { heroPersonalPower, heroWeightLimit, heroTotalAttributes, HERO_INITIAL_ATTRIBUTES } from './hero-rules';
@@ -55,6 +55,7 @@ import {
 import { battleMaps } from "./reference-data";
 import { gameplayContracts as legacyContracts, officialEquipment, officialGems, OfficialEquipment, sourceEnemies, sourceEnemyForMap } from "./v17-content";
 const gameplayContracts = legacyContracts.filter(contract => !['tier1','tier2','awakened'].includes(contract.metric));
+const starterMonsterDungeonKeys: Record<string, DungeonKey> = { '狸貓':'e_starter_raccoon','倭寇':'e_starter_wako','鐵炮倭寇':'e_starter_gunner','山賊':'e_starter_bandit','海賊':'e_starter_pirate','鐵鉤海賊':'e_starter_hook_pirate' };
 import { TradePanel } from "./trade-panel";
 import { VitalBars } from "./vital-bars";
 import { IsometricWorldMap } from "./isometric-world-map";
@@ -1020,6 +1021,7 @@ export default function GameV15() {
         ...previous,
         battleMap: map.id,
         selectedMonster: undefined,
+        dungeon: map.id === 'starter-outskirts' ? {...freshDungeon(),key:'e_starter_raccoon',enemyHp:DUNGEONS.e_starter_raccoon.hp} : previous.dungeon,
         enemyHp: enemyMax(previous.stage, map.hpMultiplier),
         logs: addLog(previous.logs, "商團遠征轉移至「" + map.name + "」。"),
       };
@@ -1561,7 +1563,7 @@ export default function GameV15() {
                 </button>;
               })}
             </div>
-            {sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・依關卡輪替"}</strong></div><span>點選卡片切換目標</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id && !enemy.boss).map(enemy => <button type="button" key={enemy.name} className={game.selectedMonster === enemy.name ? "active" : ""} onClick={() => setGame(previous => ({ ...previous, selectedMonster: enemy.name, enemyHp: enemy.hp || previous.enemyHp, logs: addLog(previous.logs, `指定遭遇怪物：${enemy.name}。`) }))}><div><strong>{enemy.name}</strong><em>{game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>掉落：{enemy.drops.join("、")}</p></button>)}</div></section>}
+            {sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・依關卡輪替"}</strong></div><span>點選卡片切換目標</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id && !enemy.boss).map(enemy => <button type="button" key={enemy.name} className={game.selectedMonster === enemy.name ? "active" : ""} onClick={() => setGame(previous => { const key=starterMonsterDungeonKeys[enemy.name]; return { ...previous, selectedMonster: enemy.name, enemyHp: enemy.hp || previous.enemyHp, dungeon: key ? {...freshDungeon(),key,enemyHp:DUNGEONS[key].hp} : previous.dungeon, logs: addLog(previous.logs, `指定遭遇怪物：${enemy.name}。`) }; })}><div><strong>{enemy.name}</strong><em>{game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>掉落：{enemy.drops.join("、")}</p></button>)}</div></section>}
             <DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} mapName={currentMap.name} mapRegion={currentMap.region} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()];setGame(previous=>applyDungeon(previous,action,now,key,roll,choice,0,retaliationRoll,materialRolls));}}/>
           </section>
           <div className="battle-grid">

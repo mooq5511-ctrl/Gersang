@@ -1,5 +1,11 @@
 /** 隨機地域怪物：沿用已確認示範版的原創數值；舊怪物 ID 留在主資料庫供舊資料相容。 */
 export const ECOLOGY_MONSTERS={
+ e_starter_raccoon:{name:'狸貓',level:1,hp:16,mp:0,atk:6,dex:10,xp:7,gold:7,drop:.06,loot:['boots']},
+ e_starter_wako:{name:'倭寇',level:1,hp:16,mp:0,atk:10,dex:12,xp:7,gold:7,drop:.06,loot:['boots']},
+ e_starter_gunner:{name:'鐵炮倭寇',level:1,hp:20,mp:0,atk:10,dex:12,xp:10,gold:10,drop:.07,loot:['boots']},
+ e_starter_bandit:{name:'山賊',level:1,hp:20,mp:0,atk:8,dex:11,xp:8,gold:8,drop:.06,loot:['boots']},
+ e_starter_pirate:{name:'海賊',level:1,hp:140,mp:12,atk:49,dex:20,xp:40,gold:40,drop:.12,loot:['boots']},
+ e_starter_hook_pirate:{name:'鐵鉤海賊',level:1,hp:180,mp:40,atk:50,dex:22,xp:55,gold:55,drop:.14,loot:['boots']},
  e_raccoon:{name:'狸貓',level:1,hp:60,mp:0,atk:5,dex:10,xp:20,gold:15,drop:.06,loot:['boots']},
  e_mad_cow:{name:'狂牛',level:12,hp:160,mp:0,atk:20,dex:18,xp:90,gold:65,drop:.12,loot:['boots']},
  e_yellow_dragon:{name:'黃龍',level:32,hp:1200,mp:300,atk:65,dex:34,xp:420,gold:300,drop:.16,loot:['staff']},
