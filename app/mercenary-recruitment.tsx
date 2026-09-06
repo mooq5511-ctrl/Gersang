@@ -5,7 +5,7 @@ import { gersangMercenaryArt } from './gersang-visuals';
 export const mercenaryPortrait = (index: number) => gersangMercenaryArt(index);
 export function MercenaryRecruitment({ gold, cost, recruit }: { gold: number; cost: number; recruit: (spec: MercenarySpec, index: number) => void }) {
   return <section className="merchant-recruits" aria-labelledby="merchant-recruits-title">
-    <h2 id="merchant-recruits-title">中央傭兵公會・16 種傭兵</h2>
+    <h2 id="merchant-recruits-title">中央傭兵公會・{merchantMercenaries.length} 種傭兵</h2>
     <p>各城皆可招募公會傭兵，招募後請至隊伍頁安排出戰。數值評級為 1–50，不是實際生命或命中百分比。</p>
     <p>初始 HP＝生命評級×20，攻防＝評級×2，MP＝40；命中率＝70%＋評級×0.56%。移速影響先手與接敵，不增加攻擊次數。前後排依職業自動安排；法術耗 MP，武技不耗 MP。相同增減益不疊加；首領免疫暈眩與定身。</p>
     <div className="base-merc-grid">{merchantMercenaries.map((spec, index) => <article className="base-merc-card merchant-recruit-card" key={spec.id}>
