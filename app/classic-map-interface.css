@@ -67,7 +67,7 @@
 .classic-live-game .nav-list { position:absolute; z-index:42; right:6px; bottom:6px; width:calc(32% - 8px); height:calc(15.5% - 12px)!important; display:grid!important; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,1fr); padding:3px; border-color:#6b6048; border-radius:0; background:#11130f!important; }
 .classic-live-game .nav-list button { min-height:0; padding:3px; font-size:9px; }
 .classic-live-game .nav-list button svg { width:14px; }
-.classic-live-game .tab-panel { position:absolute; z-index:10; top:0; right:0; bottom:15.5%; left:8.2%; margin:0; padding:12px 58px 18px 14px; overflow:auto; scrollbar-color:#887345 #11150f; background:linear-gradient(90deg,rgba(5,9,5,.34),rgba(5,8,5,.08) 45%,rgba(5,8,5,.26)); }
+.classic-live-game .tab-panel { position:absolute; z-index:10; top:0; right:0; bottom:15.5%; left:0; margin:0; padding:12px 58px 18px 14px; overflow:auto; scrollbar-color:#887345 #11150f; background:linear-gradient(90deg,rgba(5,9,5,.34),rgba(5,8,5,.08) 45%,rgba(5,8,5,.26)); }
 .classic-live-game .tab-panel > .panel,.classic-live-game .tab-panel > .battlefield,.classic-live-game .tab-panel > section { backdrop-filter:blur(3px); }
 .classic-live-game .battle-sky { min-height:330px; }
 
@@ -90,7 +90,7 @@
   .classic-live-game {
     display:grid;
     grid-template-rows:50px minmax(0,1fr) 60px;
-    grid-template-columns:250px minmax(0,1fr) 300px;
+    grid-template-columns:minmax(0,1fr) 300px;
     width:100vw;
     height:100dvh;
     min-height:0;
@@ -108,19 +108,16 @@
   .classic-live-game .resource-strip small { font-size:9px; }
   .classic-live-game .character-switch { min-height:34px; }
 
-  .integrated-party-rail { position:relative!important; z-index:4; grid-column:1; grid-row:2; inset:auto; width:auto; min-width:0; padding:7px; }
-  .integrated-party-rail button { height:calc((100% - 30px)/9); min-height:42px; }
-  .integrated-party-rail button > span { font-size:10px; }
   .classic-live-quicknav { display:none; }
 
   .classic-live-game .game-tabs { display:contents; }
-  .classic-live-game .nav-list { position:relative; z-index:4; right:auto; bottom:auto; grid-column:3; grid-row:2; width:auto; height:auto!important; grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(4,minmax(46px,1fr)); gap:5px; padding:9px; border:0; border-left:1px solid #8a774e; background:linear-gradient(90deg,#11150ded,#070906f5)!important; }
+  .classic-live-game .nav-list { position:relative; z-index:4; right:auto; bottom:auto; grid-column:2; grid-row:2; width:auto; height:auto!important; grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(4,minmax(46px,1fr)); gap:5px; padding:9px; border:0; border-left:1px solid #8a774e; background:linear-gradient(90deg,#11150ded,#070906f5)!important; }
   .classic-live-game .nav-list button { min-height:0; padding:8px 5px; font-size:12px; }
   .classic-live-game .nav-list button svg { width:17px; }
-  .classic-live-game .tab-panel { position:relative; z-index:1; grid-column:2; grid-row:2; top:auto; right:auto; bottom:auto; left:auto; min-width:0; min-height:0; margin:0; padding:14px 18px; overflow:auto; }
+  .classic-live-game .tab-panel { position:relative; z-index:1; grid-column:1; grid-row:2; top:auto; right:auto; bottom:auto; left:auto; min-width:0; min-height:0; margin:0; padding:14px 18px; overflow:auto; }
   .classic-live-game .isometric-map-tab { padding:0; }
 
-  .classic-live-footer { position:relative!important; z-index:5; grid-column:1/-1; grid-row:3; inset:auto; width:auto; height:60px; min-height:0; grid-template-columns:250px minmax(250px,1fr) minmax(300px,1.25fr); gap:5px; padding:4px 7px; border-top:1px solid #7d6c4a; }
+  .classic-live-footer { position:relative!important; z-index:5; grid-column:1/-1; grid-row:3; inset:auto; width:auto; height:60px; min-height:0; grid-template-columns:minmax(250px,.8fr) minmax(250px,1fr) minmax(300px,1.25fr); gap:5px; padding:4px 7px; border-top:1px solid #7d6c4a; }
   .classic-live-footer > * { min-height:0; }
   .classic-live-identity { padding:4px 7px; }
   .classic-live-identity img { width:38px; height:38px; }
@@ -128,13 +125,11 @@
   .classic-live-resources div { grid-template-columns:14px minmax(0,1fr); font-size:10px; }
   .classic-live-log { padding:5px 8px; font-size:10px; }
   .classic-live-game > .notice { position:fixed; top:58px; z-index:70; }
-  .classic-live-game .forced-inn { position:fixed; z-index:60; top:64px; left:calc(250px + 18px); right:calc(300px + 18px); }
+  .classic-live-game .forced-inn { position:fixed; z-index:60; top:64px; left:18px; right:calc(300px + 18px); }
 }
 
 @media (max-width:780px) {
   .classic-live-game { min-height:540px; }
-  .integrated-party-rail { min-width:54px; }
-  .integrated-party-rail button > span { display:none; }
   .classic-live-footer { grid-template-columns:25% 22% 20% 33%; gap:2px; padding:3px; }
   .classic-live-identity { padding:3px; }
   .classic-live-identity img { width:34px; height:34px; }

@@ -1470,24 +1470,8 @@ export default function GameV15() {
     });
   }
 
-  const classicParty = [game.hero, ...game.mercs].slice(0, 9);
-
   return (
     <main className="game-shell v15-shell classic-live-game">
-      <aside className="integrated-party-rail" aria-label="目前隊伍">
-        <div className="integrated-party-title"><span>隊伍</span><span>{game.active.length + 1}/9</span></div>
-        {classicParty.map((unit) => {
-          const vitals = vitalStats(unit);
-          const isActive = unit.uid === "hero" || game.active.includes(unit.uid);
-          return <button key={unit.uid} type="button" className={(selectedUid === unit.uid ? "selected " : "") + (isActive ? "active" : "reserve")} onClick={() => { setSelectedUid(unit.uid); setActiveTab("squad"); }}>
-            <img src={unit.image} alt="" />
-            <span>{unit.name}</span>
-            <i className="party-hp"><b style={{width:`${Math.max(0,Math.min(100,vitals.hp/vitals.maxHp*100))}%`}} /></i>
-            <i className="party-mp"><b style={{width:`${Math.max(0,Math.min(100,vitals.mp/vitals.maxMp*100))}%`}} /></i>
-          </button>;
-        })}
-      </aside>
-
       <div className="classic-live-quicknav" aria-label="快速功能">
         <button type="button" onClick={() => setActiveTab("squad")} title="背包與隊伍"><PackageOpen /></button>
         <button type="button" onClick={() => setActiveTab("contracts")} title="冒險委託"><BookOpen /></button>
