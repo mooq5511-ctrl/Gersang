@@ -17,7 +17,7 @@ import { ACTIVE_MERCENARY_LIMIT, backupBeforeGuildMigration, retainGuildRoster }
 import { EQUIPMENT_SLOTS, EQUIPMENT_LABELS, emptyEquipmentSlots, itemKind, compatibleSlots, normalizeStoredItem, equipFromInventory, unequipToInventory, migrateSevenSlotSave, backupBeforeEquipmentMigration, type EquipmentSlot, type EquipmentKind } from './equipment-slots';
 import { wearableCatalog, type WearableBase } from './wearable-catalog';
 import { MercenaryRecruitment, mercenaryPortrait } from './mercenary-recruitment';
-import { gersangBuildingArt, gersangHeroArt, gersangItemArt, gersangUnitArt } from './gersang-visuals';
+import { gersangBuildingArt, gersangHeroArt, gersangHeroFemaleArt, gersangItemArt, gersangUnitArt } from './gersang-visuals';
 import { resolveMercenaryBattle, type TacticalEnemy } from './mercenary-battle';
 import {
   BedDouble,
@@ -144,6 +144,7 @@ type Hero = Omit<Unit, "nation" | "tier" | "special" | "templateId"> & {
   job: string;
   maxHp: number;
   status: PlayerStatus;
+  gender: "male" | "female";
 };
 
 type CharacterProfile = {
@@ -153,6 +154,7 @@ type CharacterProfile = {
   level: number;
   stage: number;
   updatedAt: number;
+  gender?: "male" | "female";
 };
 
 type CityService = "mercenary" | "weapon" | "armor" | "warehouse" | "inn" | "pharmacy" | "exchange";
@@ -234,7 +236,8 @@ function emptyEquipment(): EquipmentSet {
 }
 
 
-function makeHero(nation: NationId = "korea", name = "王天下"): Hero {
+function heroPortrait(nation:NationId, gender:"male"|"female"="male") { return gender === "female" ? gersangHeroFemaleArt[nation] : gersangHeroArt[nation]; }
+function makeHero(nation: NationId = "korea", name = "王天下", gender:"male"|"female"="male"): Hero {
   const profile = heroNationProfiles[nation];
   return normalizeVitals<Hero>({
     uid: "hero",
@@ -246,7 +249,7 @@ function makeHero(nation: NationId = "korea", name = "王天下"): Hero {
     job: nation==='korea' ? '朝鮮商客' : profile.title,
     role: "主角",
     skill: profile.skill,
-    image: profile.image,
+    image: heroPortrait(nation,gender), gender,
     level: 1,
     xp: 0,
     points: 0,
@@ -307,7 +310,7 @@ function starterEquipment(): Equipment[] {
   return [rollEquipment(3), rollEquipment(8, true)];
 }
 
-function freshGame(nation: NationId = "korea", heroName = "王天下"): GameState {
+function freshGame(nation: NationId = "korea", heroName = "王天下", gender:"male"|"female"="male"): GameState {
   const starters: Unit[] = [];
   return {
     version: 30,
@@ -319,7 +322,7 @@ function freshGame(nation: NationId = "korea", heroName = "王天下"): GameStat
     kills: 0,
     city: worldCities.find((city) => city.nation === nation)?.id || worldCities[0].id,
     battleMap: battleMaps[0].id,
-    hero: makeHero(nation, heroName),
+    hero: makeHero(nation, heroName, gender),
     mercs: starters,
     active: starters.map((unit) => unit.uid),
     inventory: starterEquipment(),
@@ -380,7 +383,7 @@ function applyGersangVisuals(state: GameState): GameState {
   };
   return {
     ...state,
-    hero: { ...state.hero, image: heroNationProfiles[state.hero.nation].image, equip: mapEquipmentSet(state.hero.equip) },
+    hero: { ...state.hero, image: heroPortrait(state.hero.nation, state.hero.gender), equip: mapEquipmentSet(state.hero.equip) },
     mercs: state.mercs.map((unit, index) => ({
       ...unit,
       image: gersangUnitArt(unit.templateId, unit.name, index),
@@ -500,7 +503,8 @@ function restoreGame(raw: unknown): GameState {
       job: Number(parsed.version) >= 19 && parsed.hero?.job ? parsed.hero.job : heroDefaults.job,
       skill: Number(parsed.version) >= 19 && parsed.hero?.skill ? parsed.hero.skill : heroDefaults.skill,
       // 強制套用國籍對應主角圖，讓既有存檔也會完成圖片置換。
-      image: heroNationProfiles[heroNation].image,
+      image: heroPortrait(heroNation, parsed.hero?.gender === "female" ? "female" : "male"),
+      gender: parsed.hero?.gender === "female" ? "female" : "male",
       maxHp:Number.isFinite(parsed.hero?.maxHp)&&Number(parsed.hero?.maxHp)>0?Math.max(100,Number(parsed.hero?.maxHp)):100+(Math.max(1,Number(parsed.hero?.level)||heroDefaults.level)-1)*20,
       status:parsed.hero?.status==='客棧中'?'客棧中':'正常',
       position:normalizeBattlePosition(parsed.hero?.position, String(parsed.hero?.name||heroDefaults.name), String(parsed.hero?.role||heroDefaults.role), true),
@@ -537,7 +541,7 @@ function restoreGame(raw: unknown): GameState {
 }
 
 function profileFromGame(slot: number, game: GameState): CharacterProfile {
-  return { slot, name: game.hero.name, nation: game.hero.nation, level: game.hero.level, stage: game.stage, updatedAt: Date.now() };
+  return { slot, name: game.hero.name, nation: game.hero.nation, level: game.hero.level, stage: game.stage, updatedAt: Date.now(), gender: game.hero.gender };
 }
 
 /** 使用真實主角 HP/MP 與現有背包；勝利只發放一次獎勵。 */
@@ -825,6 +829,7 @@ export default function GameV15() {
   const [creatorSlot, setCreatorSlot] = useState<number | null>(null);
   const [characterName, setCharacterName] = useState("");
   const [characterNation, setCharacterNation] = useState<NationId>("taiwan");
+  const [characterGender, setCharacterGender] = useState<"male"|"female">("male");
   const [notice, setNotice] = useState("");
   const [selectedUid, setSelectedUid] = useState("hero");
   const [cityService, setCityService] = useState<CityService>("mercenary");
@@ -929,7 +934,7 @@ export default function GameV15() {
       setNotice("請輸入角色名稱。");
       return;
     }
-    const next = freshGame(characterNation, name);
+    const next = freshGame(characterNation, name, characterGender);
     const nextProfiles = [...profiles];
     nextProfiles[creatorSlot] = profileFromGame(creatorSlot, next);
     localStorage.setItem(profileSaveKey(creatorSlot), JSON.stringify(next));
@@ -1397,7 +1402,7 @@ export default function GameV15() {
               return profile && nation ? (
                 <article className="character-slot occupied" key={slot} style={{ "--nation-color": nation.color } as React.CSSProperties}>
                   <span className="slot-number">角色欄位 {slot + 1}</span>
-                  <img src={heroNationProfiles[profile.nation].image} alt={profile.name} />
+                  <img src={heroPortrait(profile.nation, profile.gender)} alt={profile.name} />
                   <div><small>{nation.name}・{heroNationProfiles[profile.nation].title}</small><h2>{profile.name}</h2><p>Lv.{profile.level}・第 {profile.stage} 關</p><em>起始城市・{nation.capital}</em></div>
                   <Button onClick={() => enterCharacter(slot)}><Play />進入遊戲</Button>
                 </article>
@@ -1406,7 +1411,7 @@ export default function GameV15() {
                   <span className="slot-number">角色欄位 {slot + 1}</span>
                   <div className="empty-slot-mark"><Crown /></div>
                   <div><h2>尚未建立角色</h2><p>選擇國家並建立新的商團主角。</p></div>
-                  <Button variant="outline" onClick={() => { setCreatorSlot(slot); setCharacterName(""); setCharacterNation("taiwan"); }}>建立角色</Button>
+                  <Button variant="outline" onClick={() => { setCreatorSlot(slot); setCharacterName(""); setCharacterNation("taiwan"); setCharacterGender("male"); }}>建立角色</Button>
                 </article>
               );
             })}
@@ -1416,11 +1421,12 @@ export default function GameV15() {
             <section className="character-creator">
               <div className="panel-title"><Crown /><h2>建立角色・欄位 {creatorSlot + 1}</h2><span>選定後仍可遊歷四國</span></div>
               <label className="character-name-field"><span>角色名稱</span><input maxLength={12} value={characterName} onChange={(event) => setCharacterName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") createCharacter(); }} placeholder="輸入 1～12 個字" /></label>
+              <div className="creator-genders" aria-label="選擇性別"><Button type="button" variant={characterGender === "male" ? "default" : "outline"} onClick={() => setCharacterGender("male")}>男性主角</Button><Button type="button" variant={characterGender === "female" ? "default" : "outline"} onClick={() => setCharacterGender("female")}>女性主角</Button></div>
               <div className="creator-nations">
                 {nations.map((nation) => {
                   const profile = heroNationProfiles[nation.id];
                   return <button type="button" key={nation.id} aria-label={`選擇${nation.name}角色`} className={characterNation === nation.id ? "active" : ""} style={{ "--nation-color": nation.color } as React.CSSProperties} onClick={() => setCharacterNation(nation.id)}>
-                    <img src={profile.image} alt="" /><span><strong>{nation.name}</strong><small>{profile.title}・{nation.capital}</small><em>{profile.skill}</em></span>
+                    <img src={heroPortrait(nation.id, characterGender)} alt="" /><span><strong>{nation.name}</strong><small>{profile.title}・{nation.capital}</small><em>{profile.skill}</em></span>
                   </button>;
                 })}
               </div>
