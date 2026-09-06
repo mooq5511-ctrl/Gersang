@@ -805,6 +805,7 @@ function resolveRoadEncounter(previous: GameState): GameState {
 
 export default function GameV15() {
   const [game, rawSetGame] = useState<GameState>(freshGame);
+  const [activeTab, setActiveTab] = useState("battle");
   // 所有存檔與取得路徑共用格位整理：保留已有位置與超額舊物，不截斷陣列。
   const setGame=useCallback((action:GameState|((previous:GameState)=>GameState))=>rawSetGame(previous=>{
     const next=typeof action==='function'?action(previous):action;
@@ -1428,8 +1429,30 @@ export default function GameV15() {
     );
   }
 
+  const classicParty = [game.hero, ...game.mercs].slice(0, 9);
+
   return (
-    <main className="game-shell v15-shell">
+    <main className="game-shell v15-shell classic-live-game">
+      <aside className="integrated-party-rail" aria-label="目前隊伍">
+        <div className="integrated-party-title"><span>隊伍</span><span>{game.active.length + 1}/9</span></div>
+        {classicParty.map((unit) => {
+          const vitals = vitalStats(unit);
+          const isActive = unit.uid === "hero" || game.active.includes(unit.uid);
+          return <button key={unit.uid} type="button" className={(selectedUid === unit.uid ? "selected " : "") + (isActive ? "active" : "reserve")} onClick={() => { setSelectedUid(unit.uid); setActiveTab("squad"); }}>
+            <img src={unit.image} alt="" />
+            <span>{unit.name}</span>
+            <i className="party-hp"><b style={{width:`${Math.max(0,Math.min(100,vitals.hp/vitals.maxHp*100))}%`}} /></i>
+            <i className="party-mp"><b style={{width:`${Math.max(0,Math.min(100,vitals.mp/vitals.maxMp*100))}%`}} /></i>
+          </button>;
+        })}
+      </aside>
+
+      <div className="classic-live-quicknav" aria-label="快速功能">
+        <button type="button" onClick={() => setActiveTab("squad")} title="背包與隊伍"><PackageOpen /></button>
+        <button type="button" onClick={() => setActiveTab("contracts")} title="冒險委託"><BookOpen /></button>
+        <button type="button" onClick={() => setActiveTab("city")} title="四國城市"><Map /></button>
+        <button type="button" onClick={() => setActiveTab("archive")} title="萬象圖鑑"><Sparkles /></button>
+      </div>
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
@@ -1451,7 +1474,22 @@ export default function GameV15() {
         <Button type="button" onClick={()=>setGame(payGameInn)}>💰 付費快速治療<small>{quickHealCost.toLocaleString('zh-TW')} 兩</small></Button>
       </section>
 
-      <Tabs defaultValue="trade" className="game-tabs">
+      <footer className="classic-live-footer">
+        <section className="classic-live-identity">
+          <img src={game.hero.image} alt="" />
+          <div><small>LV {game.hero.level} · {heroNation.name}{game.hero.job}</small><strong>{game.hero.name}</strong><span>{currentCity.name} · 第 {game.stage} 關</span></div>
+        </section>
+        <section className="classic-live-resources">
+          <div><Coins /><span>{format(game.gold)} 兩</span></div>
+          <div><HeartPulse /><span>{heroVital.hp} / {heroVital.maxHp}</span></div>
+          <div><Swords /><span>{format(unitPower(game.hero)+game.mercs.reduce((sum,unit)=>sum+unitPower(unit),0))}</span></div>
+        </section>
+        <section className="classic-live-log" aria-label="即時訊息">
+          {game.logs.slice(0, 4).map((log, index) => <p key={index}>{log}</p>)}
+        </section>
+      </footer>
+
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value)} className="game-tabs">
         <TabsList className="nav-list v15-nav">
           <TabsTrigger value="trade"><Ship />東海商路</TabsTrigger>
           <TabsTrigger value="battle"><Swords />遭遇戰報</TabsTrigger>
