@@ -85,7 +85,7 @@ export function ThunderAltarRaid({ credit, power, materials, onEnter, onRefund, 
     <header className="raid-header"><div><small>神仙谷・特殊高難度副本</small><h2><Bolt />雷霆祭壇</h2><p>240 秒內連戰三位雷屬性首領。入場消耗 50,000 信用值，失敗退回 25,000 信用值並保留參與獎勵。</p></div><div className="raid-entry"><strong>{credit.toLocaleString()}</strong><span>持有信用值</span><Button disabled={status === "fighting" || credit < ENTRY_COST} onClick={start}><Crown />進入祭壇・50,000</Button></div></header>
     <div className="raid-phases">{BOSSES.map((item, index) => <article key={item.name} className={index === phase ? "active" : index < phase || status === "cleared" ? "done" : ""}><b>Phase {index + 1}</b><strong>{item.name}</strong><small>{index === 0 ? "命中／範圍" : index === 1 ? "護盾／控場" : "治療／爆發"}</small></article>)}</div>
     <section className="raid-arena">
-      <div className="raid-boss"><span className="raid-lightning">ϟ</span><small>{boss.title}・雷屬性</small><h3>{boss.name}</h3><p>{boss.skill}</p><em>狂暴：{boss.enrage}・階段剩餘 {phaseSeconds} 秒</em></div>
+      <div className={`raid-boss boss-phase-${phase}`}><div className="raid-boss-art" role="img" aria-label={`${boss.name} 首領圖像`} /><small>{boss.title}・雷屬性</small><h3>{boss.name}</h3><p>{boss.skill}</p><em>狂暴：{boss.enrage}・階段剩餘 {phaseSeconds} 秒</em></div>
       <div className="raid-console">
         <div className="raid-timer"><span>總倒數</span><strong>{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}</strong></div>
         <div><div className="raid-label"><span><Swords />{boss.name} HP</span><b>{Math.ceil(hp).toLocaleString()} / {maxHp.toLocaleString()}</b></div><Progress value={Math.max(0, hp / maxHp * 100)} /></div>
