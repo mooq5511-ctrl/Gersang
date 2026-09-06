@@ -823,6 +823,7 @@ export default function GameV15() {
     return next===previous?previous:applyGersangVisuals({...next,inventory:positionInventory(next.inventory)});
   }),[]);
   const [ready, setReady] = useState(false);
+  const [loginEntered, setLoginEntered] = useState(false);
   const [profiles, setProfiles] = useState<Array<CharacterProfile | null>>([null, null, null]);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
   const [creatorSlot, setCreatorSlot] = useState<number | null>(null);
@@ -1395,13 +1396,22 @@ export default function GameV15() {
 
   if (!ready) return <div className="game-loading">正在整理四國角色欄位…</div>;
 
+  if (!loginEntered) {
+    return <main className="login-splash-screen">
+      <button type="button" className="login-splash-enter" onClick={() => { setActiveSlot(null); setCreatorSlot(null); setLoginEntered(true); }} aria-label="進入角色選擇">
+        <img src="/game-assets/login-splash.jpg" alt="巨商角色群像" />
+        <span>點擊畫面進入</span>
+      </button>
+    </main>;
+  }
+
   if (activeSlot === null) {
     return (
       <main className="character-select-screen">
         <section className="character-select-shell">
           <div className="character-select-heading">
             <div className="brand-seal">商</div>
-            <div><small>商途 × BT52Gersang × 東方商路・融合版 V30</small><h1>從一支商隊，走向六萬種可能。</h1><p>四國二十城 × 五名傭兵上陣 × 前中後排戰術 × 60,888 筆 Gersang 素材。人物、物品、建築與戰場已套用原始遊戲美術。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
+            <div><small>放置 RPG × 東方商路</small><h1>放置你的巨商魂</h1><p>四國二十城、五名傭兵與前中後排戰術；在商路與雷霆祭壇中持續培養你的隊伍。</p><span className="shared-warehouse-badge"><Warehouse />共用倉庫 {sharedWarehouse.length}/{WAREHOUSE_LIMIT}</span></div>
           </div>
           {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
           <div className="character-slot-grid">
@@ -1487,7 +1497,7 @@ export default function GameV15() {
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
-          <div><h1>商途・巨商放置錄</h1><p>V30・雷霆祭壇與等級曲線</p></div>
+          <div><h1>放置你的巨商魂</h1><p>雷霆祭壇與等級曲線</p></div>
         </div>
         <div className="resource-strip v15-resources">
           <div><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
@@ -1773,7 +1783,7 @@ export default function GameV15() {
         </TabsContent>
       </Tabs>
 
-      <footer><span>融合版 V30・商途 × BT52Gersang × 東方商路</span><span>原畫人物・原始物品・四國建築・萬象遠征・60,888 素材圖鑑</span></footer>
+      <footer><span>放置你的巨商魂・東方商路</span><span>四國城市・傭兵養成・雷霆祭壇・萬象圖鑑</span></footer>
     </main>
   );
 }

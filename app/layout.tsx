@@ -15,7 +15,7 @@ const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: '巨商經典野外介面',
+  title: '放置你的巨商魂',
   description: '以經典東方商旅 MMORPG 為靈感的網頁版野外遊戲介面。',
 };
 

@@ -4,6 +4,15 @@
     radial-gradient(circle at center, #172015 0, #070906 58%, #020302 100%);
 }
 
+.login-splash-screen { min-height:100dvh; display:grid; place-items:center; padding:clamp(16px,3vw,42px); overflow:hidden; background:radial-gradient(circle at 50% 35%,#453620 0,#16150f 46%,#050706 100%); }
+.login-splash-enter { position:relative; display:grid; place-items:center; width:min(100%,960px); height:min(100%,780px); padding:0; overflow:hidden; border:1px solid #a98c53; background:#f6f4ed; box-shadow:0 0 0 4px #16150e,0 26px 80px #000c; cursor:pointer; }
+.login-splash-enter img { display:block; width:100%; height:100%; object-fit:contain; object-position:center; transition:transform 360ms ease,filter 360ms ease; }
+.login-splash-enter::after { content:""; position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 80px #21160970; }
+.login-splash-enter span { position:absolute; bottom:clamp(18px,4vh,42px); left:50%; padding:10px 22px; border:1px solid #e9ce82; background:#10160fe8; color:#fff0bd; font-family:serif; font-size:clamp(15px,2vw,21px); letter-spacing:.18em; text-shadow:0 1px 2px #000; transform:translateX(-50%); transition:background 160ms ease,transform 160ms ease; }
+.login-splash-enter:hover img,.login-splash-enter:focus-visible img { filter:brightness(1.06); transform:scale(1.018); }
+.login-splash-enter:hover span,.login-splash-enter:focus-visible span { background:#4a3719ee; transform:translateX(-50%) translateY(-2px); }
+.login-splash-enter:focus-visible { outline:3px solid #f5d675; outline-offset:5px; }
+
 /* Live integration: the existing game panels now run inside the classic HUD. */
 .classic-live-game {
   position: relative;
