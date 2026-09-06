@@ -60,7 +60,7 @@ export function TradePanel({ trade, gold, stage, escorts, logs, lastEncounter, o
         <section className="panel trade-dispatch"><div className="panel-title"><Ship /><h2>{trade.caravan ? "商隊航行中" : "商隊調度"}</h2><span className="trade-live">{trade.caravan ? "進行中" : "待命"}</span></div>
           <div className="trade-destination"><strong>{route.from}</strong><ArrowRight /><strong>{route.to}</strong></div><p>{quote.cargo} 箱{route.good} · {trade.caravan ? (now ? secondsLeft + " 秒後抵達" : "計算航程中") : route.seconds + " 秒航程"}</p>
           <Progress value={progress} aria-label="商隊航程" />
-          <output className="trade-encounter-status">{trade.caravan ? `本趟遭遇 ${trade.caravan.encountersResolved} / ${encounterCount(trade.caravan.encounterSeed)} 場` : "每趟隨機遭遇 0～10 場戰鬥"}<br /><small>自動迎戰，最多 30 回合；未能擊退則撤離，不扣貨款。</small></output>
+          <output className="trade-encounter-status">跑商途中不觸發隨機戰鬥<br /><small>請至戰鬥地圖選擇怪物後開始狩獵。</small></output>
           <dl><div><dt>進貨成本</dt><dd>{fmt(quote.cost)} 兩</dd></div><div><dt>售出總額</dt><dd>{fmt(quote.revenue)} 兩</dd></div><div><dt>每趟淨利</dt><dd className="trade-profit">+{fmt(quote.revenue - quote.cost)} 兩</dd></div><div><dt>養成收益</dt><dd>商譽 +{quote.reputation} · 經驗 +{quote.xp}</dd></div></dl>
           <Button className="trade-primary" disabled={!!trade.caravan || !unlocked || gold < quote.cost} onClick={() => onDispatch(route.id)}><Ship />{trade.caravan ? "運送貨物中" : !unlocked ? "尚未解鎖此航線" : gold < quote.cost ? "進貨資金不足" : "裝貨並出航"}</Button>
           <Button variant="outline" className="trade-primary" onClick={onToggleAuto}>{trade.auto ? <Pause /> : <Play />}{trade.auto ? "連續經商已開啟 · 點此關閉" : "連續經商已關閉 · 點此開啟"}</Button>

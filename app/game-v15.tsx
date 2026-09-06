@@ -1544,7 +1544,7 @@ export default function GameV15() {
               {banditEncounter && <div className="enemy-source-line"><span>低階山賊・朝鮮山道</span><span>相對強度（1–10）：生命 3／攻擊 3／防禦 2／移速 5</span><span>移速 {bandit.speed}・較快者先行動；同速時我方先手</span><span>山寨地利：山道、森林、山寨前 2 回合減傷 15%。</span><span>攔路劈砍：第 2 回合起，冷卻 3 回合；130% 傷害，移速 −1 至下回合結束。</span><span>揚沙偷襲：HP 低於 50% 時優先施放，每戰一次；60% 傷害，目標下次攻擊命中率由 100% 降為 80%。武技不耗 MP。</span></div>}
               <div className="battle-actions">
                 {activeUnits.some(unit => !!mercenarySpec(unit.templateId)) && <p>戰術遭遇：{boss ? '首領 1 名' : '敵軍 3 名（前排 2、後排 1）'}。上方生命為敵軍合計，單名攻擊為 {format(boss ? monsterStats.attack : Math.max(1,Math.floor(monsterStats.attack*0.55)))}。技能會自動選擇目標。</p>}
-                <output>{game.trade.caravan ? "跑商途中機率遭遇，每趟 0～10 場，隊伍自動迎戰。" : "商隊尚未出航，不會發生戰鬥。請至東海商路派遣商隊。"}<br />最近戰報：{game.lastEncounter}</output>
+                <output>{game.trade.caravan ? "跑商途中不再觸發隨機戰鬥；請由下方地圖指定怪物開始狩獵。" : "商隊尚未出航；戰鬥可直接由下方地圖選擇怪物開始。"}<br />最近戰報：{game.lastEncounter}</output>
               </div>
             </div>
           </section>

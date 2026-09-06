@@ -22,7 +22,8 @@ export const cargoCapacity = (level: number) => 10 + (level - 1) * 5;
 export const upgradeCost = (level: number) => Math.floor(6000 * Math.pow(1.55, level - 1));
 const safe = (value: unknown, fallback = 0) => typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : fallback;
 
-export const encounterCount = (seed: number) => (seed >>> 0) % 11;
+/** 跑商不再觸發隨機遭遇；戰鬥只由地圖選擇的指定怪物開始。 */
+export const encounterCount = (_seed: number) => 0;
 const nextSeed = (seed: number) => (Math.imul(seed, 1664525) + 1013904223) >>> 0;
 export function encounterTimes(voyage: Voyage): number[] {
   const count = encounterCount(voyage.encounterSeed);
