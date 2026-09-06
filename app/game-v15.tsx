@@ -746,11 +746,11 @@ function resolveRoadEncounter(previous: GameState): GameState {
       const banditEncounter = isBanditEncounter(previous.battleMap, previous.stage);
       const sourceTarget = banditEncounter ? bandit : sourceEnemyForMap(previous.battleMap, previous.stage, previous.stage % 10 === 0);
       const map = battleMaps.find((entry) => entry.id === previous.battleMap) || battleMaps[0];
-      const health = banditEncounter ? bandit.hp : enemyMax(previous.stage, map.hpMultiplier);
+      const health = banditEncounter ? bandit.hp : sourceTarget?.hp || enemyMax(previous.stage, map.hpMultiplier);
       const party = [previous.hero, ...active].map((unit) => ({ uid: unit.uid, templateId: unit.templateId, name: unit.name, skill: unit.skill, position:unit.position, ...vitalStats(unit), ...combatStats(unit), attack: Math.floor(combatStats(unit).attack * form.atk * formationDamageMultiplier(unit.position)), cost: spellCost(unit) }));
       const targetName = sourceTarget?.name || enemyForStage(previous.stage, map.enemyRegion).name;
       const tactical = active.some(unit => !!mercenarySpec(unit.templateId));
-      const enemy: TacticalEnemy = { name: targetName, hp: health, ...(banditEncounter ? { attack: bandit.attack, defense: bandit.defense, speed: tactical ? bandit.speed * 5 : bandit.speed } : enemyCombatStats(previous.stage, health, previous.stage % 10 === 0)), physical: sourceTarget?.physical || 0, magic: sourceTarget?.magic || 0, bandit: banditEncounter, boss: previous.stage % 10 === 0, kind: /騎/.test(targetName) ? 'cavalry' : /虎|狼|熊|鹿|獸|龜|蛇|狐|馬/.test(targetName) ? 'beast' : 'human', ranged: /弓|砲|術|巫|法/.test(targetName), magicAttack: /術|巫|法/.test(targetName), poison: /蛇|蠍/.test(targetName) };
+      const enemy: TacticalEnemy = { name: targetName, hp: health, ...(banditEncounter ? { attack: bandit.attack, defense: bandit.defense, speed: tactical ? bandit.speed * 5 : bandit.speed } : { ...enemyCombatStats(previous.stage, health, previous.stage % 10 === 0), ...(sourceTarget?.attack ? { attack: sourceTarget.attack } : {}) }), physical: sourceTarget?.physical || 0, magic: sourceTarget?.magic || 0, bandit: banditEncounter, boss: previous.stage % 10 === 0, kind: /騎/.test(targetName) ? 'cavalry' : /虎|狼|熊|鹿|獸|龜|蛇|狐|馬/.test(targetName) ? 'beast' : 'human', ranged: /弓|砲|術|巫|法/.test(targetName), magicAttack: /術|巫|法/.test(targetName), poison: /蛇|蠍/.test(targetName) };
       const squad = enemy.boss ? [enemy] : Array.from({length:3},(_,index) => ({ ...enemy, name: targetName+'・'+(index+1), hp: Math.floor(health/3)+(index < health%3 ? 1 : 0), attack: Math.max(1,Math.floor(enemy.attack*0.55)), back: index===2, ranged: index===2 || enemy.ranged }));
       const combat = tactical ? resolveMercenaryBattle(party, squad, banditEncounter ? 'mountain' : map.theme) : resolveVitalBattle(party.map(unit=>({...unit,speed:5})), { ...enemy, terrain: banditEncounter ? 'mountain' : map.theme });
       const remaining = new globalThis.Map(combat.fighters.map((unit) => [unit.uid, unit]));
@@ -989,11 +989,11 @@ export default function GameV15() {
   const currentMap = battleMaps.find((map) => map.id === game.battleMap) || battleMaps[0];
   const currentWorldZone=WORLD_ZONES.find(zone=>zone.id===(game.dungeon?.zone||'hanyang'))||WORLD_ZONES[0];
   const banditEncounter = isBanditEncounter(currentMap.id, game.stage);
-  const maxEnemyHp = banditEncounter ? bandit.hp : enemyMax(game.stage, currentMap.hpMultiplier);
+  const sourcedEnemy = banditEncounter ? bandit : sourceEnemyForMap(currentMap.id, game.stage, game.stage % 10 === 0);
+  const maxEnemyHp = banditEncounter ? bandit.hp : sourcedEnemy?.hp || enemyMax(game.stage, currentMap.hpMultiplier);
   const boss = game.stage % 10 === 0;
   const monsterStats = banditEncounter ? bandit : enemyCombatStats(game.stage, maxEnemyHp, boss);
   const enemyArt = legacyMercenaries[9 + (game.stage % 3)];
-  const sourcedEnemy = banditEncounter ? bandit : sourceEnemyForMap(currentMap.id, game.stage, boss);
   const fallbackEnemy = enemyForStage(game.stage, currentMap.enemyRegion);
   const enemy = sourcedEnemy || fallbackEnemy;
   const enemyRegion = sourcedEnemy ? currentMap.name : fallbackEnemy.region;

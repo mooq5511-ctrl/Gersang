@@ -109,6 +109,7 @@ export type BattleMap = {
 };
 
 export const battleMaps: BattleMap[] = [
+  { id: "starter-outskirts", name: "新手村郊外", region: "新手軍營", enemyRegion: "朝鮮", unlockStage: 1, theme: "field", hpMultiplier: 0.8, goldMultiplier: 0.8, coreBonus: 0, description: "狸貓、倭寇與山賊出沒的六種新手遭遇地。" },
   { id: "korea-field", name: "朝鮮地面", region: "朝鮮", enemyRegion: "朝鮮", unlockStage: 1, theme: "field", hpMultiplier: 1, goldMultiplier: 1, coreBonus: 0, description: "新手商團的第一條遠征路線。" },
   { id: "millennium-lake", name: "千年湖", region: "朝鮮", enemyRegion: "朝鮮", unlockStage: 5, theme: "lake", hpMultiplier: 1.18, goldMultiplier: 1.12, coreBonus: 0, description: "水霧環繞的古老湖畔。" },
   { id: "japan-sea", name: "日本海底洞", region: "日本", enemyRegion: "日本", unlockStage: 10, theme: "sea", hpMultiplier: 1.35, goldMultiplier: 1.25, coreBonus: 0, description: "潮汐與洞窟交錯的水屬戰場。" },
