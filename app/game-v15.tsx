@@ -53,7 +53,7 @@ import {
   worldCities,
 } from "./v15-data";
 import { battleMaps } from "./reference-data";
-import { gameplayContracts as legacyContracts, officialEquipment, officialGems, OfficialEquipment, sourceEnemyForMap } from "./v17-content";
+import { gameplayContracts as legacyContracts, officialEquipment, officialGems, OfficialEquipment, sourceEnemies, sourceEnemyForMap } from "./v17-content";
 const gameplayContracts = legacyContracts.filter(contract => !['tier1','tier2','awakened'].includes(contract.metric));
 import { TradePanel } from "./trade-panel";
 import { VitalBars } from "./vital-bars";
@@ -170,6 +170,7 @@ type GameState = {
   kills: number;
   city: string;
   battleMap: string;
+  selectedMonster?: string;
   hero: Hero;
   mercs: Unit[];
   active: string[];
@@ -744,7 +745,7 @@ function resolveRoadEncounter(previous: GameState): GameState {
         .filter(Boolean) as Unit[];
       const form = formations.find((item) => item.id === previous.formation) || formations[0];
       const banditEncounter = isBanditEncounter(previous.battleMap, previous.stage);
-      const sourceTarget = banditEncounter ? bandit : sourceEnemyForMap(previous.battleMap, previous.stage, previous.stage % 10 === 0);
+      const sourceTarget = banditEncounter ? bandit : sourceEnemyForMap(previous.battleMap, previous.stage, previous.stage % 10 === 0, previous.selectedMonster);
       const map = battleMaps.find((entry) => entry.id === previous.battleMap) || battleMaps[0];
       const health = banditEncounter ? bandit.hp : sourceTarget?.hp || enemyMax(previous.stage, map.hpMultiplier);
       const party = [previous.hero, ...active].map((unit) => ({ uid: unit.uid, templateId: unit.templateId, name: unit.name, skill: unit.skill, position:unit.position, ...vitalStats(unit), ...combatStats(unit), attack: Math.floor(combatStats(unit).attack * form.atk * formationDamageMultiplier(unit.position)), cost: spellCost(unit) }));
@@ -989,7 +990,7 @@ export default function GameV15() {
   const currentMap = battleMaps.find((map) => map.id === game.battleMap) || battleMaps[0];
   const currentWorldZone=WORLD_ZONES.find(zone=>zone.id===(game.dungeon?.zone||'hanyang'))||WORLD_ZONES[0];
   const banditEncounter = isBanditEncounter(currentMap.id, game.stage);
-  const sourcedEnemy = banditEncounter ? bandit : sourceEnemyForMap(currentMap.id, game.stage, game.stage % 10 === 0);
+  const sourcedEnemy = banditEncounter ? bandit : sourceEnemyForMap(currentMap.id, game.stage, game.stage % 10 === 0, game.selectedMonster);
   const maxEnemyHp = banditEncounter ? bandit.hp : sourcedEnemy?.hp || enemyMax(game.stage, currentMap.hpMultiplier);
   const boss = game.stage % 10 === 0;
   const monsterStats = banditEncounter ? bandit : enemyCombatStats(game.stage, maxEnemyHp, boss);
@@ -1018,6 +1019,7 @@ export default function GameV15() {
       return {
         ...previous,
         battleMap: map.id,
+        selectedMonster: undefined,
         enemyHp: enemyMax(previous.stage, map.hpMultiplier),
         logs: addLog(previous.logs, "商團遠征轉移至「" + map.name + "」。"),
       };
@@ -1559,6 +1561,7 @@ export default function GameV15() {
                 </button>;
               })}
             </div>
+            {sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <div className="monster-choice-list"><small>選擇遭遇怪物</small>{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id && !enemy.boss).map(enemy => <button type="button" key={enemy.name} className={game.selectedMonster === enemy.name ? "active" : ""} onClick={() => setGame(previous => ({ ...previous, selectedMonster: enemy.name, enemyHp: enemy.hp || previous.enemyHp, logs: addLog(previous.logs, `指定遭遇怪物：${enemy.name}。`) }))}><strong>{enemy.name}</strong><span>HP {enemy.hp ?? '—'}・ATK {enemy.attack ?? '—'}・EXP {enemy.xp}</span></button>)}</div>}
           </section>
           <div className="battle-grid">
             <section className="panel log-panel">

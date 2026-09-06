@@ -36,9 +36,11 @@ export const sourceEnemies: SourceEnemy[] = [
   { name: "狂風阿魯塔", mapId: "millennium-lake", xp: 250000, physical: 85, magic: 85, drops: ["天照手套", "狂風花", "楓葉石", "古代精髓", "風之石"], boss: true, skill: "狂風刃術" },
 ];
 
-export function sourceEnemyForMap(mapId: string, stage: number, isBoss: boolean) {
+export function sourceEnemyForMap(mapId: string, stage: number, isBoss: boolean, preferredName?: string) {
   const candidates = sourceEnemies.filter((enemy) => enemy.mapId === mapId && Boolean(enemy.boss) === isBoss);
   if (!candidates.length) return null;
+  const preferred = candidates.find((enemy) => enemy.name === preferredName);
+  if (preferred) return preferred;
   return candidates[(Math.max(1, stage) - 1) % candidates.length];
 }
 
