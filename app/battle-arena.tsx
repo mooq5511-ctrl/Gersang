@@ -6,6 +6,7 @@ import {DUNGEONS,type DungeonState} from './dungeon-engine';
 import {vitalStats} from './vitals-engine';
 import type {CaravanMember} from './caravan-status';
 import {createBattleEffects} from './battle-effects';
+import {Shield} from 'lucide-react';
 
 /** 主角卡片讀取現有角色，沒有第二份 HP/MP；特效事件序號防止重繪重播。 */
 export function BattleArena({state,hero}:{state:DungeonState;hero:CaravanMember & {nation?:string}}){
@@ -16,7 +17,7 @@ export function BattleArena({state,hero}:{state:DungeonState;hero:CaravanMember 
   if(spawn.current!==(state.spawnSerial||0)){effects.current?.spawn();spawn.current=state.spawnSerial||0}
   for(const event of state.events||[])if(event.id>seen.current){effects.current?.triggerBattleAnimation({attacker:event.attacker,target:event.target,damage:event.amount,skill:event.skill,critical:event.critical});seen.current=event.id}
  },[state.events,state.spawnSerial]);
- const v=vitalStats(hero),monster=DUNGEONS[state.key];
+ const v=vitalStats(hero),monster=DUNGEONS[state.key],shieldActive=monster.name==='狂風阿魯塔'&&(state.enemyShieldUntil||0)>Date.now(),shieldSeconds=shieldActive?Math.max(1,Math.ceil(((state.enemyShieldUntil||0)-Date.now())/1000)):0;
  const monsterArt:Record<string,string>={狸貓:'/assets/sprites/newbie-raccoon-v1.png',倭寇:'/assets/characters/char_049_pirate_skeleton_bow_R.png',鐵炮倭寇:'/assets/characters/char_053_pirate_skeleton_cannon_R.png',山賊:'/assets/characters/char_056_pirate_skeleton_captain_N.png',海賊:'/assets/characters/char_057_pirate_skeleton_captain_R.png',鐵鉤海賊:'/assets/characters/char_055_pirate_skeleton_captain_D.png',赤賊:'/assets/characters/char_054_pirate_skeleton_captain_A.png',巫女:'/assets/characters/char_052_pirate_skeleton_cannon_N.png',司令武女:'/assets/characters/char_052_pirate_skeleton_cannon_N.png','詭異的小販':'/assets/characters/char_054_pirate_skeleton_captain_A.png','詭異的獨角鬼(火)':'/assets/characters/char_057_pirate_skeleton_captain_R.png','詭異的獨角鬼(水)':'/assets/characters/char_049_pirate_skeleton_bow_R.png','詭異的獨角鬼(雷)':'/assets/characters/char_053_pirate_skeleton_cannon_R.png','詭異的獨角鬼(風)':'/assets/characters/char_056_pirate_skeleton_captain_N.png',阿魯塔:'/assets/characters/char_055_pirate_skeleton_captain_D.png','死靈武女(強)':'/assets/characters/char_052_pirate_skeleton_cannon_N.png','巫女(強)':'/assets/characters/char_052_pirate_skeleton_cannon_N.png',神漢男巫:'/assets/characters/char_049_pirate_skeleton_bow_R.png',邪靈巫師:'/assets/characters/char_053_pirate_skeleton_cannon_R.png',赤賊頭目:'/assets/characters/char_054_pirate_skeleton_captain_A.png',狂風阿魯塔:'/assets/characters/char_057_pirate_skeleton_captain_R.png'};
  return <div className={'impact-stage'+(state.status==='fighting'?' impact-stage-fighting':'')} ref={root} aria-label="主角與怪物交鋒">
  <span className="impact-versus" aria-hidden="true">對決</span>
@@ -26,7 +27,7 @@ export function BattleArena({state,hero}:{state:DungeonState;hero:CaravanMember 
  <label>MP {v.mp} / {v.maxMp}<Progress className="dungeon-mp" value={v.mp/v.maxMp*100} aria-label="主角魔法值"/></label>
  </div><div className="impact-overlay" data-popup="hero"/></div></div>
  <div className={'impact-wrap'+(state.status==='respawning'?' impact-dead':'')} data-spawn="enemy"><div className="impact-card" data-hit="enemy"><div data-motion="enemy">
-<span className="impact-seal impact-sprite impact-sprite-enemy" data-sprite="enemy"><img src={monsterArt[monster.name]||'/assets/sprites/enemy-idle.png'} alt=""/></span><h3>{monster.name}</h3><p>Lv.{monster.level} · 攻擊 {monster.atk}</p>
+<span className="impact-seal impact-sprite impact-sprite-enemy" data-sprite="enemy"><img src={monsterArt[monster.name]||'/assets/sprites/enemy-idle.png'} alt=""/>{shieldActive&&<span className="enemy-status-icon enemy-status-shield" title={`白虎盾・防禦 +30%・剩餘 ${shieldSeconds} 秒`} aria-label={`白虎盾，防禦提升 30%，剩餘 ${shieldSeconds} 秒`}><Shield size={16}/><small>{shieldSeconds}s</small></span>}</span><h3>{monster.name}</h3><p>Lv.{monster.level} · 攻擊 {monster.atk}</p>
  <label>HP {state.enemyHp} / {monster.hp}<Progress className="dungeon-hp" value={state.enemyHp/monster.hp*100} aria-label="怪物生命值"/></label>
  <label>MP {monster.mp} / {monster.mp}<Progress className="dungeon-mp" value={monster.mp?100:0} aria-label="怪物魔法值"/></label>
  </div><div className="impact-overlay" data-popup="enemy"/></div></div>
