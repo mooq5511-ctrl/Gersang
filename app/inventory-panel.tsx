@@ -37,7 +37,8 @@ export function InventoryPanel({inventory,materials,materialPrices,equip,sell,se
         const price=materialPrices[name]||0;
         const detail=materialSources.get(name);
         const sourceLabel=detail?.enemies.length?detail.enemies.slice(0,3).join('、')+(detail.enemies.length>3?` 等 ${detail.enemies.length} 種`:""):'其他戰利品';
-        return <li className="merchant-material-row merchant-material-detailed-row" key={name}><span className={'merchant-material-icon material-art material-art-'+materialArtKind(name)} aria-label={`${name}圖示`} role="img"/><div className="merchant-material-copy"><strong>{name}</strong><small>持有 ×{count}・單價 {price.toLocaleString()} 兩</small><small>來源：{sourceLabel}</small><small>地區：{detail?.maps.join('、')||'—'}・用途：鍛造／交易</small></div><button type="button" onClick={()=>sellMaterial(name)} disabled={!price}>出售 1 件</button></li>;
+        const artKind=materialArtKind(name);
+        return <li className="merchant-material-row merchant-material-detailed-row" key={name}><span className={'merchant-material-icon material-art material-art-'+artKind} aria-label={`${name}圖示`} role="img"><img src={`/assets/sprites/loot-${artKind}-cute-v1.png`} alt=""/></span><div className="merchant-material-copy"><strong>{name}</strong><small>持有 ×{count}・單價 {price.toLocaleString()} 兩</small><small>來源：{sourceLabel}</small><small>地區：{detail?.maps.join('、')||'—'}・用途：鍛造／交易</small></div><button type="button" onClick={()=>sellMaterial(name)} disabled={!price}>出售 1 件</button></li>;
       }):<li className="merchant-material-empty">尚無材料；在四國掛機地圖擊敗怪物後，戰利品會直接放入此處。</li>}</ul>
     </section>
     <div className="merchant-bag-subhead merchant-equipment-subhead"><div><strong>裝備道具</strong><small>點擊穿戴，右側按鈕出售</small></div></div>
