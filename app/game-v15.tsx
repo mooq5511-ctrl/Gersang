@@ -1509,7 +1509,8 @@ export default function GameV15() {
       if (gem.stat === "all") {
         bonus.str += gem.values[grade]; bonus.agi += gem.values[grade]; bonus.intel += gem.values[grade]; bonus.vit += gem.values[grade];
       } else bonus[gem.stat] += gem.values[grade];
-      equip[slot] = { ...item, name: item.name + "・" + gem.name, bonus };
+      const gemAffix: MagicAffix = { id: 'socket-'+gem.id+'-'+Date.now(), name: gem.name, text: gem.label+' +'+gem.values[grade], color: '#8ee7ff', stat: gem.stat, value: gem.values[grade] };
+      equip[slot] = { ...item, name: item.name + "・" + gem.name, bonus, magic: [...(item.magic || []), gemAffix] };
       const common = { ...previous, gold: previous.gold - cost, logs: addLog(previous.logs, gem.name + "已鑲嵌至「" + item.name + "」。") };
       return selectedUid === "hero"
         ? { ...common, hero: { ...previous.hero, equip } }
