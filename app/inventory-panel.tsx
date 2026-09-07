@@ -2,8 +2,9 @@
 import {rarityPresentation} from './classic-presentation';
 import {positionInventory} from './inventory-layout';
 import {equipmentDetailLines,type TooltipGear} from './divine-equipment';
-import {EQUIPMENT_LABELS,type EquipmentKind} from './equipment-slots';
+import {EQUIPMENT_LABELS,itemKind,type EquipmentKind} from './equipment-slots';
 import {sourceEnemies} from './v17-content';
+import {useState} from 'react';
 export type BagItem=TooltipGear & {uid:string;name:string;slot:EquipmentKind;image:string;bagSlot?:number};
 const materialArtKind=(name:string)=>/草|黃|藥|花|種子|牛黃|桂皮|甘草|熟地黃/.test(name)?'herb':/精氣石|屬性石|千年石|玉|石$/.test(name)?'crystal':/咒術秘訣|密號符|力量碎片/.test(name)?'scroll':/劍|斧|弓|槍|刀|投石索|佛珠|木棒|三叉戟/.test(name)?'weapon':/精髓/.test(name)?'essence':'rare';
 type InventoryPanelProps={
@@ -12,13 +13,19 @@ type InventoryPanelProps={
   materialPrices:Record<string,number>;
   equip:(uid:string)=>void;
   sell:(uid:string)=>void;
+  sellAllEquipment:()=>void;
   sellMaterial:(name:string)=>void;
   sellAllMaterials:()=>void;
   openAncientCoinBox:()=>void;
   message:string;weight:number;maxWeight:number;targetName:string;
 };
-export function InventoryPanel({inventory,materials,materialPrices,equip,sell,sellMaterial,sellAllMaterials,openAncientCoinBox,message,weight,maxWeight,targetName}:InventoryPanelProps){
+export function InventoryPanel({inventory,materials,materialPrices,equip,sell,sellAllEquipment,sellMaterial,sellAllMaterials,openAncientCoinBox,message,weight,maxWeight,targetName}:InventoryPanelProps){
+  const [equipmentFilter,setEquipmentFilter]=useState<'all'|'weapon'|'helm'|'armor'|'gloves'|'boots'|'accessories'>('all');
   const items=positionInventory(inventory);
+  const filteredItems=items.filter(item=>{
+    const kind=itemKind(item.slot);
+    return equipmentFilter==='all'||equipmentFilter===kind||(equipmentFilter==='accessories'&&(kind==='ring'||kind==='amulet'));
+  });
   const materialEntries=Object.entries(materials).filter(([,count])=>count>0).sort(([a],[b])=>a.localeCompare(b,'zh-Hant'));
   const materialCount=materialEntries.reduce((sum,[,count])=>sum+count,0);
   const materialSources=new Map<string,{maps:string[];enemies:string[]}>();
@@ -41,7 +48,7 @@ export function InventoryPanel({inventory,materials,materialPrices,equip,sell,se
         return <li className="merchant-material-row merchant-material-detailed-row" key={name}><span className={'merchant-material-icon material-art material-art-'+artKind} aria-label={`${name}圖示`} role="img"><img src={`/assets/sprites/loot-${artKind}-cute-v1.png`} alt=""/></span><div className="merchant-material-copy"><strong>{name}</strong><small>持有 ×{count}・{isAncientCoinBox?'開啟可獲得 1–10 枚新手兌換銅錢':`單價 ${price.toLocaleString()} 兩`}</small><small>來源：{sourceLabel}</small><small>地區：{detail?.maps.join('、')||'—'}・用途：{isAncientCoinBox?'開啟寶箱（大吉(作) 0.01%／者、好各 0.001%／帥 0.0001%）':'鍛造／交易'}</small></div><button type="button" onClick={()=>isAncientCoinBox?openAncientCoinBox():sellMaterial(name)} disabled={!isAncientCoinBox&&!price}>{isAncientCoinBox?'開啟寶箱':'出售 1 件'}</button></li>;
       }):<li className="merchant-material-empty">尚無材料；在四國掛機地圖擊敗怪物後，戰利品會直接放入此處。</li>}</ul>
     </section>
-    <section className="merchant-bag-details" aria-label="背包詳細清單"><div className="merchant-bag-subhead"><div><strong>背包詳細清單</strong><small>裝給目前角色・{targetName}</small></div></div>{items.length?<ul>{items.map(item=><li key={item.uid} className={'merchant-detail-entry '+rarityPresentation(item.rarity).className}><span className="merchant-bag-icon">{item.image?<img src={item.image} alt=""/>:<strong>裝</strong>}</span><div><strong>{item.name}</strong><small>{rarityPresentation(item.rarity).label}・{EQUIPMENT_LABELS[item.slot]}</small>{equipmentDetailLines(item).slice(0,2).map(line=><em key={line}>{line}</em>)}</div><button type="button" onClick={()=>equip(item.uid)}>裝給{targetName}</button><button type="button" onClick={()=>sell(item.uid)}>出售</button></li>)}</ul>:<p>尚無可穿戴裝備。</p>}</section>
+    <section className="merchant-bag-details" aria-label="背包詳細清單"><div className="merchant-bag-subhead"><div><strong>背包詳細清單</strong><small>裝給目前角色・{targetName}・顯示 {filteredItems.length}/{items.length}</small></div><button type="button" onClick={sellAllEquipment} disabled={!items.length}>全部出售</button></div><div className="merchant-equipment-filters" aria-label="裝備分類篩選">{([['all','全部'],['weapon','武器'],['helm','頭盔'],['armor','盔甲'],['gloves','手套'],['boots','鞋子'],['accessories','飾品']] as const).map(([id,label])=><button type="button" key={id} aria-pressed={equipmentFilter===id} onClick={()=>setEquipmentFilter(id)}>{label}</button>)}</div>{items.length?(filteredItems.length?<ul>{filteredItems.map(item=><li key={item.uid} className={'merchant-detail-entry '+rarityPresentation(item.rarity).className}><span className="merchant-bag-icon">{item.image?<img src={item.image} alt=""/>:<strong>裝</strong>}</span><div><strong>{item.name}</strong><small>{rarityPresentation(item.rarity).label}・{EQUIPMENT_LABELS[item.slot]}</small>{equipmentDetailLines(item).slice(0,2).map(line=><em key={line}>{line}</em>)}</div><button type="button" onClick={()=>equip(item.uid)}>裝給{targetName}</button><button type="button" onClick={()=>sell(item.uid)}>出售</button></li>)}</ul>:<p>此分類目前沒有裝備。</p>):<p>尚無可穿戴裝備。</p>}</section>
     <div className="rarity-legend" aria-label="裝備品階">{["普通","稀有","史詩","傳說"].map(rarity=><span key={rarity} className={rarityPresentation(rarity).className}>{rarity}</span>)}</div>
     <p>材料與裝備共用無上限行囊。穿戴中的裝備必須先卸下，因此不會被誤賣。</p>
     <output className="merchant-bag-message">{message||'行囊尚空，出發尋覓戰利品。'}</output><footer className="merchant-bag-bottom"><span>負重</span><strong>{weight.toFixed(1)} / {maxWeight}</strong></footer>

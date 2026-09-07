@@ -64,7 +64,7 @@ import { combatStats, enemyCombatStats, normalizeVitals, recoverVitals, resolveV
 import { advanceTrade, dispatchTrade, freshTrade, MAX_CARGO_LEVEL, restoreTrade, TRADE_ROUTES, upgradeCost, type TradeState } from "./trade-engine";
 import { formationDamageMultiplier, nextBattlePosition, normalizeBattlePosition, type BattlePosition } from './formation-position';
 import { MATERIAL_BUY_PRICES, MATERIAL_PRICES, VILLAGE_WEAPONS, buyMarketMaterial, buyVillageWeapon, exchangeAttackBonus, sellAllMaterials, sellMaterial, weaponCost, type ExchangePurchases, type VillageWeaponId } from './village-exchange';
-import {equipmentSellPrice,sellEquipmentFromInventory} from './equipment-market';
+import {sellAllEquipmentFromInventory,sellEquipmentFromInventory} from './equipment-market';
 import { GersangArchive } from './gersang-archive';
 import { parseStoredArray, preserveCorruptStorage } from './storage-guards';
 import './gersang-archive.css';
@@ -1242,6 +1242,14 @@ export default function GameV15() {
     });
   }
 
+  function sellEveryInventoryEquipment(){
+    setGame(previous=>{
+      const result=sellAllEquipmentFromInventory(previous.inventory,previous.gold);
+      if(!result.count)return {...previous,logs:addLog(previous.logs,'背包內沒有可出售的裝備。')};
+      return {...previous,inventory:result.inventory,gold:result.gold,logs:addLog(previous.logs,'裝備商回收背包裝備 '+result.count+' 件，獲得 '+format(result.earned)+' 兩。')};
+    });
+  }
+
   function unequipItem(slot:EquipmentSlot,targetUid=selectedUid) {
     setGame(previous=>{
       const target=targetUid==='hero'?previous.hero:previous.mercs.find(unit=>unit.uid===targetUid);
@@ -1658,7 +1666,7 @@ export default function GameV15() {
             });}}/>}
             battle={null}
             inventory={game.inventory} materials={game.materials} materialPrices={MATERIAL_PRICES}
-            equipSelected={(itemUid,targetUid)=>equipItem(itemUid,undefined,targetUid)} sellInventory={sellInventoryEquipment} sellMaterial={sellLoot} sellAllMaterials={sellEveryLoot} openAncientCoinBox={openAncientCoinBox} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
+            equipSelected={(itemUid,targetUid)=>equipItem(itemUid,undefined,targetUid)} sellInventory={sellInventoryEquipment} sellAllInventory={sellEveryInventoryEquipment} sellMaterial={sellLoot} sellAllMaterials={sellEveryLoot} openAncientCoinBox={openAncientCoinBox} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
 
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
             maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}

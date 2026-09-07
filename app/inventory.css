@@ -86,6 +86,26 @@
   opacity: .4;
   cursor: not-allowed;
 }
+.merchant-equipment-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0 0 8px;
+}
+.merchant-equipment-filters button {
+  border: 1px solid #6f6254;
+  border-radius: 3px;
+  background: #26211d;
+  color: #d7cbbb;
+  padding: 4px 7px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.merchant-equipment-filters button[aria-pressed=true] {
+  border-color: #d39a4b;
+  background: #5a3319;
+  color: #ffe0a1;
+}
 .merchant-material-list {
   display: flex;
   margin: 0;

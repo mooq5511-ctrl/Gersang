@@ -25,3 +25,9 @@ export function sellEquipmentFromInventory<T extends SellableEquipment>(inventor
   const earned=equipmentSellPrice(item);
   return {inventory:inventory.filter(entry=>entry.uid!==uid),gold:gold+earned,earned,item,error:null};
 }
+
+/** 只回收背包內的裝備；已穿戴的物件不在 inventory，因此不會被全部出售誤賣。 */
+export function sellAllEquipmentFromInventory<T extends SellableEquipment>(inventory:T[],gold:number){
+  const earned=inventory.reduce((sum,item)=>sum+equipmentSellPrice(item),0);
+  return {inventory:[] as T[],gold:gold+earned,earned,count:inventory.length};
+}

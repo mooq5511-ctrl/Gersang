@@ -20,7 +20,7 @@ type Props = {
   trade:()=>void; trainHero:()=>void;
 
   inventory:BagItem[];materials:Record<string,number>;materialPrices:Record<string,number>;
-  equipSelected:(uid:string,targetUid:string)=>void;sellInventory:(uid:string)=>void;sellMaterial:(name:string)=>void;sellAllMaterials:()=>void;openAncientCoinBox:()=>void;
+  equipSelected:(uid:string,targetUid:string)=>void;sellInventory:(uid:string)=>void;sellAllInventory:()=>void;sellMaterial:(name:string)=>void;sellAllMaterials:()=>void;openAncientCoinBox:()=>void;
   unequipHero:(slot:EquipmentSlot)=>void;bagMessage:string;
 };
 export function CaravanStatus(p:Props) {
@@ -34,7 +34,7 @@ export function CaravanStatus(p:Props) {
     <nav className="party-context-menu" aria-label="角色功能"><strong>{selectedRoster.name}</strong><button type="button" aria-pressed={activeWindow==='stats'} onClick={()=>setActiveWindow('stats')}>能力值</button><button type="button" aria-pressed={activeWindow==='inventory'} onClick={()=>setActiveWindow('inventory')}>背包</button></nav>
     {p.battle && <div className="hero-inventory-layout battle-only">{p.battle}</div>}
     {activeWindow==='stats'&&<section className="floating-game-window floating-character" aria-label="角色能力值"><header><strong>{selectedRoster.name}・能力值</strong><button type="button" onClick={()=>setActiveWindow(null)} aria-label="關閉能力值">×</button></header>{selectedRoster.uid==='hero'?<><HeroStatusPanel compact busy={p.busy} hero={p.hero} gold={p.gold} credit={p.credit} creditXp={p.creditXp} creditLevel={p.creditLevel} weight={p.weight} xpNeed={p.xpNeed} allocate={p.allocate} trade={p.trade} train={p.trainHero} select={()=>p.select(p.hero.uid)} unequip={p.unequipHero}/><AbilityPanel hero={p.hero} allocate={p.allocate}/></>:<MercenaryStatusWindow unit={selectedRoster} power={p.power} allocate={p.allocate}/>}<EquipmentSummary unit={selectedRoster}/></section>}
-    {activeWindow==='inventory'&&<section className="floating-game-window floating-inventory" aria-label="行囊窗"><header><strong>{selectedRoster.name}・背包</strong><button type="button" onClick={()=>setActiveWindow(null)} aria-label="關閉背包">×</button></header><InventoryPanel inventory={p.inventory} materials={p.materials} materialPrices={p.materialPrices} equip={itemUid=>p.equipSelected(itemUid,selectedRoster.uid)} sell={p.sellInventory} sellMaterial={p.sellMaterial} sellAllMaterials={p.sellAllMaterials} openAncientCoinBox={p.openAncientCoinBox} message={p.bagMessage} weight={p.weight} maxWeight={p.maxWeight} targetName={selectedRoster.name}/></section>}
+    {activeWindow==='inventory'&&<section className="floating-game-window floating-inventory" aria-label="行囊窗"><header><strong>{selectedRoster.name}・背包</strong><button type="button" onClick={()=>setActiveWindow(null)} aria-label="關閉背包">×</button></header><InventoryPanel inventory={p.inventory} materials={p.materials} materialPrices={p.materialPrices} equip={itemUid=>p.equipSelected(itemUid,selectedRoster.uid)} sell={p.sellInventory} sellAllEquipment={p.sellAllInventory} sellMaterial={p.sellMaterial} sellAllMaterials={p.sellAllMaterials} openAncientCoinBox={p.openAncientCoinBox} message={p.bagMessage} weight={p.weight} maxWeight={p.maxWeight} targetName={selectedRoster.name}/></section>}
   </section>;
 }
 
