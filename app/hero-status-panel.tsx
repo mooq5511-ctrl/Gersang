@@ -40,6 +40,6 @@ export function HeroStatusPanel({busy=false,compact=false,hero,gold,credit,weigh
       <label className="hp-meter hp-exp">EXP<span>{hero.level>=LEVEL_CAP?'已達 Lv.260':`${hero.xp.toLocaleString()} / ${xpNeed(hero.level).toLocaleString()}`}</span>{hero.level<LEVEL_CAP&&<progress max={xpNeed(hero.level)} value={hero.xp}/>}</label>
       <p className="hp-defense">巨商信用度 <strong>{levelData.totalCredit.toLocaleString()}</strong><small>本級 +{levelData.credit}｜累積經驗 {levelData.totalXp.toLocaleString()}</small></p>
     </section>}
-    <footer className="hp-actions"><button disabled={busy} onClick={trade} title="獲得 100 兩與 25 信用">模擬經商（賺錢／加信用）</button><button disabled={busy} onClick={train} title="10 經驗與 50% 神裝掉落">模擬打怪（經驗／50% 掉寶）</button><small>掛機每秒 +10 兩 · +5 信用（療傷期間暫停）</small></footer>
+    <footer className="hp-actions"><button disabled={busy} onClick={trade} title="獲得 100 兩與 25 信用">模擬經商（賺錢／加信用）</button><button disabled={busy} onClick={train} title="主角獲得 10 經驗">模擬打怪（+10 經驗）</button><small>掛機每秒 +10 兩 · +5 信用（療傷期間暫停）</small></footer>
   </aside>;
 }

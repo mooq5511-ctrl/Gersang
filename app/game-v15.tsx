@@ -12,7 +12,6 @@ import { settleCaravanIdle } from './caravan-idle';
 import { heroPersonalPower, heroWeightLimit, heroTotalAttributes, HERO_INITIAL_ATTRIBUTES } from './hero-rules';
 import {DIVINE_EQUIPMENT} from './divine-equipment';
 import {positionInventory,addInventoryItem} from './inventory-layout';
-import {rollInventoryLoot} from './inventory-loot';
 import { ACTIVE_MERCENARY_LIMIT, backupBeforeGuildMigration, retainGuildRoster } from './guild-migration';
 import { EQUIPMENT_SLOTS, EQUIPMENT_LABELS, emptyEquipmentSlots, itemKind, compatibleSlots, normalizeStoredItem, equipFromInventory, unequipToInventory, migrateSevenSlotSave, backupBeforeEquipmentMigration, type EquipmentSlot, type EquipmentKind } from './equipment-slots';
 import { wearableCatalog, type WearableBase } from './wearable-catalog';
@@ -1222,14 +1221,8 @@ export default function GameV15() {
 
   function simulateHeroLoot() {
     if(dungeonBusy(game.dungeon)){setNotice('副本或療傷期間暫停此操作，請先完成療傷。');return;}
-    // 在更新函式外抽樣，React 開發模式重跑更新函式也不會重新抽獎。
-    const key=rollInventoryLoot();
-    const spec=key?DIVINE_EQUIPMENT[key]:null;
-    const drop:Equipment|null=spec?{uid:uid('loot-'+key),name:spec.name,slot:spec.slot,bonus:{...spec.bonus},def:spec.def,atk:0,hp:0,image:'',enhance:0,rarity:'傳說',magic:[],requiredLevel:1,source:'模擬打怪掉落'}:null;
     setGame(previous=>{
-      const pickup=drop?addInventoryItem(previous.inventory,drop):{inventory:previous.inventory,error:undefined};
-      const message='模擬打怪：主角獲得 10 經驗。'+(drop?(pickup.error?'背包已滿，本次掉落無法拾取。':'獲得「'+drop.name+'」！'):'本次未掉落裝備。');
-      return {...previous,hero:grantXp(previous.hero,10),inventory:pickup.inventory,logs:addLog(previous.logs,message)};
+      return {...previous,hero:grantXp(previous.hero,10),logs:addLog(previous.logs,'模擬打怪：主角獲得 10 經驗。')};
     });
   }
 
