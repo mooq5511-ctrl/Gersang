@@ -55,7 +55,7 @@ import {
 import { battleMaps } from "./reference-data";
 import { gameplayContracts as legacyContracts, officialEquipment, officialGems, OfficialEquipment, sourceEnemies, sourceEnemyForMap } from "./v17-content";
 const gameplayContracts = legacyContracts.filter(contract => !['tier1','tier2','awakened'].includes(contract.metric));
-const monsterDungeonKeys: Record<string, DungeonKey> = { '狸貓':'e_starter_raccoon','倭寇':'e_starter_wako','鐵炮倭寇':'e_starter_gunner','山賊':'e_starter_bandit','海賊':'e_starter_pirate','鐵鉤海賊':'e_starter_hook_pirate','赤賊':'e_lake_red_thief','巫女':'e_lake_shamaness','司令武女':'e_lake_commander','詭異的小販':'e_lake_vendor','詭異的獨角鬼(火)':'e_lake_horn_fire','詭異的獨角鬼(水)':'e_lake_horn_water','詭異的獨角鬼(雷)':'e_lake_horn_lightning','詭異的獨角鬼(風)':'e_lake_horn_wind','阿魯塔':'e_lake_altur','死靈武女(強)':'e_lake_dead_shamaness','巫女(強)':'e_lake_shamaness_strong','神漢男巫':'e_lake_male_shaman','邪靈巫師':'e_lake_evil_shaman','赤賊頭目':'e_lake_red_thief_chief','狂風阿魯塔':'e_lake_gale_altur' };
+const monsterDungeonKeys: Record<string, DungeonKey> = { '狸貓':'e_starter_raccoon','倭寇':'e_starter_wako','鐵炮倭寇':'e_starter_gunner','山賊':'e_starter_bandit','海賊':'e_starter_pirate','鐵鉤海賊':'e_starter_hook_pirate','赤賊':'e_lake_red_thief','巫女':'e_lake_shamaness','司令武女':'e_lake_commander','詭異的小販':'e_lake_vendor','詭異的獨角鬼(火)':'e_lake_horn_fire','詭異的獨角鬼(水)':'e_lake_horn_water','詭異的獨角鬼(雷)':'e_lake_horn_lightning','詭異的獨角鬼(風)':'e_lake_horn_wind','阿魯塔':'e_lake_altur','死靈武女(強)':'e_lake_dead_shamaness','巫女(強)':'e_lake_shamaness_strong','神漢男巫':'e_lake_male_shaman','邪靈巫師':'e_lake_evil_shaman','赤賊頭目':'e_lake_red_thief_chief','狂風阿魯塔':'e_lake_gale_altur','河童':'e_japan_sea_kappa','蝙蝠':'e_japan_sea_bat','海蟹':'e_japan_sea_crab','王水蛭':'e_japan_sea_leech','海星':'e_japan_sea_starfish','海星(強)':'e_japan_sea_starfish_strong','黃金海星':'e_japan_sea_golden_starfish' };
 import { TradePanel } from "./trade-panel";
 import { VitalBars } from "./vital-bars";
 import { IsometricWorldMap } from "./isometric-world-map";
@@ -1015,7 +1015,7 @@ export default function GameV15() {
         ...previous,
         battleMap: map.id,
         selectedMonster: undefined,
-        dungeon: map.id === 'starter-outskirts' ? {...freshDungeon(),key:'e_starter_raccoon',enemyHp:DUNGEONS.e_starter_raccoon.hp} : map.id === 'millennium-lake' ? {...freshDungeon(),key:'e_lake_red_thief',enemyHp:DUNGEONS.e_lake_red_thief.hp} : {...(previous.dungeon||freshDungeon()),lockedEnemyKey:undefined},
+        dungeon: map.id === 'starter-outskirts' ? {...freshDungeon(),key:'e_starter_raccoon',enemyHp:DUNGEONS.e_starter_raccoon.hp} : map.id === 'millennium-lake' ? {...freshDungeon(),key:'e_lake_red_thief',enemyHp:DUNGEONS.e_lake_red_thief.hp} : map.id === 'japan-sea' ? {...freshDungeon(),key:'e_japan_sea_kappa',enemyHp:DUNGEONS.e_japan_sea_kappa.hp} : {...(previous.dungeon||freshDungeon()),lockedEnemyKey:undefined},
         enemyHp: enemyMax(previous.stage, map.hpMultiplier),
         logs: addLog(previous.logs, "商團遠征轉移至「" + map.name + "」。"),
       };

@@ -1,6 +1,6 @@
 export type SourceEnemy = {
   name: string;
-  mapId: "starter-outskirts" | "korea-field" | "millennium-lake";
+  mapId: "starter-outskirts" | "korea-field" | "millennium-lake" | "japan-sea";
   xp: number;
   hp?: number;
   mp?: number;
@@ -44,6 +44,13 @@ export const sourceEnemies: SourceEnemy[] = [
   { name: "邪靈巫師", mapId: "millennium-lake", grade: 9, element: "風(20)", hp: 480000, mp: 20000, attack: 300, xp: 100000, physical: 275, magic: 280, drops: ["楓葉石", "邪靈巫師的頭巾", "深淵的精髓", "雙刃弓", "[天璣]咒術秘訣"] },
   { name: "赤賊頭目", mapId: "millennium-lake", grade: 10, element: "風(20)", hp: 560000, mp: 10000, attack: 800, xp: 120000, physical: 285, magic: 285, drops: ["楓葉石", "赤賊頭目的矛", "小型風之屬性石", "蛇矛", "[天璣]咒術秘訣"] },
   { name: "狂風阿魯塔", mapId: "millennium-lake", grade: 10, element: "風(20)", hp: 1200000, mp: 20000, xp: 250000, physical: 295, magic: 300, drops: ["天照的手套", "狂風花", "楓葉石", "古代神獸之精髓", "小型風之屬性石", "[天璣]咒術秘訣"], skill: "狂風刃術" },
+  { name: "河童", mapId: "japan-sea", grade: 1, hp: 80, mp: 0, attack: 10, xp: 40, physical: 0, magic: 0, drops: ["硬殼", "鹽醃鯖魚", "舊短劍", "下級精髓"] },
+  { name: "蝙蝠", mapId: "japan-sea", grade: 1, hp: 80, mp: 0, attack: 7, xp: 55, physical: 0, magic: 30, drops: ["雜肉", "舊長銃砲", "舊白羽扇", "下級精髓"] },
+  { name: "海蟹", mapId: "japan-sea", grade: 1, hp: 320, mp: 40, attack: 20, xp: 95, physical: 20, magic: 0, drops: ["蟹醬", "藍色精氣石", "[龍麟做成的]咒術秘訣", "下級精髓"] },
+  { name: "王水蛭", mapId: "japan-sea", grade: 1, hp: 230, mp: 0, attack: 19, xp: 100, physical: 20, magic: 20, drops: ["正宗清酒", "舊銀製投石索", "舊青刃斧", "下級精髓"] },
+  { name: "海星", mapId: "japan-sea", grade: 10, hp: 65000, mp: 8000, attack: 600, xp: 18000, physical: 240, magic: 230, drops: ["飛摺扇", "華麗的珊瑚", "破裂的令牌", "海星碎片", "生命的精髓"] },
+  { name: "海星(強)", mapId: "japan-sea", grade: 9, hp: 260000, mp: 10000, attack: 800, xp: 55000, physical: 275, magic: 270, drops: ["飛摺扇", "華麗的珊瑚", "破裂的令牌", "海星碎片", "生命的精髓"] },
+  { name: "黃金海星", mapId: "japan-sea", grade: 10, element: "水(20)", hp: 1000000, mp: 20000, attack: 2000, xp: 200000, physical: 300, magic: 295, drops: ["黃帝的腰帶", "結冰石", "黃金海星的殼", "海星碎片", "[天璇]咒術秘訣", "小型憤怒精髓"] },
 ];
 
 export function sourceEnemyForMap(mapId: string, stage: number, isBoss: boolean, preferredName?: string) {
