@@ -946,6 +946,7 @@ export default function GameV15() {
   const [cityService, setCityService] = useState<CityService>("mercenary");
   const [medicineAmounts, setMedicineAmounts] = useState<Record<string, number>>({});
   const [gemSlot, setGemSlot] = useState<EquipmentSlot>('armor');
+  const [gemAmount, setGemAmount] = useState(1);
   const [sharedWarehouse, setSharedWarehouse] = useState<Equipment[]>([]);
   const warehouseWritable = useRef(true);
   const loaded = useRef(false);
@@ -1488,7 +1489,7 @@ export default function GameV15() {
     });
   }
 
-  function socketGem(gemId: string, grade: number) {
+  function socketGem(gemId: string, grade: number, requestedAmount = 1) {
     const gem = officialGems.find((entry) => entry.id === gemId);
     if (!gem) return;
     setGame((previous) => {
@@ -1499,21 +1500,23 @@ export default function GameV15() {
         setNotice('請先在'+slotLabels[slot]+'欄穿戴裝備。');
         return previous;
       }
-      const cost = gem.costs[grade];
+      const equip = { ...target.equip };
+      const item = equip[slot]!;
+      const existing = item.socketGem;
+      const amount = Math.min(requestedAmount, 100 - (existing?.count || 0));
+      if (amount < 1) { setNotice('此裝備部位最多鑲嵌 100 顆寶石。'); return previous; }
+      const cost = gem.costs[grade] * amount;
       if (previous.gold < cost) {
         setNotice("寶石加工資金不足。");
         return previous;
       }
-      const equip = { ...target.equip };
-      const item = equip[slot]!;
-      const existing = item.socketGem;
       if (existing && existing.id !== gem.id) { setNotice('每個裝備部位只能鑲嵌一種寶石。'); return previous; }
       if ((existing?.count || 0) >= 100) { setNotice('此裝備部位最多鑲嵌 100 顆寶石。'); return previous; }
       const bonus = { ...(item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }) };
       if (gem.stat === "all") {
-        bonus.str += gem.values[grade]; bonus.agi += gem.values[grade]; bonus.intel += gem.values[grade]; bonus.vit += gem.values[grade];
-      } else bonus[gem.stat] += gem.values[grade];
-      const count=(existing?.count||0)+1,totalValue=(existing?.totalValue||0)+gem.values[grade],baseName=existing?.baseName||item.name,gemTitle=gem.name.replace(/石$/,'')+'的 '+baseName;
+        bonus.str += gem.values[grade]*amount; bonus.agi += gem.values[grade]*amount; bonus.intel += gem.values[grade]*amount; bonus.vit += gem.values[grade]*amount;
+      } else bonus[gem.stat] += gem.values[grade]*amount;
+      const count=(existing?.count||0)+amount,totalValue=(existing?.totalValue||0)+gem.values[grade]*amount,baseName=existing?.baseName||item.name,gemTitle=gem.name.replace(/石$/,'')+'的 '+baseName;
       const gemAffix: MagicAffix = { id: 'socket-'+gem.id, name: gem.name, text: gem.label+' +'+totalValue+'（'+count+' 顆）', color: '#8ee7ff', stat: gem.stat, value: totalValue };
       equip[slot] = { ...item, name: '+'+count+' '+gemTitle, bonus, socketGem: { id: gem.id, name: gem.name, count, totalValue, baseName }, magic: [...(item.magic || []).filter(affix=>affix.id!=='socket-'+gem.id), gemAffix] };
       const common = { ...previous, gold: previous.gold - cost, logs: addLog(previous.logs, gem.name + "已鑲嵌至「" + item.name + "」。") };
@@ -1803,7 +1806,7 @@ export default function GameV15() {
           </section>
 
           <div className="city-auxiliary">
-            <section className="panel gem-workshop"><div className="panel-title"><Gem /><h2>寶石鑲嵌工房</h2><span>目前對象・{selected.name}</span></div><Select value={gemSlot} onValueChange={value=>{if(value) setGemSlot(value as EquipmentSlot)}}><SelectTrigger aria-label="選擇鑲嵌欄位"><SelectValue>{slotLabels[gemSlot]}</SelectValue></SelectTrigger><SelectContent>{slots.map(slot=><SelectItem key={slot} value={slot}>{slotLabels[slot]}</SelectItem>)}</SelectContent></Select><div className="gem-grid">{officialGems.map((gem) => <article key={gem.id}><strong>{gem.name}</strong><small>{gem.label}</small><div>{gem.values.map((value, grade) => <Button key={grade} size="sm" variant="outline" onClick={() => socketGem(gem.id, grade)}>+{value}・{format(gem.costs[grade])}兩</Button>)}</div></article>)}</div></section>
+            <section className="panel gem-workshop"><div className="panel-title"><Gem /><h2>寶石鑲嵌工房</h2><span>目前對象・{selected.name}</span></div><Select value={gemSlot} onValueChange={value=>{if(value) setGemSlot(value as EquipmentSlot)}}><SelectTrigger aria-label="選擇鑲嵌欄位"><SelectValue>{slotLabels[gemSlot]}</SelectValue></SelectTrigger><SelectContent>{slots.map(slot=><SelectItem key={slot} value={slot}>{slotLabels[slot]}</SelectItem>)}</SelectContent></Select><label className="gem-amount">鑲嵌數量（1～100）<input aria-label="寶石鑲嵌數量" type="number" min="1" max="100" value={gemAmount} onChange={event=>setGemAmount(Math.min(100,Math.max(1,Math.floor(Number(event.target.value)||1))))}/></label><div className="gem-grid">{officialGems.map((gem) => <article key={gem.id}><strong>{gem.name}</strong><small>{gem.label}</small><div>{gem.values.map((value, grade) => <Button key={grade} size="sm" variant="outline" onClick={() => socketGem(gem.id, grade, gemAmount)}>+{value}・{format(gem.costs[grade])}兩</Button>)}</div></article>)}</div></section>
             <section className="panel"><div className="panel-title"><Shield /><h2>陣法</h2></div><div className="formation-list">{formations.map((item) => <button key={item.id} className={game.formation === item.id ? "formation-row active" : "formation-row"} onClick={() => setGame((prev) => ({ ...prev, formation: item.id }))}><span><strong>{item.name}</strong><small>{item.detail}</small></span><em>{game.formation === item.id ? "使用中" : "切換"}</em></button>)}</div></section>
           </div>
         </TabsContent>
