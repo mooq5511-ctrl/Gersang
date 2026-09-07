@@ -25,7 +25,8 @@ export function WorldMapNavigation({state,level,power,travel}:{state:DungeonStat
 }
 export function DungeonPanel({state,mp,hero,dps=0,act,autoSkill,toggleAutoSkill,mapName,mapRegion,medicineQuickbar}:{state:DungeonState;mp:number;hero:CaravanMember;dps?:number;act:(action:'start'|'normal'|'skill'|'retreat',key?:DungeonKey)=>void;autoSkill:boolean;toggleAutoSkill:()=>void;mapName?:string;mapRegion?:string;medicineQuickbar?:ReactNode}){
  const monster=DUNGEONS[state.key],zone=zoneFor(state.zone),active=state.status==='fighting'&&state.phase==='交戰',cooldown=Math.max(0,Math.ceil((state.skillAt-state.stamp)/1000));
- const ecology=ECOLOGY_POOLS[zone.id].map(key=>DUNGEONS[key].name+' Lv.'+DUNGEONS[key].level).join(' ／ ');
+ const isStarterField=zone.id==='hanyang';
+ const ecology=isStarterField?'狸貓 Lv.1':ECOLOGY_POOLS[zone.id].map(key=>DUNGEONS[key].name+' Lv.'+DUNGEONS[key].level).join(' ／ ');
  const liveLogs=state.logs.filter(line=>/施放|造成|受到|攻擊|技能|暴擊/.test(line)).slice(0,4);
  return <section className="dungeon-panel" aria-label="動態戰鬥">
  <header className="dungeon-command-header"><div><small>{mapRegion ? mapRegion+' · 戰鬥地圖同步' : zone.mood}</small><h2>{mapName || zone.name}</h2></div><span className={'dungeon-status dungeon-status-'+state.status}>{{idle:'整裝待發',fighting:'交鋒中',respawning:'等待下一隻',recovering:'漢陽療傷中'}[state.status]}</span></header>
@@ -37,7 +38,7 @@ export function DungeonPanel({state,mp,hero,dps=0,act,autoSkill,toggleAutoSkill,
  <output className={'dungeon-flash'+(state.logs[0]?.startsWith('🎁')?' dungeon-loot-flash':'')} key={state.serial+'-'+state.logs[0]}>{state.logs[0]||'選擇對手，開始自動戰鬥。'}</output>
  <div className="dungeon-auto-skill"><span><strong>技能自動施放</strong><small>MP 足夠且冷卻完成時自動施放蛇龍出水</small></span><button type="button" role="switch" aria-checked={autoSkill} className={autoSkill?'enabled':''} onClick={toggleAutoSkill}>{autoSkill?'開啟':'關閉'}</button></div>
  <div className="dungeon-actions"><button disabled={!active||state.normalAt>state.stamp} onClick={()=>act('normal')}>普通攻擊<small>無消耗 · 共用自動攻擊冷卻</small></button><button disabled={!active||mp<40||cooldown>0} onClick={()=>act('skill')}>蛇龍出水<small>{mp<40?'MP 不足':cooldown?'冷卻 '+cooldown+' 秒':'40 MP · 5,000＋全傭兵智力×1.5'}</small></button><button disabled={!active&&state.status!=='respawning'} onClick={()=>act('retreat')}>{state.status==='recovering'?'客棧療傷中':'撤退至客棧'}</button></div>
- <details className="dungeon-notes"><summary>戰鬥規則與本地怪物</summary><p>掉落區域：{zone.loot}。前排輸出 +20%，後排受擊有 50% 閃避；全員倒下才會撤回客棧。</p><p>本地怪物：{ecology}</p></details>
+ <details className="dungeon-notes"><summary>戰鬥規則與本地怪物</summary><p>掉落區域：{isStarterField?'舊斧頭、肉類':zone.loot}。前排輸出 +20%，後排受擊有 50% 閃避；全員倒下才會撤回客棧。</p><p>本地怪物：{ecology}</p></details>
  <details className="dungeon-journal"><summary>戰鬥日誌 · 最近 30 則</summary><ol className="dungeon-log">{state.logs.slice(0,30).map((line,i)=><li key={i} className={battleLogPresentation(line).className}><span className="classic-log-label">{battleLogPresentation(line).label}</span>{line}</li>)}</ol></details>
  </section>;
 }
