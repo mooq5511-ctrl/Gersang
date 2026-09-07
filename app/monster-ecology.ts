@@ -28,7 +28,7 @@ export const ECOLOGY_MONSTERS={
  e_japan_sea_leech:{name:'王水蛭',level:1,hp:230,mp:0,atk:19,dex:19,xp:100,gold:100,drop:.14,loot:['boots']},
  e_japan_sea_starfish:{name:'海星',level:10,hp:65000,mp:8000,atk:600,dex:46,xp:18000,gold:18000,drop:.38,loot:['staff','armor']},
  e_japan_sea_starfish_strong:{name:'海星(強)',level:9,hp:260000,mp:10000,atk:800,dex:52,xp:55000,gold:55000,drop:.46,loot:['staff','armor']},
- e_japan_sea_golden_starfish:{name:'黃金海星',level:10,hp:1000000,mp:20000,atk:2000,dex:60,xp:200000,gold:200000,drop:.58,loot:['staff','armor']},
+ e_japan_sea_golden_starfish:{name:'黃金海星',level:10,hp:1000000,mp:20000,atk:1500,dex:60,xp:200000,gold:200000,drop:.58,loot:['staff','armor'],skill:'恢復術／火焰燎原／詛咒'},
  e_white_tiger_soul_eater:{name:'食魂獸',level:8,hp:50000,mp:400,atk:700,dex:52,xp:15000,gold:15000,drop:0,loot:[]},
  e_white_tiger_trainer:{name:'黑色商團飼育師',level:7,hp:50000,mp:2000,atk:500,dex:48,xp:16000,gold:16000,drop:0,loot:[]},
  e_white_tiger_spider:{name:'人魂蜘蛛',level:8,hp:44000,mp:12000,atk:600,dex:54,xp:16000,gold:16000,drop:0,loot:[]},

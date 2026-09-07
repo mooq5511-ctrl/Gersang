@@ -51,7 +51,7 @@ export const sourceEnemies: SourceEnemy[] = [
   { name: "王水蛭", mapId: "japan-sea", grade: 1, hp: 230, mp: 0, attack: 19, xp: 100, physical: 20, magic: 20, drops: ["正宗清酒", "舊銀製投石索", "舊青刃斧", "下級精髓"] },
   { name: "海星", mapId: "japan-sea", grade: 10, hp: 65000, mp: 8000, attack: 600, xp: 18000, physical: 240, magic: 230, drops: ["飛摺扇", "華麗的珊瑚", "破裂的令牌", "海星碎片", "生命的精髓"] },
   { name: "海星(強)", mapId: "japan-sea", grade: 9, hp: 260000, mp: 10000, attack: 800, xp: 55000, physical: 275, magic: 270, drops: ["飛摺扇", "華麗的珊瑚", "破裂的令牌", "海星碎片", "生命的精髓"] },
-  { name: "黃金海星", mapId: "japan-sea", grade: 10, element: "水(20)", hp: 1000000, mp: 20000, attack: 2000, xp: 200000, physical: 300, magic: 295, drops: ["黃帝的腰帶", "結冰石", "黃金海星的殼", "海星碎片", "[天璇]咒術秘訣", "小型憤怒精髓"] },
+  { name: "黃金海星", mapId: "japan-sea", grade: 10, element: "水(20)", hp: 1000000, mp: 20000, attack: 1500, xp: 200000, physical: 300, magic: 295, drops: ["黃帝的腰帶", "結冰石", "黃金海星的殼", "海星碎片", "[天璇]咒術秘訣", "小型憤怒精髓"], skill: "恢復術／火焰燎原／詛咒" },
   { name: "食魂獸", mapId: "miasma-forest", grade: 8, hp: 50000, mp: 400, attack: 700, xp: 15000, physical: 230, magic: 210, drops: ["[風雲的]咒術秘訣", "食魂獸門牙", "上級精髓", "結晶碎片(風)", "小型憤怒精髓"] },
   { name: "黑色商團飼育師", mapId: "miasma-forest", grade: 7, hp: 50000, mp: 2000, attack: 500, xp: 16000, physical: 220, magic: 240, drops: ["飛虎頭盔", "撕裂的書信", "生命的精髓", "結晶碎片(風)", "小型憤怒精髓"] },
   { name: "人魂蜘蛛", mapId: "miasma-forest", grade: 8, hp: 44000, mp: 12000, attack: 600, xp: 16000, physical: 230, magic: 220, drops: ["金剛石指環", "粗糙的頭髮", "生命的精髓", "結晶碎片(風)", "小型憤怒精髓"] },

@@ -629,7 +629,7 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
   const mercenaryIntelligence=previous.mercs.reduce((sum,unit)=>sum+heroTotalAttributes(unit).intel,0);
   const fighters=[previous.hero,...deployedMercs],living=fighters.filter(unit=>vitalStats(unit).hp>0);
   const attack=living.reduce((sum,unit)=>sum+combatStats(unit).attack*(unit.position==='前排'?1.2:1),0);
-  const party=fighters.map(unit=>{const stats=vitalStats(unit);return{uid:unit.uid,name:unit.name,hp:stats.hp,maxHp:stats.maxHp,position:unit.position,defense:combatStats(unit).defense}});
+  const party=fighters.map(unit=>{const stats=vitalStats(unit),combat=combatStats(unit);return{uid:unit.uid,name:unit.name,hp:stats.hp,maxHp:stats.maxHp,position:unit.position,defense:combat.defense,attack:combat.attack}});
   const passiveDamage=deployedMercs.reduce((sum,unit)=>sum+Math.max(0,Math.floor(combatStats(unit).attack*0.18)),0);
   const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,mercenaryIntelligence,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice,spawnRoll,retaliationRoll,party,passiveDamage,materialRolls,previous.autoSkill);
   const remaining=new globalThis.Map(result.party.map(unit=>[unit.uid,unit.hp]));
