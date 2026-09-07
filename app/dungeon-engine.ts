@@ -65,7 +65,9 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
  const victory=()=>{state.status='respawning';state.spawnAt=now+500;state.serial++;const e=enemy(),zone=zoneFor(state.zone);
   // 每個品項使用獨立亂數；同一隻怪物可以同時噴出多項素材。
   const materials=(zone.enemy===state.key?zone.dropTable:[]).filter((drop,index)=>(materialRolls[index]??1)*100<=drop.rate).map(drop=>drop.item);
-  reward={xp:e.xp,gold:e.gold,loot:roll<e.drop?e.loot[Math.min(e.loot.length-1,Math.max(0,Math.floor(choice*e.loot.length)))]:null,materials};
+  // 神裝採固定個別機率：怪物掉落池內的每一件裝備均為 0.01%，且單次最多掉一件。
+  const uniqueLoot=[...new Set(e.loot)],rareRate=.0001,rareIndex=Math.floor(roll/rareRate);
+  reward={xp:e.xp,gold:e.gold,loot:rareIndex<uniqueLoot.length?uniqueLoot[rareIndex]:null,materials};
   log('成功擊敗 '+e.name+'！獲得 '+e.xp+' 經驗與 '+e.gold+' 兩。');if(materials.length)log('🎁 噴寶：獲得【'+materials.join('】、【')+'】！')};
  const hit=(skill=false)=>{
   if(state.status!=='fighting'||allDown())return;
