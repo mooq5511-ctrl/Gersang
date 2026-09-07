@@ -1557,7 +1557,6 @@ export default function GameV15() {
             <div className="combat-stat-pair"><span>出戰人數 <b>{1 + activeUnits.length}</b></span><span>總戰力 <b>{format(unitPower(game.hero) + activeUnits.reduce((sum, unit) => sum + unitPower(unit), 0))}</b></span><span>總 HP <b>{format([game.hero, ...activeUnits].reduce((sum, unit) => sum + vitalStats(unit).hp, 0))}</b></span><span>總 MP <b>{format([game.hero, ...activeUnits].reduce((sum, unit) => sum + vitalStats(unit).mp, 0))}</b></span><span>主角狀態 <b>{game.hero.status}</b></span></div>
           </section>
           <section className="panel battle-map-panel">
-            <div className="panel-title"><Map /><h2>戰鬥地圖</h2><span>8 個區域・關卡解鎖</span></div>
             <div className="battle-map-grid">
               {battleMaps.map((map) => {
                 const unlocked = game.stage >= map.unlockStage;
