@@ -627,7 +627,7 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
   const total=heroTotalAttributes(previous.hero),v=vitalStats(previous.hero);
   const activeIds=new Set(previous.active.slice(0,ACTIVE_MERCENARY_LIMIT));
   const deployedMercs=previous.mercs.filter(unit=>activeIds.has(unit.uid));
-  const mercenaryIntelligence=previous.mercs.reduce((sum,unit)=>sum+heroTotalAttributes(unit).intel,0);
+  const mercenaryIntelligence=fighters.reduce((sum,unit)=>sum+heroTotalAttributes(unit).intel,0);
   const fighters=[previous.hero,...deployedMercs],living=fighters.filter(unit=>vitalStats(unit).hp>0);
   const attack=living.reduce((sum,unit)=>sum+combatStats(unit).attack*(unit.position==='前排'?1.2:1),0);
   const party=fighters.map(unit=>{const stats=vitalStats(unit),combat=combatStats(unit);return{uid:unit.uid,name:unit.name,hp:stats.hp,maxHp:stats.maxHp,position:unit.position,defense:combat.defense,attack:combat.attack}});
