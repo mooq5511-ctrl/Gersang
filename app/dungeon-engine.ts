@@ -36,7 +36,13 @@ export const zoneRequirement=(zone:typeof WORLD_ZONES[number])=>zone.level===1?'
 export type BattleEvent={id:number;attacker:'hero'|'enemy';target:'hero'|'enemy';amount:number;skill:boolean;critical?:boolean};
 export type DungeonState={events?:BattleEvent[];eventSerial?:number;spawnSerial?:number;innHealAt?:number;enemyShieldAt?:number;enemyShatterAt?:number;enemyShieldUntil?:number;/** 指定狩獵時鎖定下一次重生的目標。 */lockedEnemyKey?:DungeonKey;status:'idle'|'fighting'|'respawning'|'recovering';phase?:'接敵'|'交戰';distance?:number;damageCursor?:number;zone?:ZoneId;key:DungeonKey;enemyHp:number;normalAt:number;skillAt:number;spawnAt:number;stamp:number;pauseAt?:number;logs:string[];serial:number};
 export type DungeonHero={hp:number;mp:number;maxHp:number;maxMp:number;str:number;dex:number;mercenaryIntelligence:number;attack:number;defense:number;staff:boolean};
-export type DungeonPartyMember={uid:string;name:string;hp:number;maxHp:number;position:BattlePosition};
+export type DungeonPartyMember={uid:string;name:string;hp:number;maxHp:number;position:BattlePosition;defense?:number};
+/** 依攻擊力與防禦力計算實際傷害，並加入 90%～110% 的自然浮動。 */
+export function calculateDamage(attacker:{atk:number},defender:{def:number},random=Math.random){
+ const damageMultiplier=100/(100+Math.max(0,defender.def||0));
+ const randomFactor=0.9+random()*0.2;
+ return Math.max(1,Math.round(Math.max(0,attacker.atk||0)*damageMultiplier*randomFactor));
+}
 export const freshDungeon=():DungeonState=>({status:'idle',phase:'接敵',distance:100,damageCursor:0,zone:'hanyang',key:'e_raccoon',enemyHp:DUNGEONS.e_raccoon.hp,normalAt:0,skillAt:0,spawnAt:0,innHealAt:0,enemyShieldAt:0,enemyShatterAt:0,enemyShieldUntil:0,stamp:0,logs:[],serial:0,events:[],eventSerial:0,spawnSerial:0});
 export const dungeonBusy=(state?:DungeonState)=>!!state&&state.status!=='idle';
 /** 切圖只更換對手，不補血、不補魔、不發舊怪獎勵，也不清除技能冷卻。
@@ -80,7 +86,7 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   const critical=skill||(!skill&&choice<.2);state.enemyHp=Math.max(0,state.enemyHp-damage);event('hero',damage,skill,!skill&&critical);const front=members.find(member=>member.hp>0&&member.position==='前排'),rear=members.find(member=>member.hp>0&&member.position==='後排');log((critical?'💥 暴擊！ ':'')+(skill?'主角施放了 [蛇龍出水]':'商隊協同攻擊')+'，造成 '+damage+' 點傷害！');if(front)log('⚔️ [前排] '+front.name+' 突入敵陣，輸出加成 20%！');else if(rear)log('🏹 [後排] '+rear.name+' 在安全後方持續輸出！');
   if(!state.enemyHp)victory();
  };
- const counter=()=>{if(state.status!=='fighting'||state.phase!=='交戰')return;const target=formationTarget(members,state.damageCursor||0);if(!target)return recover();state.damageCursor=(state.damageCursor||0)+1;if(rearDodge(target.position,retaliationRoll)){log('🏹 [後排] '+target.name+' 閃過 '+enemy().name+' 的攻擊！');return}const damage=state.key==='e_lake_gale_altur'?enemy().atk:10+Math.min(15,Math.max(0,Math.floor(retaliationRoll*16)));target.hp=Math.max(0,target.hp-damage);syncHero();event('enemy',damage);log('⚔️ ['+target.position+'] '+target.name+' 正在抵擋傷害，受到 '+damage+' 點傷害！');if(allDown())recover()};
+ const counter=()=>{if(state.status!=='fighting'||state.phase!=='交戰')return;const target=formationTarget(members,state.damageCursor||0);if(!target)return recover();state.damageCursor=(state.damageCursor||0)+1;if(rearDodge(target.position,retaliationRoll)){log('🏹 [後排] '+target.name+' 閃過 '+enemy().name+' 的攻擊！');return}const damage=state.key==='e_lake_gale_altur'?enemy().atk:calculateDamage({atk:enemy().atk},{def:target.defense||0},()=>retaliationRoll);target.hp=Math.max(0,target.hp-damage);syncHero();event('enemy',damage);log('⚔️ ['+target.position+'] '+target.name+' 正在抵擋傷害，受到 '+damage+' 點傷害！');if(allDown())recover()};
  const castGaleSkills=()=>{if(state.key!=='e_lake_gale_altur'||state.status!=='fighting')return;if(now>=(state.enemyShieldAt||0)){state.enemyShieldUntil=now+3000;state.enemyShieldAt=now+60000;log('🛡️ 狂風阿魯塔施放【白虎盾】，自身防禦提升 30%，持續 3 秒。')}if(now>=(state.enemyShatterAt||0)){const target=formationTarget(members,state.damageCursor||0);state.enemyShatterAt=now+30000;if(target){target.hp=Math.max(0,target.hp-500);event('enemy',500);log('🌪️ 狂風阿魯塔施放【風碎】，無視防禦造成 500 點傷害！');if(allDown())recover()}}};
  if(action==='start'&&state.status==='idle'){
   state.key=key;state.enemyHp=DUNGEONS[key].hp;state.stamp=now;state.pauseAt=now;state.normalAt=now;state.skillAt=now;state.enemyShieldAt=now+60000;state.enemyShatterAt=now+30000;state.enemyShieldUntil=0;state.phase='交戰';state.distance=0;state.damageCursor=0;state.status=!allDown()?'fighting':'recovering';log('部隊向前推進，遭遇敵方【'+DUNGEONS[key].name+'大軍】！');
