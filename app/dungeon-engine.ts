@@ -63,7 +63,7 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
  const allDown=()=>members.every(member=>member.hp<=0);
  let reward:null|{xp:number;gold:number;loot:string|null;materials:string[]}=null;
  const log=(message:string)=>{state.logs=[message,...state.logs].slice(0,40)};
- const enemyCombatMultiplier=()=>(state.zone==='miasma-forest'||state.key.startsWith('e_white_tiger_'))&&members.filter(member=>member.uid!=='hero').length>5?2:1;
+ const enemyCombatMultiplier=()=>(state.zone==='miasma-forest'||String(state.key||'').startsWith('e_white_tiger_'))&&members.filter(member=>member.uid!=='hero').length>5?2:1;
  const enemy=()=>{const base=DUNGEONS[state.key],multiplier=enemyCombatMultiplier();if(multiplier===1)return base;return {...base,hp:base.hp*multiplier,mp:base.mp*multiplier,atk:base.atk*multiplier,dex:base.dex*multiplier,physical:'physical' in base&&typeof base.physical==='number'?base.physical*multiplier:undefined,magic:'magic' in base&&typeof base.magic==='number'?base.magic*multiplier:undefined}};
  // 事件只記錄已發生的傷害，序號讓 React 重繪時不重播；緩衝最多十二筆。
  const event=(attacker:'hero'|'enemy',amount:number,skill=false,critical=false)=>{const id=(state.eventSerial||0)+1;state.eventSerial=id;state.events=[...(state.events||[]),{id,attacker,target:attacker==='hero'?'enemy' as const:'hero' as const,amount,skill,...(critical?{critical:true}: {})}].slice(-12)};
