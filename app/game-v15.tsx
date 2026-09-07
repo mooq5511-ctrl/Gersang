@@ -170,6 +170,7 @@ type GameState = {
   stage: number;
   kills: number;
   newbieBossDefeated: boolean;
+  lakeBossDefeated: boolean;
   newbieCoins: number;
   city: string;
   battleMap: string;
@@ -325,6 +326,7 @@ function freshGame(nation: NationId = "korea", heroName = "王天下", gender:"m
     stage: 1,
     kills: 0,
     newbieBossDefeated: false,
+    lakeBossDefeated: false,
     newbieCoins: 0,
     city: worldCities.find((city) => city.nation === nation)?.id || worldCities[0].id,
     battleMap: battleMaps[0].id,
@@ -500,6 +502,7 @@ function restoreGame(raw: unknown): GameState {
     trade: restoreTrade(parsed.trade),
     credit: Number.isFinite(parsed.credit) ? Math.max(0, Math.floor(parsed.credit!)) : 0,
     newbieBossDefeated: parsed.newbieBossDefeated === true,
+    lakeBossDefeated: parsed.lakeBossDefeated === true,
     newbieCoins: Number.isFinite(parsed.newbieCoins) ? Math.max(0, Math.floor(parsed.newbieCoins!)) : 0,
     idleStamp: Number.isFinite(parsed.idleStamp) && parsed.idleStamp! > 0 ? parsed.idleStamp : Date.now(),
     city: restoredCity,
@@ -575,9 +578,11 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
     const selectedDrop=materialDrops.length?materialDrops[Math.min(materialDrops.length-1,Math.floor(Math.max(0,Math.min(.999999,choice))*materialDrops.length))]:null;
     const droppedMaterials=[...reward.materials,...(selectedDrop?[selectedDrop]:[])];
     const defeatedNewbieBoss=result.state.key==='e_starter_pirate_king';
-    next={...next,hero:grantXp(next.hero,reward.xp),gold:next.gold+reward.gold,kills:next.kills+1,newbieBossDefeated:next.newbieBossDefeated||defeatedNewbieBoss,newbieCoins:next.newbieCoins+(specialCoinDrop?1:0),logs:addLog(next.logs,'成功擊敗副本怪物，獲得 '+reward.xp+' 經驗與 '+reward.gold+' 兩。')};
+    const defeatedLakeBoss=result.state.key==='e_lake_gale_altur';
+    next={...next,hero:grantXp(next.hero,reward.xp),gold:next.gold+reward.gold,kills:next.kills+1,newbieBossDefeated:next.newbieBossDefeated||defeatedNewbieBoss,lakeBossDefeated:next.lakeBossDefeated||defeatedLakeBoss,newbieCoins:next.newbieCoins+(specialCoinDrop?1:0),logs:addLog(next.logs,'成功擊敗副本怪物，獲得 '+reward.xp+' 經驗與 '+reward.gold+' 兩。')};
     if(specialCoinDrop)next={...next,logs:addLog(next.logs,'獲得特殊貨幣【新手兌換銅錢】×1。')};
     if(defeatedNewbieBoss)next={...next,logs:addLog(next.logs,'海賊王已被擊敗，千年湖地圖現已開放。')};
+    if(defeatedLakeBoss)next={...next,logs:addLog(next.logs,'狂風阿魯塔已被擊敗，日本海底洞現已開放。')};
     if(droppedMaterials.length){
       const materials={...next.materials};
       for(const material of droppedMaterials)materials[material]=(materials[material]||0)+1;
@@ -1020,6 +1025,10 @@ export default function GameV15() {
     setGame((previous) => {
       if (map.id === 'millennium-lake' && !previous.newbieBossDefeated) {
         setNotice("請先在新手村郊外擊敗海賊王，才能進入千年湖。");
+        return previous;
+      }
+      if (map.id === 'japan-sea' && !previous.lakeBossDefeated) {
+        setNotice("請先在千年湖擊敗狂風阿魯塔，才能進入日本海底洞。");
         return previous;
       }
       if (previous.stage < map.unlockStage) {
@@ -1542,11 +1551,11 @@ export default function GameV15() {
           <section className="panel battle-map-panel">
             <div className="battle-map-grid">
               {battleMaps.map((map) => {
-                const unlocked = game.stage >= map.unlockStage && (map.id !== 'millennium-lake' || game.newbieBossDefeated);
+                const unlocked = game.stage >= map.unlockStage && (map.id !== 'millennium-lake' || game.newbieBossDefeated) && (map.id !== 'japan-sea' || game.lakeBossDefeated);
                 return <button key={map.id} className={(currentMap.id === map.id ? "active " : "") + (unlocked ? "" : "locked")} onClick={() => selectBattleMap(map.id)}>
                   <span className={"map-swatch map-theme-" + map.theme}></span>
-                  <div><small>{map.region}・{map.id==='millennium-lake'?'海賊王討伐後開放':'第 '+map.unlockStage+' 關'}</small><strong>{map.name}</strong><p>{map.description}</p><em>生命 ×{map.hpMultiplier}・金錢 ×{map.goldMultiplier}</em></div>
-                  <b>{currentMap.id === map.id ? "遠征中" : unlocked ? "前往" : map.id==='millennium-lake' ? "擊敗海賊王" : "未解鎖"}</b>
+                  <div><small>{map.region}・{map.id==='millennium-lake'?'海賊王討伐後開放':map.id==='japan-sea'?'狂風阿魯塔討伐後開放':'第 '+map.unlockStage+' 關'}</small><strong>{map.name}</strong><p>{map.description}</p><em>生命 ×{map.hpMultiplier}・金錢 ×{map.goldMultiplier}</em></div>
+                  <b>{currentMap.id === map.id ? "遠征中" : unlocked ? "前往" : map.id==='millennium-lake' ? "擊敗海賊王" : map.id==='japan-sea' ? "擊敗狂風阿魯塔" : "未解鎖"}</b>
                 </button>;
               })}
             </div>
