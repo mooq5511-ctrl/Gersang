@@ -994,16 +994,6 @@ export default function GameV15() {
   const thunderSetPieces = new Set([game.hero, ...activeUnits].flatMap((unit) => Object.values(unit.equip).filter((item) => item && thunderSetNames.has(item.name)).map((item) => item!.name))).size;
   const currentMap = battleMaps.find((map) => map.id === game.battleMap) || battleMaps[0];
   const currentWorldZone=WORLD_ZONES.find(zone=>zone.id===(game.dungeon?.zone||'hanyang'))||WORLD_ZONES[0];
-  const banditEncounter = isBanditEncounter(currentMap.id, game.stage);
-  const sourcedEnemy = banditEncounter ? bandit : sourceEnemyForMap(currentMap.id, game.stage, game.stage % 10 === 0, game.selectedMonster);
-  const maxEnemyHp = banditEncounter ? bandit.hp : sourcedEnemy?.hp || enemyMax(game.stage, currentMap.hpMultiplier);
-  const boss = game.stage % 10 === 0;
-  const monsterStats = banditEncounter ? bandit : enemyCombatStats(game.stage, maxEnemyHp, boss);
-  const enemyArt = legacyMercenaries[9 + (game.stage % 3)];
-  const fallbackEnemy = enemyForStage(game.stage, currentMap.enemyRegion);
-  const enemy = sourcedEnemy || fallbackEnemy;
-  const enemyRegion = sourcedEnemy ? currentMap.name : fallbackEnemy.region;
-  const enemyCategory = sourcedEnemy ? (sourcedEnemy.boss ? "首領" : "怪物") : fallbackEnemy.category;
   const currentCity = worldCities.find((city) => city.id === game.city) || worldCities[0];
   const heroVital=vitalStats(game.hero);
   const quickHealCost=Math.max(0,heroVital.maxHp-heroVital.hp)*2;
@@ -1528,30 +1518,6 @@ export default function GameV15() {
         </TabsContent>
 
         <TabsContent value="battle" className="tab-panel">
-          <section className={"battlefield map-theme-" + currentMap.theme}>
-            <div className="battle-sky v15-battle">
-              <div className="stage-mark"><small>{currentMap.name}・{boss ? "世界首領" : "區域遠征"}</small><strong>第 {game.stage} 關</strong></div>
-              <div className="squad-sprites">
-                <figure className="sprite hero-sprite"><img src={game.hero.image} alt={game.hero.name} /><figcaption>{game.hero.name}</figcaption></figure>
-                {activeUnits.map((unit) => <figure className="sprite" key={unit.uid}><img src={unit.image} alt={unit.name} /><figcaption>{unit.name}</figcaption></figure>)}
-              </div>
-              <div className="versus">VS</div>
-              <figure className={"enemy-sprite " + (boss ? "boss" : "")}><img src={enemyArt.idle} alt={enemy.name} /><figcaption><small>下一次遭遇目標・{enemyRegion}・{enemyCategory}</small>{enemy.name}</figcaption></figure>
-            </div>
-            <div className="battle-console">
-              <div className="enemy-health">
-                <div className="combat-stat-pair"><span>怪物 ATK 攻擊力 <b>{format(monsterStats.attack)}</b></span><span>怪物 DEF 防禦力 <b>{format(monsterStats.defense)}</b></span></div>
-                <div><strong>{boss ? "首領" : "敵軍"}生命</strong><span>{format(banditEncounter ? maxEnemyHp : game.enemyHp)} / {format(maxEnemyHp)}</span></div>
-                <Progress value={banditEncounter ? 100 : Math.max(0, Math.min(100, game.enemyHp / maxEnemyHp * 100))} className="hp-progress" />
-              </div>
-              {sourcedEnemy && <div className="enemy-source-line"><span>經驗資料 {format(sourcedEnemy.xp)}</span><span>物抗 {sourcedEnemy.physical}%</span><span>法抗 {sourcedEnemy.magic}%</span>{sourcedEnemy.skill && <span>技能・{sourcedEnemy.skill}</span>}<span>掉落・{sourcedEnemy.drops.join("、")}</span></div>}
-              {banditEncounter && <div className="enemy-source-line"><span>低階山賊・朝鮮山道</span><span>相對強度（1–10）：生命 3／攻擊 3／防禦 2／移速 5</span><span>移速 {bandit.speed}・較快者先行動；同速時我方先手</span><span>山寨地利：山道、森林、山寨前 2 回合減傷 15%。</span><span>攔路劈砍：第 2 回合起，冷卻 3 回合；130% 傷害，移速 −1 至下回合結束。</span><span>揚沙偷襲：HP 低於 50% 時優先施放，每戰一次；60% 傷害，目標下次攻擊命中率由 100% 降為 80%。武技不耗 MP。</span></div>}
-              <div className="battle-actions">
-                {activeUnits.some(unit => !!mercenarySpec(unit.templateId)) && <p>戰術遭遇：{boss ? '首領 1 名' : '敵軍 3 名（前排 2、後排 1）'}。上方生命為敵軍合計，單名攻擊為 {format(boss ? monsterStats.attack : Math.max(1,Math.floor(monsterStats.attack*0.55)))}。技能會自動選擇目標。</p>}
-                <output>{game.trade.caravan ? "跑商途中不再觸發隨機戰鬥；請由下方地圖指定怪物開始狩獵。" : "商隊尚未出航；戰鬥可直接由下方地圖選擇怪物開始。"}<br />最近戰報：{game.lastEncounter}</output>
-              </div>
-            </div>
-          </section>
           <section className="panel party-vitals">
             <div className="panel-title"><Users /><h2>出戰隊伍</h2><span>簡易數值</span></div>
             <div className="combat-stat-pair"><span>出戰人數 <b>{1 + activeUnits.length}</b></span><span>總戰力 <b>{format(unitPower(game.hero) + activeUnits.reduce((sum, unit) => sum + unitPower(unit), 0))}</b></span><span>總 HP <b>{format([game.hero, ...activeUnits].reduce((sum, unit) => sum + vitalStats(unit).hp, 0))}</b></span><span>總 MP <b>{format([game.hero, ...activeUnits].reduce((sum, unit) => sum + vitalStats(unit).mp, 0))}</b></span><span>主角狀態 <b>{game.hero.status}</b></span></div>
