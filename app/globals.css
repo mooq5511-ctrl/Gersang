@@ -1425,6 +1425,7 @@ footer {
     linear-gradient(180deg, var(--map-sky) 0 56%, var(--map-ground) 56% 100%);
 }
 .battle-map-panel { margin: 12px 0; }
+.battle-map-test-unlock { margin: 0 0 8px; border: 1px solid #8c6e35; background: #35291a; color: #f0d99b; padding: 6px 10px; cursor: pointer; font-size: .72rem; }
 .battle-map-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .battle-map-grid > button {
   min-width: 0;
