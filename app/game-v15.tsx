@@ -1506,6 +1506,7 @@ export default function GameV15() {
             if (destination === "city") { setCityService("mercenary"); setActiveTab("city"); }
             else if (destination === "trade") setActiveTab("trade");
             else if (destination === "raid") setActiveTab("raid");
+            else if (destination === "battle") setActiveTab("battle");
             else setActiveTab("squad");
           }} />
         </TabsContent>
