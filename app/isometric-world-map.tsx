@@ -105,6 +105,11 @@ export function IsometricWorldMap({
           this.load.image("map-portal", "/game-assets/map-field-portal-0.png");
           this.load.image("map-inn", "/game-assets/building-korea-inn-0.png");
           this.load.image("map-market", "/game-assets/building-korea-market-0.png");
+          this.load.image("map-mercenary", "/game-assets/building-korea-mercenary-0.png");
+          this.load.image("map-warehouse", "/game-assets/building-korea-warehouse-0.png");
+          this.load.image("map-pharmacy", "/game-assets/building-korea-pharmacy-0.png");
+          this.load.image("map-weapon", "/game-assets/building-korea-weapon-0.png");
+          this.load.image("map-armor", "/game-assets/building-korea-armor-0.png");
         }
 
         create() {
@@ -148,19 +153,27 @@ export function IsometricWorldMap({
           const roads = new Set<string>();
           for (let i = 0; i < COLS; i++) { roads.add(`${i},4`); roads.add(`${i},10`); }
           for (let i = 0; i < ROWS; i++) roads.add(`6,${i}`);
+          for (const key of ["5,3","6,3","7,3","5,4","6,4","7,4","5,5","6,5","7,5","2,7","3,7","4,7","3,8","3,9","7,8","8,8","9,8"]) roads.add(key);
           const ground = this.add.graphics();
           for (let row = 0; row < ROWS; row++) for (let col = 0; col < COLS; col++) {
             const point = this.iso(col, row);
             const isRoad = roads.has(`${col},${row}`);
-            this.diamond(ground, point.x, point.y, isRoad ? 0x9c8c6e : 0x416b4e, isRoad ? 0.9 : 1);
-            ground.lineStyle(1, isRoad ? 0x5c513e : 0x6b9b6a, isRoad ? 0.7 : 0.3);
+            const variation = (col * 7 + row * 11) % 3;
+            this.diamond(ground, point.x, point.y, isRoad ? [0x887a5b,0x98896a,0x796e55][variation] : [0x355b3a,0x406b43,0x2f5438][variation], isRoad ? 1 : 0.98);
+            ground.lineStyle(1, isRoad ? 0x514735 : 0x6e965d, isRoad ? 0.8 : 0.22);
             ground.strokePoints([
               new Phaser.Geom.Point(point.x, point.y), new Phaser.Geom.Point(point.x + TILE_W / 2, point.y + TILE_H / 2),
               new Phaser.Geom.Point(point.x, point.y + TILE_H), new Phaser.Geom.Point(point.x - TILE_W / 2, point.y + TILE_H / 2),
             ], true);
+            if (!isRoad && (col * 5 + row * 3) % 5 === 0) this.drawGrassTuft(point.x + 8, point.y + 22, 40 + col + row);
           }
-          this.drawHouse(1, 1, 0x7f3229, 0xc8783d);
-          this.drawHouse(8, 1, 0x365d70, 0xcfa557);
+          this.drawStoneBorder();
+          this.drawFacility(1, 1, "map-inn", "客棧", 108, 94);
+          this.drawFacility(8, 1, "map-mercenary", "傭兵公會", 112, 96);
+          this.drawFacility(1, 8, "map-warehouse", "共用倉庫", 108, 92);
+          this.drawFacility(9, 5, "map-pharmacy", "藥店", 96, 84);
+          this.drawFacility(3, 9, "map-weapon", "武器舖", 98, 86);
+          this.drawFacility(9, 9, "map-armor", "防具舖", 98, 86);
           this.drawMarket(8, 8);
           this.drawGate(7, 9);
           this.drawGate(3, 7);
@@ -170,9 +183,24 @@ export function IsometricWorldMap({
           this.drawDestination("raid", 0x9170e8);
         }
 
-        private drawHouse(col: number, row: number, wall: number, roof: number) {
+        private drawGrassTuft(x: number, y: number, seed: number) {
+          const tuft = this.add.graphics().setDepth(30);
+          tuft.lineStyle(1.5, seed % 2 ? 0x95b75f : 0x73944f, 0.72);
+          tuft.lineBetween(x, y, x - 3, y - 7); tuft.lineBetween(x + 2, y, x + 5, y - 8); tuft.lineBetween(x + 4, y + 1, x + 9, y - 5);
+        }
+
+        private drawStoneBorder() {
+          const border = this.add.graphics().setDepth(65);
+          border.lineStyle(3, 0x413b2e, 0.9);
+          const corners = [this.iso(0, 0), this.iso(COLS - 1, 0), this.iso(COLS - 1, ROWS - 1), this.iso(0, ROWS - 1)];
+          border.strokePoints(corners.map(point => new Phaser.Geom.Point(point.x, point.y + TILE_H / 2)), true);
+        }
+
+        private drawFacility(col: number, row: number, texture: string, label: string, width: number, height: number) {
           const point = this.iso(col + 0.5, row + 0.45);
-          this.add.image(point.x, point.y - 24, "map-inn").setOrigin(0.5, 1).setDisplaySize(108, 94).setDepth(120 + (col + row + 2) * 10);
+          this.add.image(point.x, point.y - 24, texture).setOrigin(0.5, 1).setDisplaySize(width, height).setDepth(120 + (col + row + 2) * 10);
+          const sign = this.add.text(point.x, point.y - height - 24, label, { fontFamily: '"Microsoft JhengHei", sans-serif', fontSize: "11px", color: "#f6df9b", backgroundColor: "#1d1710d9", padding: { x: 5, y: 2 } });
+          sign.setOrigin(0.5, 1).setDepth(840);
         }
 
         private drawMarket(col: number, row: number) {
