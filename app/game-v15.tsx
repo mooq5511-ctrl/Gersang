@@ -1647,7 +1647,7 @@ export default function GameV15() {
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
             maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
             cyclePosition={cycleUnitPosition}
-            trade={()=>setGame(previous=>dungeonBusy(previous.dungeon)?previous:({...previous,gold:previous.gold+100,credit:previous.credit+25,logs:addLog(previous.logs,'模擬經商：獲得 100 兩與 25 信用。')}))}
+            trade={()=>setGame(previous=>dungeonBusy(previous.dungeon)?previous:({...previous,gold:previous.gold+100,credit:previous.credit+1,logs:addLog(previous.logs,'模擬經商：獲得 100 兩與 1 信用。')}))}
             trainHero={simulateHeroLoot}
             hire={()=>{ const index=Math.floor(Math.random()*merchantMercenaries.length); recruitMerchant(merchantMercenaries[index],index); }}
             train={()=>setGame(previous=>dungeonBusy(previous.dungeon)?previous:({...previous,hero:grantXp(previous.hero,100),mercs:previous.mercs.map(unit=>grantXp(unit,100)),logs:addLog(previous.logs,'模擬打怪：主角與所有已僱用傭兵各獲得 100 經驗。')}))}
