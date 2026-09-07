@@ -21,7 +21,7 @@ export const ECOLOGY_MONSTERS={
  e_lake_male_shaman:{name:'神漢男巫',level:9,hp:200000,mp:10000,atk:150,dex:52,xp:50000,gold:50000,drop:.4,loot:['staff','armor']},
  e_lake_evil_shaman:{name:'邪靈巫師',level:9,hp:480000,mp:20000,atk:300,dex:55,xp:100000,gold:100000,drop:.48,loot:['staff','armor']},
  e_lake_red_thief_chief:{name:'赤賊頭目',level:10,hp:560000,mp:10000,atk:800,dex:58,xp:120000,gold:120000,drop:.5,loot:['staff','armor']},
- e_lake_gale_altur:{name:'狂風阿魯塔',level:10,hp:1200000,mp:20000,atk:5000,dex:60,xp:250000,gold:250000,drop:.55,loot:['staff','armor']},
+ e_lake_gale_altur:{name:'狂風阿魯塔',level:10,hp:1200000,mp:20000,atk:1000,dex:60,xp:250000,gold:250000,drop:.55,loot:['staff','armor']},
  e_japan_sea_kappa:{name:'河童',level:1,hp:80,mp:0,atk:10,dex:18,xp:40,gold:40,drop:.1,loot:['boots']},
  e_japan_sea_bat:{name:'蝙蝠',level:1,hp:80,mp:0,atk:7,dex:24,xp:55,gold:55,drop:.11,loot:['boots']},
  e_japan_sea_crab:{name:'海蟹',level:1,hp:320,mp:40,atk:20,dex:16,xp:95,gold:95,drop:.14,loot:['boots']},

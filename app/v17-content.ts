@@ -44,7 +44,7 @@ export const sourceEnemies: SourceEnemy[] = [
   { name: "神漢男巫", mapId: "millennium-lake", grade: 9, element: "風(20)", hp: 200000, mp: 10000, attack: 150, xp: 50000, physical: 265, magic: 260, drops: ["楓葉石", "神漢男巫的帽子", "被封印的力量碎片", "紅摺扇", "[天璣]咒術秘訣"] },
   { name: "邪靈巫師", mapId: "millennium-lake", grade: 9, element: "風(20)", hp: 480000, mp: 20000, attack: 300, xp: 100000, physical: 275, magic: 280, drops: ["楓葉石", "邪靈巫師的頭巾", "深淵的精髓", "雙刃弓", "[天璣]咒術秘訣"] },
   { name: "赤賊頭目", mapId: "millennium-lake", grade: 10, element: "風(20)", hp: 560000, mp: 10000, attack: 800, xp: 120000, physical: 285, magic: 285, drops: ["楓葉石", "赤賊頭目的矛", "小型風之屬性石", "蛇矛", "[天璣]咒術秘訣"] },
-  { name: "狂風阿魯塔", mapId: "millennium-lake", grade: 10, element: "風(20)", hp: 1200000, mp: 20000, attack: 5000, xp: 250000, physical: 295, magic: 300, drops: ["天照的手套", "狂風花", "楓葉石", "古代神獸之精髓", "小型風之屬性石", "[天璣]咒術秘訣", "[新手]兌換銅錢"], skill: "白虎盾／風碎", boss: true },
+  { name: "狂風阿魯塔", mapId: "millennium-lake", grade: 10, element: "風(20)", hp: 1200000, mp: 20000, attack: 1000, xp: 250000, physical: 295, magic: 300, drops: ["天照的手套", "狂風花", "楓葉石", "古代神獸之精髓", "小型風之屬性石", "[天璣]咒術秘訣", "[新手]兌換銅錢"], skill: "白虎盾／風碎", boss: true },
   { name: "河童", mapId: "japan-sea", grade: 1, hp: 80, mp: 0, attack: 10, xp: 40, physical: 0, magic: 0, drops: ["硬殼", "鹽醃鯖魚", "舊短劍", "下級精髓"] },
   { name: "蝙蝠", mapId: "japan-sea", grade: 1, hp: 80, mp: 0, attack: 7, xp: 55, physical: 0, magic: 30, drops: ["雜肉", "舊長銃砲", "舊白羽扇", "下級精髓"] },
   { name: "海蟹", mapId: "japan-sea", grade: 1, hp: 320, mp: 40, attack: 20, xp: 95, physical: 20, magic: 0, drops: ["蟹醬", "藍色精氣石", "[龍麟做成的]咒術秘訣", "下級精髓"] },
