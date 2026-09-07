@@ -1203,7 +1203,7 @@ export default function GameV15() {
   function sellEveryLoot(){
     setGame(previous=>{
       const result=sellAllMaterials(previous.materials,previous.gold);
-      if(!result.earned)return {...previous,logs:addLog(previous.logs,'目前沒有可變賣的怪物素材。')};
+      if(!result.count)return {...previous,logs:addLog(previous.logs,'目前沒有可變賣的怪物素材。')};
       return {...previous,materials:result.materials,gold:result.gold,logs:addLog(previous.logs,'交易所完成全部變賣，獲得 '+format(result.earned)+' 兩。')};
     });
   }

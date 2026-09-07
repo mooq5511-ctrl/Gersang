@@ -22,6 +22,47 @@ export const MATERIAL_PRICES: Record<string, number> = {
   '舊貓娃娃': 2500,
   '舊蓮花佛鐘': 2500,
   '幽冥石': 1000,
+  '大黃': 33,
+  '骨針': 1200,
+  '青色精氣石': 30,
+  '千年石': 30,
+  '銀松草': 5,
+  '舊堅固密號符': 150,
+  '中級精髓': 300,
+  '赤色精氣石': 30,
+  '紫雲妃玉': 50,
+  '舊白虎投石索': 2500,
+  '獨角鬼的紅色袋子': 50000,
+  '文若寶劍': 25000,
+  '火之印章': 33,
+  '獨角鬼的黃玉戒指': 0,
+  '獨角鬼的藍色袋子': 50000,
+  '龍頭火繩槍': 80000,
+  '水之印章': 0,
+  '獨角鬼的黃色袋子': 50000,
+  '笞刑斧': 80000,
+  '雷之印章': 0,
+  '獨角鬼的綠色袋子': 50000,
+  '大將弓': 80000,
+  '風之印章': 0,
+  '神木種子': 12000,
+  '舊龍頭火繩槍': 33333,
+  '[龍麟做成的]咒術秘訣': 50000,
+  '雙刃弓': 30000,
+  '古代神獸之精髓': 0,
+  '小型憤怒精髓': 0,
+  '鈴鐺刀': 8000,
+  '楓葉石': 33,
+  '神漢男巫的帽子': 33,
+  '被封印的力量碎片': 0,
+  '紅摺扇': 5000,
+  '[天璣]咒術秘訣': 60000,
+  '邪靈巫師的頭巾': 33,
+  '深淵的精髓': 5000,
+  '赤賊頭目的矛': 120000,
+  '小型風之屬性石': 33,
+  '蛇矛': 8000,
+  '狂風花': 33,
 };
 
 /** 村莊販售價固定為收購價的兩倍，避免來回買賣產生無限套利。 */
@@ -53,7 +94,7 @@ export function sellMaterial(materials: Record<string, number>, gold: number, it
   const owned = Math.max(0, Math.floor(materials[itemName] || 0));
   const price = MATERIAL_PRICES[itemName];
   const quantity = Math.min(owned, Math.max(1, Math.floor(amount)));
-  if (!price || quantity <= 0) return { materials, gold, earned: 0, error: '沒有可出售的「' + itemName + '」。' };
+  if (price === undefined || quantity <= 0) return { materials, gold, earned: 0, error: '沒有可出售的「' + itemName + '」。' };
   const next = { ...materials };
   const remains = owned - quantity;
   if (remains > 0) next[itemName] = remains;
@@ -65,8 +106,9 @@ export function sellMaterial(materials: Record<string, number>, gold: number, it
 export function sellAllMaterials(materials: Record<string, number>, gold: number) {
   // 古錢箱保留給玩家自行確認，避免全部出售時誤失去開箱機會。
   const earned = Object.entries(materials).reduce((sum, [name, count]) => sum + (name === '古錢箱' ? 0 : (MATERIAL_PRICES[name] || 0) * Math.max(0, Math.floor(count))), 0);
-  const unsellable = Object.fromEntries(Object.entries(materials).filter(([name]) => name === '古錢箱' || !MATERIAL_PRICES[name]));
-  return { materials: unsellable, gold: gold + earned, earned };
+  const count = Object.entries(materials).filter(([name]) => name !== '古錢箱' && MATERIAL_PRICES[name] !== undefined).reduce((sum, [, amount]) => sum + Math.max(0, Math.floor(amount)), 0);
+  const unsellable = Object.fromEntries(Object.entries(materials).filter(([name]) => name === '古錢箱' || MATERIAL_PRICES[name] === undefined));
+  return { materials: unsellable, gold: gold + earned, earned, count };
 }
 
 export function buyMarketMaterial(materials: Record<string, number>, gold: number, itemName: string) {
