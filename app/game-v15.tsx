@@ -240,6 +240,53 @@ function uid(prefix: string) {
   return prefix + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
 }
 
+const SHOP_QUALITY: Record<Equipment["rarity"], { chance: number; multiplier: number }> = {
+  "普通": { chance: 75, multiplier: 1 },
+  "稀有": { chance: 10, multiplier: 1.5 },
+  "史詩": { chance: 0.2, multiplier: 10 },
+  "傳說": { chance: 0.05, multiplier: 150 },
+};
+
+/** 商店品質依指定機率優先擲出高階品；未命中任一高階區間時以普通品出貨。 */
+function rollShopQuality(): Equipment["rarity"] {
+  const roll = Math.random() * 100;
+  if (roll < SHOP_QUALITY["傳說"].chance) return "傳說";
+  if (roll < SHOP_QUALITY["傳說"].chance + SHOP_QUALITY["史詩"].chance) return "史詩";
+  if (roll < SHOP_QUALITY["傳說"].chance + SHOP_QUALITY["史詩"].chance + SHOP_QUALITY["稀有"].chance) return "稀有";
+  return "普通";
+}
+
+function scaleShopStat(value: number | undefined, multiplier: number) {
+  return Math.floor((value || 0) * multiplier);
+}
+
+function scaleShopMagic(magic: MagicAffix[], multiplier: number) {
+  return magic.map((affix) => {
+    const value = scaleShopStat(affix.value, multiplier);
+    return { ...affix, value, text: affix.text.replace(/\+(\d+)%/, "+" + value + "%") };
+  });
+}
+
+function applyShopQuality(item: Equipment, rarity = rollShopQuality()): Equipment {
+  const multiplier = SHOP_QUALITY[rarity].multiplier;
+  const cleanName = item.name.replace(/^(普通|稀有|史詩|傳說)・/, "");
+  return {
+    ...item,
+    name: rarity + "・" + cleanName,
+    atk: scaleShopStat(item.atk, multiplier),
+    def: scaleShopStat(item.def, multiplier),
+    hp: scaleShopStat(item.hp, multiplier),
+    rarity,
+    magic: scaleShopMagic(item.magic, multiplier),
+    bonus: {
+      str: scaleShopStat(item.bonus?.str, multiplier), agi: scaleShopStat(item.bonus?.agi, multiplier),
+      intel: scaleShopStat(item.bonus?.intel, multiplier), vit: scaleShopStat(item.bonus?.vit, multiplier),
+    },
+    resist: { physical: scaleShopStat(item.resist?.physical, multiplier), magic: scaleShopStat(item.resist?.magic, multiplier) },
+    source: "四國城市商店・" + rarity + "品質 x" + multiplier,
+  };
+}
+
 function emptyEquipment(): EquipmentSet {
   return emptyEquipmentSlots<Equipment>();
 }
@@ -293,25 +340,26 @@ function rollEquipment(stage: number, guaranteed = false): Equipment {
   };
 }
 
-function makeOfficialEquipment(record: OfficialEquipment): Equipment {
+function makeOfficialEquipment(record: OfficialEquipment, rarity = rollShopQuality()): Equipment {
   const base = equipmentBases.find((item) => item.slot === record.kind) || equipmentBases[0];
   const magic = [...magicAffixes].sort(() => Math.random() - 0.5).slice(0, record.level >= 130 ? 3 : record.level >= 50 ? 2 : 1);
+  const multiplier = SHOP_QUALITY[rarity].multiplier;
   return {
     uid: uid(record.id),
-    name: record.name,
+    name: rarity + "・" + record.name,
     slot: record.kind,
-    atk: record.atk || 0,
-    def: record.def || 0,
+    atk: scaleShopStat(record.atk, multiplier),
+    def: scaleShopStat(record.def, multiplier),
     hp: 0,
     image: base.image,
     enhance: 0,
-    rarity: record.level >= 170 ? "傳說" : record.level >= 80 ? "史詩" : record.level >= 35 ? "稀有" : "普通",
-    magic: magic.map((affix) => ({ ...affix })),
+    rarity,
+    magic: scaleShopMagic(magic.map((affix) => ({ ...affix })), multiplier),
     requiredLevel: record.level,
-    source: "52巨商物品資料",
+    source: "四國城市商店・" + rarity + "品質 x" + multiplier,
     skill: record.skill,
-    bonus: { str: record.str || 0, agi: record.agi || 0, intel: record.intel || 0, vit: record.vit || 0 },
-    resist: { physical: record.physical || 0, magic: record.magic || 0 },
+    bonus: { str: scaleShopStat(record.str, multiplier), agi: scaleShopStat(record.agi, multiplier), intel: scaleShopStat(record.intel, multiplier), vit: scaleShopStat(record.vit, multiplier) },
+    resist: { physical: scaleShopStat(record.physical, multiplier), magic: scaleShopStat(record.magic, multiplier) },
   };
 }
 
@@ -1276,8 +1324,9 @@ export default function GameV15() {
     const price=Math.floor(base.price*currentCity.priceFactor);
     setGame(previous=>{
       if(previous.gold<price) { setNotice('裝備商店資金不足。'); return previous; }
-      const item:Equipment={...base,uid:uid(base.id),enhance:0,rarity:'普通',magic:[],requiredLevel:1};
-      return {...previous,gold:previous.gold-price,inventory:[item,...previous.inventory],logs:addLog(previous.logs,'購入「'+item.name+'」。')};
+      const baseItem:Equipment={...base,uid:uid(base.id),enhance:0,rarity:'普通',magic:[],requiredLevel:1,bonus:{str:0,agi:0,intel:0,vit:0},resist:{physical:0,magic:0}};
+      const item=applyShopQuality(baseItem);
+      return {...previous,gold:previous.gold-price,inventory:[item,...previous.inventory],logs:addLog(previous.logs,'購入「'+item.name+'」・品質倍率 x'+SHOP_QUALITY[item.rarity].multiplier+'。')};
     });
   }
 
@@ -1288,12 +1337,12 @@ export default function GameV15() {
         setNotice("裝備商店資金不足。");
         return previous;
       }
-      const item = rollEquipment(previous.stage, true);
+      const item = applyShopQuality(rollEquipment(previous.stage, true));
       return {
         ...previous,
         gold: previous.gold - cost,
         inventory: [item, ...previous.inventory],
-        logs: addLog(previous.logs, "購入附魔裝備「" + item.name + "」。"),
+        logs: addLog(previous.logs, "購入附魔裝備「" + item.name + "」・品質倍率 x" + SHOP_QUALITY[item.rarity].multiplier + "。"),
       };
     });
   }
@@ -1305,7 +1354,7 @@ export default function GameV15() {
         return previous;
       }
       const item = makeOfficialEquipment(record);
-      return { ...previous, gold: previous.gold - price, inventory: [item, ...previous.inventory], logs: addLog(previous.logs, "從" + currentCity.name + (record.kind === "weapon" ? "武器商店" : "防具商店") + "購入「" + record.name + "」。") };
+      return { ...previous, gold: previous.gold - price, inventory: [item, ...previous.inventory], logs: addLog(previous.logs, "從" + currentCity.name + (record.kind === "weapon" ? "武器商店" : "防具商店") + "購入「" + item.name + "」・品質倍率 x" + SHOP_QUALITY[item.rarity].multiplier + "。") };
     });
   }
 
@@ -1723,7 +1772,7 @@ export default function GameV15() {
 
             {cityService === 'mercenary' && <MercenaryRecruitment gold={game.gold} cost={Math.floor(6000 * currentCity.priceFactor)} recruit={recruitMerchant} />}
 
-            {(cityService === "weapon" || cityService === "armor") && <div className="city-service-body"><div className="panel-title">{cityService === "weapon" ? <Swords /> : <Shield />}<h2>{currentCity.name}{cityService === "weapon" ? "武器商店" : "防具商店"}</h2><span>本城獨立庫存</span></div>
+            {(cityService === "weapon" || cityService === "armor") && <div className="city-service-body"><div className="panel-title">{cityService === "weapon" ? <Swords /> : <Shield />}<h2>{currentCity.name}{cityService === "weapon" ? "武器商店" : "防具商店"}</h2><span>本城獨立庫存</span></div><p className="shop-quality-notice">購入時隨機鑑定：普通 75%（×1）・稀有 10%（×1.5）・史詩 0.2%（×10）・傳說 0.05%（×150）；未命中高階品時以普通品質出貨。</p>
               <div className="official-item-grid">{(cityService === "weapon" ? cityWeapons : cityArmors).map((record) => {
                 const price = Math.floor(record.price * currentCity.priceFactor);
                 return <article key={record.id}><img src={gersangItemArt(record.kind === "weapon" ? "weapon" : "armor")} alt="" /><small>Lv.{record.level}・{record.kind === "weapon" ? "武器" : "防具"}</small><strong>{record.name}</strong><span>{record.atk ? "攻 " + record.atk : "防 " + record.def}{record.skill ? "・" + record.skill : ""}</span><em>{[record.str ? "力+" + record.str : "", record.agi ? "敏+" + record.agi : "", record.intel ? "智+" + record.intel : "", record.vit ? "體+" + record.vit : ""].filter(Boolean).join("・") || "基礎裝備"}</em><Button size="sm" onClick={() => buyOfficialItem(record, price)}>{format(price)} 兩</Button></article>;
