@@ -1,10 +1,8 @@
 /* eslint-disable next/no-img-element */
 import {rarityPresentation} from './classic-presentation';
 import {positionInventory} from './inventory-layout';
-import {equipmentDetailLines,equipmentDescription,type TooltipGear} from './divine-equipment';
-import {Tooltip,TooltipProvider,TooltipTrigger,TooltipContent} from '@/components/ui/tooltip';
+import {equipmentDetailLines,type TooltipGear} from './divine-equipment';
 import {EQUIPMENT_LABELS,type EquipmentKind} from './equipment-slots';
-import {equipmentSellPrice} from './equipment-market';
 import {sourceEnemies} from './v17-content';
 export type BagItem=TooltipGear & {uid:string;name:string;slot:EquipmentKind;image:string;bagSlot?:number};
 const materialArtKind=(name:string)=>/草|黃|藥|花|種子|牛黃|桂皮|甘草|熟地黃/.test(name)?'herb':/精氣石|屬性石|千年石|玉|石$/.test(name)?'crystal':/咒術秘訣|密號符|力量碎片/.test(name)?'scroll':/劍|斧|弓|槍|刀|投石索|佛珠|木棒|三叉戟/.test(name)?'weapon':/精髓/.test(name)?'essence':'rare';
@@ -41,10 +39,6 @@ export function InventoryPanel({inventory,materials,materialPrices,equip,sell,se
         return <li className="merchant-material-row merchant-material-detailed-row" key={name}><span className={'merchant-material-icon material-art material-art-'+artKind} aria-label={`${name}圖示`} role="img"><img src={`/assets/sprites/loot-${artKind}-cute-v1.png`} alt=""/></span><div className="merchant-material-copy"><strong>{name}</strong><small>持有 ×{count}・單價 {price.toLocaleString()} 兩</small><small>來源：{sourceLabel}</small><small>地區：{detail?.maps.join('、')||'—'}・用途：鍛造／交易</small></div><button type="button" onClick={()=>sellMaterial(name)} disabled={!price}>出售 1 件</button></li>;
       }):<li className="merchant-material-empty">尚無材料；在四國掛機地圖擊敗怪物後，戰利品會直接放入此處。</li>}</ul>
     </section>
-    <div className="merchant-bag-subhead merchant-equipment-subhead"><div><strong>裝備道具</strong><small>點擊穿戴，右側按鈕出售</small></div></div>
-    <TooltipProvider><ul className="merchant-bag-list">{items.length?items.map((item,index)=><li className="merchant-bag-entry" key={item.uid}><Tooltip><TooltipTrigger className={'merchant-bag-row '+rarityPresentation(item.rarity).className} onClick={()=>equip(item.uid)} aria-label={'背包第 '+(index+1)+' 件：'+item.name}>
-      <span className="merchant-bag-icon">{item.image?<img src={item.image} alt=""/>:<strong>{({weapon:'杖',armor:'甲',helm:'兜',boots:'靴',ring:'戒',amulet:'符',gloves:'套',accessory:'符'} as const)[item.slot]}</strong>}</span><span className="merchant-bag-copy"><strong>{item.name}</strong><small>{rarityPresentation(item.rarity).label}・{EQUIPMENT_LABELS[item.slot]}</small></span><em>點擊穿戴</em>
-    </TooltipTrigger><TooltipContent className={"hp-gear-tooltip "+rarityPresentation(item.rarity).className}><strong>{item.name}</strong><span className="rarity-caption">{rarityPresentation(item.rarity).label}</span>{equipmentDetailLines(item).map((line,i)=><span key={i}>{line}</span>)}<em>{equipmentDescription(item)}</em></TooltipContent></Tooltip><button className="merchant-bag-sell" type="button" onClick={()=>sell(item.uid)} aria-label={'出售'+item.name}>出售<strong>{equipmentSellPrice(item).toLocaleString()} 兩</strong></button></li>):<li className="merchant-bag-empty">行囊尚空，出發尋覓神裝。</li>}</ul></TooltipProvider>
     <section className="merchant-bag-details" aria-label="背包詳細清單"><div className="merchant-bag-subhead"><div><strong>背包詳細清單</strong><small>裝給目前角色・{targetName}</small></div></div>{items.length?<ul>{items.map(item=><li key={item.uid} className={'merchant-detail-entry '+rarityPresentation(item.rarity).className}><span className="merchant-bag-icon">{item.image?<img src={item.image} alt=""/>:<strong>裝</strong>}</span><div><strong>{item.name}</strong><small>{rarityPresentation(item.rarity).label}・{EQUIPMENT_LABELS[item.slot]}</small>{equipmentDetailLines(item).slice(0,2).map(line=><em key={line}>{line}</em>)}</div><button type="button" onClick={()=>equip(item.uid)}>裝給{targetName}</button><button type="button" onClick={()=>sell(item.uid)}>出售</button></li>)}</ul>:<p>尚無可穿戴裝備。</p>}</section>
     <div className="rarity-legend" aria-label="裝備品階">{["普通","稀有","史詩","傳說"].map(rarity=><span key={rarity} className={rarityPresentation(rarity).className}>{rarity}</span>)}</div>
     <p>材料與裝備共用無上限行囊。穿戴中的裝備必須先卸下，因此不會被誤賣。</p>
