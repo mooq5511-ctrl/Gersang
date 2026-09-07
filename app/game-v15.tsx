@@ -59,7 +59,7 @@ import { TradePanel } from "./trade-panel";
 import { VitalBars } from "./vital-bars";
 import { IsometricWorldMap } from "./isometric-world-map";
 import { ThunderAltarRaid, type ThunderForgeId } from "./thunder-altar-raid";
-import { LEVEL_CAP, progressForLevel, xpForNextLevel } from "./level-progression";
+import { LEVEL_CAP, xpForNextLevel } from "./level-progression";
 import { combatStats, enemyCombatStats, normalizeVitals, recoverVitals, resolveVitalBattle, spellCost, vitalStats } from "./vitals-engine";
 import { advanceTrade, dispatchTrade, freshTrade, MAX_CARGO_LEVEL, restoreTrade, TRADE_ROUTES, upgradeCost, type TradeState } from "./trade-engine";
 import { formationDamageMultiplier, nextBattlePosition, normalizeBattlePosition, type BattlePosition } from './formation-position';
@@ -164,6 +164,8 @@ type GameState = {
   version: 30;
   trade: TradeState;
   credit: number;
+  creditXp: number;
+  creditLevel: number;
   idleStamp: number;
   gold: number;
   stage: number;
@@ -322,6 +324,8 @@ function freshGame(nation: NationId = "korea", heroName = "王天下", gender:"m
     version: 30,
     trade: freshTrade(),
     credit: 0,
+    creditXp: 0,
+    creditLevel: 1,
     idleStamp: Date.now(),
     gold: 0,
     stage: 1,
@@ -347,7 +351,7 @@ function freshGame(nation: NationId = "korea", heroName = "王天下", gender:"m
     lastEncounter: "尚未遭遇敵人。商隊出航後才可能觸發戰鬥。",
     enemyHp: enemyMax(1, battleMaps[0].hpMultiplier),
     formation: "goose",
-    logs: ["V30・主角與傭兵已套用巨商 Lv.1～260 經驗與信用度成長表。"],
+    logs: ["主角、傭兵與信用等級已套用 Lv.1～300 共用經驗成長曲線。"],
     lastSeen: Date.now(),
   };
 }
@@ -505,6 +509,8 @@ function restoreGame(raw: unknown): GameState {
     version: 30,
     trade: restoreTrade(parsed.trade),
     credit: Number.isFinite(parsed.credit) ? Math.max(0, Math.floor(parsed.credit!)) : 0,
+    creditXp: Number.isFinite(parsed.creditXp) ? Math.max(0, Math.floor(parsed.creditXp!)) : 0,
+    creditLevel: Math.max(1, Math.min(LEVEL_CAP, Math.floor(parsed.creditLevel || 1))),
     newbieBossDefeated: parsed.newbieBossDefeated === true,
     lakeBossDefeated: parsed.lakeBossDefeated === true,
     newbieCoins: Number.isFinite(parsed.newbieCoins) ? Math.max(0, Math.floor(parsed.newbieCoins!)) : 0,
@@ -619,11 +625,11 @@ function settleMerchantGame(previous: GameState, now: number,roll=.99,choice=0,s
     if(next.trade.caravan)next={...next,trade:{...next.trade,caravan:{...next.trade.caravan,startedAt:next.trade.caravan.startedAt+pause}}};
     if(previous.dungeon!.status==='recovering')return {...next,idleStamp:now};
     const idle=settleCaravanIdle(previous.idleStamp,now);
-    return {...next,idleStamp:idle.stamp,gold:next.gold+idle.gold,credit:next.credit+idle.credit};
+    return grantCreditXp({...next,idleStamp:idle.stamp,gold:next.gold+idle.gold,credit:next.credit+idle.credit},idle.credit);
   }
   // 與跑商共用一個每秒計時器，獨立時間戳避免重複領取離線收益。
   const idle = settleCaravanIdle(previous.idleStamp, now);
-  if (idle.stamp !== previous.idleStamp) previous = { ...previous, idleStamp: idle.stamp, gold: previous.gold + idle.gold, credit: previous.credit + idle.credit };
+  if (idle.stamp !== previous.idleStamp) previous = grantCreditXp({ ...previous, idleStamp: idle.stamp, gold: previous.gold + idle.gold, credit: previous.credit + idle.credit }, idle.credit);
   const result = advanceTrade(previous.trade, previous.gold, now);
   if (!result.trips && !result.encounters) return previous;
   let next = {
@@ -684,6 +690,16 @@ function grantXp<T extends Unit | Hero>(unit: T, amount: number): T {
     return {...upgraded,hp:vitalStats(upgraded).maxHp} as T;
   }
   return { ...unit, xp, level, points };
+}
+
+function grantCreditXp(game: GameState, amount: number): GameState {
+  let creditXp = game.creditXp + Math.max(0, Math.floor(amount));
+  let creditLevel = game.creditLevel;
+  while (creditLevel < LEVEL_CAP && creditXp >= xpNeed(creditLevel)) {
+    creditXp -= xpNeed(creditLevel);
+    creditLevel += 1;
+  }
+  return { ...game, creditXp, creditLevel };
 }
 
 function affixMultiplier(unit: Unit | Hero, stat: string) {
@@ -1632,7 +1648,7 @@ export default function GameV15() {
 
 
         <TabsContent value="squad" className="tab-panel">
-          <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit}
+          <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel}
             navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now(),spawnRoll=Math.random();setGame(previous=>{
               const old=previous.dungeon||freshDungeon();
               const deployed=[previous.hero,...previous.mercs.filter(unit=>previous.active.slice(0,ACTIVE_MERCENARY_LIMIT).includes(unit.uid))];
@@ -1647,7 +1663,7 @@ export default function GameV15() {
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
             maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
             cyclePosition={cycleUnitPosition}
-            trade={()=>setGame(previous=>dungeonBusy(previous.dungeon)?previous:({...previous,gold:previous.gold+100,credit:previous.credit+1,logs:addLog(previous.logs,'模擬經商：獲得 100 兩與 1 信用。')}))}
+            trade={()=>setGame(previous=>dungeonBusy(previous.dungeon)?previous:grantCreditXp({...previous,gold:previous.gold+100,credit:previous.credit+1,logs:addLog(previous.logs,'模擬經商：獲得 100 兩與 1 信用經驗。')},1))}
             trainHero={simulateHeroLoot}
             hire={()=>{ const index=Math.floor(Math.random()*merchantMercenaries.length); recruitMerchant(merchantMercenaries[index],index); }}
             train={()=>setGame(previous=>dungeonBusy(previous.dungeon)?previous:({...previous,hero:grantXp(previous.hero,100),mercs:previous.mercs.map(unit=>grantXp(unit,100)),logs:addLog(previous.logs,'模擬打怪：主角與所有已僱用傭兵各獲得 100 經驗。')}))}
