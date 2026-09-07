@@ -6,6 +6,7 @@ export const ECOLOGY_MONSTERS={
  e_starter_bandit:{name:'山賊',level:1,hp:20,mp:0,atk:8,dex:11,xp:8,gold:8,drop:.06,loot:['boots']},
  e_starter_pirate:{name:'海賊',level:1,hp:140,mp:12,atk:49,dex:20,xp:40,gold:40,drop:.12,loot:['boots']},
  e_starter_hook_pirate:{name:'鐵鉤海賊',level:1,hp:180,mp:40,atk:50,dex:22,xp:55,gold:55,drop:.14,loot:['boots']},
+ e_starter_pirate_king:{name:'海賊王',level:9,hp:8000,mp:400,atk:190,dex:52,xp:30000,gold:30000,drop:.5,loot:['staff','armor']},
  e_lake_red_thief:{name:'赤賊',level:1,hp:80,mp:100,atk:8,dex:16,xp:25,gold:25,drop:.09,loot:['boots']},
  e_lake_shamaness:{name:'巫女',level:2,hp:800,mp:800,atk:130,dex:30,xp:375,gold:375,drop:.2,loot:['staff']},
  e_lake_commander:{name:'司令武女',level:2,hp:1400,mp:1200,atk:135,dex:35,xp:550,gold:550,drop:.24,loot:['staff','armor']},

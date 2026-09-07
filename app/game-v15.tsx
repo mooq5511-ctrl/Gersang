@@ -55,7 +55,7 @@ import {
 import { battleMaps } from "./reference-data";
 import { gameplayContracts as legacyContracts, officialEquipment, officialGems, OfficialEquipment, sourceEnemies, sourceEnemyForMap } from "./v17-content";
 const gameplayContracts = legacyContracts.filter(contract => !['tier1','tier2','awakened'].includes(contract.metric));
-const monsterDungeonKeys: Record<string, DungeonKey> = { '狸貓':'e_starter_raccoon','倭寇':'e_starter_wako','鐵炮倭寇':'e_starter_gunner','山賊':'e_starter_bandit','海賊':'e_starter_pirate','鐵鉤海賊':'e_starter_hook_pirate','赤賊':'e_lake_red_thief','巫女':'e_lake_shamaness','司令武女':'e_lake_commander','詭異的小販':'e_lake_vendor','詭異的獨角鬼(火)':'e_lake_horn_fire','詭異的獨角鬼(水)':'e_lake_horn_water','詭異的獨角鬼(雷)':'e_lake_horn_lightning','詭異的獨角鬼(風)':'e_lake_horn_wind','阿魯塔':'e_lake_altur','死靈武女(強)':'e_lake_dead_shamaness','巫女(強)':'e_lake_shamaness_strong','神漢男巫':'e_lake_male_shaman','邪靈巫師':'e_lake_evil_shaman','赤賊頭目':'e_lake_red_thief_chief','狂風阿魯塔':'e_lake_gale_altur','河童':'e_japan_sea_kappa','蝙蝠':'e_japan_sea_bat','海蟹':'e_japan_sea_crab','王水蛭':'e_japan_sea_leech','海星':'e_japan_sea_starfish','海星(強)':'e_japan_sea_starfish_strong','黃金海星':'e_japan_sea_golden_starfish' };
+const monsterDungeonKeys: Record<string, DungeonKey> = { '狸貓':'e_starter_raccoon','倭寇':'e_starter_wako','鐵炮倭寇':'e_starter_gunner','山賊':'e_starter_bandit','海賊':'e_starter_pirate','鐵鉤海賊':'e_starter_hook_pirate','海賊王':'e_starter_pirate_king','赤賊':'e_lake_red_thief','巫女':'e_lake_shamaness','司令武女':'e_lake_commander','詭異的小販':'e_lake_vendor','詭異的獨角鬼(火)':'e_lake_horn_fire','詭異的獨角鬼(水)':'e_lake_horn_water','詭異的獨角鬼(雷)':'e_lake_horn_lightning','詭異的獨角鬼(風)':'e_lake_horn_wind','阿魯塔':'e_lake_altur','死靈武女(強)':'e_lake_dead_shamaness','巫女(強)':'e_lake_shamaness_strong','神漢男巫':'e_lake_male_shaman','邪靈巫師':'e_lake_evil_shaman','赤賊頭目':'e_lake_red_thief_chief','狂風阿魯塔':'e_lake_gale_altur','河童':'e_japan_sea_kappa','蝙蝠':'e_japan_sea_bat','海蟹':'e_japan_sea_crab','王水蛭':'e_japan_sea_leech','海星':'e_japan_sea_starfish','海星(強)':'e_japan_sea_starfish_strong','黃金海星':'e_japan_sea_golden_starfish' };
 import { TradePanel } from "./trade-panel";
 import { VitalBars } from "./vital-bars";
 import { IsometricWorldMap } from "./isometric-world-map";
@@ -169,6 +169,8 @@ type GameState = {
   gold: number;
   stage: number;
   kills: number;
+  newbieBossDefeated: boolean;
+  newbieCoins: number;
   city: string;
   battleMap: string;
   selectedMonster?: string;
@@ -322,6 +324,8 @@ function freshGame(nation: NationId = "korea", heroName = "王天下", gender:"m
     gold: 0,
     stage: 1,
     kills: 0,
+    newbieBossDefeated: false,
+    newbieCoins: 0,
     city: worldCities.find((city) => city.nation === nation)?.id || worldCities[0].id,
     battleMap: battleMaps[0].id,
     hero: makeHero(nation, heroName, gender),
@@ -495,6 +499,8 @@ function restoreGame(raw: unknown): GameState {
     version: 30,
     trade: restoreTrade(parsed.trade),
     credit: Number.isFinite(parsed.credit) ? Math.max(0, Math.floor(parsed.credit!)) : 0,
+    newbieBossDefeated: parsed.newbieBossDefeated === true,
+    newbieCoins: Number.isFinite(parsed.newbieCoins) ? Math.max(0, Math.floor(parsed.newbieCoins!)) : 0,
     idleStamp: Number.isFinite(parsed.idleStamp) && parsed.idleStamp! > 0 ? parsed.idleStamp : Date.now(),
     city: restoredCity,
     hero: {
@@ -564,9 +570,14 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
     const reward=result.reward;
     // 指定狩獵以實際交戰中的怪物為準；每次勝利固定抽取其圖鑑掉落之一並收入素材庫。
     const sourceDrop=sourceEnemies.find(enemy=>enemy.mapId===previous.battleMap&&enemy.name===DUNGEONS[result.state.key].name)?.drops||[];
-    const selectedDrop=sourceDrop.length?sourceDrop[Math.min(sourceDrop.length-1,Math.floor(Math.max(0,Math.min(.999999,choice))*sourceDrop.length))]:null;
+    const specialCoinDrop=sourceDrop.includes('[新手]兌換銅錢');
+    const materialDrops=sourceDrop.filter(item=>item!=='[新手]兌換銅錢');
+    const selectedDrop=materialDrops.length?materialDrops[Math.min(materialDrops.length-1,Math.floor(Math.max(0,Math.min(.999999,choice))*materialDrops.length))]:null;
     const droppedMaterials=[...reward.materials,...(selectedDrop?[selectedDrop]:[])];
-    next={...next,hero:grantXp(next.hero,reward.xp),gold:next.gold+reward.gold,kills:next.kills+1,logs:addLog(next.logs,'成功擊敗副本怪物，獲得 '+reward.xp+' 經驗與 '+reward.gold+' 兩。')};
+    const defeatedNewbieBoss=result.state.key==='e_starter_pirate_king';
+    next={...next,hero:grantXp(next.hero,reward.xp),gold:next.gold+reward.gold,kills:next.kills+1,newbieBossDefeated:next.newbieBossDefeated||defeatedNewbieBoss,newbieCoins:next.newbieCoins+(specialCoinDrop?1:0),logs:addLog(next.logs,'成功擊敗副本怪物，獲得 '+reward.xp+' 經驗與 '+reward.gold+' 兩。')};
+    if(specialCoinDrop)next={...next,logs:addLog(next.logs,'獲得特殊貨幣【新手兌換銅錢】×1。')};
+    if(defeatedNewbieBoss)next={...next,logs:addLog(next.logs,'海賊王已被擊敗，千年湖地圖現已開放。')};
     if(droppedMaterials.length){
       const materials={...next.materials};
       for(const material of droppedMaterials)materials[material]=(materials[material]||0)+1;
@@ -1007,6 +1018,10 @@ export default function GameV15() {
     const map = battleMaps.find((entry) => entry.id === mapId);
     if (!map) return;
     setGame((previous) => {
+      if (map.id === 'millennium-lake' && !previous.newbieBossDefeated) {
+        setNotice("請先在新手村郊外擊敗海賊王，才能進入千年湖。");
+        return previous;
+      }
       if (previous.stage < map.unlockStage) {
         setNotice("需要通過第 " + map.unlockStage + " 關才能進入「" + map.name + "」。");
         return previous;
@@ -1460,6 +1475,7 @@ export default function GameV15() {
         </div>
         <div className="resource-strip v15-resources">
           <div><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
+          <div className="newbie-coin"><Coins /><span>{format(game.newbieCoins)}</span><small>新手兌換銅錢</small></div>
           <div className={game.hero.status==='客棧中'?'hp-status at-inn':'hp-status'}><HeartPulse /><span id="p-hp">{heroVital.hp} / {heroVital.maxHp}</span><small>血量 · {game.hero.status}</small></div>
           <div><Swords /><span>{format(unitPower(game.hero)+game.mercs.reduce((sum,unit)=>sum+unitPower(unit),0))}</span><small>總商隊戰力</small></div>
           <div><Users /><span>{game.active.length}/{ACTIVE_MERCENARY_LIMIT}</span><small>出戰傭兵</small></div>
@@ -1526,15 +1542,15 @@ export default function GameV15() {
           <section className="panel battle-map-panel">
             <div className="battle-map-grid">
               {battleMaps.map((map) => {
-                const unlocked = game.stage >= map.unlockStage;
+                const unlocked = game.stage >= map.unlockStage && (map.id !== 'millennium-lake' || game.newbieBossDefeated);
                 return <button key={map.id} className={(currentMap.id === map.id ? "active " : "") + (unlocked ? "" : "locked")} onClick={() => selectBattleMap(map.id)}>
                   <span className={"map-swatch map-theme-" + map.theme}></span>
-                  <div><small>{map.region}・第 {map.unlockStage} 關</small><strong>{map.name}</strong><p>{map.description}</p><em>生命 ×{map.hpMultiplier}・金錢 ×{map.goldMultiplier}</em></div>
-                  <b>{currentMap.id === map.id ? "遠征中" : unlocked ? "前往" : "未解鎖"}</b>
+                  <div><small>{map.region}・{map.id==='millennium-lake'?'海賊王討伐後開放':'第 '+map.unlockStage+' 關'}</small><strong>{map.name}</strong><p>{map.description}</p><em>生命 ×{map.hpMultiplier}・金錢 ×{map.goldMultiplier}</em></div>
+                  <b>{currentMap.id === map.id ? "遠征中" : unlocked ? "前往" : map.id==='millennium-lake' ? "擊敗海賊王" : "未解鎖"}</b>
                 </button>;
               })}
             </div>
-            {sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・依關卡輪替"}</strong></div><span>點選卡片即可開始自動戰鬥</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id && !enemy.boss).map(enemy => <button type="button" key={enemy.name} className={game.selectedMonster === enemy.name ? "active" : ""} onClick={() => setGame(previous => { const key=monsterDungeonKeys[enemy.name]; const base={...previous,selectedMonster:enemy.name,enemyHp:enemy.hp||previous.enemyHp,dungeon:key?{...freshDungeon(),key,lockedEnemyKey:key,enemyHp:DUNGEONS[key].hp}:previous.dungeon,logs:addLog(previous.logs,`指定遭遇怪物：${enemy.name}，自動開始持續戰鬥。`)}; return key ? applyDungeon(base,'start',Date.now(),key,Math.random(),Math.random(),0,Math.random(),[Math.random(),Math.random(),Math.random()]) : base; })}><div><strong>{enemy.name}</strong><em>{game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>MP <b>{enemy.mp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>掉落：{enemy.drops.join("、")}</p></button>)}</div></section>}
+            {sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・依關卡輪替"}</strong></div><span>點選卡片即可開始自動戰鬥</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id).map(enemy => <button type="button" key={enemy.name} className={(game.selectedMonster === enemy.name ? "active " : "")+(enemy.boss ? "boss-target" : "")} onClick={() => setGame(previous => { const key=monsterDungeonKeys[enemy.name]; const base={...previous,selectedMonster:enemy.name,enemyHp:enemy.hp||previous.enemyHp,dungeon:key?{...freshDungeon(),key,lockedEnemyKey:key,enemyHp:DUNGEONS[key].hp}:previous.dungeon,logs:addLog(previous.logs,`${enemy.boss?'首領挑戰：':'指定遭遇怪物：'}${enemy.name}，自動開始持續戰鬥。`)}; return key ? applyDungeon(base,'start',Date.now(),key,Math.random(),Math.random(),0,Math.random(),[Math.random(),Math.random(),Math.random()]) : base; })}><div><strong>{enemy.name}</strong><em>{enemy.boss ? (game.newbieBossDefeated?"已討伐・可再戰":"首領挑戰") : game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>MP <b>{enemy.mp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>掉落：{enemy.drops.join("、")}</p></button>)}</div></section>}
             <DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} mapName={currentMap.name} mapRegion={currentMap.region} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()];setGame(previous=>applyDungeon(previous,action,now,key,roll,choice,0,retaliationRoll,materialRolls));}}/>
           </section>
           <div className="battle-grid">
