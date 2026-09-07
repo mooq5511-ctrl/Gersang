@@ -3,7 +3,10 @@ export type SourceEnemy = {
   mapId: "starter-outskirts" | "korea-field" | "millennium-lake";
   xp: number;
   hp?: number;
+  mp?: number;
   attack?: number;
+  grade?: number;
+  element?: string;
   physical: number;
   magic: number;
   drops: string[];
@@ -26,14 +29,21 @@ export const sourceEnemies: SourceEnemy[] = [
   { name: "老虎", mapId: "korea-field", xp: 18, physical: 0, magic: 0, drops: ["虎皮", "虎骨"] },
   { name: "夜叉", mapId: "korea-field", xp: 45, physical: 10, magic: 10, drops: ["夜叉角", "青色精氣石"] },
   { name: "飛虎", mapId: "korea-field", xp: 9500, physical: 70, magic: 70, drops: ["高級方天戟", "見月劍", "上級精髓"], boss: true },
-  { name: "赤賊", mapId: "millennium-lake", xp: 25, physical: 0, magic: 0, drops: ["大黃", "骨針", "青色精氣石", "下級精髓"] },
-  { name: "巫女", mapId: "millennium-lake", xp: 375, physical: 30, magic: 80, drops: ["千年石", "銀松草", "中級精髓"] },
-  { name: "司令巫女", mapId: "millennium-lake", xp: 550, physical: 50, magic: 80, drops: ["紫雲妃玉", "千年石", "中級精髓"], skill: "煉獄術" },
-  { name: "阿魯塔", mapId: "millennium-lake", xp: 3300, physical: 65, magic: 65, drops: ["阿魯塔之角", "風之石", "上級精髓"], skill: "風刃術" },
-  { name: "強化巫女", mapId: "millennium-lake", xp: 90000, physical: 70, magic: 85, drops: ["強化千年石", "古代精髓"] },
-  { name: "強化司令巫女", mapId: "millennium-lake", xp: 100000, physical: 75, magic: 85, drops: ["司令巫女符", "古代精髓"], skill: "煉獄術" },
-  { name: "赤賊頭目", mapId: "millennium-lake", xp: 120000, physical: 75, magic: 75, drops: ["頭目印章", "楓葉石", "古代精髓"], boss: true },
-  { name: "狂風阿魯塔", mapId: "millennium-lake", xp: 250000, physical: 85, magic: 85, drops: ["天照手套", "狂風花", "楓葉石", "古代精髓", "風之石"], boss: true, skill: "狂風刃術" },
+  { name: "赤賊", mapId: "millennium-lake", grade: 1, hp: 80, mp: 100, attack: 8, xp: 25, physical: 0, magic: 0, drops: ["大黃", "骨針", "青色精氣石", "下級精髓"] },
+  { name: "巫女", mapId: "millennium-lake", grade: 2, hp: 800, mp: 800, attack: 130, xp: 375, physical: 30, magic: 80, drops: ["千年石", "銀松草", "舊堅固密號符", "中級精髓"] },
+  { name: "司令武女", mapId: "millennium-lake", grade: 2, hp: 1400, mp: 1200, attack: 135, xp: 550, physical: 50, magic: 80, drops: ["赤色精氣石", "紫雲妃玉", "舊白虎投石索", "中級精髓"], skill: "煉獄術" },
+  { name: "詭異的小販", mapId: "millennium-lake", grade: 10, hp: 1200000, mp: 20000, attack: 30, xp: 0, physical: 280, magic: 280, drops: [] },
+  { name: "詭異的獨角鬼(火)", mapId: "millennium-lake", grade: 10, element: "火(20)", hp: 2800000, mp: 40000, attack: 30, xp: 0, physical: 380, magic: 380, drops: ["獨角鬼的紅色袋子", "文若寶劍", "火之印章", "獨角鬼的黃玉戒指"] },
+  { name: "詭異的獨角鬼(水)", mapId: "millennium-lake", grade: 10, element: "水(20)", hp: 2800000, mp: 40000, attack: 30, xp: 0, physical: 380, magic: 380, drops: ["獨角鬼的藍色袋子", "龍頭火繩槍", "水之印章", "獨角鬼的黃玉戒指"] },
+  { name: "詭異的獨角鬼(雷)", mapId: "millennium-lake", grade: 10, element: "雷(20)", hp: 2800000, mp: 40000, attack: 30, xp: 0, physical: 380, magic: 380, drops: ["獨角鬼的黃色袋子", "笞刑斧", "雷之印章", "獨角鬼的黃玉戒指"] },
+  { name: "詭異的獨角鬼(風)", mapId: "millennium-lake", grade: 10, element: "風(20)", hp: 2800000, mp: 40000, attack: 30, xp: 0, physical: 380, magic: 380, drops: ["獨角鬼的綠色袋子", "大將弓", "風之印章", "獨角鬼的黃玉戒指"] },
+  { name: "阿魯塔", mapId: "millennium-lake", grade: 4, hp: 6000, mp: 2000, attack: 280, xp: 3300, physical: 170, magic: 180, drops: ["神木種子", "舊龍頭火繩槍", "[龍麟做成的]咒術秘訣", "赤色精氣石", "中級精髓"], skill: "風刃術" },
+  { name: "死靈武女(強)", mapId: "millennium-lake", grade: 9, hp: 50000, mp: 10000, attack: 1100, xp: 100000, physical: 280, magic: 280, drops: ["雙刃弓", "古代神獸之精髓", "小型憤怒精髓"] },
+  { name: "巫女(強)", mapId: "millennium-lake", grade: 9, hp: 40000, mp: 10000, attack: 500, xp: 90000, physical: 275, magic: 280, drops: ["鈴鐺刀", "古代神獸之精髓", "小型憤怒精髓"] },
+  { name: "神漢男巫", mapId: "millennium-lake", grade: 9, element: "風(20)", hp: 200000, mp: 10000, attack: 150, xp: 50000, physical: 265, magic: 260, drops: ["楓葉石", "神漢男巫的帽子", "被封印的力量碎片", "紅摺扇", "[天璣]咒術秘訣"] },
+  { name: "邪靈巫師", mapId: "millennium-lake", grade: 9, element: "風(20)", hp: 480000, mp: 20000, attack: 300, xp: 100000, physical: 275, magic: 280, drops: ["楓葉石", "邪靈巫師的頭巾", "深淵的精髓", "雙刃弓", "[天璣]咒術秘訣"] },
+  { name: "赤賊頭目", mapId: "millennium-lake", grade: 10, element: "風(20)", hp: 560000, mp: 10000, attack: 800, xp: 120000, physical: 285, magic: 285, drops: ["楓葉石", "赤賊頭目的矛", "小型風之屬性石", "蛇矛", "[天璣]咒術秘訣"] },
+  { name: "狂風阿魯塔", mapId: "millennium-lake", grade: 10, element: "風(20)", hp: 1200000, mp: 20000, xp: 250000, physical: 295, magic: 300, drops: ["天照的手套", "狂風花", "楓葉石", "古代神獸之精髓", "小型風之屬性石", "[天璣]咒術秘訣"], skill: "狂風刃術" },
 ];
 
 export function sourceEnemyForMap(mapId: string, stage: number, isBoss: boolean, preferredName?: string) {
