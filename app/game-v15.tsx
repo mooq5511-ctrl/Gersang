@@ -579,11 +579,13 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
   if(result.reward){
     const reward=result.reward;
     // 指定狩獵以實際交戰中的怪物為準；每次勝利固定抽取其圖鑑掉落之一並收入素材庫。
-    const sourceDrop=sourceEnemies.find(enemy=>enemy.mapId===previous.battleMap&&enemy.name===DUNGEONS[result.state.key].name)?.drops||[];
+    const sourceEnemy=sourceEnemies.find(enemy=>enemy.mapId===previous.battleMap&&enemy.name===DUNGEONS[result.state.key].name);
+    const sourceDrop=sourceEnemy?.drops||[];
     const specialCoinDrop=sourceDrop.includes('[新手]兌換銅錢');
-    const materialDrops=sourceDrop.filter(item=>item!=='[新手]兌換銅錢');
+    const materialDrops=sourceDrop.filter(item=>item!=='[新手]兌換銅錢'&&item!=='古錢箱');
     const selectedDrop=materialDrops.length?materialDrops[Math.min(materialDrops.length-1,Math.floor(Math.max(0,Math.min(.999999,choice))*materialDrops.length))]:null;
-    const droppedMaterials=[...reward.materials,...(selectedDrop?[selectedDrop]:[])];
+    const ancientCoinBox=sourceEnemy?.mapId==='starter-outskirts'?['古錢箱']:[];
+    const droppedMaterials=[...reward.materials,...(selectedDrop?[selectedDrop]:[]),...ancientCoinBox];
     const defeatedNewbieBoss=result.state.key==='e_starter_pirate_king';
     const defeatedLakeBoss=result.state.key==='e_lake_gale_altur';
     next={...next,hero:grantXp(next.hero,reward.xp),gold:next.gold+reward.gold,kills:next.kills+1,newbieBossDefeated:next.newbieBossDefeated||defeatedNewbieBoss,lakeBossDefeated:next.lakeBossDefeated||defeatedLakeBoss,newbieCoins:next.newbieCoins+(specialCoinDrop?1:0),logs:addLog(next.logs,'成功擊敗副本怪物，獲得 '+reward.xp+' 經驗與 '+reward.gold+' 兩。')};
@@ -812,8 +814,10 @@ function resolveRoadEncounter(previous: GameState): GameState {
       let logs = addLog(previous.logs, report);
       if (combat.spells.length) logs = addLog(logs, combat.spells.join("；"));
       if (sourceDefeated) {
-        const material = sourceDefeated.drops[Math.floor(Math.random() * sourceDefeated.drops.length)];
+        const ordinaryDrops=sourceDefeated.drops.filter(item=>item!=='古錢箱');
+        const material = ordinaryDrops[Math.floor(Math.random() * ordinaryDrops.length)];
         materials[material] = (materials[material] || 0) + 1;
+        if(sourceDefeated.mapId==='starter-outskirts')materials['古錢箱']=(materials['古錢箱']||0)+1;
         xpReward = Math.max(42, Math.min(1800, Math.floor(sourceDefeated.xp / 5) + 35));
         logs = addLog(logs, (banditEncounter ? "山賊掉落「" : "52怪物掉落「") + material + "」；經驗資料 " + format(sourceDefeated.xp) + "。");
       }
@@ -1342,6 +1346,17 @@ export default function GameV15() {
     });
   }
 
+  function openAncientCoinBox(){
+    const coins=1+Math.floor(Math.random()*10);
+    setGame(previous=>{
+      const boxes=Math.max(0,Math.floor(previous.materials['古錢箱']||0));
+      if(!boxes)return previous;
+      const materials={...previous.materials};
+      if(boxes===1)delete materials['古錢箱']; else materials['古錢箱']=boxes-1;
+      return {...previous,materials,newbieCoins:previous.newbieCoins+coins,logs:addLog(previous.logs,'開啟「古錢箱」，獲得【新手兌換銅錢】×'+coins+'。')};
+    });
+  }
+
   function applyMedicine(previous:GameState, medicineId:string, automatic=false) {
     const medicine = medicineCatalog.find((entry) => entry.id === medicineId);
     if (!medicine || (previous.medicines[medicine.id] || 0) <= 0) return previous;
@@ -1623,7 +1638,7 @@ export default function GameV15() {
             });}}/>}
             battle={null}
             inventory={game.inventory} materials={game.materials} materialPrices={MATERIAL_PRICES}
-            equipSelected={(itemUid,targetUid)=>equipItem(itemUid,undefined,targetUid)} sellInventory={sellInventoryEquipment} sellMaterial={sellLoot} sellAllMaterials={sellEveryLoot} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
+            equipSelected={(itemUid,targetUid)=>equipItem(itemUid,undefined,targetUid)} sellInventory={sellInventoryEquipment} sellMaterial={sellLoot} sellAllMaterials={sellEveryLoot} openAncientCoinBox={openAncientCoinBox} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
 
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
             maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}

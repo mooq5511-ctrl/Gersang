@@ -15,12 +15,12 @@ export type SourceEnemy = {
 };
 
 export const sourceEnemies: SourceEnemy[] = [
-  { name: "狸貓", mapId: "starter-outskirts", hp: 16, attack: 6, xp: 7, physical: 0, magic: 0, drops: ["[隨便的]咒術秘訣", "藍色精氣石", "舊斧頭", "下級精髓"] },
-  { name: "倭寇", mapId: "starter-outskirts", hp: 16, attack: 10, xp: 7, physical: 0, magic: 0, drops: ["舊木劍", "舊六面木棒", "舊金剛爪刀", "下級精髓"] },
-  { name: "鐵炮倭寇", mapId: "starter-outskirts", hp: 20, attack: 10, xp: 10, physical: 0, magic: 0, drops: ["[訓練用]咒術秘訣", "舊摩呼羅迦佛珠", "藍色精氣石", "下級精髓"] },
-  { name: "山賊", mapId: "starter-outskirts", hp: 20, attack: 8, xp: 8, physical: 0, magic: 0, drops: ["下級精髓", "桂皮", "[訓練用]咒術秘訣", "舊短弓"] },
-  { name: "海賊", mapId: "starter-outskirts", hp: 140, attack: 49, xp: 40, physical: 0, magic: 0, drops: ["海鮮", "牛黃", "舊三叉戟", "下級精髓"] },
-  { name: "鐵鉤海賊", mapId: "starter-outskirts", hp: 180, attack: 50, xp: 55, physical: 0, magic: 0, drops: ["熟地黃", "舊貓娃娃", "舊蓮花佛鐘", "下級精髓"] },
+  { name: "狸貓", mapId: "starter-outskirts", hp: 16, attack: 6, xp: 7, physical: 0, magic: 0, drops: ["[隨便的]咒術秘訣", "藍色精氣石", "舊斧頭", "下級精髓", "古錢箱"] },
+  { name: "倭寇", mapId: "starter-outskirts", hp: 16, attack: 10, xp: 7, physical: 0, magic: 0, drops: ["舊木劍", "舊六面木棒", "舊金剛爪刀", "下級精髓", "古錢箱"] },
+  { name: "鐵炮倭寇", mapId: "starter-outskirts", hp: 20, attack: 10, xp: 10, physical: 0, magic: 0, drops: ["[訓練用]咒術秘訣", "舊摩呼羅迦佛珠", "藍色精氣石", "下級精髓", "古錢箱"] },
+  { name: "山賊", mapId: "starter-outskirts", hp: 20, attack: 8, xp: 8, physical: 0, magic: 0, drops: ["下級精髓", "桂皮", "[訓練用]咒術秘訣", "舊短弓", "古錢箱"] },
+  { name: "海賊", mapId: "starter-outskirts", hp: 140, attack: 49, xp: 40, physical: 0, magic: 0, drops: ["海鮮", "牛黃", "舊三叉戟", "下級精髓", "古錢箱"] },
+  { name: "鐵鉤海賊", mapId: "starter-outskirts", hp: 180, attack: 50, xp: 55, physical: 0, magic: 0, drops: ["熟地黃", "舊貓娃娃", "舊蓮花佛鐘", "下級精髓", "古錢箱"] },
   { name: "海賊王", mapId: "starter-outskirts", grade: 9, hp: 8000, mp: 400, attack: 190, xp: 30000, physical: 290, magic: 290, drops: ["古錢箱", "幽冥石", "[新手]兌換銅錢"], boss: true },
   { name: "鹿", mapId: "korea-field", xp: 6, physical: 0, magic: 0, drops: ["甘草", "鹿茸", "下級精髓"] },
   { name: "小山賊", mapId: "korea-field", xp: 7, physical: 0, magic: 0, drops: ["乾馬肉", "舊念珠", "下級精髓"] },
