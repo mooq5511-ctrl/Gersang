@@ -578,6 +578,8 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
   else if(result.state.status==='idle'&&previous.hero.status==='客棧中')next=leaveGameInn(next);
   if(result.reward){
     const reward=result.reward;
+    const battleMembers=1+deployedMercs.length;
+    const shareXp=Math.floor(reward.xp/Math.max(1,battleMembers));
     // 指定狩獵以實際交戰中的怪物為準；每次勝利固定抽取其圖鑑掉落之一並收入素材庫。
     const sourceEnemy=sourceEnemies.find(enemy=>enemy.mapId===previous.battleMap&&enemy.name===DUNGEONS[result.state.key].name);
     const sourceDrop=sourceEnemy?.drops||[];
@@ -588,7 +590,7 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
     const droppedMaterials=[...reward.materials,...(selectedDrop?[selectedDrop]:[]),...ancientCoinBox];
     const defeatedNewbieBoss=result.state.key==='e_starter_pirate_king';
     const defeatedLakeBoss=result.state.key==='e_lake_gale_altur';
-    next={...next,hero:grantXp(next.hero,reward.xp),gold:next.gold+reward.gold,kills:next.kills+1,newbieBossDefeated:next.newbieBossDefeated||defeatedNewbieBoss,lakeBossDefeated:next.lakeBossDefeated||defeatedLakeBoss,newbieCoins:next.newbieCoins+(specialCoinDrop?1:0),logs:addLog(next.logs,'成功擊敗副本怪物，獲得 '+reward.xp+' 經驗與 '+reward.gold+' 兩。')};
+    next={...next,hero:grantXp(next.hero,shareXp),mercs:next.mercs.map(unit=>activeIds.has(unit.uid)?grantXp(unit,shareXp):unit),gold:next.gold+reward.gold,kills:next.kills+1,newbieBossDefeated:next.newbieBossDefeated||defeatedNewbieBoss,lakeBossDefeated:next.lakeBossDefeated||defeatedLakeBoss,newbieCoins:next.newbieCoins+(specialCoinDrop?1:0),logs:addLog(next.logs,'成功擊敗副本怪物，獲得 '+reward.xp+' 經驗與 '+reward.gold+' 兩；'+battleMembers+' 名出戰角色均分，每人 '+shareXp+' 經驗。')};
     if(specialCoinDrop)next={...next,logs:addLog(next.logs,'獲得特殊貨幣【新手兌換銅錢】×1。')};
     if(defeatedNewbieBoss)next={...next,logs:addLog(next.logs,'海賊王已被擊敗，千年湖地圖現已開放。')};
     if(defeatedLakeBoss)next={...next,logs:addLog(next.logs,'狂風阿魯塔已被擊敗，日本海底洞現已開放。')};
@@ -818,7 +820,7 @@ function resolveRoadEncounter(previous: GameState): GameState {
         const material = ordinaryDrops[Math.floor(Math.random() * ordinaryDrops.length)];
         materials[material] = (materials[material] || 0) + 1;
         if(sourceDefeated.mapId==='starter-outskirts')materials['古錢箱']=(materials['古錢箱']||0)+1;
-        xpReward = Math.max(42, Math.min(1800, Math.floor(sourceDefeated.xp / 5) + 35));
+        xpReward = sourceDefeated.xp;
         logs = addLog(logs, (banditEncounter ? "山賊掉落「" : "52怪物掉落「") + material + "」；經驗資料 " + format(sourceDefeated.xp) + "。");
       }
       if (nextKills % 4 === 0 || isBoss) {
@@ -827,6 +829,9 @@ function resolveRoadEncounter(previous: GameState): GameState {
         inventory=pickup.inventory;
         logs = addLog(logs, pickup.error?'背包已滿，本次戰利品無法拾取。':"獲得 " + drop.rarity + "裝備「" + drop.name + "」，附帶 " + drop.magic.length + " 條魔法屬性。");
       }
+      const battleMembers=1+active.length;
+      const shareXp=Math.floor(xpReward/Math.max(1,battleMembers));
+      logs=addLog(logs,'怪物經驗 '+format(xpReward)+' 由 '+battleMembers+' 名出戰角色均分，每人獲得 '+format(shareXp)+' 經驗。');
       return {
         ...previous,
         gold: previous.gold + reward,
@@ -839,9 +844,9 @@ function resolveRoadEncounter(previous: GameState): GameState {
         soulStones,
         awakeningStones,
         materials,
-        hero: grantXp(previous.hero, xpReward),
+        hero: grantXp(previous.hero, shareXp),
         mercs: previous.mercs.map((unit) =>
-          previous.active.includes(unit.uid) ? grantXp(unit, Math.floor(xpReward * 0.8)) : unit,
+          active.some((member)=>member.uid===unit.uid) ? grantXp(unit, shareXp) : unit,
         ),
         logs,
       };
