@@ -1332,7 +1332,6 @@ export default function GameV15() {
   }
 
   function consumeMedicine(medicineId: string) {
-    if(dungeonBusy(game.dungeon)){setNotice('副本或療傷期間暫停此操作，請先完成療傷。');return;}
     const medicine = medicineCatalog.find((entry) => entry.id === medicineId);
     if (!medicine) return;
     setGame((previous) => {
@@ -1547,6 +1546,10 @@ export default function GameV15() {
           <section className="panel party-vitals">
             <div className="panel-title"><Users /><h2>出戰隊伍</h2><span>簡易數值</span></div>
             <div className="combat-stat-pair"><span>出戰人數 <b>{1 + activeUnits.length}</b></span><span>總戰力 <b>{format(unitPower(game.hero) + activeUnits.reduce((sum, unit) => sum + unitPower(unit), 0))}</b></span><span>總 HP <b>{format([game.hero, ...activeUnits].reduce((sum, unit) => sum + vitalStats(unit).hp, 0))}</b></span><span>總 MP <b>{format([game.hero, ...activeUnits].reduce((sum, unit) => sum + vitalStats(unit).mp, 0))}</b></span><span>主角狀態 <b>{game.hero.status}</b></span></div>
+          </section>
+          <section className="panel medicine-quickbar" aria-label="隨身藥袋">
+            <div className="panel-title"><Pill /><h2>隨身藥袋</h2><span>可於戰鬥中直接使用</span></div>
+            <div>{medicineCatalog.map(medicine => <button type="button" key={medicine.id} disabled={!game.medicines[medicine.id]} onClick={() => consumeMedicine(medicine.id)}><Pill /><span><strong>{medicine.name} ×{game.medicines[medicine.id] || 0}</strong><small>{medicine.effect}</small></span><b>使用</b></button>)}</div>
           </section>
           <section className="panel battle-map-panel">
             <div className="battle-map-grid">
