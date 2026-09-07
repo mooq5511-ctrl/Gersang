@@ -562,11 +562,15 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
   else if(result.state.status==='idle'&&previous.hero.status==='客棧中')next=leaveGameInn(next);
   if(result.reward){
     const reward=result.reward;
+    // 指定狩獵以實際交戰中的怪物為準；每次勝利固定抽取其圖鑑掉落之一並收入素材庫。
+    const sourceDrop=sourceEnemies.find(enemy=>enemy.mapId===previous.battleMap&&enemy.name===DUNGEONS[result.state.key].name)?.drops||[];
+    const selectedDrop=sourceDrop.length?sourceDrop[Math.min(sourceDrop.length-1,Math.floor(Math.max(0,Math.min(.999999,choice))*sourceDrop.length))]:null;
+    const droppedMaterials=[...reward.materials,...(selectedDrop?[selectedDrop]:[])];
     next={...next,hero:grantXp(next.hero,reward.xp),gold:next.gold+reward.gold,kills:next.kills+1,logs:addLog(next.logs,'成功擊敗副本怪物，獲得 '+reward.xp+' 經驗與 '+reward.gold+' 兩。')};
-    if(reward.materials.length){
+    if(droppedMaterials.length){
       const materials={...next.materials};
-      for(const material of reward.materials)materials[material]=(materials[material]||0)+1;
-      next={...next,materials,logs:addLog(next.logs,'噴寶：獲得【'+reward.materials.join('】、【')+'】！')};
+      for(const material of droppedMaterials)materials[material]=(materials[material]||0)+1;
+      next={...next,materials,logs:addLog(next.logs,'噴寶：獲得【'+droppedMaterials.join('】、【')+'】！')};
     }
     const spec=reward.loot?DIVINE_EQUIPMENT[reward.loot as keyof typeof DIVINE_EQUIPMENT]:null;
     if(spec){
