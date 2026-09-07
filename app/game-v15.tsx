@@ -1617,7 +1617,7 @@ export default function GameV15() {
         <TabsContent value="battle" className="tab-panel">
           <section className="panel party-vitals">
             <div className="panel-title"><Users /><h2>出戰隊伍</h2><span>簡易數值</span></div>
-            <div className="combat-stat-pair"><span>出戰人數 <b>{1 + activeUnits.length}</b></span><span>總戰力 <b>{format(unitPower(game.hero) + activeUnits.reduce((sum, unit) => sum + unitPower(unit), 0))}</b></span><span>總 HP <b>{format([game.hero, ...activeUnits].reduce((sum, unit) => sum + vitalStats(unit).hp, 0))}</b></span><span>總 MP <b>{format([game.hero, ...activeUnits].reduce((sum, unit) => sum + vitalStats(unit).mp, 0))}</b></span><span>主角狀態 <b>{game.hero.status}</b></span></div>
+            <div className="combat-stat-pair"><span>出戰人數 <b>{1 + activeUnits.length}</b></span><span>總戰力 <b>{format(unitPower(game.hero) + activeUnits.reduce((sum, unit) => sum + unitPower(unit), 0))}</b></span><span>總力量 <b>{format([game.hero,...activeUnits].reduce((sum,unit)=>sum+heroTotalAttributes(unit).str,0))}</b></span><span>總智力 <b>{format([game.hero,...activeUnits].reduce((sum,unit)=>sum+heroTotalAttributes(unit).intel,0))}</b></span></div>
           </section>
           <section className="panel battle-map-panel">
             {import.meta.env.DEV&&<button type="button" className="battle-map-test-unlock" onClick={()=>setGame(previous=>({...previous,stage:Math.max(previous.stage,...battleMaps.map(map=>map.unlockStage)),newbieBossDefeated:true,lakeBossDefeated:true,logs:addLog(previous.logs,'測試模式：已解鎖全部戰鬥地圖。')}))}>測試用・解鎖全部地圖</button>}
