@@ -47,7 +47,7 @@ function MercenaryStatusWindow({unit,power,allocate}:{unit:CaravanMember;power:(
   </section>;
 }
 
-type WindowEquipment={image?:string;name:string;atk?:number;def?:number;hp?:number;magic?:{id:string;name:string;text:string;color:string}[]};
+type WindowEquipment={image?:string;name:string;atk?:number;def?:number;hp?:number;magic?:{id:string;name:string;text:string;color:string}[];socketGem?:{name:string;count:number;totalValue:number}};
 function EquipmentSummary({unit}:{unit:CaravanMember}){
   return <section className="window-equipment" aria-label="八格裝備與額外魔法屬性"><h3>八格裝備與額外魔法屬性</h3><div>{EQUIPMENT_SLOTS.map(slot=>{const item=unit.equip[slot] as WindowEquipment|null;return <article key={slot}><span className="window-equipment-icon">{item?.image?<img src={item.image} alt=""/>:EQUIPMENT_LABELS[slot].slice(0,1)}</span><p><small>{EQUIPMENT_LABELS[slot]}</small><strong>{item?.name||'未裝備'}</strong>{item&&<><em>攻 {item.atk||0}・防 {item.def||0}・生命 {item.hp||0}</em>{item.magic?.map(affix=><i key={affix.id} style={{color:affix.color}}>{affix.name}：{affix.text}</i>)}</>}</p></article>;})}</div></section>;
 }

@@ -96,6 +96,7 @@ type Equipment = {
   skill?: string;
   bonus?: { str: number; agi: number; intel: number; vit: number };
   resist?: { physical: number; magic: number };
+  socketGem?: { id: string; name: string; count: number; totalValue: number; baseName: string };
 };
 
 type EquipmentSet = Record<EquipmentSlot, Equipment | null>;
@@ -1505,12 +1506,16 @@ export default function GameV15() {
       }
       const equip = { ...target.equip };
       const item = equip[slot]!;
+      const existing = item.socketGem;
+      if (existing && existing.id !== gem.id) { setNotice('每個裝備部位只能鑲嵌一種寶石。'); return previous; }
+      if ((existing?.count || 0) >= 100) { setNotice('此裝備部位最多鑲嵌 100 顆寶石。'); return previous; }
       const bonus = { ...(item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }) };
       if (gem.stat === "all") {
         bonus.str += gem.values[grade]; bonus.agi += gem.values[grade]; bonus.intel += gem.values[grade]; bonus.vit += gem.values[grade];
       } else bonus[gem.stat] += gem.values[grade];
-      const gemAffix: MagicAffix = { id: 'socket-'+gem.id+'-'+Date.now(), name: gem.name, text: gem.label+' +'+gem.values[grade], color: '#8ee7ff', stat: gem.stat, value: gem.values[grade] };
-      equip[slot] = { ...item, name: item.name + "・" + gem.name, bonus, magic: [...(item.magic || []), gemAffix] };
+      const count=(existing?.count||0)+1,totalValue=(existing?.totalValue||0)+gem.values[grade],baseName=existing?.baseName||item.name,gemTitle=gem.name.replace(/石$/,'')+'的 '+baseName;
+      const gemAffix: MagicAffix = { id: 'socket-'+gem.id, name: gem.name, text: gem.label+' +'+totalValue+'（'+count+' 顆）', color: '#8ee7ff', stat: gem.stat, value: totalValue };
+      equip[slot] = { ...item, name: '+'+count+' '+gemTitle, bonus, socketGem: { id: gem.id, name: gem.name, count, totalValue, baseName }, magic: [...(item.magic || []).filter(affix=>affix.id!=='socket-'+gem.id), gemAffix] };
       const common = { ...previous, gold: previous.gold - cost, logs: addLog(previous.logs, gem.name + "已鑲嵌至「" + item.name + "」。") };
       return selectedUid === "hero"
         ? { ...common, hero: { ...previous.hero, equip } }
