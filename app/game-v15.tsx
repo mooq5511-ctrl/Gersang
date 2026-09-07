@@ -1348,12 +1348,16 @@ export default function GameV15() {
 
   function openAncientCoinBox(){
     const coins=1+Math.floor(Math.random()*10);
+    const rareRoll=Math.random();
+    const rareReward=rareRoll<0.000001?'大吉(帥)':rareRoll<0.000011?'大吉(好)':rareRoll<0.000021?'大吉(者)':rareRoll<0.000121?'大吉(作)':null;
     setGame(previous=>{
       const boxes=Math.max(0,Math.floor(previous.materials['古錢箱']||0));
       if(!boxes)return previous;
       const materials={...previous.materials};
       if(boxes===1)delete materials['古錢箱']; else materials['古錢箱']=boxes-1;
-      return {...previous,materials,newbieCoins:previous.newbieCoins+coins,logs:addLog(previous.logs,'開啟「古錢箱」，獲得【新手兌換銅錢】×'+coins+'。')};
+      if(rareReward)materials[rareReward]=(materials[rareReward]||0)+1;
+      const rewardText='開啟「古錢箱」，獲得【新手兌換銅錢】×'+coins+(rareReward?'，稀有獎勵【'+rareReward+'】×1':'')+'。';
+      return {...previous,materials,newbieCoins:previous.newbieCoins+coins,logs:addLog(previous.logs,rewardText)};
     });
   }
 
