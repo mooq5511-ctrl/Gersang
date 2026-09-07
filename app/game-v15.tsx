@@ -185,6 +185,8 @@ type GameState = {
   materials: Record<string, number>;
   exchangePurchases: ExchangePurchases;
   medicines: Record<string, number>;
+  autoMedicine: { healing: number; mana: number };
+  autoMedicineAt: { healing: number; mana: number };
   claimedContracts: string[];
   lastEncounter: string;
   enemyHp: number;
@@ -340,6 +342,8 @@ function freshGame(nation: NationId = "korea", heroName = "王天下", gender:"m
     materials: {},
     exchangePurchases: {},
     medicines: {},
+    autoMedicine: { healing: 0, mana: 0 },
+    autoMedicineAt: { healing: 0, mana: 0 },
     claimedContracts: [],
     lastEncounter: "尚未遭遇敵人。商隊出航後才可能觸發戰鬥。",
     enemyHp: enemyMax(1, battleMaps[0].hpMultiplier),
@@ -532,6 +536,8 @@ function restoreGame(raw: unknown): GameState {
     materials: parsed.materials && typeof parsed.materials === "object" ? parsed.materials : {},
     exchangePurchases: parsed.exchangePurchases && typeof parsed.exchangePurchases === "object" ? parsed.exchangePurchases : {},
     medicines: parsed.medicines && typeof parsed.medicines === "object" ? parsed.medicines : {},
+    autoMedicine: { healing: Math.min(99,Math.max(0,Math.floor(Number(parsed.autoMedicine?.healing)||0))), mana: Math.min(99,Math.max(0,Math.floor(Number(parsed.autoMedicine?.mana)||0))) },
+    autoMedicineAt: { healing: 0, mana: 0 },
     claimedContracts: Array.isArray(parsed.claimedContracts) ? parsed.claimedContracts : [],
     lastSeen: Number(parsed.lastSeen) || Date.now(),
   });
@@ -1052,7 +1058,7 @@ export default function GameV15() {
       // 在 React 更新函式外抽樣，同一次回合重跑不會改變掉寶結果。
       const now=Date.now(),roll=Math.random(),choice=Math.random();
       const spawnRoll=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()];
-      setGame(previous=>settleMerchantGame(previous,now,roll,choice,spawnRoll,retaliationRoll,materialRolls));
+      setGame(previous=>applyAutoMedicines(settleMerchantGame(previous,now,roll,choice,spawnRoll,retaliationRoll,materialRolls),now));
     }, 50);
     return () => window.clearInterval(timer);
   }, [ready, activeSlot, setGame]);
@@ -1331,21 +1337,38 @@ export default function GameV15() {
     });
   }
 
-  function consumeMedicine(medicineId: string) {
+  function applyMedicine(previous:GameState, medicineId:string, automatic=false) {
     const medicine = medicineCatalog.find((entry) => entry.id === medicineId);
-    if (!medicine) return;
-    setGame((previous) => {
-      if ((previous.medicines[medicine.id] || 0) <= 0) {
-        setNotice("目前沒有「" + medicine.name + "」。");
-        return previous;
-      }
-      return {
-        ...previous,
-        medicines: { ...previous.medicines, [medicine.id]: previous.medicines[medicine.id] - 1 },
-        hero: recoverVitals(grantXp(previous.hero, medicine.heroXp), "hpRestore" in medicine ? medicine.hpRestore : 0, "mpRestore" in medicine ? medicine.mpRestore : 0),
-        mercs: previous.mercs.map((unit) => previous.active.includes(unit.uid) ? recoverVitals(grantXp(unit, medicine.mercXp), "hpRestore" in medicine ? medicine.hpRestore : 0, "mpRestore" in medicine ? medicine.mpRestore : 0) : unit),
-        logs: addLog(previous.logs, "使用「" + medicine.name + "」：" + medicine.effect + "。"),
-      };
+    if (!medicine || (previous.medicines[medicine.id] || 0) <= 0) return previous;
+    return {
+      ...previous,
+      medicines: { ...previous.medicines, [medicine.id]: previous.medicines[medicine.id] - 1 },
+      hero: recoverVitals(grantXp(previous.hero, medicine.heroXp), "hpRestore" in medicine ? medicine.hpRestore : 0, "mpRestore" in medicine ? medicine.mpRestore : 0),
+      mercs: previous.mercs.map((unit) => previous.active.includes(unit.uid) ? recoverVitals(grantXp(unit, medicine.mercXp), "hpRestore" in medicine ? medicine.hpRestore : 0, "mpRestore" in medicine ? medicine.mpRestore : 0) : unit),
+      logs: addLog(previous.logs, (automatic?'自動':'') + "使用「" + medicine.name + "」：" + medicine.effect + "。"),
+    };
+  }
+
+  function applyAutoMedicines(previous:GameState,now:number) {
+    let next=previous;
+    const hpRate=vitalStats(next.hero).hp/Math.max(1,vitalStats(next.hero).maxHp)*100;
+    if(next.autoMedicine.healing>0&&hpRate<=next.autoMedicine.healing&&now-next.autoMedicineAt.healing>=1_000){
+      const after=applyMedicine(next,'healing',true);
+      if(after!==next)next={...after,autoMedicineAt:{...after.autoMedicineAt,healing:now}};
+    }
+    const mpRate=vitalStats(next.hero).mp/Math.max(1,vitalStats(next.hero).maxMp)*100;
+    if(next.autoMedicine.mana>0&&mpRate<=next.autoMedicine.mana&&now-next.autoMedicineAt.mana>=1_000){
+      const after=applyMedicine(next,'mana',true);
+      if(after!==next)next={...after,autoMedicineAt:{...after.autoMedicineAt,mana:now}};
+    }
+    return next;
+  }
+
+  function consumeMedicine(medicineId: string) {
+    setGame(previous => {
+      const next=applyMedicine(previous,medicineId);
+      if(next===previous){const medicine=medicineCatalog.find(entry=>entry.id===medicineId);if(medicine)setNotice("目前沒有「" + medicine.name + "」。");}
+      return next;
     });
   }
 
@@ -1559,7 +1582,7 @@ export default function GameV15() {
               })}
             </div>
             {sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・依關卡輪替"}</strong></div><span>點選卡片即可開始自動戰鬥</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id).map(enemy => <button type="button" key={enemy.name} className={(game.selectedMonster === enemy.name ? "active " : "")+(enemy.boss ? "boss-target" : "")} onClick={() => setGame(previous => { const key=monsterDungeonKeys[enemy.name]; const base={...previous,selectedMonster:enemy.name,enemyHp:enemy.hp||previous.enemyHp,dungeon:key?{...freshDungeon(),key,lockedEnemyKey:key,enemyHp:DUNGEONS[key].hp}:previous.dungeon,logs:addLog(previous.logs,`${enemy.boss?'首領挑戰：':'指定遭遇怪物：'}${enemy.name}，自動開始持續戰鬥。`)}; return key ? applyDungeon(base,'start',Date.now(),key,Math.random(),Math.random(),0,Math.random(),[Math.random(),Math.random(),Math.random()]) : base; })}><div><strong>{enemy.name}</strong><em>{enemy.boss ? (game.newbieBossDefeated?"已討伐・可再戰":"首領挑戰") : game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>MP <b>{enemy.mp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>掉落：{enemy.drops.join("、")}</p></button>)}</div></section>}
-            <DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} mapName={currentMap.name} mapRegion={currentMap.region} medicineQuickbar={<div className="battle-medicine-float" aria-label="隨身藥袋">{medicineCatalog.filter(medicine=>medicine.id==='healing'||medicine.id==='mana').map(medicine=><button type="button" key={medicine.id} disabled={!game.medicines[medicine.id]} onClick={()=>consumeMedicine(medicine.id)} title={`${medicine.name}：${medicine.effect}`}><Pill /><span>{medicine.name}</span><b>×{game.medicines[medicine.id]||0}</b></button>)}</div>} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()];setGame(previous=>applyDungeon(previous,action,now,key,roll,choice,0,retaliationRoll,materialRolls));}}/>
+            <DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} mapName={currentMap.name} mapRegion={currentMap.region} medicineQuickbar={<div className="battle-medicine-float" aria-label="隨身藥袋">{medicineCatalog.filter(medicine=>medicine.id==='healing'||medicine.id==='mana').map(medicine=>{const medicineKey=medicine.id as 'healing'|'mana'; const resource=medicineKey==='healing'?'HP':'MP'; return <div className="battle-medicine-item" key={medicine.id}><button type="button" disabled={!game.medicines[medicine.id]} onClick={()=>consumeMedicine(medicine.id)} title={`${medicine.name}：${medicine.effect}`}><Pill /><span>{medicine.name}</span><b>×{game.medicines[medicine.id]||0}</b></button><label title={`設定${medicine.name}自動使用門檻；0% 為關閉`}><small>{game.autoMedicine[medicineKey] ? `自動 ${resource} ≤` : '自動關閉'}</small><input aria-label={`${medicine.name}自動使用門檻`} type="number" min="0" max="99" value={game.autoMedicine[medicineKey]} onChange={event=>{const threshold=Math.min(99,Math.max(0,Math.floor(Number(event.target.value)||0)));setGame(previous=>({...previous,autoMedicine:{...previous.autoMedicine,[medicineKey]:threshold}}));}}/><span>%</span></label></div>;})}</div>} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()];setGame(previous=>applyDungeon(previous,action,now,key,roll,choice,0,retaliationRoll,materialRolls));}}/>
           </section>
           <div className="battle-grid">
             <section className="panel log-panel">
