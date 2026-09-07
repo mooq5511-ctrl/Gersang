@@ -33,7 +33,7 @@ export function DungeonPanel({state,mp,hero,dps=0,act,mapName,mapRegion,medicine
  <BattleArena state={state} hero={hero}/>
  {medicineQuickbar}
  <output className={'dungeon-flash'+(state.logs[0]?.startsWith('🎁')?' dungeon-loot-flash':'')} key={state.serial+'-'+state.logs[0]}>{state.logs[0]||'選擇對手，開始自動戰鬥。'}</output>
- <div className="dungeon-actions"><button disabled={!active||state.normalAt>state.stamp} onClick={()=>act('normal')}>普通攻擊<small>無消耗 · 共用自動攻擊冷卻</small></button><button disabled={!active||mp<40||cooldown>0} onClick={()=>act('skill')}>蛇龍出水<small>{mp<40?'MP 不足':cooldown?'冷卻 '+cooldown+' 秒':'40 MP · 50＋智力×1.5'}</small></button><button disabled={!active&&state.status!=='respawning'} onClick={()=>act('retreat')}>{state.status==='recovering'?'客棧療傷中':'撤退至客棧'}</button></div>
+ <div className="dungeon-actions"><button disabled={!active||state.normalAt>state.stamp} onClick={()=>act('normal')}>普通攻擊<small>無消耗 · 共用自動攻擊冷卻</small></button><button disabled={!active||mp<40||cooldown>0} onClick={()=>act('skill')}>蛇龍出水<small>{mp<40?'MP 不足':cooldown?'冷卻 '+cooldown+' 秒':'40 MP · 5,000＋智力×1.5'}</small></button><button disabled={!active&&state.status!=='respawning'} onClick={()=>act('retreat')}>{state.status==='recovering'?'客棧療傷中':'撤退至客棧'}</button></div>
  <details className="dungeon-notes"><summary>戰鬥規則與本地怪物</summary><p>掉落區域：{zone.loot}。前排輸出 +20%，後排受擊有 50% 閃避；全員倒下才會撤回客棧。</p><p>本地怪物：{ecology}</p></details>
  <details className="dungeon-journal"><summary>戰鬥日誌 · 最近 30 則</summary><ol className="dungeon-log">{state.logs.slice(0,30).map((line,i)=><li key={i} className={battleLogPresentation(line).className}><span className="classic-log-label">{battleLogPresentation(line).label}</span>{line}</li>)}</ol></details>
  </section>;

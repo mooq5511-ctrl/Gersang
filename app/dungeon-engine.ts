@@ -74,8 +74,8 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   if(state.phase!=='交戰'){state.phase='交戰';state.distance=0;log('部隊向前推進，遭遇敵方【'+enemy().name+'大軍】！')}
   if(skill){if(mp<40||now<state.skillAt)return;mp-=40;state.skillAt=now+3000}
   else{if(now<state.normalAt)return;state.normalAt=now+1000}
-  // 蛇龍出水：固定基礎傷害 50，再加上主角智力 × 1.5；不受一般 ATK 或武器倍率影響。
-  const damage=Math.max(1,Math.floor(skill?50+hero.int*1.5:hero.str*2+hero.attack));
+  // 蛇龍出水：固定基礎傷害 5,000，再加上主角智力 × 1.5；不受一般 ATK 或武器倍率影響。
+  const damage=Math.max(1,Math.floor(skill?5000+hero.int*1.5:hero.str*2+hero.attack));
   const critical=skill||(!skill&&choice<.2);state.enemyHp=Math.max(0,state.enemyHp-damage);event('hero',damage,skill,!skill&&critical);const front=members.find(member=>member.hp>0&&member.position==='前排'),rear=members.find(member=>member.hp>0&&member.position==='後排');log((critical?'💥 暴擊！ ':'')+(skill?'主角施放了 [蛇龍出水]':'商隊協同攻擊')+'，造成 '+damage+' 點傷害！');if(front)log('⚔️ [前排] '+front.name+' 突入敵陣，輸出加成 20%！');else if(rear)log('🏹 [後排] '+rear.name+' 在安全後方持續輸出！');
   if(!state.enemyHp)victory();
  };
