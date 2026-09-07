@@ -35,7 +35,7 @@ export const referenceCategories: ReferenceCategory[] = [
     name: "怪物與地區",
     source: "https://52jushang.com/monster/index.asp",
     description: "六大地區、特殊地形、討伐、巨型首領與活動怪物索引。",
-    entries: list("朝鮮地面|大觀嶺|高手洞窟|巨濟海底洞|漢拏山|武寧王陵|月奇峰|千年湖|黑色商團營地|隆山|幽冥界|桂林星之房|介馬莊園|炎雀峰|白商會營地|黃天福的家|秘密場所|秘密祭壇|武道場|挑戰模式|血鬥專場|奇妙的傳說|中國地面|萬里長城|秦始皇陵墓|猿公的竹林|冰宮星之房|少林寺|小玲的後院|冰雪神殿|北海冰窟|詭異的洞窟|沼澤地帶|破奧之塔|神仙谷|狐仙的竹林|惡人村|炎魔洞|黑龍潭|精靈探索|日天鬼門|怨恨的房間|月天鬼門|怨望的祭壇|匡廬山頂部|光之試驗|隱身處地下墳墓|峽谷秘密研究所|地下神殿內部|混沌之門|幻想溪谷夕陽|幻想溪谷黎明|噩夢的龜裂|香巴拉天獄金庫|香巴拉關門勇猛試驗場|日本地面|日本海底洞|八幡平溫泉|大雪山冰谷|冰城|石鎚山|毒蛇的巢穴|鬼曲城|龍神之泉|台灣地面|海賊洞|海底洞|奇獨龜輪山|瘴氣森林|野獸林星之房|尼泊爾|尼泊爾石窟|印度北部|泰姬陵|印度東部|太陽寺院|武鬥場|印度西部|提婆神廟地下|印度南部|遺棄的海岸寺院|蒙古地面|帝王陵寢|須彌山|噩夢的縫隙|噩夢的房間|噩夢的根源|噩夢的祭壇|巨型 BOSS|國家討伐戰|詭異的包袱商|討伐齊天大聖|哪吒的試煉|聖誕節"),
+    entries: list("朝鮮地面|大觀嶺|高手洞窟|巨濟海底洞|漢拏山|武寧王陵|月奇峰|千年湖|黑色商團營地|隆山|幽冥界|桂林星之房|介馬莊園|炎雀峰|白商會營地|黃天福的家|秘密場所|秘密祭壇|武道場|挑戰模式|血鬥專場|奇妙的傳說|中國地面|萬里長城|秦始皇陵墓|猿公的竹林|冰宮星之房|少林寺|小玲的後院|冰雪神殿|北海冰窟|詭異的洞窟|沼澤地帶|破奧之塔|神仙谷|狐仙的竹林|惡人村|炎魔洞|黑龍潭|精靈探索|日天鬼門|怨恨的房間|月天鬼門|怨望的祭壇|匡廬山頂部|光之試驗|隱身處地下墳墓|峽谷秘密研究所|地下神殿內部|混沌之門|幻想溪谷夕陽|幻想溪谷黎明|噩夢的龜裂|香巴拉天獄金庫|香巴拉關門勇猛試驗場|日本地面|日本海底洞|八幡平溫泉|大雪山冰谷|冰城|石鎚山|毒蛇的巢穴|鬼曲城|龍神之泉|台灣地面|海賊洞|海底洞|奇獨龜輪山|白虎林|野獸林星之房|尼泊爾|尼泊爾石窟|印度北部|泰姬陵|印度東部|太陽寺院|武鬥場|印度西部|提婆神廟地下|印度南部|遺棄的海岸寺院|蒙古地面|帝王陵寢|須彌山|噩夢的縫隙|噩夢的房間|噩夢的根源|噩夢的祭壇|巨型 BOSS|國家討伐戰|詭異的包袱商|討伐齊天大聖|哪吒的試煉|聖誕節"),
   },
   {
     id: "item",
@@ -112,7 +112,7 @@ export const battleMaps: BattleMap[] = [
   { id: "starter-outskirts", name: "新手村郊外", region: "新手軍營", enemyRegion: "朝鮮", unlockStage: 1, theme: "field", hpMultiplier: 0.8, goldMultiplier: 0.8, coreBonus: 0, description: "狸貓、倭寇與山賊出沒的六種新手遭遇地。" },
   { id: "millennium-lake", name: "千年湖", region: "朝鮮", enemyRegion: "朝鮮", unlockStage: 1, theme: "lake", hpMultiplier: 1.18, goldMultiplier: 1.12, coreBonus: 0, description: "擊敗新手村郊外的海賊王後方可進入。" },
   { id: "japan-sea", name: "日本海底洞", region: "日本", enemyRegion: "日本", unlockStage: 1, theme: "sea", hpMultiplier: 1.35, goldMultiplier: 1.25, coreBonus: 0, description: "擊敗千年湖首領「狂風阿魯塔」後方可進入。" },
-  { id: "miasma-forest", name: "瘴氣森林", region: "台灣", enemyRegion: "台灣", unlockStage: 15, theme: "forest", hpMultiplier: 1.55, goldMultiplier: 1.38, coreBonus: 1, description: "密林瘴氣使敵軍更加強韌。" },
+  { id: "miasma-forest", name: "白虎林", region: "台灣", enemyRegion: "台灣", unlockStage: 15, theme: "forest", hpMultiplier: 1.55, goldMultiplier: 1.38, coreBonus: 1, description: "白虎盤踞的密林使敵軍更加強韌。" },
   { id: "ice-temple", name: "冰雪神殿", region: "中國", enemyRegion: "中國", unlockStage: 20, theme: "ice", hpMultiplier: 1.8, goldMultiplier: 1.55, coreBonus: 1, description: "寒霜神殿，適合高階隊伍遠征。" },
   { id: "taj-mahal", name: "泰姬陵", region: "印度", enemyRegion: "印度", unlockStage: 30, theme: "desert", hpMultiplier: 2.15, goldMultiplier: 1.8, coreBonus: 1, description: "印度高階怪物盤據的古陵。" },
   { id: "sumeru", name: "須彌山", region: "特殊", unlockStage: 40, theme: "sumeru", hpMultiplier: 2.65, goldMultiplier: 2.15, coreBonus: 2, description: "神獸與冥界力量交會的險地。" },
