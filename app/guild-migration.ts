@@ -1,7 +1,7 @@
 import { mercenarySpec } from './mercenary-roster.ts';
 type Item = { uid: string };
 type Member<E extends Item> = { uid: string; templateId: string; equip: Record<string, E | null> };
-export const ACTIVE_MERCENARY_LIMIT = 5;
+export const ACTIVE_MERCENARY_LIMIT = 11;
 /** Keep recognized guild templates, returning retired members' gear exactly once. */
 export function retainGuildRoster<E extends Item, M extends Member<E>, S extends { mercs: M[]; active: string[]; inventory: E[]; hero: { equip: Record<string, E | null> }; logs: string[] }>(state: S): S {
   const retained = state.mercs.filter(unit => !!mercenarySpec(unit.templateId));

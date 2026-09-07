@@ -1029,6 +1029,7 @@ export default function GameV15() {
   const currentWorldZone=WORLD_ZONES.find(zone=>zone.id===(game.dungeon?.zone||'hanyang'))||WORLD_ZONES[0];
   const currentCity = worldCities.find((city) => city.id === game.city) || worldCities[0];
   const heroVital=vitalStats(game.hero);
+  const heroXpNeeded=xpNeed(game.hero.level);
   const quickHealCost=Math.max(0,heroVital.maxHp-heroVital.hp)*2;
   const currentNation = nations.find((nation) => nation.id === currentCity.nation) || nations[0];
   const heroNation = nations.find((nation) => nation.id === game.hero.nation) || nations[0];
@@ -1117,7 +1118,7 @@ export default function GameV15() {
   function recruitMerchant(spec: MercenarySpec, index: number) {
     const cost = Math.floor(6000 * currentCity.priceFactor);
     setGame(previous => {
-      if (previous.gold < cost || previous.mercs.length >= 9) return { ...previous, logs: addLog(previous.logs, previous.mercs.length >= 9 ? '商隊已滿九席，無法再僱用。' : '僱用資金不足。') };
+      if (previous.gold < cost || previous.mercs.length >= 18) return { ...previous, logs: addLog(previous.logs, previous.mercs.length >= 18 ? '商隊傭兵名冊已滿，無法再僱用。' : '僱用資金不足。') };
       const unit = normalizeVitals<Unit>({ uid: uid('merchant-'+spec.id), templateId: 'merchant-'+spec.id, nation: 'legacy', tier: 0, special: false, name: spec.name, role: spec.role, skill: spec.active, image: mercenaryPortrait(spec.id,index), level: 1, xp: 0, points: 0, str: spec.ratings[1], agi: spec.ratings[3], vit: spec.ratings[0], intel: spec.mp ? 20 : 10, position:normalizeBattlePosition(undefined,spec.name,spec.role), equip: emptyEquipment() });
       return { ...previous, gold: previous.gold-cost, mercs: [...previous.mercs,unit], active: [...previous.active, unit.uid].slice(0,ACTIVE_MERCENARY_LIMIT), logs: addLog(previous.logs,'招募 '+spec.name+'，已加入護商隊。') };
     });
@@ -1129,7 +1130,7 @@ export default function GameV15() {
         return { ...previous, active: previous.active.filter((id) => id !== unitUid) };
       }
       if (previous.active.length >= ACTIVE_MERCENARY_LIMIT) {
-        setNotice("出戰傭兵最多 5 人，主角不佔欄位。");
+        setNotice("出戰傭兵最多 " + ACTIVE_MERCENARY_LIMIT + " 人，主角不佔欄位。");
         return previous;
       }
       return { ...previous, active: [...previous.active, unitUid] };
@@ -1558,6 +1559,7 @@ export default function GameV15() {
         <section className="classic-live-resources">
           <div><Coins /><span>{format(game.gold)} 兩</span></div>
           <div><HeartPulse /><span>{heroVital.hp} / {heroVital.maxHp}</span></div>
+          <div title="主角升級經驗"><Sparkles /><span>{game.hero.level>=LEVEL_CAP?'EXP 已滿級':`EXP ${format(game.hero.xp)} / ${format(heroXpNeeded)}`}</span></div>
           <div><Swords /><span>{format(unitPower(game.hero)+game.mercs.reduce((sum,unit)=>sum+unitPower(unit),0))}</span></div>
         </section>
         <section className="classic-live-log" aria-label="即時訊息">
