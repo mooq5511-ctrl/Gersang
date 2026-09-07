@@ -861,6 +861,7 @@ export default function GameV15() {
   const [notice, setNotice] = useState("");
   const [selectedUid, setSelectedUid] = useState("hero");
   const [cityService, setCityService] = useState<CityService>("mercenary");
+  const [medicineAmounts, setMedicineAmounts] = useState<Record<string, number>>({});
   const [gemSlot, setGemSlot] = useState<EquipmentSlot>('armor');
   const [sharedWarehouse, setSharedWarehouse] = useState<Equipment[]>([]);
   const warehouseWritable = useRef(true);
@@ -1324,16 +1325,19 @@ export default function GameV15() {
     });
   }
 
-  function buyMedicine(medicineId: string) {
+  function buyMedicine(medicineId: string, requestedAmount = 1) {
     const medicine = medicineCatalog.find((entry) => entry.id === medicineId);
     if (!medicine) return;
     const price = Math.floor(medicine.price * currentCity.priceFactor);
+    const amount = Math.max(1, Math.floor(requestedAmount) || 1);
     setGame((previous) => {
-      if (previous.gold < price) {
+      const purchased = Math.min(amount, Math.floor(previous.gold / price));
+      if (purchased <= 0) {
         setNotice("購買「" + medicine.name + "」的資金不足。");
         return previous;
       }
-      return { ...previous, gold: previous.gold - price, medicines: { ...previous.medicines, [medicine.id]: (previous.medicines[medicine.id] || 0) + 1 }, logs: addLog(previous.logs, "在" + currentCity.name + "藥店購入「" + medicine.name + "」。") };
+      if (purchased < amount) setNotice("金幣不足，僅購入「" + medicine.name + "」×" + purchased + "。");
+      return { ...previous, gold: previous.gold - price * purchased, medicines: { ...previous.medicines, [medicine.id]: (previous.medicines[medicine.id] || 0) + purchased }, logs: addLog(previous.logs, "在" + currentCity.name + "藥店購入「" + medicine.name + "」×" + purchased + "。") };
     });
   }
 
@@ -1674,7 +1678,7 @@ export default function GameV15() {
 
             {cityService === "inn" && <div className="city-service-body inn-service"><BedDouble /><div><small>{currentCity.name}客棧</small><h2>商團歇腳與修練</h2><p>全員 HP / MP 恢復至上限；主角獲得 700 經驗，出戰傭兵各獲得 550 經驗。</p><Button type="button" onClick={restAtInn}>{game.hero.status==='客棧中'||game.dungeon?.status==='recovering'?'立即療傷・'+format(quickHealCost)+' 兩':'入住・'+format(Math.floor(1800 * currentCity.priceFactor))+' 兩'}</Button></div></div>}
 
-            {cityService === "pharmacy" && <div className="city-service-body"><div className="panel-title"><Pill /><h2>{currentCity.name}藥店</h2><span>購買後可立即使用</span></div><div className="medicine-grid">{medicineCatalog.map((medicine) => <article key={medicine.id}><Pill /><div><strong>{medicine.name}</strong><small>{medicine.effect}</small><em>持有 {game.medicines[medicine.id] || 0}</em></div><Button size="sm" onClick={() => buyMedicine(medicine.id)}>購買 {format(Math.floor(medicine.price * currentCity.priceFactor))} 兩</Button><Button size="sm" variant="outline" disabled={!game.medicines[medicine.id]} onClick={() => consumeMedicine(medicine.id)}>使用</Button></article>)}</div></div>}
+            {cityService === "pharmacy" && <div className="city-service-body"><div className="panel-title"><Pill /><h2>{currentCity.name}藥店</h2><span>可設定每次購買數量</span></div><div className="medicine-grid">{medicineCatalog.map((medicine) => {const amount=medicineAmounts[medicine.id]||1;const unitPrice=Math.floor(medicine.price * currentCity.priceFactor);return <article key={medicine.id}><Pill /><div><strong>{medicine.name}</strong><small>{medicine.effect}</small><em>持有 {game.medicines[medicine.id] || 0} ・單價 {format(unitPrice)} 兩</em></div><div className="medicine-purchase"><label>數量<input aria-label={`${medicine.name}購買數量`} type="number" min="1" max="999" value={amount} onChange={event=>setMedicineAmounts(previous=>({...previous,[medicine.id]:Math.min(999,Math.max(1,Math.floor(Number(event.target.value)||1)))}))}/></label><Button size="sm" onClick={() => buyMedicine(medicine.id,amount)}>購買 {format(unitPrice*amount)} 兩</Button></div><Button size="sm" variant="outline" disabled={!game.medicines[medicine.id]} onClick={() => consumeMedicine(medicine.id)}>使用</Button></article>;})}</div></div>}
 
             {cityService === "exchange" && <div className="city-service-body village-exchange"><div className="panel-title"><PackageOpen /><h2>全東亞材料交易所</h2><span>永久攻擊 +{exchangeAttackBonus(game.exchangePurchases)}</span></div><div className="exchange-layout"><div className="exchange-weapons"><div className="exchange-subtitle"><strong>{currentCity.name}鍛造所</strong><small>可重複購買，每次漲價 30%</small></div><div className="weapon-upgrade-grid">{VILLAGE_WEAPONS.map(good=>{const cost=weaponCost(good.id,game.exchangePurchases),bought=game.exchangePurchases[good.id]||0;return <article key={good.id} className={good.id==='immortal-great-blade'?'divine':''}><div><strong>{good.name}</strong><small>主角永久攻擊 +{good.atkBonus}｜已鍛造 {bought} 次</small></div><button onClick={()=>buyExchangeUpgrade(good.id)} disabled={game.gold<cost}>🪙 {format(cost)} 兩</button></article>;})}</div></div><div className="exchange-market"><div className="exchange-subtitle"><strong>本地材料櫃檯</strong><small>{currentWorldZone.name}・可買回本地怪物材料</small></div><div className="material-market-grid">{currentWorldZone.dropTable.map(item=>{const price=MATERIAL_BUY_PRICES[item.item]||0;return <article key={item.item}><div><strong>{item.item}</strong><small>持有 ×{game.materials[item.item]||0}・買價 {format(price)} 兩</small></div><button type="button" disabled={!price||game.gold<price} onClick={()=>buyLootMaterial(item.item)}>買入 1 件</button></article>;})}</div></div></div></div>}
           </section>

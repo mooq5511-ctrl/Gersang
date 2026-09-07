@@ -1323,6 +1323,10 @@ footer {
 .medicine-grid small { min-height: 34px; color: #8fa794; font-size: 0.68rem; }
 .medicine-grid em { margin-top: 4px; color: #a9c9ae; font-size: 0.66rem; font-style: normal; }
 .medicine-grid button { grid-column: span 2; }
+.medicine-purchase { grid-column: span 2; display: flex; align-items: center; gap: 7px; }
+.medicine-purchase label { display: flex; align-items: center; gap: 4px; color: #a9c9ae; font-size: 0.72rem; white-space: nowrap; }
+.medicine-purchase input { width: 50px; padding: 5px; border: 1px solid #5d8567; border-radius: 5px; background: #09100c; color: #e7dbad; font: inherit; text-align: center; }
+.medicine-purchase button { flex: 1; }
 .city-auxiliary { display: grid; grid-template-columns: 1.45fr 0.55fr; gap: 12px; margin-top: 12px; }
 .shop-magic-preview { display: flex; flex-wrap: wrap; gap: 7px; margin: 14px 0; }
 .shop-magic-preview span { padding: 7px 9px; border: 1px solid; border-radius: 6px; background: #0c1216; font-size: 0.68rem; }
