@@ -1228,8 +1228,8 @@ export default function GameV15() {
     const drop:Equipment|null=spec?{uid:uid('loot-'+key),name:spec.name,slot:spec.slot,bonus:{...spec.bonus},def:spec.def,atk:0,hp:0,image:'',enhance:0,rarity:'傳說',magic:[],requiredLevel:1,source:'模擬打怪掉落'}:null;
     setGame(previous=>{
       const pickup=drop?addInventoryItem(previous.inventory,drop):{inventory:previous.inventory,error:undefined};
-      const message='模擬打怪：主角獲得 100 經驗。'+(drop?(pickup.error?'背包已滿，本次掉落無法拾取。':'獲得「'+drop.name+'」！'):'本次未掉落裝備。');
-      return {...previous,hero:grantXp(previous.hero,100),inventory:pickup.inventory,logs:addLog(previous.logs,message)};
+      const message='模擬打怪：主角獲得 10 經驗。'+(drop?(pickup.error?'背包已滿，本次掉落無法拾取。':'獲得「'+drop.name+'」！'):'本次未掉落裝備。');
+      return {...previous,hero:grantXp(previous.hero,10),inventory:pickup.inventory,logs:addLog(previous.logs,message)};
     });
   }
 
