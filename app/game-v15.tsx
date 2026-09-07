@@ -1725,7 +1725,7 @@ export default function GameV15() {
 
 
         <TabsContent value="squad" className="tab-panel">
-          <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel}
+          <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} active={game.active} toggleActive={toggleActive} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel}
             navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now(),spawnRoll=Math.random();setGame(previous=>{
               const old=previous.dungeon||freshDungeon();
               const deployed=[previous.hero,...previous.mercs.filter(unit=>previous.active.slice(0,ACTIVE_MERCENARY_LIMIT).includes(unit.uid))];
