@@ -128,6 +128,19 @@
   border-radius: 4px;
   background: linear-gradient(100deg, #100b05, #25190b);
 }
+.merchant-material-actions {
+  display: grid;
+  gap: 4px;
+}
+.merchant-material-actions button {
+  border: 1px solid #9b5b35;
+  border-radius: 4px;
+  background: linear-gradient(#5e291d, #30140e);
+  color: #ffd27a;
+  cursor: pointer;
+  padding: 4px 6px;
+  font-size: 11px;
+}
 .merchant-material-icon {
   display: grid;
   place-items: center;

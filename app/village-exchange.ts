@@ -1,9 +1,28 @@
 import { gersangStages } from './gersang-world-map.ts';
 
 /** 地圖掉落物的村莊收購價，直接由同一份地圖資料推導，避免戰利品與商店價格脫節。 */
-export const MATERIAL_PRICES: Record<string, number> = Object.fromEntries(
-  gersangStages.flatMap(stage => stage.monster.drops.map(drop => [drop.item, drop.price])),
-);
+export const MATERIAL_PRICES: Record<string, number> = {
+  ...Object.fromEntries(gersangStages.flatMap(stage => stage.monster.drops.map(drop => [drop.item, drop.price]))),
+  '[隨便的]咒術秘訣': 1200,
+  '藍色精氣石': 30,
+  '舊斧頭': 5000,
+  '下級精髓': 25,
+  '古錢箱': 1,
+  '舊木劍': 2500,
+  '舊六面木棒': 2500,
+  '舊金剛爪刀': 2500,
+  '[訓練用]咒術秘訣': 1000,
+  '舊摩呼羅迦佛珠': 2500,
+  '桂皮': 3,
+  '舊短弓': 33,
+  '海鮮': 33,
+  '牛黃': 33,
+  '舊三叉戟': 2500,
+  '熟地黃': 33,
+  '舊貓娃娃': 2500,
+  '舊蓮花佛鐘': 2500,
+  '幽冥石': 1000,
+};
 
 /** 村莊販售價固定為收購價的兩倍，避免來回買賣產生無限套利。 */
 export const MATERIAL_BUY_PRICES: Record<string, number> = Object.fromEntries(
@@ -44,8 +63,9 @@ export function sellMaterial(materials: Record<string, number>, gold: number, it
 }
 
 export function sellAllMaterials(materials: Record<string, number>, gold: number) {
-  const earned = Object.entries(materials).reduce((sum, [name, count]) => sum + (MATERIAL_PRICES[name] || 0) * Math.max(0, Math.floor(count)), 0);
-  const unsellable = Object.fromEntries(Object.entries(materials).filter(([name]) => !MATERIAL_PRICES[name]));
+  // 古錢箱保留給玩家自行確認，避免全部出售時誤失去開箱機會。
+  const earned = Object.entries(materials).reduce((sum, [name, count]) => sum + (name === '古錢箱' ? 0 : (MATERIAL_PRICES[name] || 0) * Math.max(0, Math.floor(count))), 0);
+  const unsellable = Object.fromEntries(Object.entries(materials).filter(([name]) => name === '古錢箱' || !MATERIAL_PRICES[name]));
   return { materials: unsellable, gold: gold + earned, earned };
 }
 
