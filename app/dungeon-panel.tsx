@@ -26,10 +26,12 @@ export function WorldMapNavigation({state,level,power,travel}:{state:DungeonStat
 export function DungeonPanel({state,mp,hero,dps=0,act,autoSkill,toggleAutoSkill,mapName,mapRegion,medicineQuickbar}:{state:DungeonState;mp:number;hero:CaravanMember;dps?:number;act:(action:'start'|'normal'|'skill'|'retreat',key?:DungeonKey)=>void;autoSkill:boolean;toggleAutoSkill:()=>void;mapName?:string;mapRegion?:string;medicineQuickbar?:ReactNode}){
  const monster=DUNGEONS[state.key],zone=zoneFor(state.zone),active=state.status==='fighting'&&state.phase==='交戰',cooldown=Math.max(0,Math.ceil((state.skillAt-state.stamp)/1000));
  const ecology=ECOLOGY_POOLS[zone.id].map(key=>DUNGEONS[key].name+' Lv.'+DUNGEONS[key].level).join(' ／ ');
+ const liveLogs=state.logs.filter(line=>/施放|造成|受到|攻擊|技能|暴擊/.test(line)).slice(0,4);
  return <section className="dungeon-panel" aria-label="動態戰鬥">
  <header className="dungeon-command-header"><div><small>{mapRegion ? mapRegion+' · 戰鬥地圖同步' : zone.mood}</small><h2>{mapName || zone.name}</h2></div><span className={'dungeon-status dungeon-status-'+state.status}>{{idle:'整裝待發',fighting:'交鋒中',respawning:'等待下一隻',recovering:'漢陽療傷中'}[state.status]}</span></header>
  <div className="dungeon-summary" aria-label="戰鬥摘要"><span><small>目前目標</small><strong>{monster.name}</strong></span><span><small>商隊 DPS</small><strong>{dps.toLocaleString()}</strong></span><span><small>掉落加成</small><strong>{monster.drop*100}%</strong></span></div>
  <div className="battle-phase" aria-live="polite"><span><small>我方・{hero.name}</small><strong>HP {Math.max(0,hero.hp||0).toLocaleString()} / {(hero.maxHp||1).toLocaleString()}</strong></span><span><small>敵方・{monster.name}</small><strong>HP {Math.max(0,state.enemyHp).toLocaleString()} / {monster.hp.toLocaleString()}</strong></span><span><small>戰況</small><strong>{state.status==='fighting'?'即時交戰':state.status==='respawning'?'敵人重生中':state.status==='recovering'?'返回療傷':'待命'}</strong></span><div><i style={{width:(100-(state.distance??100))+'%'}}/></div></div>
+ <div className="battle-live-feed" aria-label="即時戰鬥資訊" aria-live="polite"><strong>即時戰鬥資訊</strong>{liveLogs.length?liveLogs.map((line,index)=><span key={state.serial+'-'+index+'-'+line}>{line}</span>):<span>等待敵我行動……</span>}</div>
  <BattleArena state={state} hero={hero}/>
  {medicineQuickbar}
  <output className={'dungeon-flash'+(state.logs[0]?.startsWith('🎁')?' dungeon-loot-flash':'')} key={state.serial+'-'+state.logs[0]}>{state.logs[0]||'選擇對手，開始自動戰鬥。'}</output>
