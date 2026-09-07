@@ -456,7 +456,8 @@ function migrateV14(raw: unknown): GameState {
     busan: "korea-city-3",
   };
   const mercs = legacyUnits.length ? legacyUnits : base.mercs;
-  const migratedCity = cityMap[String(old.city)] || (isNationId(old.city) ? worldCities.find((city) => city.nation === old.city)?.id : null) || worldCities[0].id;
+  const legacyCityNation=(['korea','china','japan','taiwan'] as NationId[]).find(nation=>String(old.city).startsWith(nation+'-city-'));
+  const migratedCity = cityMap[String(old.city)] || (isNationId(old.city) ? worldCities.find((city) => city.nation === old.city)?.id : null) || (legacyCityNation ? worldCities.find(city=>city.nation===legacyCityNation)?.id : null) || worldCities[0].id;
   const migratedCityData = worldCities.find((city) => city.id === migratedCity) || worldCities[0];
   const heroNation = isNationId(oldHero.nation) ? oldHero.nation : migratedCityData.nation;
   const heroBase = makeHero(heroNation, safeLegacyText(oldHero.name, base.hero.name));
@@ -1636,7 +1637,7 @@ export default function GameV15() {
 
         <TabsContent value="city" className="tab-panel">
           <section className="panel city-atlas">
-            <div className="panel-title"><Map /><h2>四國二十城</h2><span>每國 5 座城市</span></div>
+            <div className="panel-title"><Map /><h2>四國主城</h2><span>朝鮮漢陽・中國南京・日本江戶・台灣台北</span></div>
             <div className="city-country-grid">{nations.map((nation) => <article key={nation.id} style={{ "--nation-color": nation.color } as React.CSSProperties}>
               <div><strong>{nation.name}</strong><small>{nation.description}</small></div>
               <div>{worldCities.filter((city) => city.nation === nation.id).map((city) => {

@@ -1,8 +1,8 @@
 export const TRADE_ROUTES = [
-  { id: "hanji", from: "漢陽", to: "釜山", good: "韓紙", nation: "朝鮮", cost: 1800, sale: 2900, seconds: 18, reputation: 0, stage: 1, rewardRep: 8, color: "#79b9d5" },
+  { id: "hanji", from: "漢陽", to: "台北", good: "高麗人參", nation: "朝鮮 → 台灣", cost: 1800, sale: 2900, seconds: 18, reputation: 0, stage: 1, rewardRep: 8, color: "#79b9d5" },
   { id: "tea", from: "台北", to: "南京", good: "烏龍茶", nation: "台灣 → 中國", cost: 3600, sale: 6000, seconds: 24, reputation: 40, stage: 5, rewardRep: 12, color: "#88c9a6" },
-  { id: "silk", from: "南京", to: "大阪", good: "雲錦", nation: "中國 → 日本", cost: 6500, sale: 11000, seconds: 32, reputation: 150, stage: 15, rewardRep: 18, color: "#e2ac73" },
-  { id: "porcelain", from: "京都", to: "台南", good: "京燒瓷器", nation: "日本 → 台灣", cost: 10000, sale: 18000, seconds: 40, reputation: 350, stage: 30, rewardRep: 24, color: "#c6a6df" },
+  { id: "silk", from: "南京", to: "江戶", good: "雲錦", nation: "中國 → 日本", cost: 6500, sale: 11000, seconds: 32, reputation: 150, stage: 15, rewardRep: 18, color: "#e2ac73" },
+  { id: "porcelain", from: "江戶", to: "漢陽", good: "江戶刀具", nation: "日本 → 朝鮮", cost: 10000, sale: 18000, seconds: 40, reputation: 350, stage: 30, rewardRep: 24, color: "#c6a6df" },
 ] as const;
 
 export type TradeRoute = (typeof TRADE_ROUTES)[number];

@@ -47,15 +47,15 @@ export type LegendRecipe = {
 export const nations: Nation[] = [
   { id: "korea", name: "朝鮮", capital: "漢陽", color: "#69a8d4", description: "均衡堅韌，擅長長兵器與支援術。" },
   { id: "china", name: "中國", capital: "南京", color: "#df785f", description: "兵種完整，兼具武鬥、火器與道術。" },
-  { id: "japan", name: "日本", capital: "京都", color: "#c890d8", description: "速度與爆發出色，擅長劍術與奇襲。" },
+  { id: "japan", name: "日本", capital: "江戶", color: "#c890d8", description: "速度與爆發出色，擅長劍術與奇襲。" },
   { id: "taiwan", name: "台灣", capital: "台北", color: "#8bc8a0", description: "靈活多變，結合山林、海商與咒術。" },
 ];
 
 const cityNames: Record<NationId, Array<[string, string]>> = {
-  taiwan: [["台北", "茶葉"], ["台南", "砂糖"], ["高雄", "海產"], ["花蓮", "藥草"], ["鹿港", "陶器"]],
-  china: [["南京", "絲綢"], ["北京", "藥材"], ["西安", "玉器"], ["成都", "香料"], ["廣州", "瓷器"]],
-  korea: [["漢陽", "高麗人參"], ["平壤", "皮革"], ["釜山", "海產"], ["全州", "米糧"], ["開城", "紙張"]],
-  japan: [["京都", "漆器"], ["江戶", "刀具"], ["大阪", "棉布"], ["名古屋", "陶瓷"], ["長崎", "火藥"]],
+  taiwan: [["台北", "茶葉"]],
+  china: [["南京", "絲綢"]],
+  korea: [["漢陽", "高麗人參"]],
+  japan: [["江戶", "刀具"]],
 };
 
 export const worldCities: WorldCity[] = nations.flatMap((nation, nationIndex) =>

@@ -31,9 +31,9 @@ export function TradePanel({ trade, gold, stage, escorts, logs, lastEncounter, o
       <div className="trade-chart" aria-label={`${route.from}至${route.to}商路示意圖`}>
         <div className="trade-compass"><Compass /><span>四國貿易網</span><small>商路節點示意</small></div>
         <div className="trade-island trade-island-china"><small>CHINA</small><strong>中國</strong><span>南京</span></div>
-        <div className="trade-island trade-island-korea"><small>KOREA</small><strong>朝鮮</strong><span>漢陽・釜山</span></div>
-        <div className="trade-island trade-island-japan"><small>JAPAN</small><strong>日本</strong><span>京都・大阪</span></div>
-        <div className="trade-island trade-island-taiwan"><small>TAIWAN</small><strong>台灣</strong><span>台北・台南</span></div>
+        <div className="trade-island trade-island-korea"><small>KOREA</small><strong>朝鮮</strong><span>漢陽</span></div>
+        <div className="trade-island trade-island-japan"><small>JAPAN</small><strong>日本</strong><span>江戶</span></div>
+        <div className="trade-island trade-island-taiwan"><small>TAIWAN</small><strong>台灣</strong><span>台北</span></div>
         <div className={"trade-ship " + (trade.caravan ? "sailing" : "")}><Ship /><span>{trade.caravan ? "商隊航行中" : "商隊待命"}</span></div>
         <div className="trade-map-caption">{route.from}<ArrowRight />{route.to}<b>{route.good}</b></div>
       </div>
