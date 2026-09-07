@@ -20,7 +20,7 @@ type Props = {
   trade:()=>void; trainHero:()=>void;
 
   inventory:BagItem[];materials:Record<string,number>;materialPrices:Record<string,number>;
-  equipSelected:(uid:string,targetUid:string)=>void;sellInventory:(uid:string)=>void;sellAllInventory:()=>void;sellMaterial:(name:string)=>void;sellAllMaterials:()=>void;openAncientCoinBox:()=>void;
+  equipSelected:(uid:string,targetUid:string)=>void;sellInventory:(uid:string)=>void;sellAllInventory:()=>void;sellMaterial:(name:string)=>void;sellAllMaterials:()=>void;openAncientCoinBox:(amount:number)=>void;
   unequipHero:(slot:EquipmentSlot)=>void;bagMessage:string;
 };
 export function CaravanStatus(p:Props) {

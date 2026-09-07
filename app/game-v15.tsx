@@ -1379,17 +1379,23 @@ export default function GameV15() {
     });
   }
 
-  function openAncientCoinBox(){
-    const coins=1+Math.floor(Math.random()*10);
-    const rareRoll=Math.random();
-    const rareReward=rareRoll<0.000001?'大吉(帥)':rareRoll<0.000011?'大吉(好)':rareRoll<0.000021?'大吉(者)':rareRoll<0.000121?'大吉(作)':null;
+  function openAncientCoinBox(amount=1){
+    const requested=Math.max(1,Math.floor(amount));
+    const rolls=Array.from({length:requested},()=>{
+      const rareRoll=Math.random();
+      return {coins:1+Math.floor(Math.random()*10),rareReward:rareRoll<0.000001?'大吉(帥)':rareRoll<0.000011?'大吉(好)':rareRoll<0.000021?'大吉(者)':rareRoll<0.000121?'大吉(作)':null};
+    });
     setGame(previous=>{
       const boxes=Math.max(0,Math.floor(previous.materials['古錢箱']||0));
       if(!boxes)return previous;
+      const opened=Math.min(boxes,requested),openedRolls=rolls.slice(0,opened),coins=openedRolls.reduce((sum,roll)=>sum+roll.coins,0);
       const materials={...previous.materials};
-      if(boxes===1)delete materials['古錢箱']; else materials['古錢箱']=boxes-1;
-      if(rareReward)materials[rareReward]=(materials[rareReward]||0)+1;
-      const rewardText='開啟「古錢箱」，獲得【新手兌換銅錢】×'+coins+(rareReward?'，稀有獎勵【'+rareReward+'】×1':'')+'。';
+      if(boxes===opened)delete materials['古錢箱']; else materials['古錢箱']=boxes-opened;
+      const rareCounts:Record<string,number>={};
+      for(const roll of openedRolls)if(roll.rareReward)rareCounts[roll.rareReward]=(rareCounts[roll.rareReward]||0)+1;
+      for(const [name,count] of Object.entries(rareCounts))materials[name]=(materials[name]||0)+count;
+      const rareText=Object.entries(rareCounts).map(([name,count])=>'【'+name+'】×'+count).join('、');
+      const rewardText='開啟「古錢箱」×'+opened+'，獲得【新手兌換銅錢】×'+coins+(rareText?'，稀有獎勵'+rareText:'')+'。';
       return {...previous,materials,newbieCoins:previous.newbieCoins+coins,logs:addLog(previous.logs,rewardText)};
     });
   }
