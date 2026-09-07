@@ -5,7 +5,9 @@ import {equipmentDetailLines,equipmentDescription,type TooltipGear} from './divi
 import {Tooltip,TooltipProvider,TooltipTrigger,TooltipContent} from '@/components/ui/tooltip';
 import {EQUIPMENT_LABELS,type EquipmentKind} from './equipment-slots';
 import {equipmentSellPrice} from './equipment-market';
+import {sourceEnemies} from './v17-content';
 export type BagItem=TooltipGear & {uid:string;name:string;slot:EquipmentKind;image:string;bagSlot?:number};
+const materialArtKind=(name:string)=>/草|黃|藥|花|種子|牛黃|桂皮|甘草|熟地黃/.test(name)?'herb':/精氣石|屬性石|千年石|玉|石$/.test(name)?'crystal':/咒術秘訣|密號符|力量碎片/.test(name)?'scroll':/劍|斧|弓|槍|刀|投石索|佛珠|木棒|三叉戟/.test(name)?'weapon':/精髓/.test(name)?'essence':'rare';
 type InventoryPanelProps={
   inventory:BagItem[];
   materials:Record<string,number>;
@@ -20,12 +22,22 @@ export function InventoryPanel({inventory,materials,materialPrices,equip,sell,se
   const items=positionInventory(inventory);
   const materialEntries=Object.entries(materials).filter(([,count])=>count>0).sort(([a],[b])=>a.localeCompare(b,'zh-Hant'));
   const materialCount=materialEntries.reduce((sum,[,count])=>sum+count,0);
+  const materialSources=new Map<string,{maps:string[];enemies:string[]}>();
+  for(const enemy of sourceEnemies)for(const material of enemy.drops){
+    const current=materialSources.get(material)||{maps:[],enemies:[]};
+    const mapName=enemy.mapId==='starter-outskirts'?'新手村郊外':enemy.mapId==='millennium-lake'?'千年湖':'朝鮮地面';
+    if(!current.maps.includes(mapName))current.maps.push(mapName);
+    if(!current.enemies.includes(enemy.name))current.enemies.push(enemy.name);
+    materialSources.set(material,current);
+  }
   return <section className="merchant-bag iron-inventory" aria-label="商隊背包"><h2>行囊 <small>裝備 {items.length}・材料 {materialCount}</small></h2>
     <section className="merchant-material-section" aria-label="戰利品材料">
       <div className="merchant-bag-subhead"><div><strong>戰利品材料</strong><small>怪物掉落會自動收入背包</small></div><button type="button" onClick={sellAllMaterials} disabled={!materialCount}>全部出售</button></div>
-      <ul className="merchant-material-list">{materialEntries.length?materialEntries.map(([name,count])=>{
+      <ul className="merchant-material-list merchant-material-detailed-list">{materialEntries.length?materialEntries.map(([name,count])=>{
         const price=materialPrices[name]||0;
-        return <li className="merchant-material-row" key={name}><span className="merchant-material-icon" aria-hidden="true">材</span><div><strong>{name}</strong><small>持有 ×{count}・單價 {price.toLocaleString()} 兩</small></div><button type="button" onClick={()=>sellMaterial(name)} disabled={!price}>出售 1 件</button></li>;
+        const detail=materialSources.get(name);
+        const sourceLabel=detail?.enemies.length?detail.enemies.slice(0,3).join('、')+(detail.enemies.length>3?` 等 ${detail.enemies.length} 種`:""):'其他戰利品';
+        return <li className="merchant-material-row merchant-material-detailed-row" key={name}><span className={'merchant-material-icon material-art material-art-'+materialArtKind(name)} aria-label={`${name}圖示`} role="img"/><div className="merchant-material-copy"><strong>{name}</strong><small>持有 ×{count}・單價 {price.toLocaleString()} 兩</small><small>來源：{sourceLabel}</small><small>地區：{detail?.maps.join('、')||'—'}・用途：鍛造／交易</small></div><button type="button" onClick={()=>sellMaterial(name)} disabled={!price}>出售 1 件</button></li>;
       }):<li className="merchant-material-empty">尚無材料；在四國掛機地圖擊敗怪物後，戰利品會直接放入此處。</li>}</ul>
     </section>
     <div className="merchant-bag-subhead merchant-equipment-subhead"><div><strong>裝備道具</strong><small>點擊穿戴，右側按鈕出售</small></div></div>
