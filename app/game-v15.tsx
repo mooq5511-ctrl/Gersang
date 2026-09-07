@@ -837,7 +837,6 @@ export default function GameV15() {
   const [characterNation, setCharacterNation] = useState<NationId>("taiwan");
   const [characterGender, setCharacterGender] = useState<"male"|"female">("male");
   const [notice, setNotice] = useState("");
-  const [raidOpen, setRaidOpen] = useState(false);
   const [selectedUid, setSelectedUid] = useState("hero");
   const [cityService, setCityService] = useState<CityService>("mercenary");
   const [gemSlot, setGemSlot] = useState<EquipmentSlot>('armor');
@@ -1505,6 +1504,7 @@ export default function GameV15() {
           <TabsTrigger value="map"><Map />斜角城鎮</TabsTrigger>
           <TabsTrigger value="trade"><Ship />東海商路</TabsTrigger>
           <TabsTrigger value="battle"><Map />地圖選擇</TabsTrigger>
+          <TabsTrigger value="raid"><Crown />雷霆祭壇</TabsTrigger>
           <TabsTrigger value="squad"><Users />主角與隊伍</TabsTrigger>
           <TabsTrigger value="city"><Castle />四國城市</TabsTrigger>
           <TabsTrigger value="contracts"><BookOpen />冒險委託</TabsTrigger>
@@ -1515,7 +1515,7 @@ export default function GameV15() {
           <IsometricWorldMap cityName={currentCity.name} heroImage={game.hero.image} onEnter={(destination) => {
             if (destination === "city") { setCityService("mercenary"); setActiveTab("city"); }
             else if (destination === "trade") setActiveTab("trade");
-            else if (destination === "raid") { setActiveTab("battle"); setRaidOpen(true); }
+            else if (destination === "raid") setActiveTab("raid");
             else setActiveTab("squad");
           }} />
         </TabsContent>
@@ -1569,8 +1569,6 @@ export default function GameV15() {
               })}
             </div>
             {sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・依關卡輪替"}</strong></div><span>點選卡片即可開始自動戰鬥</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id && !enemy.boss).map(enemy => <button type="button" key={enemy.name} className={game.selectedMonster === enemy.name ? "active" : ""} onClick={() => setGame(previous => { const key=monsterDungeonKeys[enemy.name]; const base={...previous,selectedMonster:enemy.name,enemyHp:enemy.hp||previous.enemyHp,dungeon:key?{...freshDungeon(),key,lockedEnemyKey:key,enemyHp:DUNGEONS[key].hp}:previous.dungeon,logs:addLog(previous.logs,`指定遭遇怪物：${enemy.name}，自動開始持續戰鬥。`)}; return key ? applyDungeon(base,'start',Date.now(),key,Math.random(),Math.random(),0,Math.random(),[Math.random(),Math.random(),Math.random()]) : base; })}><div><strong>{enemy.name}</strong><em>{game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>MP <b>{enemy.mp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>掉落：{enemy.drops.join("、")}</p></button>)}</div></section>}
-            <section className="monster-choice-list world-boss-choice" aria-label="世界首領"><header><div><small>世界首領・神仙谷</small><strong>雷霆祭壇</strong></div><span>手動開啟挑戰</span></header><div className="monster-choice-grid"><button type="button" className={raidOpen?"active":""} onClick={()=>setRaidOpen(true)}><div><strong>喵兒 → 守護弓手・泰貞 → 鹿亞</strong><em>{raidOpen?"挑戰已開啟":"開啟世界首領"}</em></div><dl><span>階段 <b>3</b></span><span>限時 <b>240 秒</b></span><span>門票 <b>50,000 信用</b></span></dl><p>掉落：雷祭印記、雷神／青龍 T10 鍛造素材</p></button></div></section>
-            {raidOpen&&<section className="world-boss-raid" aria-label="雷霆祭壇挑戰"><header><strong>雷霆祭壇・世界首領挑戰</strong><button type="button" onClick={()=>setRaidOpen(false)}>收起挑戰</button></header><ThunderAltarRaid credit={game.credit} power={Math.floor((unitPower(game.hero) + game.mercs.filter(unit => game.active.includes(unit.uid)).reduce((sum, unit) => sum + unitPower(unit), 0)) * (thunderSetPieces >= 4 ? 1.45 : thunderSetPieces >= 2 ? 1.2 : 1))} materials={game.materials} setPieces={thunderSetPieces} onEnter={() => setGame(previous => ({ ...previous, credit: previous.credit - 50_000, logs: addLog(previous.logs, "進入「神仙谷・雷霆祭壇」，支付 50,000 信用值。") }))} onRefund={() => setGame(previous => ({ ...previous, credit: previous.credit + 25_000, logs: addLog(previous.logs, "雷霆祭壇挑戰失敗，退回 25,000 信用值。") }))} onMaterials={(materials) => setGame(previous => ({ ...previous, materials, logs: addLog(previous.logs, "雷霆祭壇戰利品已加入背包。") }))} onForge={forgeThunderSet} onNotice={setNotice}/></section>}
             <DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} mapName={currentMap.name} mapRegion={currentMap.region} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()];setGame(previous=>applyDungeon(previous,action,now,key,roll,choice,0,retaliationRoll,materialRolls));}}/>
           </section>
           <div className="battle-grid">
@@ -1580,6 +1578,21 @@ export default function GameV15() {
             </section>
           </div>
         </TabsContent>
+
+        <TabsContent value="raid" className="tab-panel">
+          <ThunderAltarRaid
+            credit={game.credit}
+            power={Math.floor((unitPower(game.hero) + game.mercs.filter(unit => game.active.includes(unit.uid)).reduce((sum, unit) => sum + unitPower(unit), 0)) * (thunderSetPieces >= 4 ? 1.45 : thunderSetPieces >= 2 ? 1.2 : 1))}
+            materials={game.materials}
+            setPieces={thunderSetPieces}
+            onEnter={() => setGame(previous => ({ ...previous, credit: previous.credit - 50_000, logs: addLog(previous.logs, "進入「神仙谷・雷霆祭壇」，支付 50,000 信用值。") }))}
+            onRefund={() => setGame(previous => ({ ...previous, credit: previous.credit + 25_000, logs: addLog(previous.logs, "雷霆祭壇挑戰失敗，退回 25,000 信用值。") }))}
+            onMaterials={(materials) => setGame(previous => ({ ...previous, materials, logs: addLog(previous.logs, "雷霆祭壇戰利品已加入背包。") }))}
+            onForge={forgeThunderSet}
+            onNotice={setNotice}
+          />
+        </TabsContent>
+
 
         <TabsContent value="squad" className="tab-panel">
           <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} gold={game.gold} credit={game.credit}
