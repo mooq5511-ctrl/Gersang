@@ -187,6 +187,7 @@ type GameState = {
   materials: Record<string, number>;
   exchangePurchases: ExchangePurchases;
   medicines: Record<string, number>;
+  autoSkill: boolean;
   autoMedicine: { healing: number; mana: number };
   autoMedicineAt: { healing: number; mana: number };
   claimedContracts: string[];
@@ -395,6 +396,7 @@ function freshGame(nation: NationId = "korea", heroName = "王天下", gender:"m
     materials: {},
     exchangePurchases: {},
     medicines: {},
+    autoSkill: true,
     autoMedicine: { healing: 0, mana: 0 },
     autoMedicineAt: { healing: 0, mana: 0 },
     claimedContracts: [],
@@ -593,6 +595,7 @@ function restoreGame(raw: unknown): GameState {
     materials: parsed.materials && typeof parsed.materials === "object" ? parsed.materials : {},
     exchangePurchases: parsed.exchangePurchases && typeof parsed.exchangePurchases === "object" ? parsed.exchangePurchases : {},
     medicines: parsed.medicines && typeof parsed.medicines === "object" ? parsed.medicines : {},
+    autoSkill: parsed.autoSkill !== false,
     autoMedicine: { healing: Math.min(99,Math.max(0,Math.floor(Number(parsed.autoMedicine?.healing)||0))), mana: Math.min(99,Math.max(0,Math.floor(Number(parsed.autoMedicine?.mana)||0))) },
     autoMedicineAt: { healing: 0, mana: 0 },
     claimedContracts: Array.isArray(parsed.claimedContracts) ? parsed.claimedContracts : [],
@@ -628,7 +631,7 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
   const attack=living.reduce((sum,unit)=>sum+combatStats(unit).attack*(unit.position==='前排'?1.2:1),0);
   const party=fighters.map(unit=>{const stats=vitalStats(unit);return{uid:unit.uid,name:unit.name,hp:stats.hp,maxHp:stats.maxHp,position:unit.position}});
   const passiveDamage=deployedMercs.reduce((sum,unit)=>sum+Math.max(0,Math.floor(combatStats(unit).attack*0.18)),0);
-  const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,mercenaryIntelligence,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice,spawnRoll,retaliationRoll,party,passiveDamage,materialRolls);
+  const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,mercenaryIntelligence,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice,spawnRoll,retaliationRoll,party,passiveDamage,materialRolls,previous.autoSkill);
   const remaining=new globalThis.Map(result.party.map(unit=>[unit.uid,unit.hp]));
   let next:GameState={...previous,dungeon:result.state,hero:{...previous.hero,hp:remaining.get('hero')??result.hp,mp:result.mp},mercs:previous.mercs.map(unit=>({...unit,hp:remaining.get(unit.uid)??unit.hp}))};
   if(result.state.status==='recovering'&&previous.hero.status!=='客棧中')next=enterGameInn(next,now,result.state.logs[0],result.state);
@@ -648,7 +651,7 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
     const defeatedNewbieBoss=result.state.key==='e_starter_pirate_king';
     const defeatedLakeBoss=result.state.key==='e_lake_gale_altur';
     const defeatedGoldenStarfish=result.state.key==='e_japan_sea_golden_starfish';
-    next={...next,hero:grantXp(next.hero,shareXp),mercs:next.mercs.map(unit=>activeIds.has(unit.uid)?grantXp(unit,shareXp):unit),gold:next.gold+reward.gold,kills:next.kills+1,newbieBossDefeated:next.newbieBossDefeated||defeatedNewbieBoss,lakeBossDefeated:next.lakeBossDefeated||defeatedLakeBoss,goldenStarfishDefeated:next.goldenStarfishDefeated||defeatedGoldenStarfish,newbieCoins:next.newbieCoins+(specialCoinDrop?1:0),logs:addLog(next.logs,'成功擊敗副本怪物，獲得 '+reward.xp+' 經驗與 '+reward.gold+' 兩；'+battleMembers+' 名出戰角色均分，每人 '+shareXp+' 經驗。')};
+    next={...next,hero:grantXp(next.hero,shareXp),mercs:next.mercs.map(unit=>activeIds.has(unit.uid)?grantXp(unit,shareXp):unit),gold:next.gold+reward.gold,kills:next.kills+1,newbieBossDefeated:next.newbieBossDefeated||defeatedNewbieBoss,lakeBossDefeated:next.lakeBossDefeated||defeatedLakeBoss,goldenStarfishDefeated:next.goldenStarfishDefeated||defeatedGoldenStarfish,newbieCoins:next.newbieCoins+(specialCoinDrop?1:0),logs:addLog(next.logs,'成功擊敗副本怪物，獲得 '+reward.xp+' 經驗；'+battleMembers+' 名出戰角色均分，每人 '+shareXp+' 經驗。')};
     if(specialCoinDrop)next={...next,logs:addLog(next.logs,'獲得特殊貨幣【新手兌換銅錢】×1。')};
     if(defeatedNewbieBoss)next={...next,logs:addLog(next.logs,'海賊王已被擊敗，千年湖地圖現已開放。')};
     if(defeatedLakeBoss)next={...next,logs:addLog(next.logs,'狂風阿魯塔已被擊敗，日本海底洞現已開放。')};
@@ -1432,7 +1435,7 @@ export default function GameV15() {
     const requested=Math.max(1,Math.floor(amount));
     const rolls=Array.from({length:requested},()=>{
       const rareRoll=Math.random();
-      return {coins:1+Math.floor(Math.random()*10),rareReward:rareRoll<0.000001?'大吉(帥)':rareRoll<0.000011?'大吉(好)':rareRoll<0.000021?'大吉(者)':rareRoll<0.000121?'大吉(作)':null};
+      return {coins:1+Math.floor(Math.random()*10),rareReward:rareRoll<0.0001?'大吉(帥)':rareRoll<0.0002?'大吉(好)':rareRoll<0.0003?'大吉(者)':rareRoll<0.0004?'大吉(作)':null};
     });
     setGame(previous=>{
       const boxes=Math.max(0,Math.floor(previous.materials['古錢箱']||0));
@@ -1696,7 +1699,7 @@ export default function GameV15() {
               })}
             </div>
             {sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・依關卡輪替"}</strong></div><span>點選卡片即可開始自動戰鬥</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id).map(enemy => <button type="button" key={enemy.name} className={(game.selectedMonster === enemy.name ? "active " : "")+(enemy.boss ? "boss-target" : "")} onClick={() => setGame(previous => { const key=monsterDungeonKeys[enemy.name]; const base={...previous,selectedMonster:enemy.name,enemyHp:enemy.hp||previous.enemyHp,dungeon:key?{...freshDungeon(),key,lockedEnemyKey:key,enemyHp:DUNGEONS[key].hp}:previous.dungeon,logs:addLog(previous.logs,`${enemy.boss?'首領挑戰：':'指定遭遇怪物：'}${enemy.name}，自動開始持續戰鬥。`)}; return key ? applyDungeon(base,'start',Date.now(),key,Math.random(),Math.random(),0,Math.random(),[Math.random(),Math.random(),Math.random()]) : base; })}><div><strong>{enemy.name}</strong><em>{enemy.boss ? (game.newbieBossDefeated?"已討伐・可再戰":"首領挑戰") : game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>MP <b>{enemy.mp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>掉落：{enemy.drops.join("、")}</p></button>)}</div></section>}
-            <DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} mapName={currentMap.name} mapRegion={currentMap.region} medicineQuickbar={<div className="battle-medicine-float" aria-label="隨身藥袋">{medicineCatalog.filter(medicine=>medicine.id==='healing'||medicine.id==='mana').map(medicine=>{const medicineKey=medicine.id as 'healing'|'mana'; const resource=medicineKey==='healing'?'HP':'MP'; return <div className="battle-medicine-item" key={medicine.id}><button type="button" disabled={!game.medicines[medicine.id]} onClick={()=>consumeMedicine(medicine.id)} title={`${medicine.name}：${medicine.effect}`}><Pill /><span>{medicine.name}</span><b>×{game.medicines[medicine.id]||0}</b></button><label title={`設定${medicine.name}自動使用門檻；0% 為關閉`}><small>{game.autoMedicine[medicineKey] ? `自動 ${resource} ≤` : '自動關閉'}</small><input aria-label={`${medicine.name}自動使用門檻`} type="number" min="0" max="99" value={game.autoMedicine[medicineKey]} onChange={event=>{const threshold=Math.min(99,Math.max(0,Math.floor(Number(event.target.value)||0)));setGame(previous=>({...previous,autoMedicine:{...previous.autoMedicine,[medicineKey]:threshold}}));}}/><span>%</span></label></div>;})}</div>} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()];setGame(previous=>applyDungeon(previous,action,now,key,roll,choice,0,retaliationRoll,materialRolls));}}/>
+            <DungeonPanel hero={game.hero} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} autoSkill={game.autoSkill} toggleAutoSkill={()=>setGame(previous=>({...previous,autoSkill:!previous.autoSkill,logs:addLog(previous.logs,previous.autoSkill?'已關閉技能自動施放。':'已開啟技能自動施放。')}))} mapName={currentMap.name} mapRegion={currentMap.region} medicineQuickbar={<div className="battle-medicine-float" aria-label="隨身藥袋">{medicineCatalog.filter(medicine=>medicine.id==='healing'||medicine.id==='mana').map(medicine=>{const medicineKey=medicine.id as 'healing'|'mana'; const resource=medicineKey==='healing'?'HP':'MP'; return <div className="battle-medicine-item" key={medicine.id}><button type="button" disabled={!game.medicines[medicine.id]} onClick={()=>consumeMedicine(medicine.id)} title={`${medicine.name}：${medicine.effect}`}><Pill /><span>{medicine.name}</span><b>×{game.medicines[medicine.id]||0}</b></button><label title={`設定${medicine.name}自動使用門檻；0% 為關閉`}><small>{game.autoMedicine[medicineKey] ? `自動 ${resource} ≤` : '自動關閉'}</small><input aria-label={`${medicine.name}自動使用門檻`} type="number" min="0" max="99" value={game.autoMedicine[medicineKey]} onChange={event=>{const threshold=Math.min(99,Math.max(0,Math.floor(Number(event.target.value)||0)));setGame(previous=>({...previous,autoMedicine:{...previous.autoMedicine,[medicineKey]:threshold}}));}}/><span>%</span></label></div>;})}</div>} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()];setGame(previous=>applyDungeon(previous,action,now,key,roll,choice,0,retaliationRoll,materialRolls));}}/>
           </section>
           <div className="battle-grid">
             <section className="panel log-panel">
