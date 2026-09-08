@@ -1692,7 +1692,7 @@ export default function GameV15() {
           <TabsTrigger value="squad"><Users />主角與隊伍</TabsTrigger>
           <TabsTrigger value="city"><Castle />四國城市</TabsTrigger>
           <TabsTrigger value="contracts"><BookOpen />冒險委託</TabsTrigger>
-          <TabsTrigger value="archive"><Sparkles />萬象圖鑑</TabsTrigger>
+          <TabsTrigger value="archive"><BookOpen />裝備圖鑑</TabsTrigger>
         </TabsList>
 
         <TabsContent value="map" className="tab-panel isometric-map-tab">
@@ -1863,11 +1863,11 @@ export default function GameV15() {
         </TabsContent>
 
         <TabsContent value="archive" className="tab-panel">
-          <GersangArchive slot={activeSlot} onReward={rewardArchiveDiscovery} onLegacyImport={importLegacyChronicle} />
+          <GersangArchive />
         </TabsContent>
       </Tabs>
 
-      <footer><span>放置你的巨商魂・東方商路</span><span>四國城市・傭兵養成・雷霆祭壇・萬象圖鑑</span></footer>
+      <footer><span>放置你的巨商魂・東方商路</span><span>四國城市・傭兵養成・雷霆祭壇・裝備圖鑑</span></footer>
     </main>
   );
 }
