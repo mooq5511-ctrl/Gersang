@@ -59,7 +59,7 @@ import { TradePanel } from "./trade-panel";
 import { VitalBars } from "./vital-bars";
 import { IsometricWorldMap } from "./isometric-world-map";
 import { ThunderAltarRaid } from "./thunder-altar-raid";
-import { MYTHIC_ART_BY_NAME, THUNDER_FORGE_ITEMS, mythicSetPieceCount, type ThunderForgeId } from './mythic-forge';
+import { MYTHIC_ART_BY_NAME, THUNDER_FORGE_ITEMS, mythicSetPieceCount, type MythicSet, type ThunderForgeId } from './mythic-forge';
 import { LEVEL_CAP, xpForNextLevel } from "./level-progression";
 import { combatStats, enemyCombatStats, normalizeVitals, recoverVitals, resolveVitalBattle, spellCost, vitalStats } from "./vitals-engine";
 import { advanceTrade, dispatchTrade, freshTrade, MAX_CARGO_LEVEL, restoreTrade, TRADE_ROUTES, upgradeCost, type TradeState } from "./trade-engine";
@@ -1618,6 +1618,21 @@ export default function GameV15() {
     });
   }
 
+  function redeemWandererSet(set: Extract<MythicSet,'azure'|'chiyou'|'amaterasu'>) {
+    const pieces=Object.values(THUNDER_FORGE_ITEMS).filter(recipe=>recipe.set===set);
+    const setName={azure:'青龍',chiyou:'蚩尤',amaterasu:'天照'}[set];
+    setGame(previous=>{
+      if(previous.newbieCoins<1000){setNotice('新手兌換銅錢不足，需要 1,000 枚。');return previous;}
+      let inventory=previous.inventory;
+      for(const recipe of pieces){
+        const item:Equipment={uid:`wanderer-${recipe.id}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,name:recipe.name,slot:recipe.slot,atk:recipe.atk,def:recipe.def,hp:recipe.hp,image:recipe.image||gersangItemArt(recipe.slot),enhance:0,rarity:'傳說',magic:recipe.magic.map(affix=>({...affix})),bonus:{...recipe.bonus},skill:recipe.skill,requiredLevel:150,source:'平行世界流浪商團'};
+        inventory=addInventoryItem(inventory,item).inventory;
+      }
+      setNotice(`已兌換完整 T10 ${setName}套裝。`);
+      return {...previous,newbieCoins:previous.newbieCoins-1000,inventory,logs:addLog(previous.logs,`平行世界流浪商團：兌換完整「T10 ${setName}套裝」。`)};
+    });
+  }
+
   return (
     <main className="game-shell v15-shell classic-live-game">
       <header className="topbar">
@@ -1718,7 +1733,7 @@ export default function GameV15() {
         <TabsContent value="raid" className="tab-panel">
           <ThunderAltarRaid
             credit={game.credit}
-            power={Math.floor((unitPower(game.hero) + game.mercs.filter(unit => game.active.includes(unit.uid)).reduce((sum, unit) => sum + unitPower(unit), 0)) * (thunderSetPieces >= 4 ? 1.45 : thunderSetPieces >= 2 ? 1.2 : 1))}
+            power={Math.floor(unitPower(game.hero) + game.mercs.filter(unit => game.active.includes(unit.uid)).reduce((sum, unit) => sum + unitPower(unit), 0))}
             materials={game.materials}
             azureSetPieces={azureSetPieces} chiyouSetPieces={chiyouSetPieces} amaterasuSetPieces={amaterasuSetPieces}
             onEnter={() => setGame(previous => ({ ...previous, credit: previous.credit - 50_000, logs: addLog(previous.logs, "進入「神仙谷・雷霆祭壇」，支付 50,000 信用值。") }))}
@@ -1731,7 +1746,7 @@ export default function GameV15() {
 
 
         <TabsContent value="squad" className="tab-panel">
-          <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} active={game.active} toggleActive={toggleActive} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel}
+          <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} active={game.active} toggleActive={toggleActive} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet}
             navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now(),spawnRoll=Math.random();setGame(previous=>{
               const old=previous.dungeon||freshDungeon();
               const deployed=[previous.hero,...previous.mercs.filter(unit=>previous.active.slice(0,ACTIVE_MERCENARY_LIMIT).includes(unit.uid))];
