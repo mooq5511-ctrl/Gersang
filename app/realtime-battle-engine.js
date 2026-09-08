@@ -84,14 +84,21 @@ export class RealtimeBattleSystem {
     return this.events;
   }
 
-  /** Same-row front target first; otherwise nearest row, then front-most column. */
+  /**
+   * Left-versus-right targeting:
+   * - Player attacks Enemy col 0 → 1 → 2 → 3.
+   * - Enemy attacks Player col 3 → 2 → 1 → 0.
+   * Same row wins first; if empty, the nearest row wins before front depth.
+   */
   findTarget(attacker) {
     const candidates = this.living(attacker.side === 'player' ? 'enemy' : 'player');
     if (!candidates.length) return null;
     return [...candidates].sort((a, b) => {
       const rowDistance = Math.abs(a.position.row - attacker.position.row) - Math.abs(b.position.row - attacker.position.row);
       if (rowDistance) return rowDistance;
-      const column = a.position.col - b.position.col;
+      const column = attacker.side === 'player'
+        ? a.position.col - b.position.col
+        : b.position.col - a.position.col;
       return column || a.id.localeCompare(b.id);
     })[0];
   }
@@ -126,6 +133,8 @@ export class RealtimeBattleSystem {
       this.log('attack', {
         actorId: action.actor.id,
         targetId: action.target.id,
+        sourcePosition: { ...action.actor.position },
+        targetPosition: { ...action.target.position },
         ability: action.skill ? 'skill' : 'attack',
         mpAfter: action.actor.mp,
       });
@@ -142,12 +151,22 @@ export class RealtimeBattleSystem {
         this.log('damage', {
           actorId: hit.actor.id,
           targetId: target.id,
+          sourcePosition: { ...hit.actor.position },
+          targetPosition: { ...target.position },
           ability: hit.skill ? 'skill' : 'attack',
           damage: dealt,
           hpAfter: target.hp,
         });
       }
-      if (target.hp <= 0) this.log('death', { targetId: target.id });
+      if (target.hp <= 0) {
+        const finishingHit = hits[hits.length - 1];
+        this.log('death', {
+          actorId: finishingHit?.actor.id,
+          targetId: target.id,
+          sourcePosition: finishingHit ? { ...finishingHit.actor.position } : undefined,
+          targetPosition: { ...target.position },
+        });
+      }
     }
     return this.finishIfNeeded();
   }
