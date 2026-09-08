@@ -4,7 +4,7 @@
  * from requestAnimationFrame, a server tick, or an offline simulation loop.
  */
 export class Unit {
-  constructor({ id, side, hp, maxHp, atk, def, attackInterval = 1.5, cooldown = 0, mp = 0, position }) {
+  constructor({ id, side, hp, maxHp, atk, def, attackInterval = 1.5, cooldown = 0, mp = 0, skillPower = 0, position }) {
     if (!id) throw new Error('Unit.id is required.');
     if (side !== 'player' && side !== 'enemy') throw new Error('Unit.side must be player or enemy.');
     if (!position || !Number.isInteger(position.row) || !Number.isInteger(position.col) || position.row < 0 || position.row > 2 || position.col < 0 || position.col > 3) {
@@ -20,6 +20,7 @@ export class Unit {
     this.attackInterval = Math.max(0.05, Number(attackInterval) || 1.5);
     this.cooldown = Math.max(0, Number(cooldown) || 0);
     this.mp = Math.max(0, Math.min(100, Number(mp) || 0));
+    this.skillPower = Math.max(0, Number(skillPower) || 0);
     this.position = { row: position.row, col: position.col };
   }
 
@@ -27,13 +28,14 @@ export class Unit {
 }
 
 export class RealtimeBattleSystem {
-  constructor(players = [], enemies = [], { skillMultiplier = 2 } = {}) {
+  constructor(players = [], enemies = [], { skillMultiplier = 2, autoSkill = true } = {}) {
     if (players.length > 12 || enemies.length > 12) throw new Error('RealtimeBattleSystem supports at most 12 units per side.');
     this.players = players.map(unit => unit instanceof Unit ? unit : new Unit(unit));
     this.enemies = enemies.map(unit => unit instanceof Unit ? unit : new Unit(unit));
     if (this.players.some(unit => unit.side !== 'player') || this.enemies.some(unit => unit.side !== 'enemy')) throw new Error('Units must be placed in the matching side list.');
 
     this.skillMultiplier = Math.max(1, Number(skillMultiplier) || 2);
+    this.autoSkill = Boolean(autoSkill);
     this.timeMs = 0;
     this.running = false;
     this.winner = null;
@@ -94,8 +96,9 @@ export class RealtimeBattleSystem {
     })[0];
   }
 
-  damageFor(attacker, defender, multiplier = 1) {
-    return Math.max(1, Math.round(attacker.atk * multiplier * (100 / (100 + defender.def))));
+  damageFor(attacker, defender, multiplier = 1, skill = false) {
+    const attackPower = skill && attacker.skillPower > 0 ? attacker.skillPower : attacker.atk * multiplier;
+    return Math.max(1, Math.round(attackPower * (100 / (100 + defender.def))));
   }
 
   /**
@@ -108,8 +111,8 @@ export class RealtimeBattleSystem {
       .map(actor => {
         const target = this.findTarget(actor);
         if (!target) return null;
-        const skill = actor.mp >= 100;
-        return { actor, target, skill, damage: this.damageFor(actor, target, skill ? this.skillMultiplier : 1) };
+        const skill = this.autoSkill && actor.mp >= 100;
+        return { actor, target, skill, damage: this.damageFor(actor, target, skill ? this.skillMultiplier : 1, skill) };
       })
       .filter(Boolean);
 
@@ -155,6 +158,32 @@ export class RealtimeBattleSystem {
     const maxSteps = Math.ceil(maxSeconds / stepSeconds);
     for (let step = 0; this.running && step < maxSteps; step += 1) this.update(stepSeconds);
     return { winner: this.winner, elapsedMs: Math.round(this.timeMs), events: this.events };
+  }
+
+  /** Serializable state used by React/localStorage between game ticks. */
+  snapshot() {
+    const copy = unit => ({
+      id: unit.id, side: unit.side, hp: unit.hp, maxHp: unit.maxHp,
+      atk: unit.atk, def: unit.def, attackInterval: unit.attackInterval,
+      cooldown: unit.cooldown, mp: unit.mp, position: { ...unit.position },
+      skillPower: unit.skillPower,
+    });
+    return {
+      players: this.players.map(copy), enemies: this.enemies.map(copy),
+      skillMultiplier: this.skillMultiplier, autoSkill: this.autoSkill, timeMs: this.timeMs,
+      running: this.running, winner: this.winner, eventId: this.eventId,
+      events: this.events.slice(-160),
+    };
+  }
+
+  static fromSnapshot(snapshot) {
+    const battle = new RealtimeBattleSystem(snapshot.players || [], snapshot.enemies || [], { skillMultiplier: snapshot.skillMultiplier, autoSkill: snapshot.autoSkill !== false });
+    battle.timeMs = Number(snapshot.timeMs) || 0;
+    battle.running = Boolean(snapshot.running);
+    battle.winner = snapshot.winner || null;
+    battle.eventId = Number(snapshot.eventId) || 0;
+    battle.events = Array.isArray(snapshot.events) ? [...snapshot.events] : [];
+    return battle;
   }
 
   finishIfNeeded() {
