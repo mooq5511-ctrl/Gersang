@@ -1,3 +1,5 @@
+import {cuteEquipmentArt} from './gersang-visuals';
+
 export type NationId = "korea" | "china" | "japan" | "taiwan";
 
 export type Nation = {
@@ -180,11 +182,11 @@ export const magicAffixes = [
 ] as const;
 
 export const equipmentBases = [
-  { id: "blade", name: "精鐵長刀", slot: "weapon", atk: 46, def: 0, hp: 0, image: "/assets/items/a003_Weapon01_I.png" },
-  { id: "robe", name: "商旅錦衣", slot: "armor", atk: 0, def: 32, hp: 130, image: "/assets/items/a000_Dress01_I.png" },
-  { id: "armor", name: "玄鐵甲", slot: "armor", atk: 0, def: 52, hp: 190, image: "/assets/items/a004_armor02_I.png" },
-  { id: "wind", name: "風靈符", slot: "accessory", atk: 26, def: 8, hp: 80, image: "/assets/items/a001_ELEMENT04_I.png" },
-  { id: "water", name: "水靈珠", slot: "accessory", atk: 20, def: 16, hp: 120, image: "/assets/items/a002_ELEMENT05_I.png" },
+  { id: "blade", name: "精鐵長刀", slot: "weapon", atk: 46, def: 0, hp: 0, image: cuteEquipmentArt("精鐵長刀", "/assets/items/a003_Weapon01_I.png") },
+  { id: "robe", name: "商旅錦衣", slot: "armor", atk: 0, def: 32, hp: 130, image: cuteEquipmentArt("商旅錦衣", "/assets/items/a000_Dress01_I.png") },
+  { id: "armor", name: "玄鐵甲", slot: "armor", atk: 0, def: 52, hp: 190, image: cuteEquipmentArt("玄鐵甲", "/assets/items/a004_armor02_I.png") },
+  { id: "wind", name: "風靈符", slot: "accessory", atk: 26, def: 8, hp: 80, image: cuteEquipmentArt("風靈符", "/assets/items/a001_ELEMENT04_I.png") },
+  { id: "water", name: "水靈珠", slot: "accessory", atk: 20, def: 16, hp: 120, image: cuteEquipmentArt("水靈珠", "/assets/items/a002_ELEMENT05_I.png") },
 ] as const;
 
 export type OfficialRoster = {

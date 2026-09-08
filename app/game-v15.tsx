@@ -16,7 +16,7 @@ import { ACTIVE_MERCENARY_LIMIT, backupBeforeGuildMigration, retainGuildRoster }
 import { EQUIPMENT_SLOTS, EQUIPMENT_LABELS, emptyEquipmentSlots, itemKind, compatibleSlots, normalizeStoredItem, equipFromInventory, unequipToInventory, migrateSevenSlotSave, backupBeforeEquipmentMigration, type EquipmentSlot, type EquipmentKind } from './equipment-slots';
 import { wearableCatalog, type WearableBase } from './wearable-catalog';
 import { MercenaryRecruitment, mercenaryPortrait } from './mercenary-recruitment';
-import { gersangBuildingArt, gersangHeroArt, gersangHeroFemaleArt, gersangItemArt, gersangUnitArt } from './gersang-visuals';
+import { cuteEquipmentArt, gersangBuildingArt, gersangHeroArt, gersangHeroFemaleArt, gersangItemArt, gersangUnitArt } from './gersang-visuals';
 import { resolveMercenaryBattle, type TacticalEnemy } from './mercenary-battle';
 import {
   BedDouble,
@@ -347,7 +347,7 @@ function makeOfficialEquipment(record: OfficialEquipment, rarity = rollShopQuali
     atk: scaleShopStat(record.atk, multiplier),
     def: scaleShopStat(record.def, multiplier),
     hp: 0,
-    image: base.image,
+    image: cuteEquipmentArt(record.name, base.image),
     enhance: 0,
     rarity,
     magic: scaleShopMagic(magic.map((affix) => ({ ...affix })), multiplier),
@@ -440,7 +440,8 @@ function applyGersangVisuals(state: GameState): GameState {
   const mapEquipment = (item: Equipment): Equipment => {
     const corrected=item.name==='T10 天照神杖'?THUNDER_FORGE_ITEMS.amaterasuStaff:null;
     const source=corrected?{...item,name:corrected.name,slot:corrected.slot,atk:corrected.atk,def:corrected.def,hp:corrected.hp,bonus:{...corrected.bonus},magic:corrected.magic.map(affix=>({...affix})),skill:corrected.skill,requiredLevel:1}:item;
-    return {...source,image:MYTHIC_ART_BY_NAME[source.name]||gersangItemArt(itemKind(source.slot))};
+    const fallback=gersangItemArt(itemKind(source.slot));
+    return {...source,image:MYTHIC_ART_BY_NAME[source.name]||cuteEquipmentArt(source.name,fallback)};
   };
   const mapEquipmentSet = (equip: EquipmentSet): EquipmentSet => {
     const mapped = emptyEquipment();
@@ -1809,7 +1810,7 @@ export default function GameV15() {
             {(cityService === "weapon" || cityService === "armor") && <div className="city-service-body"><div className="panel-title">{cityService === "weapon" ? <Swords /> : <Shield />}<h2>{currentCity.name}{cityService === "weapon" ? "武器商店" : "防具商店"}</h2><span>本城獨立庫存</span></div><p className="shop-quality-notice">購入時隨機鑑定：普通 75%（×1）・稀有 10%（×1.5）・史詩 0.2%（×10）・傳說 0.05%（×150）；未命中高階品時以普通品質出貨。</p>
               <div className="official-item-grid">{(cityService === "weapon" ? cityWeapons : cityArmors).map((record) => {
                 const price = Math.floor(record.price * currentCity.priceFactor);
-                return <article key={record.id}><img src={gersangItemArt(record.kind === "weapon" ? "weapon" : "armor")} alt="" /><small>Lv.{record.level}・{record.kind === "weapon" ? "武器" : "防具"}</small><strong>{record.name}</strong><span>{record.atk ? "攻 " + record.atk : "防 " + record.def}{record.skill ? "・" + record.skill : ""}</span><em>{[record.str ? "力+" + record.str : "", record.agi ? "敏+" + record.agi : "", record.intel ? "智+" + record.intel : "", record.vit ? "體+" + record.vit : ""].filter(Boolean).join("・") || "基礎裝備"}</em><Button size="sm" onClick={() => buyOfficialItem(record, price)}>{format(price)} 兩</Button></article>;
+                return <article key={record.id}><img src={cuteEquipmentArt(record.name,gersangItemArt(record.kind === "weapon" ? "weapon" : "armor"))} alt="" /><small>Lv.{record.level}・{record.kind === "weapon" ? "武器" : "防具"}</small><strong>{record.name}</strong><span>{record.atk ? "攻 " + record.atk : "防 " + record.def}{record.skill ? "・" + record.skill : ""}</span><em>{[record.str ? "力+" + record.str : "", record.agi ? "敏+" + record.agi : "", record.intel ? "智+" + record.intel : "", record.vit ? "體+" + record.vit : ""].filter(Boolean).join("・") || "基礎裝備"}</em><Button size="sm" onClick={() => buyOfficialItem(record, price)}>{format(price)} 兩</Button></article>;
               })}</div>
               <div className="official-item-grid">{wearableCatalog.filter(item=>cityService==='weapon'?['weapon','ring','amulet'].includes(item.slot):!['weapon','ring','amulet'].includes(item.slot)).map(item=><article key={item.id}><img src={gersangItemArt(item.slot)} alt="" /><small>{slotLabels[item.slot]}</small><strong>{item.name}</strong><span>攻 {item.atk} · 防 {item.def} · HP {item.hp}</span><Button onClick={()=>buyWearable(item)}>{format(Math.floor(item.price*currentCity.priceFactor))} 兩</Button></article>)}</div>
               {cityService === "weapon" && <div className="enchant-counter"><div><strong>附魔裝備櫃</strong><p>購入與目前關卡相符、附帶 1～3 條魔法屬性的隨機裝備。</p></div><Button onClick={buyMagicEquipment}><ShoppingBag />12,000 兩</Button></div>}

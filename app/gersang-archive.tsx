@@ -8,7 +8,7 @@ import {equipmentBases} from './v15-data';
 import {officialEquipment,officialGems} from './v17-content';
 import {THUNDER_FORGE_RECIPES} from './mythic-forge';
 import {MATERIAL_PRICES} from './village-exchange';
-import {gersangItemArt} from './gersang-visuals';
+import {cuteEquipmentArt,gersangItemArt} from './gersang-visuals';
 
 type Category='全部'|'裝備'|'道具'|'材料';
 type Entry={id:string;name:string;category:Exclude<Category,'全部'>;image:string;detail:string[]};
@@ -20,7 +20,7 @@ export function GersangArchive(){
  const [category,setCategory]=useState<Category>('全部');
  const entries=useMemo<Entry[]>(()=>{
    const base=equipmentBases.map(item=>({id:'base-'+item.id,name:item.name,category:'裝備' as const,image:item.image,detail:[slotLabel[item.slot]||'裝備',`攻擊 ${item.atk}・防禦 ${item.def}・生命 ${item.hp}`]}));
-   const official=officialEquipment.map(item=>({id:'official-'+item.id,name:item.name,category:'裝備' as const,image:gersangItemArt(item.kind),detail:[`Lv.${item.level}・${slotLabel[item.kind]||'裝備'}`,`攻擊 ${item.atk||0}・防禦 ${item.def||0}`,`力量 ${item.str||0}・敏捷 ${item.agi||0}・體質 ${item.vit||0}・智力 ${item.intel||0}`,item.skill?`裝備技能：${item.skill}`:`商店售價 ${format(item.price)} 兩`]}));
+   const official=officialEquipment.map(item=>({id:'official-'+item.id,name:item.name,category:'裝備' as const,image:cuteEquipmentArt(item.name,gersangItemArt(item.kind)),detail:[`Lv.${item.level}・${slotLabel[item.kind]||'裝備'}`,`攻擊 ${item.atk||0}・防禦 ${item.def||0}`,`力量 ${item.str||0}・敏捷 ${item.agi||0}・體質 ${item.vit||0}・智力 ${item.intel||0}`,item.skill?`裝備技能：${item.skill}`:`商店售價 ${format(item.price)} 兩`]}));
    const mythic=THUNDER_FORGE_RECIPES.map(item=>({id:'mythic-'+item.id,name:item.name,category:'裝備' as const,image:item.image||gersangItemArt(item.slot),detail:[`T10・${slotLabel[item.slot]||'裝備'}・無等級限制`, `攻擊 ${item.atk}・防禦 ${item.def}・生命 ${item.hp}`,`力量 ${item.bonus.str}・敏捷 ${item.bonus.agi}・體質 ${item.bonus.vit}・智力 ${item.bonus.intel}`,item.skill||item.magic.map(affix=>`${affix.name}：${affix.text}`).join('・')] }));
    const gems=officialGems.map(gem=>({id:'gem-'+gem.id,name:gem.name,category:'道具' as const,image:'/assets/items/a001_ELEMENT04_I.png',detail:[`寶石・${gem.label}`,`鑲嵌加成 +${gem.values.join('／+')}`,`工房費用 ${gem.costs.map(format).join('／')} 兩`]}));
    const materials=Object.entries(MATERIAL_PRICES).map(([name,price])=>({id:'material-'+name,name,category:'材料' as const,image:'/assets/sprites/loot-rare-cute-v1.png',detail:['怪物掉落／鍛造材料',`收購單價 ${format(price)} 兩`,name==='古錢箱'?'可選擇數量開啟，獲得新手兌換銅錢。':'可用於交易、鍛造或兌換。']}));
