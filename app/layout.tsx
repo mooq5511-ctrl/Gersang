@@ -10,6 +10,7 @@ import './classic-fusion.css';
 import './battle-impact.css';
 import './ability-panel.css';
 import './classic-map-interface.css';
+import './readability.css';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });

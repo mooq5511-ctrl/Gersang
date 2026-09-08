@@ -174,6 +174,7 @@ type GameState = {
   selectedMonster?: string;
   hero: Hero;
   mercs: Unit[];
+  restingMercs: Unit[];
   active: string[];
   inventory: Equipment[];
   fusionCores: number;
@@ -383,6 +384,7 @@ function freshGame(nation: NationId = "korea", heroName = "王天下", gender:"m
     battleMap: battleMaps[0].id,
     hero: makeHero(nation, heroName, gender),
     mercs: starters,
+    restingMercs: [],
     active: starters.map((unit) => unit.uid),
     inventory: starterEquipment(),
     fusionCores: 0,
@@ -458,6 +460,11 @@ function applyGersangVisuals(state: GameState): GameState {
     ...state,
     hero: { ...state.hero, image: heroPortrait(state.hero.nation, state.hero.gender), equip: mapEquipmentSet(state.hero.equip) },
     mercs: state.mercs.map((unit, index) => ({
+      ...unit,
+      image: gersangUnitArt(unit.templateId, unit.name, index),
+      equip: mapEquipmentSet(unit.equip),
+    })),
+    restingMercs: state.restingMercs.map((unit, index) => ({
       ...unit,
       image: gersangUnitArt(unit.templateId, unit.name, index),
       equip: mapEquipmentSet(unit.equip),
@@ -593,6 +600,9 @@ function restoreGame(raw: unknown): GameState {
     mercs: Array.isArray(parsed.mercs)
       ? parsed.mercs.map((unit, index) => ({ ...unit, level: Math.min(LEVEL_CAP, Math.max(1, Number(unit.level) || 1)), image:gersangUnitArt(unit.templateId,unit.name,index), position:normalizeBattlePosition(unit.position,unit.name,unit.role), equip: sanitizeEquip(unit.equip) } as Unit))
       : next.mercs,
+    restingMercs: Array.isArray(parsed.restingMercs)
+      ? parsed.restingMercs.slice(0,10).map((unit, index) => ({ ...unit, level: Math.min(LEVEL_CAP, Math.max(1, Number(unit.level) || 1)), image:gersangUnitArt(unit.templateId,unit.name,index), position:normalizeBattlePosition(unit.position,unit.name,unit.role), equip: sanitizeEquip(unit.equip) } as Unit))
+      : next.restingMercs,
     inventory: Array.isArray(parsed.inventory)
       ? parsed.inventory.map((item) => ({ ...normalizeStoredItem(item), bonus: item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }, resist: item.resist || { physical: 0, magic: 0 } }))
       : next.inventory,
@@ -619,6 +629,7 @@ function restoreGame(raw: unknown): GameState {
   next.hero = { ...next.hero, flatAttackBonus: exchangeAttackBonus(next.exchangePurchases) };
   next.hero = normalizeVitals(next.hero);
   next.mercs = next.mercs.map(normalizeVitals);
+  next.restingMercs = next.restingMercs.map(normalizeVitals);
   next = applyGersangVisuals(next);
   return retainGuildRoster<Equipment, Unit, GameState>(next);
 }
@@ -1223,6 +1234,24 @@ export default function GameV15() {
     });
   }
 
+  function storeMercenary(unitUid: string) {
+    setGame(previous => {
+      const unit = previous.mercs.find(entry => entry.uid === unitUid);
+      if (!unit || previous.active.includes(unitUid)) return { ...previous, logs: addLog(previous.logs, '請先將上陣傭兵撤下，才能安排至休息處。') };
+      if (previous.restingMercs.length >= 10) return { ...previous, logs: addLog(previous.logs, '傭兵休息處已滿（10／10）。') };
+      return { ...previous, mercs: previous.mercs.filter(entry => entry.uid !== unitUid), restingMercs: [...previous.restingMercs, unit], logs: addLog(previous.logs, `「${unit.name}」已前往傭兵休息處。`) };
+    });
+  }
+
+  function withdrawRestingMercenary(unitUid: string) {
+    setGame(previous => {
+      const unit = previous.restingMercs.find(entry => entry.uid === unitUid);
+      if (!unit) return previous;
+      if (previous.mercs.length >= ACTIVE_MERCENARY_LIMIT) return { ...previous, logs: addLog(previous.logs, '隊伍名冊已滿（11／11），請先安排一名傭兵至休息處。') };
+      return { ...previous, restingMercs: previous.restingMercs.filter(entry => entry.uid !== unitUid), mercs: [...previous.mercs, unit], logs: addLog(previous.logs, `「${unit.name}」已從傭兵休息處歸隊。`) };
+    });
+  }
+
 
   function addStat(stat: "str" | "agi" | "intel" | "vit", amount = 1) {
     setGame((previous) => {
@@ -1760,7 +1789,7 @@ export default function GameV15() {
 
 
         <TabsContent value="squad" className="tab-panel">
-          <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} active={game.active} toggleActive={toggleActive} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet}
+          <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} restingMercs={game.restingMercs} active={game.active} toggleActive={toggleActive} storeMercenary={storeMercenary} withdrawRestingMercenary={withdrawRestingMercenary} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet}
             navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now(),spawnRoll=Math.random();setGame(previous=>{
               const old=previous.dungeon||freshDungeon();
               const deployed=[previous.hero,...previous.mercs.filter(unit=>previous.active.slice(0,ACTIVE_MERCENARY_LIMIT).includes(unit.uid))];

@@ -23,6 +23,7 @@ export function InventoryPanel({inventory,materials,materialPrices,equip,sell,se
   const [equipmentFilter,setEquipmentFilter]=useState<'all'|'weapon'|'helm'|'armor'|'gloves'|'boots'|'accessories'>('all');
   const [coinBoxAmount,setCoinBoxAmount]=useState(1);
   const [materialsOpen,setMaterialsOpen]=useState(true);
+  const [materialQuery,setMaterialQuery]=useState('');
   const items=positionInventory(inventory);
   const filteredItems=items.filter(item=>{
     const kind=itemKind(item.slot);
@@ -30,6 +31,8 @@ export function InventoryPanel({inventory,materials,materialPrices,equip,sell,se
   });
   const materialEntries=Object.entries(materials).filter(([,count])=>count>0).sort(([a],[b])=>a.localeCompare(b,'zh-Hant'));
   const materialCount=materialEntries.reduce((sum,[,count])=>sum+count,0);
+  const normalizedMaterialQuery=materialQuery.trim().toLocaleLowerCase();
+  const filteredMaterialEntries=materialEntries.filter(([name])=>name.toLocaleLowerCase().includes(normalizedMaterialQuery));
   const materialSources=new Map<string,{maps:string[];enemies:string[]}>();
   for(const enemy of sourceEnemies)for(const material of enemy.drops){
     const current=materialSources.get(material)||{maps:[],enemies:[]};
@@ -40,8 +43,8 @@ export function InventoryPanel({inventory,materials,materialPrices,equip,sell,se
   }
   return <section className="merchant-bag iron-inventory" aria-label="商隊背包"><h2>行囊 <small>裝備 {items.length}・材料 {materialCount}</small></h2>
     <section className="merchant-material-section" aria-label="戰利品材料">
-      <div className="merchant-bag-subhead"><div><strong>戰利品材料</strong><small>怪物掉落會自動收入背包</small></div><span className="merchant-material-header-actions"><button type="button" aria-expanded={materialsOpen} onClick={()=>setMaterialsOpen(open=>!open)}>{materialsOpen?'關閉':'開啟'}材料</button><button type="button" onClick={sellAllMaterials} disabled={!materialCount}>全部出售</button></span></div>
-      {materialsOpen&&<ul className="merchant-material-list merchant-material-detailed-list">{materialEntries.length?materialEntries.map(([name,count])=>{
+      <div className="merchant-bag-subhead"><div><strong>戰利品材料</strong><small>怪物掉落會自動收入背包・顯示 {filteredMaterialEntries.length}/{materialEntries.length} 種</small></div><span className="merchant-material-header-actions"><button type="button" aria-expanded={materialsOpen} onClick={()=>setMaterialsOpen(open=>!open)}>{materialsOpen?'關閉':'開啟'}材料</button><button type="button" onClick={sellAllMaterials} disabled={!materialCount}>全部出售</button></span></div>
+      {materialsOpen&&<><label className="merchant-material-search">搜尋材料<input type="search" value={materialQuery} onChange={event=>setMaterialQuery(event.target.value)} placeholder="輸入材料名稱" aria-label="搜尋戰利品材料"/></label><ul className="merchant-material-list merchant-material-detailed-list">{materialEntries.length?filteredMaterialEntries.map(([name,count])=>{
         const price=materialPrices[name]||0;
         const detail=materialSources.get(name);
         const sourceLabel=detail?.enemies.length?detail.enemies.slice(0,3).join('、')+(detail.enemies.length>3?` 等 ${detail.enemies.length} 種`:""):'其他戰利品';
@@ -49,7 +52,7 @@ export function InventoryPanel({inventory,materials,materialPrices,equip,sell,se
         const isAncientCoinBox=name==='古錢箱';
         const openAmount=Math.min(count,Math.max(1,Math.floor(coinBoxAmount)||1));
         return <li className="merchant-material-row merchant-material-detailed-row" key={name}><span className={'merchant-material-icon material-art material-art-'+artKind} aria-label={`${name}圖示`} role="img"><img src={`/assets/sprites/loot-${artKind}-cute-v1.png`} alt=""/></span><div className="merchant-material-copy"><strong>{name}</strong><small>持有 ×{count}・{isAncientCoinBox?'開啟可獲得 1–10 枚新手兌換銅錢・售價 1 兩':`單價 ${price.toLocaleString()} 兩`}</small><small>來源：{sourceLabel}</small><small>地區：{detail?.maps.join('、')||'—'}・用途：{isAncientCoinBox?'開啟寶箱（大吉(作／者／好／帥) 各 0.01%）':'鍛造／交易'}</small></div>{isAncientCoinBox?<span className="merchant-material-actions"><label>開啟數量<input aria-label="古錢箱開啟數量" type="number" min="1" max={count} value={openAmount} onChange={event=>setCoinBoxAmount(Math.min(count,Math.max(1,Math.floor(Number(event.target.value)||1))) )}/></label><button type="button" onClick={()=>openAncientCoinBox(openAmount)}>開啟 ×{openAmount}</button><button type="button" onClick={()=>{if(window.confirm('確定以 1 兩出售「古錢箱」？此操作不會開啟寶箱。'))sellMaterial(name)}}>出售 1 兩</button></span>:<button type="button" onClick={()=>sellMaterial(name)} disabled={price===undefined}>出售 1 件</button>}</li>;
-      }):<li className="merchant-material-empty">尚無材料；在四國掛機地圖擊敗怪物後，戰利品會直接放入此處。</li>}</ul>}
+      }):<li className="merchant-material-empty">尚無材料；在四國掛機地圖擊敗怪物後，戰利品會直接放入此處。</li>}{materialEntries.length>0&&!filteredMaterialEntries.length&&<li className="merchant-material-empty">找不到符合「{materialQuery}」的材料。</li>}</ul></>}
     </section>
     <section className="merchant-bag-details" aria-label="背包詳細清單"><div className="merchant-bag-subhead"><div><strong>背包詳細清單</strong><small>裝給目前角色・{targetName}・顯示 {filteredItems.length}/{items.length}</small></div><button type="button" onClick={sellAllEquipment} disabled={!items.length}>全部出售</button></div><div className="merchant-equipment-filters" aria-label="裝備分類篩選">{([['all','全部'],['weapon','武器'],['helm','頭盔'],['armor','盔甲'],['gloves','手套'],['boots','鞋子'],['accessories','飾品']] as const).map(([id,label])=><button type="button" key={id} aria-pressed={equipmentFilter===id} onClick={()=>setEquipmentFilter(id)}>{label}</button>)}</div>{items.length?(filteredItems.length?<ul>{filteredItems.map(item=><li key={item.uid} className={'merchant-detail-entry '+rarityPresentation(item.rarity).className}><span className="merchant-bag-icon">{item.image?<img src={item.image} alt=""/>:<strong>裝</strong>}</span><div><strong>{item.name}</strong><small>{rarityPresentation(item.rarity).label}・{EQUIPMENT_LABELS[item.slot]}</small>{equipmentDetailLines(item).slice(0,2).map(line=><em key={line}>{line}</em>)}</div><button type="button" onClick={()=>equip(item.uid)}>裝給{targetName}</button><button type="button" onClick={()=>sell(item.uid)}>出售</button></li>)}</ul>:<p>此分類目前沒有裝備。</p>):<p>尚無可穿戴裝備。</p>}</section>
     <div className="rarity-legend" aria-label="裝備品階">{["普通","稀有","史詩","傳說"].map(rarity=><span key={rarity} className={rarityPresentation(rarity).className}>{rarity}</span>)}</div>

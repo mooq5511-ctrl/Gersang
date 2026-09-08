@@ -1,0 +1,58 @@
+/* A shared type scale that favours readable Traditional Chinese game text. */
+body {
+  font-size: 16px;
+  line-height: 1.5;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: max(14px, 0.875rem);
+  line-height: 1.35;
+}
+
+.classic-live-game {
+  font-size: 14px;
+  line-height: 1.45;
+  text-rendering: optimizeLegibility;
+}
+
+/* Keep panels consistent: the previous mixed serif fonts blurred dense Chinese labels. */
+.classic-live-game :is(.merchant-bag, .caravan-status, .dungeon-panel, .ability-panel,
+  .trade-panel, .guild-panel, .panel, .floating-window) {
+  font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif !important;
+}
+
+/* Helper text is enlarged, while headings retain their designed hierarchy. */
+.classic-live-game :is(small, .trade-intro > small, .trade-tags span, .trade-compass,
+  .trade-island span, .trade-ship span, .trade-map-caption, .trade-metrics article > span,
+  .trade-route > div span, .trade-route p, .trade-route footer span, .trade-dispatch > p,
+  .trade-dispatch > output, .trade-dispatch dl, .trade-primary, .trade-hint,
+  .trade-upgrade > p, .trade-ledger li, .merchant-material-actions label,
+  .equipment-codex-grid p, .equipment-codex-grid small) {
+  font-size: 12px !important;
+  line-height: 1.45;
+}
+
+.classic-live-game :is(.integrated-party-title, .integrated-party-rail button > span,
+  .hp-stat button:last-child, .classic-live-identity small, .classic-live-identity span,
+  .classic-live-resources div, .classic-live-log, .classic-live-game .nav-list button,
+  .isometric-world-heading small, .isometric-world-heading span, .isometric-destinations span,
+  .party-meta, .level-badge small, .resource-row, .chat-tabs button, .chat-input input,
+  .mode-button, .toast-message, .merchant-detail-entry em, .merchant-detail-entry i,
+  .merchant-detail-entry button, .window-equipment em, .window-equipment i,
+  .mercenary-rest-grid article small, .mercenary-rest-note,
+  .caravan-status .wandering-caravan-button span,
+  .caravan-status .wandering-caravan-button small,
+  .mercenary-rest-button span, .mercenary-rest-button small) {
+  font-size: 12px !important;
+  line-height: 1.35;
+}
+
+.classic-live-game :is(.hp-stat strong, .combat-stat-pair b, .merchant-detail-entry strong,
+  .window-equipment strong, output, progress) { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 700px) {
+  body { font-size: 15px; }
+  button, input, select, textarea { font-size: 14px; }
+}
