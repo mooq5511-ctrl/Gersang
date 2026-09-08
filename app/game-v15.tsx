@@ -58,7 +58,8 @@ const monsterDungeonKeys: Record<string, DungeonKey> = { '狸貓':'e_starter_rac
 import { TradePanel } from "./trade-panel";
 import { VitalBars } from "./vital-bars";
 import { IsometricWorldMap } from "./isometric-world-map";
-import { ThunderAltarRaid, type ThunderForgeId } from "./thunder-altar-raid";
+import { ThunderAltarRaid } from "./thunder-altar-raid";
+import { MYTHIC_ART_BY_NAME, THUNDER_FORGE_ITEMS, mythicSetPieceCount, type ThunderForgeId } from './mythic-forge';
 import { LEVEL_CAP, xpForNextLevel } from "./level-progression";
 import { combatStats, enemyCombatStats, normalizeVitals, recoverVitals, resolveVitalBattle, spellCost, vitalStats } from "./vitals-engine";
 import { advanceTrade, dispatchTrade, freshTrade, MAX_CARGO_LEVEL, restoreTrade, TRADE_ROUTES, upgradeCost, type TradeState } from "./trade-engine";
@@ -100,13 +101,6 @@ type Equipment = {
 };
 
 type EquipmentSet = Record<EquipmentSlot, Equipment | null>;
-
-const THUNDER_FORGE_ITEMS: Record<ThunderForgeId, { name: string; slot: EquipmentKind; atk: number; def: number; hp: number; magic: MagicAffix[]; needs: Record<string, number> }> = {
-  boots: { name: "T10 雷神迅影靴", slot: "boots", atk: 30, def: 20, hp: 120, magic: [{ id: "thunder-agi", name: "雷神迅影", text: "敏捷 +15%", color: "#71cfff", stat: "agi", value: 15 }], needs: { "喵兒的尾巴": 20, "小型雷之屬性石": 80 } },
-  bow: { name: "T10 雷神穿雲弓", slot: "weapon", atk: 220, def: 10, hp: 0, magic: [{ id: "thunder-boss", name: "雷霆穿雲", text: "攻擊 +20%", color: "#71cfff", stat: "atk", value: 20 }], needs: { "雷電的箭矢": 20, "深淵的精髓": 5 } },
-  armor: { name: "T10 青龍雷鎧", slot: "armor", atk: 0, def: 150, hp: 800, magic: [{ id: "azure-hp", name: "青龍庇護", text: "生命 +15%", color: "#90d4ad", stat: "hp", value: 15 }], needs: { "鹿亞之角": 15, "小型雷之屬性石": 120 } },
-  helm: { name: "T10 青龍頭盔", slot: "helm", atk: 0, def: 100, hp: 400, magic: [{ id: "azure-def", name: "龍甲格擋", text: "防禦 +20%", color: "#90d4ad", stat: "def", value: 20 }], needs: { "青龍頭盔": 1, "深淵的精髓": 10 } },
-};
 
 type Unit = {
   uid: string;
@@ -443,7 +437,7 @@ function safeLegacyText(value: unknown, fallback: string | number) {
 }
 
 function applyGersangVisuals(state: GameState): GameState {
-  const mapEquipment = (item: Equipment): Equipment => ({ ...item, image: gersangItemArt(itemKind(item.slot)) });
+  const mapEquipment = (item: Equipment): Equipment => ({ ...item, image: MYTHIC_ART_BY_NAME[item.name] || gersangItemArt(itemKind(item.slot)) });
   const mapEquipmentSet = (equip: EquipmentSet): EquipmentSet => {
     const mapped = emptyEquipment();
     for (const slot of slots) mapped[slot] = equip[slot] ? mapEquipment(equip[slot]!) : null;
@@ -632,7 +626,8 @@ function applyDungeon(previous:GameState, action:'tick'|'start'|'normal'|'skill'
   const attack=living.reduce((sum,unit)=>sum+combatStats(unit).attack*(unit.position==='前排'?1.2:1),0);
   const party=fighters.map(unit=>{const stats=vitalStats(unit),combat=combatStats(unit);return{uid:unit.uid,name:unit.name,hp:stats.hp,maxHp:stats.maxHp,position:unit.position,defense:combat.defense,attack:combat.attack}});
   const passiveDamage=deployedMercs.reduce((sum,unit)=>sum+Math.max(0,Math.floor(combatStats(unit).attack*0.18)),0);
-  const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,mercenaryIntelligence,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name},action,now,key,roll,choice,spawnRoll,retaliationRoll,party,passiveDamage,materialRolls,previous.autoSkill);
+  const amaterasuSet=Object.values(previous.hero.equip).filter(item=>item?.name.startsWith('T10 天照')).length>=5;
+  const result=dungeonStep(previous.dungeon||freshDungeon(),{...v,str:total.str,dex:total.agi,mercenaryIntelligence,attack,defense:combatStats(previous.hero).defense,staff:previous.hero.equip.weapon?.name===DIVINE_EQUIPMENT.staff.name,amaterasuGaze:amaterasuSet},action,now,key,roll,choice,spawnRoll,retaliationRoll,party,passiveDamage,materialRolls,previous.autoSkill);
   const remaining=new globalThis.Map(result.party.map(unit=>[unit.uid,unit.hp]));
   let next:GameState={...previous,dungeon:result.state,hero:{...previous.hero,hp:remaining.get('hero')??result.hp,mp:result.mp},mercs:previous.mercs.map(unit=>({...unit,hp:remaining.get(unit.uid)??unit.hp}))};
   if(result.state.status==='recovering'&&previous.hero.status!=='客棧中')next=enterGameInn(next,now,result.state.logs[0],result.state);
@@ -1097,8 +1092,10 @@ export default function GameV15() {
   const activeUnits = game.active
     .map((unitUid) => game.mercs.find((unit) => unit.uid === unitUid))
     .filter(Boolean) as Unit[];
-  const thunderSetNames = new Set(Object.values(THUNDER_FORGE_ITEMS).map((item) => item.name));
-  const thunderSetPieces = new Set([game.hero, ...activeUnits].flatMap((unit) => Object.values(unit.equip).filter((item) => item && thunderSetNames.has(item.name)).map((item) => item!.name))).size;
+  const equippedMythicNames = [game.hero, ...activeUnits].flatMap((unit) => Object.values(unit.equip).filter((item): item is Equipment => !!item).map(item => item.name));
+  const azureSetPieces = mythicSetPieceCount(equippedMythicNames,'azure');
+  const chiyouSetPieces = mythicSetPieceCount(equippedMythicNames,'chiyou');
+  const amaterasuSetPieces = mythicSetPieceCount(equippedMythicNames,'amaterasu');
   const currentMap = battleMaps.find((map) => map.id === game.battleMap) || battleMaps[0];
   const currentWorldZone=WORLD_ZONES.find(zone=>zone.id===(game.dungeon?.zone||'hanyang'))||WORLD_ZONES[0];
   const currentCity = worldCities.find((city) => city.id === game.city) || worldCities[0];
@@ -1613,7 +1610,7 @@ export default function GameV15() {
       if (!Object.entries(recipe.needs).every(([name, amount]) => (previous.materials[name] || 0) >= amount)) { setNotice("鍛造材料不足。"); return previous; }
       const materials = { ...previous.materials };
       for (const [name, amount] of Object.entries(recipe.needs)) materials[name] -= amount;
-      const item: Equipment = { uid: `t10-${id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: recipe.name, slot: recipe.slot, atk: recipe.atk, def: recipe.def, hp: recipe.hp, image: gersangItemArt(recipe.slot), enhance: 0, rarity: "傳說", magic: recipe.magic.map(affix => ({ ...affix })), requiredLevel: 150, source: "神仙谷・雷霆祭壇" };
+      const item: Equipment = { uid: `t10-${id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: recipe.name, slot: recipe.slot, atk: recipe.atk, def: recipe.def, hp: recipe.hp, image: recipe.image || gersangItemArt(recipe.slot), enhance: 0, rarity: "傳說", magic: recipe.magic.map(affix => ({ ...affix })), bonus: { ...recipe.bonus }, skill: recipe.skill, requiredLevel: 150, source: "神仙谷・雷霆祭壇" };
       const pickup = addInventoryItem(previous.inventory, item);
       if (pickup.error) { setNotice("背包已滿，無法完成鍛造。"); return previous; }
       setNotice(`鍛造完成：${recipe.name}`);
@@ -1723,7 +1720,7 @@ export default function GameV15() {
             credit={game.credit}
             power={Math.floor((unitPower(game.hero) + game.mercs.filter(unit => game.active.includes(unit.uid)).reduce((sum, unit) => sum + unitPower(unit), 0)) * (thunderSetPieces >= 4 ? 1.45 : thunderSetPieces >= 2 ? 1.2 : 1))}
             materials={game.materials}
-            setPieces={thunderSetPieces}
+            azureSetPieces={azureSetPieces} chiyouSetPieces={chiyouSetPieces} amaterasuSetPieces={amaterasuSetPieces}
             onEnter={() => setGame(previous => ({ ...previous, credit: previous.credit - 50_000, logs: addLog(previous.logs, "進入「神仙谷・雷霆祭壇」，支付 50,000 信用值。") }))}
             onRefund={() => setGame(previous => ({ ...previous, credit: previous.credit + 25_000, logs: addLog(previous.logs, "雷霆祭壇挑戰失敗，退回 25,000 信用值。") }))}
             onMaterials={(materials) => setGame(previous => ({ ...previous, materials, logs: addLog(previous.logs, "雷霆祭壇戰利品已加入背包。") }))}

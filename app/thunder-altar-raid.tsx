@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Bolt, Crown, Shield, Sparkles, Swords } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { THUNDER_FORGE_RECIPES, type ThunderForgeId } from './mythic-forge';
 import "./thunder-altar-raid.css";
 
 type Status = "ready" | "fighting" | "failed" | "cleared";
 type Phase = 0 | 1 | 2;
-export type ThunderForgeId = "boots" | "bow" | "armor" | "helm";
 
 const ENTRY_COST = 50_000;
 const BOSSES = [
@@ -17,18 +17,11 @@ const BOSSES = [
   { name: "鹿亞", title: "雷翼獸王", time: 90, factor: 11, skill: "召喚雷雲與全場雷暴：需要持續治療，最後 30 秒必須全力爆發。", enrage: "末日神罰" },
 ] as const;
 
-const FORGE_RECIPES: Array<{ id: ThunderForgeId; name: string; effect: string; needs: Record<string, number> }> = [
-  { id: "boots", name: "T10 雷神迅影靴", effect: "ATK +30／DEF +20／HP +120", needs: { "喵兒的尾巴": 20, "小型雷之屬性石": 80 } },
-  { id: "bow", name: "T10 雷神穿雲弓", effect: "ATK +220／首領傷害 +20%", needs: { "雷電的箭矢": 20, "深淵的精髓": 5 } },
-  { id: "armor", name: "T10 青龍雷鎧", effect: "DEF +150／HP +800／雷傷減免", needs: { "鹿亞之角": 15, "小型雷之屬性石": 120 } },
-  { id: "helm", name: "T10 青龍頭盔", effect: "DEF +100／HP +400／格擋強化", needs: { "青龍頭盔": 1, "深淵的精髓": 10 } },
-];
-
 const gain = (materials: Record<string, number>, rewards: Record<string, number>) => Object.entries(rewards).reduce((next, [name, amount]) => ({ ...next, [name]: (next[name] || 0) + amount }), { ...materials });
 
-export function ThunderAltarRaid({ credit, power, materials, setPieces, onEnter, onRefund, onMaterials, onForge, onNotice }: {
+export function ThunderAltarRaid({ credit, power, materials, azureSetPieces, chiyouSetPieces, amaterasuSetPieces, onEnter, onRefund, onMaterials, onForge, onNotice }: {
   credit: number; power: number; materials: Record<string, number>;
-  setPieces: number; onEnter: () => void; onRefund: () => void; onMaterials: (next: Record<string, number>) => void; onForge: (id: ThunderForgeId) => void; onNotice: (text: string) => void;
+  azureSetPieces: number; chiyouSetPieces: number; amaterasuSetPieces:number; onEnter: () => void; onRefund: () => void; onMaterials: (next: Record<string, number>) => void; onForge: (id: ThunderForgeId) => void; onNotice: (text: string) => void;
 }) {
   const [status, setStatus] = useState<Status>("ready");
   const [phase, setPhase] = useState<Phase>(0);
@@ -40,7 +33,8 @@ export function ThunderAltarRaid({ credit, power, materials, setPieces, onEnter,
   const [burstReady, setBurstReady] = useState(true);
   const [message, setMessage] = useState("祭壇封印尚未解除。");
   const raidPower = Math.max(1_000, power);
-  const dps = Math.max(50, Math.floor(raidPower * 0.12));
+  const setBonus=(pieces:number,bonus:[number,number,number])=>pieces>=5?bonus[2]:pieces>=3?bonus[1]:pieces>=2?bonus[0]:0;
+  const dps = Math.max(50, Math.floor(raidPower * .12 * (1+setBonus(azureSetPieces,[.1,.2,.35])+setBonus(chiyouSetPieces,[.12,.25,.4])+setBonus(amaterasuSetPieces,[.15,.3,.45]))));
   const bossHp = useMemo(() => BOSSES.map(boss => Math.floor(raidPower * boss.factor)), [raidPower]);
 
   const finishFailure = (passed: Phase) => {
@@ -103,6 +97,6 @@ export function ThunderAltarRaid({ credit, power, materials, setPieces, onEnter,
       </div>
     </section>
     <footer className="raid-loot"><strong>通關保底</strong><span>雷祭印記 ×6</span><span>小型雷之屬性石 ×20</span><span>精氣之珠碎片 ×12</span><span>鹿亞之角 ×1</span></footer>
-    <section className="raid-forge"><header><div><small>神仙谷鍛造</small><h3>T10 雷神／青龍套裝</h3><p>已裝備 {setPieces}/4 件・2 件：雷傷 +20%；4 件：雷霆祭壇首領傷害 +25%。</p></div></header><div className="raid-forge-grid">{FORGE_RECIPES.map(recipe => { const canForge = Object.entries(recipe.needs).every(([name, amount]) => (materials[name] || 0) >= amount); return <article key={recipe.id}><strong>{recipe.name}</strong><small>{recipe.effect}</small><p>{Object.entries(recipe.needs).map(([name, amount]) => <span key={name} className={(materials[name] || 0) >= amount ? "ready" : ""}>{name} {materials[name] || 0}/{amount}</span>)}</p><Button size="sm" disabled={!canForge} onClick={() => onForge(recipe.id)}>鍛造</Button></article>; })}</div></section>
+    <section className="raid-forge"><header><div><small>神仙谷鍛造</small><h3>T10 雷神／神獸套裝</h3><p>青龍 {azureSetPieces}/5：2／3／5 件祭壇傷害 +10／20／35%。蚩尤 {chiyouSetPieces}/5：+12／25／40%。天照 {amaterasuSetPieces}/5：+15／30／45%。</p></div></header><div className="raid-forge-grid">{THUNDER_FORGE_RECIPES.map(recipe => { const canForge = Object.entries(recipe.needs).every(([name, amount]) => (materials[name] || 0) >= amount); const effect=`ATK +${recipe.atk}／DEF +${recipe.def}／HP +${recipe.hp}${recipe.bonus.intel?`／智力 +${recipe.bonus.intel}`:''}${recipe.bonus.str?`／力量 +${recipe.bonus.str}`:''}${recipe.bonus.agi?`／敏捷 +${recipe.bonus.agi}`:''}${recipe.bonus.vit?`／體質 +${recipe.bonus.vit}`:''}`; return <article key={recipe.id}>{recipe.image&&<img className="raid-forge-art" src={recipe.image} alt=""/>}<strong>{recipe.name}</strong><small>{effect}</small><p>{Object.entries(recipe.needs).map(([name, amount]) => <span key={name} className={(materials[name] || 0) >= amount ? "ready" : ""}>{name} {materials[name] || 0}/{amount}</span>)}</p><Button size="sm" disabled={!canForge} onClick={() => onForge(recipe.id)}>鍛造</Button></article>; })}</div></section>
   </section>;
 }
