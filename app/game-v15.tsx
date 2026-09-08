@@ -1610,7 +1610,7 @@ export default function GameV15() {
       if (!Object.entries(recipe.needs).every(([name, amount]) => (previous.materials[name] || 0) >= amount)) { setNotice("鍛造材料不足。"); return previous; }
       const materials = { ...previous.materials };
       for (const [name, amount] of Object.entries(recipe.needs)) materials[name] -= amount;
-      const item: Equipment = { uid: `t10-${id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: recipe.name, slot: recipe.slot, atk: recipe.atk, def: recipe.def, hp: recipe.hp, image: recipe.image || gersangItemArt(recipe.slot), enhance: 0, rarity: "傳說", magic: recipe.magic.map(affix => ({ ...affix })), bonus: { ...recipe.bonus }, skill: recipe.skill, requiredLevel: 150, source: "神仙谷・雷霆祭壇" };
+      const item: Equipment = { uid: `t10-${id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: recipe.name, slot: recipe.slot, atk: recipe.atk, def: recipe.def, hp: recipe.hp, image: recipe.image || gersangItemArt(recipe.slot), enhance: 0, rarity: "傳說", magic: recipe.magic.map(affix => ({ ...affix })), bonus: { ...recipe.bonus }, skill: recipe.skill, requiredLevel: recipe.set==='thunder'?150:1, source: "神仙谷・雷霆祭壇" };
       const pickup = addInventoryItem(previous.inventory, item);
       if (pickup.error) { setNotice("背包已滿，無法完成鍛造。"); return previous; }
       setNotice(`鍛造完成：${recipe.name}`);
@@ -1625,7 +1625,7 @@ export default function GameV15() {
       if(previous.newbieCoins<1000){setNotice('新手兌換銅錢不足，需要 1,000 枚。');return previous;}
       let inventory=previous.inventory;
       for(const recipe of pieces){
-        const item:Equipment={uid:`wanderer-${recipe.id}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,name:recipe.name,slot:recipe.slot,atk:recipe.atk,def:recipe.def,hp:recipe.hp,image:recipe.image||gersangItemArt(recipe.slot),enhance:0,rarity:'傳說',magic:recipe.magic.map(affix=>({...affix})),bonus:{...recipe.bonus},skill:recipe.skill,requiredLevel:150,source:'平行世界流浪商團'};
+        const item:Equipment={uid:`wanderer-${recipe.id}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,name:recipe.name,slot:recipe.slot,atk:recipe.atk,def:recipe.def,hp:recipe.hp,image:recipe.image||gersangItemArt(recipe.slot),enhance:0,rarity:'傳說',magic:recipe.magic.map(affix=>({...affix})),bonus:{...recipe.bonus},skill:recipe.skill,requiredLevel:1,source:'平行世界流浪商團'};
         inventory=addInventoryItem(inventory,item).inventory;
       }
       setNotice(`已兌換完整 T10 ${setName}套裝。`);

@@ -23,7 +23,8 @@ export function equipFromInventory<E extends Wearable,U extends {level:number;eq
   const allowed=compatibleSlots(item.slot);
   const slot=requested ?? allowed.find(key=>!unit.equip[key]) ?? allowed[0];
   if(!slot||!allowed.includes(slot)) return fail('此裝備無法放入該欄位。');
-  if(unit.level<(item.requiredLevel||1)) return fail('裝備等級不足。');
+  const mythicBeastSet=/^T10 (青龍|蚩尤|天照)/.test((item as {name?:string}).name||'');
+  if(!mythicBeastSet&&unit.level<(item.requiredLevel||1)) return fail('裝備等級不足。');
   if(Object.values(unit.equip).some(entry=>entry?.uid===uid)) return fail('同一件物品不能重複穿戴。');
   const equip={...unit.equip,[slot]:normalizeStoredItem(item)};
   const next=inventory.filter(entry=>entry.uid!==uid);
