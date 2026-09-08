@@ -437,10 +437,20 @@ function safeLegacyText(value: unknown, fallback: string | number) {
 }
 
 function applyGersangVisuals(state: GameState): GameState {
-  const mapEquipment = (item: Equipment): Equipment => ({ ...item, image: MYTHIC_ART_BY_NAME[item.name] || gersangItemArt(itemKind(item.slot)) });
+  const mapEquipment = (item: Equipment): Equipment => {
+    const corrected=item.name==='T10 天照神杖'?THUNDER_FORGE_ITEMS.amaterasuStaff:null;
+    const source=corrected?{...item,name:corrected.name,slot:corrected.slot,atk:corrected.atk,def:corrected.def,hp:corrected.hp,bonus:{...corrected.bonus},magic:corrected.magic.map(affix=>({...affix})),skill:corrected.skill,requiredLevel:1}:item;
+    return {...source,image:MYTHIC_ART_BY_NAME[source.name]||gersangItemArt(itemKind(source.slot))};
+  };
   const mapEquipmentSet = (equip: EquipmentSet): EquipmentSet => {
     const mapped = emptyEquipment();
-    for (const slot of slots) mapped[slot] = equip[slot] ? mapEquipment(equip[slot]!) : null;
+    for (const slot of slots) {
+      if(!equip[slot])continue;
+      const item=mapEquipment(equip[slot]!);
+      const kind=itemKind(item.slot);
+      const target=(kind==='ring'?slot:kind) as EquipmentSlot;
+      mapped[target]=mapped[target]||item;
+    }
     return mapped;
   };
   return {
