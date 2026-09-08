@@ -20,6 +20,7 @@ export const gersangMercenaryArt = (index: number) =>
 
 export function gersangUnitArt(templateId: string | undefined, name: string, fallbackIndex = 0) {
   const id = templateId?.replace(/^merchant-/, "");
+  if (id === "mazu") return "/assets/mercenary-portraits/mazu.webp";
   if (id === "swordmaster" || id === "sanada") return `/game-assets/cute-merc-${id}-0.png`;
   const exact = mercenaryIds.indexOf(id as (typeof mercenaryIds)[number]);
   if (exact >= 0) return gersangMercenaryArt(exact);
