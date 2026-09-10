@@ -112,7 +112,7 @@ export const battleMaps: BattleMap[] = [
   { id: "starter-outskirts", name: "新手村郊外", region: "新手軍營", enemyRegion: "朝鮮", unlockStage: 1, theme: "field", hpMultiplier: 0.8, goldMultiplier: 0.8, coreBonus: 0, description: "狸貓、倭寇與山賊出沒的六種新手遭遇地。" },
   { id: "millennium-lake", name: "千年湖", region: "朝鮮", enemyRegion: "朝鮮", unlockStage: 1, theme: "lake", hpMultiplier: 1.18, goldMultiplier: 1.12, coreBonus: 0, description: "擊敗新手村郊外的海賊王後方可進入。" },
   { id: "japan-sea", name: "日本海底洞", region: "日本", enemyRegion: "日本", unlockStage: 1, theme: "sea", hpMultiplier: 1.35, goldMultiplier: 1.25, coreBonus: 0, description: "擊敗千年湖首領「狂風阿魯塔」後方可進入。" },
-  { id: "miasma-forest", name: "白虎林", region: "台灣", enemyRegion: "台灣", unlockStage: 15, theme: "forest", hpMultiplier: 1.55, goldMultiplier: 1.38, coreBonus: 1, description: "白虎盤踞的密林使敵軍更加強韌。" },
+  { id: "miasma-forest", name: "白虎林", region: "台灣", enemyRegion: "台灣", unlockStage: 1, theme: "forest", hpMultiplier: 1.55, goldMultiplier: 1.38, coreBonus: 1, description: "擊敗日本海底洞首領「黃金海星」後開放；白虎盤踞的密林使敵軍更加強韌。" },
   { id: "ice-temple", name: "冰雪神殿", region: "中國", enemyRegion: "中國", unlockStage: 20, theme: "ice", hpMultiplier: 1.8, goldMultiplier: 1.55, coreBonus: 1, description: "寒霜神殿，適合高階隊伍遠征。" },
   { id: "taj-mahal", name: "泰姬陵", region: "印度", enemyRegion: "印度", unlockStage: 30, theme: "desert", hpMultiplier: 2.15, goldMultiplier: 1.8, coreBonus: 1, description: "印度高階怪物盤據的古陵。" },
   { id: "sumeru", name: "須彌山", region: "特殊", unlockStage: 40, theme: "sumeru", hpMultiplier: 2.65, goldMultiplier: 2.15, coreBonus: 2, description: "神獸與冥界力量交會的險地。" },

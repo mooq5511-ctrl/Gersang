@@ -1,4 +1,4 @@
-import {DUNGEONS,WORLD_ZONES,zoneFor,zoneUnlocked,zoneRequirement,type ZoneId,type DungeonState,type DungeonKey} from './dungeon-engine';
+import {DUNGEONS,WORLD_ZONES,isBossMonster,zoneFor,zoneUnlocked,zoneRequirement,type ZoneId,type DungeonState,type DungeonKey} from './dungeon-engine';
 import type {ReactNode} from 'react';
 import {battleLogPresentation} from './classic-presentation';
 import {Button} from '@/components/ui/button';
@@ -23,20 +23,20 @@ export function WorldMapNavigation({state,level,power,travel}:{state:DungeonStat
  </nav>;
 }
 export function DungeonPanel({state,mp,hero,party,dps=0,act,autoSkill,toggleAutoSkill,mapName,mapRegion,medicineQuickbar}:{state:DungeonState;mp:number;hero:CaravanMember;party:CaravanMember[];dps?:number;act:(action:'start'|'normal'|'skill'|'retreat',key?:DungeonKey)=>void;autoSkill:boolean;toggleAutoSkill:()=>void;mapName?:string;mapRegion?:string;medicineQuickbar?:ReactNode}){
- const monster=DUNGEONS[state.key],zone=zoneFor(state.zone),active=state.status==='fighting'&&state.phase==='交戰',cooldown=Math.max(0,Math.ceil((state.skillAt-state.stamp)/1000));
- const enemyMaxHp=state.realtime?.enemies.reduce((sum,unit)=>sum+unit.maxHp,0)||monster.hp*12;
+ const monster=DUNGEONS[state.key],boss=isBossMonster(monster.name),enemyCount=boss?1:12,zone=zoneFor(state.zone),active=state.status==='fighting'&&state.phase==='交戰',cooldown=Math.max(0,Math.ceil((state.skillAt-state.stamp)/1000));
+ const enemyMaxHp=state.realtime?.enemies.reduce((sum,unit)=>sum+unit.maxHp,0)||monster.hp*enemyCount;
  const liveLogs=state.logs.filter(line=>/施放|造成|受到|攻擊|技能|暴擊/.test(line)).slice(0,4);
  return <section className="dungeon-panel" aria-label="動態戰鬥">
  <header className="dungeon-command-header"><div><small>{mapRegion ? mapRegion+' · 戰鬥地圖同步' : zone.mood}</small><h2>{mapName || zone.name}</h2></div><span className={'dungeon-status dungeon-status-'+state.status}>{{idle:'整裝待發',fighting:'交鋒中',respawning:'等待下一隻',recovering:'漢陽療傷中'}[state.status]}</span></header>
  <div className="dungeon-summary" aria-label="戰鬥摘要"><span><small>目前目標</small><strong>{monster.name}</strong></span><span><small>商隊 DPS</small><strong>{dps.toLocaleString()}</strong></span><span><small>掉落加成</small><strong>{monster.drop*100}%</strong></span></div>
- <div className="battle-phase" aria-live="polite"><span><small>我方・{party.length} 名</small><strong>{state.realtime?.players.filter(unit=>unit.hp>0).length??party.filter(unit=>(unit.hp||0)>0).length} 名存活</strong></span><span><small>敵方・12 隻{monster.name}</small><strong>HP {Math.max(0,state.enemyHp).toLocaleString()} / {enemyMaxHp.toLocaleString()}</strong></span><span><small>戰況</small><strong>{state.status==='fighting'?'12 對 12 即時交戰':state.status==='respawning'?'敵方整隊重生中':state.status==='recovering'?'返回療傷':'待命'}</strong></span><div><i style={{width:(100-(state.distance??100))+'%'}}/></div></div>
+ <div className="battle-phase" aria-live="polite"><span><small>我方・{party.length} 名</small><strong>{state.realtime?.players.filter(unit=>unit.hp>0).length??party.filter(unit=>(unit.hp||0)>0).length} 名存活</strong></span><span><small>敵方・{boss?'首領・':''}{enemyCount} 隻{monster.name}</small><strong>HP {Math.max(0,state.enemyHp).toLocaleString()} / {enemyMaxHp.toLocaleString()}</strong></span><span><small>戰況</small><strong>{state.status==='fighting'?(boss?'首領單體即時交戰':'12 對 12 即時交戰'):state.status==='respawning'?(boss?'首領重新出現中':'敵方整隊重生中'):state.status==='recovering'?'返回療傷':'待命'}</strong></span><div><i style={{width:(100-(state.distance??100))+'%'}}/></div></div>
  <div className="battle-live-feed" aria-label="即時戰鬥資訊" aria-live="polite"><strong>即時戰鬥資訊</strong>{liveLogs.length?liveLogs.map((line,index)=><span key={state.serial+'-'+index+'-'+line}>{line}</span>):<span>等待敵我行動……</span>}</div>
  <BattleArena state={state} hero={hero} party={party}/>
  {medicineQuickbar}
  <output className={'dungeon-flash'+(state.logs[0]?.startsWith('🎁')?' dungeon-loot-flash':'')} key={state.serial+'-'+state.logs[0]}>{state.logs[0]||'選擇對手，開始自動戰鬥。'}</output>
  <div className="dungeon-auto-skill"><span><strong>滿 MP 自動技能</strong><small>每次普攻 +20 MP；達到 100 MP 後於下次個人攻擊時施放</small></span><button type="button" role="switch" aria-checked={autoSkill} className={autoSkill?'enabled':''} onClick={toggleAutoSkill}>{autoSkill?'開啟':'關閉'}</button></div>
  <div className="dungeon-actions realtime-actions"><span>每名角色依自己的攻速冷卻自動鎖敵，不再使用共用攻擊回合。</span><button disabled={!active&&state.status!=='respawning'} onClick={()=>act('retreat')}>{state.status==='recovering'?'客棧療傷中':'撤退至客棧'}</button></div>
- <details className="dungeon-notes" open><summary>戰鬥規則</summary><p>前排輸出 +20%，後排受擊有 50% 閃避；全員倒下才會撤回客棧。</p>{state.key.startsWith('e_white_tiger_')&&<p>野獸的領地：攜帶超過 5 隻傭兵時，全體怪物 HP、MP、ATK、物防、魔防與技能傷害 ×2。</p>}</details>
+ <details className="dungeon-notes" open><summary>戰鬥規則</summary><p>前排輸出 +20%，後排受擊有 50% 閃避；全員倒下才會撤回客棧。</p>{state.key==='e_white_tiger_fierce_tiger'&&<><p><strong>狂虎・暴君風吼嘯：</strong>消耗 5,000 MP，冷卻 12 秒；造成自身攻擊力 320% 的風屬性物理傷害，擊退並吸取 15% 當前 MP，移速 -40% 持續 5 秒。</p><p><strong>白虎凶煞：</strong>常駐打擊／魔法抗性 +15%；生命低於 40% 時攻速／移速 +300%，近身攻擊 25% 機率附加 3 秒撕裂。</p></>}{state.key.startsWith('e_white_tiger_')&&<p>野獸的領地：攜帶超過 5 隻傭兵時，全體怪物 HP、MP、ATK、物防、魔防與技能傷害 ×2。</p>}</details>
  <details className="dungeon-journal"><summary>戰鬥日誌 · 最近 30 則</summary><ol className="dungeon-log">{state.logs.slice(0,30).map((line,i)=><li key={i} className={battleLogPresentation(line).className}><span className="classic-log-label">{battleLogPresentation(line).label}</span>{line}</li>)}</ol></details>
  </section>;
 }

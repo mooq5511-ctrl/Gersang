@@ -52,7 +52,7 @@ export function TradePanel({ trade, gold, stage, escorts, logs, lastEncounter, o
           return <button type="button" key={item.id} className={"trade-route " + (trade.selectedRouteId === item.id ? "selected " : "") + (!available ? "locked" : "")} onClick={() => onSelect(item.id)} aria-pressed={trade.selectedRouteId === item.id} style={{ "--route-color": item.color } as React.CSSProperties}>
             <div><small>0{index + 1} / {item.nation}</small>{available ? <span>{item.seconds} 秒 / 趟</span> : <LockKeyhole size={15} />}</div>
             <h3>{item.from}<ArrowRight />{item.to}</h3><p><Package />{item.good}・{cargoCapacity(trade.cargoLevel)} 箱</p>
-            <footer><span>每趟淨利<strong>+{fmt(terms.revenue - terms.cost)} 兩</strong></span><small>{available ? "已開通" : `需商譽 ${item.reputation}・第 ${item.stage} 關`}</small></footer>
+            <footer><span>每趟淨利<strong>+{fmt(terms.revenue - terms.cost)} 兩</strong></span><small>{available ? "已開通" : `需商譽 ${item.reputation}・世界地圖進度不足`}</small></footer>
           </button>;
         })}</div>
       </section>
