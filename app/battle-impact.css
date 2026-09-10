@@ -49,3 +49,4 @@
 .realtime-unit-boss>strong{top:210px;width:220px;font-size:20px;color:#ffd978;text-shadow:0 3px 8px #000}
 .realtime-unit-boss>small{top:238px;width:220px;font-size:13px;color:#f0c98b}
 .realtime-unit-boss .realtime-floating-damage{font-size:30px}
+.realtime-unit-boss.realtime-unit-dead{opacity:.38;filter:grayscale(1) brightness(.72)}

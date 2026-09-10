@@ -1,6 +1,6 @@
 export type SourceEnemy = {
   name: string;
-  mapId: "starter-outskirts" | "korea-field" | "millennium-lake" | "japan-sea" | "miasma-forest";
+  mapId: "starter-outskirts" | "korea-field" | "millennium-lake" | "japan-sea" | "miasma-forest" | "sumeru";
   xp: number;
   hp?: number;
   mp?: number;
@@ -55,7 +55,18 @@ export const sourceEnemies: SourceEnemy[] = [
   { name: "食魂獸", mapId: "miasma-forest", grade: 8, hp: 50000, mp: 400, attack: 700, xp: 15000, physical: 230, magic: 210, drops: ["[風雲的]咒術秘訣", "食魂獸門牙", "上級精髓", "結晶碎片(風)", "小型憤怒精髓"] },
   { name: "黑色商團飼育師", mapId: "miasma-forest", grade: 7, hp: 50000, mp: 2000, attack: 500, xp: 16000, physical: 220, magic: 240, drops: ["飛虎頭盔", "撕裂的書信", "生命的精髓", "結晶碎片(風)", "小型憤怒精髓"] },
   { name: "人魂蜘蛛", mapId: "miasma-forest", grade: 8, hp: 44000, mp: 12000, attack: 600, xp: 16000, physical: 230, magic: 220, drops: ["金剛石指環", "粗糙的頭髮", "生命的精髓", "結晶碎片(風)", "小型憤怒精髓"] },
-  { name: "狂虎", mapId: "miasma-forest", grade: 10, hp: 200000, mp: 40000, attack: 500, xp: 40000, physical: 240, magic: 250, drops: ["神獸之根源(白虎)", "狂虎之爪", "狂虎鬍鬚", "白虎的罈子", "小型憤怒精髓"], boss: true },
+  { name: "狂虎", mapId: "miasma-forest", grade: 10, hp: 2000000, mp: 40000, attack: 3000, xp: 40000, physical: 240, magic: 250, drops: ["神獸之根源(白虎)", "狂虎之爪", "狂虎鬍鬚", "白虎的罈子", "小型憤怒精髓"], boss: true },
+  { name: "訓練的雷獸", mapId: "sumeru", grade: 7, hp: 40000, mp: 6000, attack: 1435, xp: 12000, physical: 220, magic: 220, drops: ["幻獸之魂", "赤色精氣石", "上級精髓", "小型憤怒精髓"] },
+  { name: "訓練的瘟神", mapId: "sumeru", grade: 7, hp: 40000, mp: 6000, attack: 1275, xp: 12000, physical: 220, magic: 225, drops: ["幻獸之魂", "赤色精氣石", "上級精髓", "小型憤怒精髓"] },
+  { name: "訓練的虎鶴", mapId: "sumeru", grade: 7, hp: 40000, mp: 6000, attack: 820, xp: 12000, physical: 225, magic: 220, drops: ["幻獸之魂", "赤色精氣石", "上級精髓", "小型憤怒精髓"] },
+  { name: "青臉夜叉金剛", mapId: "sumeru", grade: 9, hp: 190000, mp: 10000, attack: 2412, xp: 43000, physical: 250, magic: 265, drops: ["須彌石", "夜叉金剛之角", "上級精髓", "小型憤怒精髓"] },
+  { name: "辟寒金剛", mapId: "sumeru", grade: 9, hp: 260000, mp: 10000, attack: 3625, xp: 52000, physical: 270, magic: 270, drops: ["須彌石", "金剛碎片", "上級精髓", "小型憤怒精髓"] },
+  { name: "紫賢金剛", mapId: "sumeru", grade: 9, hp: 280000, mp: 10000, attack: 4850, xp: 62000, physical: 280, magic: 280, drops: ["須彌石", "紫賢寶珠", "上級精髓", "小型憤怒精髓"] },
+  { name: "強力棍兵", mapId: "sumeru", grade: 9, hp: 400000, mp: 20000, attack: 5950, xp: 85000, physical: 285, magic: 285, drops: ["須彌石", "鬼煞之棍", "上級精髓", "小型憤怒精髓"] },
+  { name: "神獸玄武", mapId: "sumeru", grade: 10, hp: 400000, mp: 20000, attack: 5550, xp: 70000, physical: 265, magic: 275, drops: ["神獸之魂(玄武)", "玄武甲片", "須彌石", "小型憤怒精髓"] },
+  { name: "神獸白虎", mapId: "sumeru", grade: 10, hp: 4000000, mp: 10000, attack: 6500, xp: 90000, physical: 280, magic: 285, drops: ["神獸之魂(白虎)", "白虎之牙", "須彌石", "小型憤怒精髓"] },
+  { name: "多聞天王", mapId: "sumeru", grade: 10, hp: 800000, mp: 20000, attack: 7150, xp: 175000, physical: 298, magic: 295, drops: ["多聞天王的冠飾", "神獸之魂(玄武)", "須彌石", "小型憤怒精髓"], boss: true },
+  { name: "廣目天王", mapId: "sumeru", grade: 10, hp: 10000000, mp: 20000, attack: 10125, xp: 175000, physical: 295, magic: 299, drops: ["廣目天王的寶珠", "神獸之魂(白虎)", "須彌石", "小型憤怒精髓"], boss: true },
 ];
 
 export function sourceEnemyForMap(mapId: string, stage: number, isBoss: boolean, preferredName?: string) {

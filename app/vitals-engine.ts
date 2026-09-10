@@ -22,8 +22,11 @@ export function vitalStats(unit: VitalUnit) {
   }
   // 主角基礎上限存於 maxHp：初始 100、每次升級 +20；體質與裝備再動態加成。
   const heroHp=(unit.maxHp??100)+Math.max(0,vitality-20)*4+equipmentHp;
-  const maxHp = Math.max(1, Math.floor((unit.templateId==='hero' ? heroHp : spec ? spec.ratings[0] * 20 + (unit.level - 1) * 12 + Math.max(0, vitality - spec.ratings[0]) * 8 + equipmentHp : 100 + vitality * 8 + unit.level * 12 + equipmentHp) * (1 + hpPercent / 100)));
-  const maxMp = Math.max(1, Math.floor(unit.templateId==='hero' ? intelligence*4 : spec ? 40 + (unit.level - 1) * 4 + Math.max(0, intelligence - (spec.mp ? 20 : 10)) * 3 : 40 + intelligence * 3 + unit.level * 4));
+  const mercenaryHp = spec ? (spec.baseHp ?? spec.ratings[0] * 20 + (unit.level - 1) * 12) + Math.max(0, vitality - spec.ratings[0]) * 8 + equipmentHp : 100 + vitality * 8 + unit.level * 12 + equipmentHp;
+  const mercenaryIntelligence = spec?.intel ?? (spec?.mp ? 20 : 10);
+  const mercenaryMp = spec ? (spec.baseMp ?? 40 + (unit.level - 1) * 4) + Math.max(0, intelligence - mercenaryIntelligence) * 3 : 40 + intelligence * 3 + unit.level * 4;
+  const maxHp = Math.max(1, Math.floor((unit.templateId==='hero' ? heroHp : mercenaryHp) * (1 + hpPercent / 100)));
+  const maxMp = Math.max(1, Math.floor(unit.templateId==='hero' ? intelligence*4 : mercenaryMp));
   const clamp = (value: number | undefined, max: number) => typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(max, Math.floor(value))) : max;
   return { maxHp, maxMp, hp: clamp(unit.hp, maxHp), mp: clamp(unit.mp, maxMp), defense, intelligence };
 }

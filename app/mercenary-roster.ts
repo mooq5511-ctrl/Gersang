@@ -1,5 +1,5 @@
 export type MercenaryId = 'spear' | 'shield' | 'archer' | 'shaman' | 'samurai' | 'ninja' | 'gunner' | 'onmyoji' | 'blade' | 'monk' | 'healer' | 'cannon' | 'escort' | 'hunter' | 'elephant' | 'priest' | 'swordmaster' | 'sanada' | 'mazu';
-export type MercenarySpec = { id: MercenaryId; name: string; role: string; ratings: readonly [number, number, number, number, number]; intel?: number; passive: string; passiveEffect: string; active: string; activeEffect: string; cooldown: number; mp: number; ranged: boolean };
+export type MercenarySpec = { id: MercenaryId; name: string; role: string; ratings: readonly [number, number, number, number, number]; intel?: number; baseHp?: number; baseMp?: number; passive: string; passiveEffect: string; active: string; activeEffect: string; cooldown: number; mp: number; ranged: boolean };
 export const merchantMercenaries: MercenarySpec[] = [
   { id:'spear',name:'朝鮮槍兵',role:'前排／反騎兵',ratings:[38,30,34,24,36],passive:'長槍拒馬',passiveEffect:'近戰普攻減傷 10%；對騎兵、獸類傷害 +15%。',active:'突槍穿陣',activeEffect:'前排單體 140% 物傷，防禦 −15%，持續 2 回合。',cooldown:4,mp:0,ranged:false },
   { id:'shield',name:'山城盾衛',role:'坦克／護衛',ratings:[48,18,48,14,30],passive:'守城鐵壁',passiveEffect:'HP 高於 50% 時防禦 +20%。',active:'舉盾護商',activeEffect:'其他隊友 HP 低於 50% 時，守護最低者，代受下一次單體攻擊並減傷 40%；最多 2 回合。',cooldown:4,mp:0,ranged:false },
@@ -19,7 +19,7 @@ export const merchantMercenaries: MercenarySpec[] = [
   { id:'priest',name:'天竺梵僧',role:'輔助／法術防護',ratings:[32,23,28,23,39],passive:'靜心持咒',passiveEffect:'每完成 3 次行動恢復 4 MP，不超過上限。',active:'梵音護陣',activeEffect:'隊友 HP 低於 70% 時，全體獲得自身最大 HP 10% 護盾，持續 2 回合，並清除命中降低；不復活。',cooldown:5,mp:16,ranged:true },
   { id:'swordmaster',name:'劍豪',role:'前排／二轉劍士',ratings:[43,46,39,36,42],passive:'劍氣凝神',passiveEffect:'每次成功命中獲得 1 層劍氣；滿 3 層後下一次武技傷害 +35%，並無視 15% 防禦。',active:'奧義・居合',activeEffect:'對前排生命最低者造成 210% 物傷；若擊倒目標，立即獲得 1 層劍氣。',cooldown:4,mp:0,ranged:false },
   { id:'sanada',name:'軍神真田信綱',role:'前排／傳說武將',ratings:[50,48,47,34,40],passive:'六文錢軍略',passiveEffect:'開戰時前排獲得 10% 傷害減免；自身 HP 低於 45% 時，攻擊與防禦各 +15%。',active:'真田赤備突擊',activeEffect:'對前排及相鄰敵人各造成 155% 物傷；命中首領時額外附加 1 回合破甲 12%。',cooldown:5,mp:0,ranged:false },
-  { id:'mazu',name:'媽祖娘娘',role:'作者測試／全能守護',ratings:[50000,50000,50000,50000,50000],intel:50000,passive:'天后庇護',passiveEffect:'作者測試傭兵：力量、敏捷、體質、智力皆為一般傭兵上限的 1,000 倍。',active:'海神護航',activeEffect:'對全體敵人造成 1000% 傷害，並使全體友軍恢復最大生命 50%。',cooldown:1,mp:0,ranged:true },
+  { id:'mazu',name:'媽祖娘娘',role:'作者測試／全能守護',ratings:[5000,5000,5000,5000,5000],intel:5000,baseHp:50000,baseMp:5000,passive:'天后庇護',passiveEffect:'作者測試傭兵：力量、敏捷、體質、智力固定為 5,000。',active:'海神護航',activeEffect:'對全體敵人造成 1000% 傷害，並使全體友軍恢復最大生命 50%。',cooldown:1,mp:0,ranged:true },
 ];
 const byTemplate = new Map(merchantMercenaries.map(spec => ['merchant-'+spec.id, spec]));
 export const mercenarySpec = (templateId?: string) => templateId ? byTemplate.get(templateId) : undefined;

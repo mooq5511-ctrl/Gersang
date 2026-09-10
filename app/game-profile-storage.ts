@@ -41,6 +41,18 @@ export function readCharacterSave(storage: Storage, slot: number) {
   return storage.getItem(profileSaveKey(slot));
 }
 
+function normalizeStoredMercenary(unit: Unit, index: number): Unit {
+  const isMazu = unit.templateId === "merchant-mazu";
+  return {
+    ...unit,
+    level: Math.min(LEVEL_CAP, Math.max(1, Number(unit.level) || 1)),
+    ...(isMazu ? { str: 5000, agi: 5000, vit: 5000, intel: 5000, hp: Number.isFinite(Number(unit.hp)) ? Math.max(0,Math.min(Number(unit.hp),50000)) : 50000, mp: Number.isFinite(Number(unit.mp)) ? Math.max(0,Math.min(Number(unit.mp),5000)) : 5000 } : {}),
+    image: gersangUnitArt(unit.templateId, unit.name, index),
+    position: normalizeBattlePosition(unit.position, unit.name, unit.role),
+    equip: sanitizeEquip(unit.equip),
+  };
+}
+
 /** Restores only the current character-save schema; legacy V14-V18 imports are intentionally unsupported. */
 export function restoreGame(raw: unknown): GameState {
   raw = migrateSevenSlotSave(raw);
@@ -65,8 +77,8 @@ export function restoreGame(raw: unknown): GameState {
     idleStamp: Number.isFinite(parsed.idleStamp) && parsed.idleStamp! > 0 ? parsed.idleStamp : Date.now(),
     city: restoredCity,
     hero: { ...heroDefaults, ...parsed.hero, level: Math.min(LEVEL_CAP, Math.max(1, Number(parsed.hero?.level) || heroDefaults.level)), nation: heroNation, job: parsed.hero?.job || heroDefaults.job, skill: parsed.hero?.skill || heroDefaults.skill, image: heroPortrait(heroNation, parsed.hero?.gender === "female" ? "female" : "male"), gender: parsed.hero?.gender === "female" ? "female" : "male", maxHp: Number.isFinite(parsed.hero?.maxHp) && Number(parsed.hero?.maxHp) > 0 ? Math.max(100, Number(parsed.hero?.maxHp)) : 100 + (Math.max(1, Number(parsed.hero?.level) || heroDefaults.level) - 1) * 20, status: parsed.hero?.status === "客棧中" ? "客棧中" : "正常", position: normalizeBattlePosition(parsed.hero?.position, String(parsed.hero?.name || heroDefaults.name), String(parsed.hero?.role || heroDefaults.role), true), equip: sanitizeEquip(parsed.hero?.equip) },
-    mercs: Array.isArray(parsed.mercs) ? parsed.mercs.map((unit, index) => ({ ...unit, level: Math.min(LEVEL_CAP, Math.max(1, Number(unit.level) || 1)), image: gersangUnitArt(unit.templateId, unit.name, index), position: normalizeBattlePosition(unit.position, unit.name, unit.role), equip: sanitizeEquip(unit.equip) } as Unit)) : next.mercs,
-    restingMercs: Array.isArray(parsed.restingMercs) ? parsed.restingMercs.slice(0, 10).map((unit, index) => ({ ...unit, level: Math.min(LEVEL_CAP, Math.max(1, Number(unit.level) || 1)), image: gersangUnitArt(unit.templateId, unit.name, index), position: normalizeBattlePosition(unit.position, unit.name, unit.role), equip: sanitizeEquip(unit.equip) } as Unit)) : next.restingMercs,
+    mercs: Array.isArray(parsed.mercs) ? parsed.mercs.map((unit, index) => normalizeStoredMercenary(unit as Unit,index)) : next.mercs,
+    restingMercs: Array.isArray(parsed.restingMercs) ? parsed.restingMercs.slice(0, 10).map((unit, index) => normalizeStoredMercenary(unit as Unit,index)) : next.restingMercs,
     inventory: Array.isArray(parsed.inventory) ? parsed.inventory.map((item) => ({ ...normalizeStoredItem(item), bonus: item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }, resist: item.resist || { physical: 0, magic: 0 } })) : next.inventory,
     soulStones: Number.isFinite(parsed.soulStones) ? Math.max(0, Number(parsed.soulStones)) : next.soulStones,
     awakeningStones: Number.isFinite(parsed.awakeningStones) ? Math.max(0, Number(parsed.awakeningStones)) : next.awakeningStones,

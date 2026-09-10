@@ -22,7 +22,7 @@ export function selectBattleMapAction(state: GameState, mapId: string, deps: Bat
   if (map.id === "japan-sea" && !state.lakeBossDefeated) { deps.notify("請先在千年湖擊敗狂風阿魯塔，才能進入日本海底洞。"); return state; }
   if (map.id === "miasma-forest" && !state.goldenStarfishDefeated) { deps.notify("請先在日本海底洞擊敗黃金海星，才能進入白虎林。"); return state; }
   if (state.stage < map.unlockStage) { deps.notify("請依世界地圖完成前置區域，才能進入「" + map.name + "」。"); return state; }
-  const key = map.id === "starter-outskirts" ? "e_starter_raccoon" : map.id === "millennium-lake" ? "e_lake_red_thief" : map.id === "japan-sea" ? "e_japan_sea_kappa" : map.id === "miasma-forest" ? "e_white_tiger_soul_eater" : null;
+  const key = map.id === "starter-outskirts" ? "e_starter_raccoon" : map.id === "millennium-lake" ? "e_lake_red_thief" : map.id === "japan-sea" ? "e_japan_sea_kappa" : map.id === "miasma-forest" ? "e_white_tiger_soul_eater" : map.id === "sumeru" ? "e_sumeru_training_thunder_beast" : null;
   return {
     ...state,
     battleMap: map.id,
