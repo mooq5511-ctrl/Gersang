@@ -1,4 +1,4 @@
-/** 隨機地域怪物：沿用已確認示範版的原創數值；舊怪物 ID 留在主資料庫供舊資料相容。 */
+﻿/** 隨機地域怪物：沿用已確認示範版的原創數值；舊怪物 ID 留在主資料庫供舊資料相容。 */
 export const ECOLOGY_MONSTERS={
  e_starter_raccoon:{name:'狸貓',level:1,hp:16,mp:0,atk:6,dex:10,xp:7,gold:7,drop:.06,loot:['boots']},
  e_starter_wako:{name:'倭寇',level:1,hp:16,mp:0,atk:10,dex:12,xp:7,gold:7,drop:.06,loot:['boots']},
@@ -71,7 +71,8 @@ export const ECOLOGY_MONSTERS={
  e_snow:{name:'經典雪女',level:65,hp:8000,mp:400,atk:190,dex:65,xp:1600,gold:1200,drop:.55,loot:['helmet','staff']},
  e_ghost:{name:'冥界餓鬼',level:72,hp:11000,mp:200,atk:230,dex:55,xp:2400,gold:1600,drop:.6,loot:['armor']},
  e_snake:{name:'冥界大蛇',level:80,hp:17000,mp:350,atk:290,dex:60,xp:3500,gold:2200,drop:.7,loot:['armor']},
- e_king:{name:'終極 BOSS 閻王',level:100,hp:25000,mp:500,atk:350,dex:70,xp:5000,gold:3000,drop:.8,loot:['armor']}
+ e_king:{name:'終極 BOSS 閻王',level:100,hp:25000,mp:500,atk:350,dex:70,xp:5000,gold:3000,drop:.8,loot:['armor']},
+ thug:{name:'打手',level:1,hp:150,mp:0,atk:8,dex:8,xp:20,gold:15,drop:.05,loot:['boots']}
 } as const;
 /** 新五關卡採單一專屬怪物；舊四區怪物仍保留在上方，讓舊存檔可以安全載入。 */
 export const ECOLOGY_POOLS={

@@ -1,4 +1,4 @@
-/** 副本狀態機：純函式，不建立計時器、不改動傳入物件，方便驗證每次結算。 */
+﻿/** 副本狀態機：純函式，不建立計時器、不改動傳入物件，方便驗證每次結算。 */
 import {ECOLOGY_MONSTERS,pickZoneMonster} from './monster-ecology.ts';
 import {goToInn,recoverAtInn} from './inn-engine.ts';
 import {formationTarget,rearDodge,type BattlePosition} from './formation-position.ts';
@@ -6,7 +6,6 @@ import {gersangWorldMap} from './gersang-world-map.ts';
 import {RealtimeBattleSystem} from './realtime-battle-engine.js';
 export const DUNGEONS = {
  ...ECOLOGY_MONSTERS,
- thug:{name:'打手',level:1,hp:150,mp:0,atk:8,dex:8,xp:20,gold:15,drop:.05,loot:['boots']},
  pirate:{name:'海賊',level:15,hp:800,mp:40,atk:35,dex:20,xp:150,gold:120,drop:.25,loot:['boots']},
  snowWoman:{name:'雪女',level:40,hp:4000,mp:200,atk:120,dex:45,xp:800,gold:600,drop:.55,loot:['helmet','staff']},
  abyssKing:{name:'閻王',level:80,hp:25000,mp:500,atk:350,dex:70,xp:5000,gold:3000,drop:.8,loot:['armor']},
