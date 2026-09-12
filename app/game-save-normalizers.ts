@@ -1,4 +1,4 @@
-import { emptyEquipment, heroPortrait } from "./game-hero-factory";
+﻿import { emptyEquipment, heroPortrait } from "./game-hero-factory";
 import { itemKind, type EquipmentSlot } from "./equipment-slots";
 import { gersangItemArt, gersangUnitArt, cuteEquipmentArt } from "./gersang-visuals";
 import { MYTHIC_ART_BY_NAME, THUNDER_FORGE_ITEMS } from "./mythic-forge";
@@ -11,7 +11,7 @@ export function sanitizeEquip(value: unknown): EquipmentSet {
 }
 
 export function applyGersangVisuals(state: GameState): GameState {
-  const map = (item: Equipment): Equipment => { const corrected = item.name === "T10 天照神杖" ? THUNDER_FORGE_ITEMS.amaterasuStaff : null; const source = corrected ? { ...item, ...corrected, magic: corrected.magic.map((affix) => ({ ...affix })), requiredLevel: 1 } : item; return { ...source, image: MYTHIC_ART_BY_NAME[source.name] || cuteEquipmentArt(source.name, gersangItemArt(itemKind(source.slot))) }; };
+  const map = (item: Equipment): Equipment => { const corrected = item.name === "T10 天照神杖" ? THUNDER_FORGE_ITEMS.amaterasuHelm : null; const source = corrected ? { ...item, ...corrected, magic: corrected.magic.map((affix) => ({ ...affix })), requiredLevel: 1 } : item; return { ...source, image: MYTHIC_ART_BY_NAME[source.name] || cuteEquipmentArt(source.name, gersangItemArt(itemKind(source.slot))) }; };
   const mapSet = (equip: EquipmentSet): EquipmentSet => { const mapped = emptyEquipment(); for (const slot of Object.keys(equip) as EquipmentSlot[]) { if (!equip[slot]) continue; const item = map(equip[slot]!); const target = (itemKind(item.slot) === "ring" ? slot : itemKind(item.slot)) as EquipmentSlot; mapped[target] = mapped[target] || item; } return mapped; };
   return { ...state, hero: { ...state.hero, image: heroPortrait(state.hero.nation, state.hero.gender), equip: mapSet(state.hero.equip) }, mercs: state.mercs.map((unit, index) => ({ ...unit, image: gersangUnitArt(unit.templateId, unit.name, index), equip: mapSet(unit.equip) })), restingMercs: state.restingMercs.map((unit, index) => ({ ...unit, image: gersangUnitArt(unit.templateId, unit.name, index), equip: mapSet(unit.equip) })), inventory: state.inventory.map(map) };
 }
