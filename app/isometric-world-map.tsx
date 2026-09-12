@@ -78,7 +78,7 @@ export function IsometricWorldMap({
   onEnter: (destination: Destination) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const gameRef = useRef<{ destroy: (removeCanvas?: boolean) => void } | null>(null);
+  const gameRef = useRef<{ destroy: (removeCanvas: boolean) => void } | null>(null);
   const enterRef = useRef(onEnter);
   const [status, setStatus] = useState("點擊地面移動");
   enterRef.current = onEnter;

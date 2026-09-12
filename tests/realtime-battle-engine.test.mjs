@@ -1,0 +1,83 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { RealtimeBattleSystem } from '../app/realtime-battle-engine.js';
+import { dungeonStep, freshDungeon } from '../app/dungeon-engine.ts';
+
+const unit = (id, side, row, col, overrides = {}) => ({
+  id, side, hp: 100, maxHp: 100, atk: 10, def: 0,
+  attackInterval: 1, position: { row, col }, ...overrides,
+});
+
+test('opening attacks resolve simultaneously even when both units die', () => {
+  const battle = new RealtimeBattleSystem(
+    [unit('hero', 'player', 0, 0, { hp: 10, atk: 10 })],
+    [unit('enemy', 'enemy', 0, 0, { hp: 10, atk: 10 })],
+  );
+  battle.startBattle();
+  assert.equal(battle.winner, 'draw');
+  assert.deepEqual(battle.events.filter(event => event.type === 'damage').map(event => event.actorId), ['hero', 'enemy']);
+  assert.equal(battle.events.filter(event => event.type === 'battle-end').length, 1);
+});
+
+test('survivors select a new living target after the first target falls', () => {
+  const battle = new RealtimeBattleSystem(
+    [unit('hero', 'player', 0, 0, { atk: 10 })],
+    [unit('front', 'enemy', 0, 0, { hp: 10, atk: 0 }), unit('back', 'enemy', 0, 1, { atk: 0 })],
+  );
+  battle.startBattle();
+  battle.update(1);
+  assert.deepEqual(battle.events.filter(event => event.type === 'attack' && event.actorId === 'hero').map(event => event.targetId), ['front', 'back']);
+});
+
+test('a long time slice matches smaller slices, including events and restored state', () => {
+  const make = () => new RealtimeBattleSystem(
+    [unit('hero', 'player', 0, 0, { hp: 200, maxHp: 200, atk: 17, attackInterval: 0.6 })],
+    [unit('enemy', 'enemy', 0, 0, { hp: 200, maxHp: 200, atk: 11, attackInterval: 0.8 })],
+  );
+  const whole = make(); whole.startBattle(); whole.update(2.4);
+  let sliced = make(); sliced.startBattle();
+  for (let index = 0; index < 24; index++) {
+    sliced = RealtimeBattleSystem.fromSnapshot(sliced.snapshot());
+    sliced.update(0.1);
+  }
+  assert.deepEqual(sliced.snapshot(), whole.snapshot());
+});
+
+test('finished battles do not emit another ending or reopen after repeated calls', () => {
+  const battle = new RealtimeBattleSystem(
+    [unit('hero', 'player', 0, 0, { atk: 100 })],
+    [unit('enemy', 'enemy', 0, 0, { hp: 10, atk: 0 })],
+  );
+  battle.startBattle();
+  const finished = battle.snapshot();
+  battle.startBattle(); battle.finishIfNeeded(); battle.update(10);
+  assert.deepEqual(battle.snapshot(), finished);
+  assert.equal(battle.events.filter(event => event.type === 'battle-end').length, 1);
+});
+
+test('dungeon awards one reward for a completed realtime boss battle', () => {
+  const hero = { hp: 1e8, maxHp: 1e8, mp: 0, maxMp: 0, str: 1, dex: 1,
+    mercenaryIntelligence: 0, attack: 1e9, defense: 0, staff: false };
+  const started = dungeonStep(freshDungeon(), hero, 'start', 1000, 'e_lake_gale_altur');
+  assert.equal(started.state.realtime.winner, 'player');
+  const settled = dungeonStep(started.state, hero, 'tick', 1050);
+  assert.equal(settled.reward.xp, 250000);
+  assert.equal(settled.state.status, 'respawning');
+  assert.equal(settled.state.serial, started.state.serial + 1);
+  const repeated = dungeonStep(settled.state, hero, 'tick', 1100);
+  assert.equal(repeated.reward, null);
+  assert.equal(repeated.state.serial, settled.state.serial);
+});
+
+test('tiger slow and bleed expire during realtime combat', () => {
+  const hero = { hp: 1e8, maxHp: 1e8, mp: 0, maxMp: 0, str: 1, dex: 1,
+    mercenaryIntelligence: 0, attack: 1, defense: 0, staff: false };
+  const started = dungeonStep(freshDungeon(), hero, 'start', 1000, 'e_white_tiger_fierce_tiger');
+  const slowed = { ...started.state, tigerSlowUntil: 1050, tigerMp: 0, tigerHowlAt: 99999,
+    tigerBleeds: { hero: { until: 1050, next: 1000 } },
+    realtime: { ...started.state.realtime, players: started.state.realtime.players.map(player => ({ ...player, attackInterval: 2.1 })) } };
+  const expired = dungeonStep(slowed, hero, 'tick', 1100);
+  assert.equal(expired.state.tigerSlowUntil, 0);
+  assert.deepEqual(expired.state.tigerBleeds, {});
+  assert.ok(Math.abs(expired.state.realtime.players[0].attackInterval - 1.5) < 1e-9);
+});

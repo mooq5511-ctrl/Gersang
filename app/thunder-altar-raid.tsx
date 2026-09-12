@@ -28,7 +28,7 @@ export function ThunderAltarRaid({ credit, power, materials, azureSetPieces, chi
   const [hp, setHp] = useState(0);
   const [maxHp, setMaxHp] = useState(1);
   const [seconds, setSeconds] = useState(240);
-  const [phaseSeconds, setPhaseSeconds] = useState(BOSSES[0].time);
+  const [phaseSeconds, setPhaseSeconds] = useState<number>(BOSSES[0].time);
   const [integrity, setIntegrity] = useState(100);
   const [burstReady, setBurstReady] = useState(true);
   const [message, setMessage] = useState("祭壇封印尚未解除。");
@@ -38,7 +38,7 @@ export function ThunderAltarRaid({ credit, power, materials, azureSetPieces, chi
   const bossHp = useMemo(() => BOSSES.map(boss => Math.floor(raidPower * boss.factor)), [raidPower]);
 
   const finishFailure = (passed: Phase) => {
-    const rewards = passed === 0 ? { "雷祭印記": 1, "小型雷之屬性石": 3 } : passed === 1 ? { "雷祭印記": 2, "小型雷之屬性石": 6, "喵兒的尾巴": 1 } : { "雷祭印記": 3, "小型雷之屬性石": 10, "喵兒的尾巴": 1, "雷電的箭矢": 1 };
+    const rewards: Record<string, number> = passed === 0 ? { "雷祭印記": 1, "小型雷之屬性石": 3 } : passed === 1 ? { "雷祭印記": 2, "小型雷之屬性石": 6, "喵兒的尾巴": 1 } : { "雷祭印記": 3, "小型雷之屬性石": 10, "喵兒的尾巴": 1, "雷電的箭矢": 1 };
     onRefund();
     onMaterials(gain(materials, rewards));
     setStatus("failed"); setMessage(`挑戰失敗，退回 25,000 信用值並取得參與獎勵。`);

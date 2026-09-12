@@ -3,7 +3,7 @@ import { VILLAGE_WEAPONS, buyVillageWeapon, exchangeAttackBonus, type VillageWea
 import { sellAllEquipmentFromInventory, sellEquipmentFromInventory } from "./equipment-market";
 import { addInventoryItem } from "./inventory-layout";
 import { THUNDER_FORGE_ITEMS, type ThunderForgeId } from "./mythic-forge";
-import { equipFromInventory, unequipToInventory, type EquipmentSlot } from "./equipment-slots";
+import { compatibleSlots, equipFromInventory, unequipToInventory, type EquipmentSlot } from "./equipment-slots";
 import { medicineCatalog } from "./game-config";
 import { officialGems } from "./v17-content";
 import { normalizeVitals, recoverVitals, vitalStats } from "./vitals-engine";
@@ -51,7 +51,7 @@ export function forgeThunderItemAction(state: GameState, id: ThunderForgeId, uid
   const recipe = THUNDER_FORGE_ITEMS[id];
   if (!Object.entries(recipe.needs).every(([name, amount]) => (state.materials[name] || 0) >= amount)) { notify("鍛造材料不足。"); return state; }
   const materials = { ...state.materials }; for (const [name, amount] of Object.entries(recipe.needs)) materials[name] -= amount;
-  const item: Equipment = { uid: uid(`t10-${id}`), name: recipe.name, slot: recipe.slot, atk: recipe.atk, def: recipe.def, hp: recipe.hp, image: recipe.image || itemImage(recipe.slot), enhance: 0, rarity: "傳說", magic: recipe.magic.map((affix) => ({ ...affix })), bonus: { ...recipe.bonus }, skill: recipe.skill, requiredLevel: recipe.set === "thunder" ? 150 : 1, source: "神仙谷・雷霆祭壇" };
+  const item: Equipment = { uid: uid(`t10-${id}`), name: recipe.name, slot: recipe.slot, atk: recipe.atk, def: recipe.def, hp: recipe.hp, image: recipe.image || itemImage(compatibleSlots(recipe.slot)[0]), enhance: 0, rarity: "傳說", magic: recipe.magic.map((affix) => ({ ...affix })), bonus: { ...recipe.bonus }, skill: recipe.skill, requiredLevel: recipe.set === "thunder" ? 150 : 1, source: "神仙谷・雷霆祭壇" };
   const pickup = addInventoryItem(state.inventory, item);
   if (pickup.error) { notify("背包已滿，無法完成鍛造。"); return state; }
   notify(`鍛造完成：${recipe.name}`);

@@ -68,7 +68,7 @@ export function resolveRoadEncounterAction(previous: GameState, deps: RoadEncoun
   if (sourceTarget) {
     const drops = sourceTarget.drops.filter((item) => item !== "古錢箱"), material = drops[Math.floor(Math.random() * drops.length)];
     materials[material] = (materials[material] || 0) + 1;
-    if (sourceTarget.mapId === "starter-outskirts") materials["古錢箱"] = (materials["古錢箱"] || 0) + 1;
+    if ('mapId' in sourceTarget && sourceTarget.mapId === "starter-outskirts") materials["古錢箱"] = (materials["古錢箱"] || 0) + 1;
     xpReward = sourceTarget.xp;
     logs = deps.addLog(logs, (banditEncounter ? "山賊掉落「" : "52怪物掉落「") + material + "」；經驗資料 " + deps.format(sourceTarget.xp) + "。");
   }

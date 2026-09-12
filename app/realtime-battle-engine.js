@@ -48,7 +48,7 @@ export class RealtimeBattleSystem {
 
   /** Starts the clock and resolves every living unit's opening attack as one simultaneous batch. */
   startBattle() {
-    if (this.running) return this.events;
+    if (this.running || this.winner) return this.events;
     if (!this.living('player').length || !this.living('enemy').length) return this.finishIfNeeded();
     this.running = true;
     this.log('battle-start', { playerCount: this.living('player').length, enemyCount: this.living('enemy').length });
@@ -206,6 +206,7 @@ export class RealtimeBattleSystem {
   }
 
   finishIfNeeded() {
+    if (this.winner) return true;
     const playersAlive = this.living('player').length;
     const enemiesAlive = this.living('enemy').length;
     if (playersAlive && enemiesAlive) return false;
