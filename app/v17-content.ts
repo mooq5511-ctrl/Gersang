@@ -1,5 +1,9 @@
+import { ECOLOGY_MONSTERS } from "./monster-ecology.ts";
+import { monsterDungeonKeys } from "./monster-ids.ts";
+
 export type SourceEnemy = {
   name: string;
+  dungeonId?: keyof typeof ECOLOGY_MONSTERS;
   mapId: "starter-outskirts" | "korea-field" | "millennium-lake" | "japan-sea" | "miasma-forest" | "sumeru";
   xp: number;
   hp?: number;
@@ -14,14 +18,14 @@ export type SourceEnemy = {
   skill?: string;
 };
 
-export const sourceEnemies: SourceEnemy[] = [
-  { name: "狸貓", mapId: "starter-outskirts", hp: 16, attack: 6, xp: 7, physical: 0, magic: 0, drops: ["[隨便的]咒術秘訣", "藍色精氣石", "舊斧頭", "下級精髓", "古錢箱"] },
-  { name: "倭寇", mapId: "starter-outskirts", hp: 16, attack: 10, xp: 7, physical: 0, magic: 0, drops: ["舊木劍", "舊六面木棒", "舊金剛爪刀", "下級精髓", "古錢箱"] },
-  { name: "鐵炮倭寇", mapId: "starter-outskirts", hp: 20, attack: 10, xp: 10, physical: 0, magic: 0, drops: ["[訓練用]咒術秘訣", "舊摩呼羅迦佛珠", "藍色精氣石", "下級精髓", "古錢箱"] },
-  { name: "山賊", mapId: "starter-outskirts", hp: 20, attack: 8, xp: 8, physical: 0, magic: 0, drops: ["下級精髓", "桂皮", "[訓練用]咒術秘訣", "舊短弓", "古錢箱"] },
-  { name: "海賊", mapId: "starter-outskirts", hp: 140, attack: 49, xp: 40, physical: 0, magic: 0, drops: ["海鮮", "牛黃", "舊三叉戟", "下級精髓", "古錢箱"] },
-  { name: "鐵鉤海賊", mapId: "starter-outskirts", hp: 180, attack: 50, xp: 55, physical: 0, magic: 0, drops: ["熟地黃", "舊貓娃娃", "舊蓮花佛鐘", "下級精髓", "古錢箱"] },
-  { name: "海賊王", mapId: "starter-outskirts", grade: 9, hp: 8000, mp: 400, attack: 190, xp: 30000, physical: 290, magic: 290, drops: ["古錢箱", "幽冥石", "[新手]兌換銅錢"], boss: true },
+const sourceEnemyDefinitions: Array<Omit<SourceEnemy, "xp"> & { xp?: number }> = [
+  { name: "狸貓", mapId: "starter-outskirts", physical: 0, magic: 0, drops: ["[隨便的]咒術秘訣", "藍色精氣石", "舊斧頭", "下級精髓", "古錢箱"] },
+  { name: "倭寇", mapId: "starter-outskirts", physical: 0, magic: 0, drops: ["舊木劍", "舊六面木棒", "舊金剛爪刀", "下級精髓", "古錢箱"] },
+  { name: "鐵炮倭寇", mapId: "starter-outskirts", physical: 0, magic: 0, drops: ["[訓練用]咒術秘訣", "舊摩呼羅迦佛珠", "藍色精氣石", "下級精髓", "古錢箱"] },
+  { name: "山賊", mapId: "starter-outskirts", physical: 0, magic: 0, drops: ["下級精髓", "桂皮", "[訓練用]咒術秘訣", "舊短弓", "古錢箱"] },
+  { name: "海賊", mapId: "starter-outskirts", physical: 0, magic: 0, drops: ["海鮮", "牛黃", "舊三叉戟", "下級精髓", "古錢箱"] },
+  { name: "鐵鉤海賊", mapId: "starter-outskirts", physical: 0, magic: 0, drops: ["熟地黃", "舊貓娃娃", "舊蓮花佛鐘", "下級精髓", "古錢箱"] },
+  { name: "海賊王", mapId: "starter-outskirts", grade: 9, physical: 290, magic: 290, drops: ["古錢箱", "幽冥石", "[新手]兌換銅錢"], boss: true },
   { name: "鹿", mapId: "korea-field", xp: 6, physical: 0, magic: 0, drops: ["甘草", "鹿茸", "下級精髓"] },
   { name: "小山賊", mapId: "korea-field", xp: 7, physical: 0, magic: 0, drops: ["乾馬肉", "舊念珠", "下級精髓"] },
   { name: "弓手山賊", mapId: "korea-field", xp: 8, physical: 0, magic: 0, drops: ["藍色精氣石", "白銀咒術秘訣", "下級精髓"] },
@@ -30,44 +34,60 @@ export const sourceEnemies: SourceEnemy[] = [
   { name: "老虎", mapId: "korea-field", xp: 18, physical: 0, magic: 0, drops: ["虎皮", "虎骨"] },
   { name: "夜叉", mapId: "korea-field", xp: 45, physical: 10, magic: 10, drops: ["夜叉角", "青色精氣石"] },
   { name: "飛虎", mapId: "korea-field", xp: 9500, physical: 70, magic: 70, drops: ["高級方天戟", "見月劍", "上級精髓"], boss: true },
-  { name: "赤賊", mapId: "millennium-lake", grade: 1, hp: 80, mp: 100, attack: 8, xp: 25, physical: 0, magic: 0, drops: ["大黃", "骨針", "青色精氣石", "下級精髓"] },
-  { name: "巫女", mapId: "millennium-lake", grade: 2, hp: 800, mp: 800, attack: 130, xp: 375, physical: 30, magic: 80, drops: ["千年石", "銀松草", "舊堅固密號符", "中級精髓"] },
-  { name: "司令武女", mapId: "millennium-lake", grade: 2, hp: 1400, mp: 1200, attack: 135, xp: 550, physical: 50, magic: 80, drops: ["赤色精氣石", "紫雲妃玉", "舊白虎投石索", "中級精髓"], skill: "煉獄術" },
-  { name: "詭異的小販", mapId: "millennium-lake", grade: 10, hp: 1200000, mp: 20000, attack: 30, xp: 0, physical: 280, magic: 280, drops: [] },
-  { name: "詭異的獨角鬼(火)", mapId: "millennium-lake", grade: 10, element: "火(20)", hp: 2800000, mp: 40000, attack: 30, xp: 0, physical: 380, magic: 380, drops: ["獨角鬼的紅色袋子", "文若寶劍", "火之印章", "獨角鬼的黃玉戒指"] },
-  { name: "詭異的獨角鬼(水)", mapId: "millennium-lake", grade: 10, element: "水(20)", hp: 2800000, mp: 40000, attack: 30, xp: 0, physical: 380, magic: 380, drops: ["獨角鬼的藍色袋子", "龍頭火繩槍", "水之印章", "獨角鬼的黃玉戒指"] },
-  { name: "詭異的獨角鬼(雷)", mapId: "millennium-lake", grade: 10, element: "雷(20)", hp: 2800000, mp: 40000, attack: 30, xp: 0, physical: 380, magic: 380, drops: ["獨角鬼的黃色袋子", "笞刑斧", "雷之印章", "獨角鬼的黃玉戒指"] },
-  { name: "詭異的獨角鬼(風)", mapId: "millennium-lake", grade: 10, element: "風(20)", hp: 2800000, mp: 40000, attack: 30, xp: 0, physical: 380, magic: 380, drops: ["獨角鬼的綠色袋子", "大將弓", "風之印章", "獨角鬼的黃玉戒指"] },
-  { name: "阿魯塔", mapId: "millennium-lake", grade: 4, hp: 6000, mp: 2000, attack: 280, xp: 3300, physical: 170, magic: 180, drops: ["神木種子", "舊龍頭火繩槍", "[龍麟做成的]咒術秘訣", "赤色精氣石", "中級精髓"], skill: "風刃術" },
-  { name: "死靈武女(強)", mapId: "millennium-lake", grade: 9, hp: 50000, mp: 10000, attack: 1100, xp: 100000, physical: 280, magic: 280, drops: ["雙刃弓", "古代神獸之精髓", "小型憤怒精髓"] },
-  { name: "巫女(強)", mapId: "millennium-lake", grade: 9, hp: 40000, mp: 10000, attack: 500, xp: 90000, physical: 275, magic: 280, drops: ["鈴鐺刀", "古代神獸之精髓", "小型憤怒精髓"] },
-  { name: "神漢男巫", mapId: "millennium-lake", grade: 9, element: "風(20)", hp: 200000, mp: 10000, attack: 150, xp: 50000, physical: 265, magic: 260, drops: ["楓葉石", "神漢男巫的帽子", "被封印的力量碎片", "紅摺扇", "[天璣]咒術秘訣"] },
-  { name: "邪靈巫師", mapId: "millennium-lake", grade: 9, element: "風(20)", hp: 480000, mp: 20000, attack: 300, xp: 100000, physical: 275, magic: 280, drops: ["楓葉石", "邪靈巫師的頭巾", "深淵的精髓", "雙刃弓", "[天璣]咒術秘訣"] },
-  { name: "赤賊頭目", mapId: "millennium-lake", grade: 10, element: "風(20)", hp: 560000, mp: 10000, attack: 800, xp: 120000, physical: 285, magic: 285, drops: ["楓葉石", "赤賊頭目的矛", "小型風之屬性石", "蛇矛", "[天璣]咒術秘訣"] },
-  { name: "狂風阿魯塔", mapId: "millennium-lake", grade: 10, element: "風(20)", hp: 1200000, mp: 20000, attack: 1000, xp: 250000, physical: 295, magic: 300, drops: ["天照的手套", "狂風花", "楓葉石", "古代神獸之精髓", "小型風之屬性石", "[天璣]咒術秘訣", "[新手]兌換銅錢"], skill: "白虎盾／風碎", boss: true },
-  { name: "河童", mapId: "japan-sea", grade: 1, hp: 80, mp: 0, attack: 10, xp: 40, physical: 0, magic: 0, drops: ["硬殼", "鹽醃鯖魚", "舊短劍", "下級精髓"] },
-  { name: "蝙蝠", mapId: "japan-sea", grade: 1, hp: 80, mp: 0, attack: 7, xp: 55, physical: 0, magic: 30, drops: ["雜肉", "舊長銃砲", "舊白羽扇", "下級精髓"] },
-  { name: "海蟹", mapId: "japan-sea", grade: 1, hp: 320, mp: 40, attack: 20, xp: 95, physical: 20, magic: 0, drops: ["蟹醬", "藍色精氣石", "[龍麟做成的]咒術秘訣", "下級精髓"] },
-  { name: "王水蛭", mapId: "japan-sea", grade: 1, hp: 230, mp: 0, attack: 19, xp: 100, physical: 20, magic: 20, drops: ["正宗清酒", "舊銀製投石索", "舊青刃斧", "下級精髓"] },
-  { name: "海星", mapId: "japan-sea", grade: 10, hp: 65000, mp: 8000, attack: 600, xp: 18000, physical: 240, magic: 230, drops: ["飛摺扇", "華麗的珊瑚", "破裂的令牌", "海星碎片", "生命的精髓"] },
-  { name: "海星(強)", mapId: "japan-sea", grade: 9, hp: 260000, mp: 10000, attack: 800, xp: 55000, physical: 275, magic: 270, drops: ["飛摺扇", "華麗的珊瑚", "破裂的令牌", "海星碎片", "生命的精髓"] },
-  { name: "黃金海星", mapId: "japan-sea", grade: 10, element: "水(20)", hp: 1000000, mp: 20000, attack: 1500, xp: 200000, physical: 300, magic: 295, drops: ["黃帝的腰帶", "結冰石", "黃金海星的殼", "海星碎片", "[天璇]咒術秘訣", "小型憤怒精髓"], skill: "恢復術／火焰燎原／詛咒" },
-  { name: "食魂獸", mapId: "miasma-forest", grade: 8, hp: 50000, mp: 400, attack: 700, xp: 15000, physical: 230, magic: 210, drops: ["[風雲的]咒術秘訣", "食魂獸門牙", "上級精髓", "結晶碎片(風)", "小型憤怒精髓"] },
-  { name: "黑色商團飼育師", mapId: "miasma-forest", grade: 7, hp: 50000, mp: 2000, attack: 500, xp: 16000, physical: 220, magic: 240, drops: ["飛虎頭盔", "撕裂的書信", "生命的精髓", "結晶碎片(風)", "小型憤怒精髓"] },
-  { name: "人魂蜘蛛", mapId: "miasma-forest", grade: 8, hp: 44000, mp: 12000, attack: 600, xp: 16000, physical: 230, magic: 220, drops: ["金剛石指環", "粗糙的頭髮", "生命的精髓", "結晶碎片(風)", "小型憤怒精髓"] },
-  { name: "狂虎", mapId: "miasma-forest", grade: 10, hp: 2000000, mp: 40000, attack: 3000, xp: 40000, physical: 240, magic: 250, drops: ["神獸之根源(白虎)", "狂虎之爪", "狂虎鬍鬚", "白虎的罈子", "小型憤怒精髓"], boss: true },
-  { name: "訓練的雷獸", mapId: "sumeru", grade: 7, hp: 40000, mp: 6000, attack: 1435, xp: 12000, physical: 220, magic: 220, drops: ["幻獸之魂", "赤色精氣石", "上級精髓", "小型憤怒精髓"] },
-  { name: "訓練的瘟神", mapId: "sumeru", grade: 7, hp: 40000, mp: 6000, attack: 1275, xp: 12000, physical: 220, magic: 225, drops: ["幻獸之魂", "赤色精氣石", "上級精髓", "小型憤怒精髓"] },
-  { name: "訓練的虎鶴", mapId: "sumeru", grade: 7, hp: 40000, mp: 6000, attack: 820, xp: 12000, physical: 225, magic: 220, drops: ["幻獸之魂", "赤色精氣石", "上級精髓", "小型憤怒精髓"] },
-  { name: "青臉夜叉金剛", mapId: "sumeru", grade: 9, hp: 190000, mp: 10000, attack: 2412, xp: 43000, physical: 250, magic: 265, drops: ["須彌石", "夜叉金剛之角", "上級精髓", "小型憤怒精髓"] },
-  { name: "辟寒金剛", mapId: "sumeru", grade: 9, hp: 260000, mp: 10000, attack: 3625, xp: 52000, physical: 270, magic: 270, drops: ["須彌石", "金剛碎片", "上級精髓", "小型憤怒精髓"] },
-  { name: "紫賢金剛", mapId: "sumeru", grade: 9, hp: 280000, mp: 10000, attack: 4850, xp: 62000, physical: 280, magic: 280, drops: ["須彌石", "紫賢寶珠", "上級精髓", "小型憤怒精髓"] },
-  { name: "強力棍兵", mapId: "sumeru", grade: 9, hp: 400000, mp: 20000, attack: 5950, xp: 85000, physical: 285, magic: 285, drops: ["須彌石", "鬼煞之棍", "上級精髓", "小型憤怒精髓"] },
-  { name: "神獸玄武", mapId: "sumeru", grade: 10, hp: 400000, mp: 20000, attack: 5550, xp: 70000, physical: 265, magic: 275, drops: ["神獸之魂(玄武)", "玄武甲片", "須彌石", "小型憤怒精髓"] },
-  { name: "神獸白虎", mapId: "sumeru", grade: 10, hp: 4000000, mp: 10000, attack: 6500, xp: 90000, physical: 280, magic: 285, drops: ["神獸之魂(白虎)", "白虎之牙", "須彌石", "小型憤怒精髓"] },
-  { name: "多聞天王", mapId: "sumeru", grade: 10, hp: 800000, mp: 20000, attack: 7150, xp: 175000, physical: 298, magic: 295, drops: ["多聞天王的冠飾", "神獸之魂(玄武)", "須彌石", "小型憤怒精髓"], boss: true },
-  { name: "廣目天王", mapId: "sumeru", grade: 10, hp: 10000000, mp: 20000, attack: 10125, xp: 175000, physical: 295, magic: 299, drops: ["廣目天王的寶珠", "神獸之魂(白虎)", "須彌石", "小型憤怒精髓"], boss: true },
+  { name: "赤賊", mapId: "millennium-lake", grade: 1, physical: 0, magic: 0, drops: ["大黃", "骨針", "青色精氣石", "下級精髓"] },
+  { name: "巫女", mapId: "millennium-lake", grade: 2, physical: 30, magic: 80, drops: ["千年石", "銀松草", "舊堅固密號符", "中級精髓"] },
+  { name: "司令武女", mapId: "millennium-lake", grade: 2, physical: 50, magic: 80, drops: ["赤色精氣石", "紫雲妃玉", "舊白虎投石索", "中級精髓"], skill: "煉獄術" },
+  { name: "詭異的小販", mapId: "millennium-lake", grade: 10, physical: 280, magic: 280, drops: [] },
+  { name: "詭異的獨角鬼(火)", mapId: "millennium-lake", grade: 10, element: "火(20)", physical: 380, magic: 380, drops: ["獨角鬼的紅色袋子", "文若寶劍", "火之印章", "獨角鬼的黃玉戒指"] },
+  { name: "詭異的獨角鬼(水)", mapId: "millennium-lake", grade: 10, element: "水(20)", physical: 380, magic: 380, drops: ["獨角鬼的藍色袋子", "龍頭火繩槍", "水之印章", "獨角鬼的黃玉戒指"] },
+  { name: "詭異的獨角鬼(雷)", mapId: "millennium-lake", grade: 10, element: "雷(20)", physical: 380, magic: 380, drops: ["獨角鬼的黃色袋子", "笞刑斧", "雷之印章", "獨角鬼的黃玉戒指"] },
+  { name: "詭異的獨角鬼(風)", mapId: "millennium-lake", grade: 10, element: "風(20)", physical: 380, magic: 380, drops: ["獨角鬼的綠色袋子", "大將弓", "風之印章", "獨角鬼的黃玉戒指"] },
+  { name: "阿魯塔", mapId: "millennium-lake", grade: 4, physical: 170, magic: 180, drops: ["神木種子", "舊龍頭火繩槍", "[龍麟做成的]咒術秘訣", "赤色精氣石", "中級精髓"], skill: "風刃術" },
+  { name: "死靈武女(強)", mapId: "millennium-lake", grade: 9, physical: 280, magic: 280, drops: ["雙刃弓", "古代神獸之精髓", "小型憤怒精髓"] },
+  { name: "巫女(強)", mapId: "millennium-lake", grade: 9, physical: 275, magic: 280, drops: ["鈴鐺刀", "古代神獸之精髓", "小型憤怒精髓"] },
+  { name: "神漢男巫", mapId: "millennium-lake", grade: 9, element: "風(20)", physical: 265, magic: 260, drops: ["楓葉石", "神漢男巫的帽子", "被封印的力量碎片", "紅摺扇", "[天璣]咒術秘訣"] },
+  { name: "邪靈巫師", mapId: "millennium-lake", grade: 9, element: "風(20)", physical: 275, magic: 280, drops: ["楓葉石", "邪靈巫師的頭巾", "深淵的精髓", "雙刃弓", "[天璣]咒術秘訣"] },
+  { name: "赤賊頭目", mapId: "millennium-lake", grade: 10, element: "風(20)", physical: 285, magic: 285, drops: ["楓葉石", "赤賊頭目的矛", "小型風之屬性石", "蛇矛", "[天璣]咒術秘訣"] },
+  { name: "狂風阿魯塔", mapId: "millennium-lake", grade: 10, element: "風(20)", physical: 295, magic: 300, drops: ["天照的手套", "狂風花", "楓葉石", "古代神獸之精髓", "小型風之屬性石", "[天璣]咒術秘訣", "[新手]兌換銅錢"], skill: "白虎盾／風碎", boss: true },
+  { name: "河童", mapId: "japan-sea", grade: 1, physical: 0, magic: 0, drops: ["硬殼", "鹽醃鯖魚", "舊短劍", "下級精髓"] },
+  { name: "蝙蝠", mapId: "japan-sea", grade: 1, physical: 0, magic: 30, drops: ["雜肉", "舊長銃砲", "舊白羽扇", "下級精髓"] },
+  { name: "海蟹", mapId: "japan-sea", grade: 1, physical: 20, magic: 0, drops: ["蟹醬", "藍色精氣石", "[龍麟做成的]咒術秘訣", "下級精髓"] },
+  { name: "王水蛭", mapId: "japan-sea", grade: 1, physical: 20, magic: 20, drops: ["正宗清酒", "舊銀製投石索", "舊青刃斧", "下級精髓"] },
+  { name: "海星", mapId: "japan-sea", grade: 10, physical: 240, magic: 230, drops: ["飛摺扇", "華麗的珊瑚", "破裂的令牌", "海星碎片", "生命的精髓"] },
+  { name: "海星(強)", mapId: "japan-sea", grade: 9, physical: 275, magic: 270, drops: ["飛摺扇", "華麗的珊瑚", "破裂的令牌", "海星碎片", "生命的精髓"] },
+  { name: "黃金海星", mapId: "japan-sea", grade: 10, element: "水(20)", physical: 300, magic: 295, drops: ["黃帝的腰帶", "結冰石", "黃金海星的殼", "海星碎片", "[天璇]咒術秘訣", "小型憤怒精髓"], skill: "恢復術／火焰燎原／詛咒" },
+  { name: "食魂獸", mapId: "miasma-forest", grade: 8, physical: 230, magic: 210, drops: ["[風雲的]咒術秘訣", "食魂獸門牙", "上級精髓", "結晶碎片(風)", "小型憤怒精髓"] },
+  { name: "黑色商團飼育師", mapId: "miasma-forest", grade: 7, physical: 220, magic: 240, drops: ["飛虎頭盔", "撕裂的書信", "生命的精髓", "結晶碎片(風)", "小型憤怒精髓"] },
+  { name: "人魂蜘蛛", mapId: "miasma-forest", grade: 8, physical: 230, magic: 220, drops: ["金剛石指環", "粗糙的頭髮", "生命的精髓", "結晶碎片(風)", "小型憤怒精髓"] },
+  { name: "狂虎", mapId: "miasma-forest", grade: 10, physical: 240, magic: 250, drops: ["神獸之根源(白虎)", "狂虎之爪", "狂虎鬍鬚", "白虎的罈子", "小型憤怒精髓"], boss: true },
+  { name: "訓練的雷獸", mapId: "sumeru", grade: 7, physical: 220, magic: 220, drops: ["幻獸之魂", "赤色精氣石", "上級精髓", "小型憤怒精髓"] },
+  { name: "訓練的瘟神", mapId: "sumeru", grade: 7, physical: 220, magic: 225, drops: ["幻獸之魂", "赤色精氣石", "上級精髓", "小型憤怒精髓"] },
+  { name: "訓練的虎鶴", mapId: "sumeru", grade: 7, physical: 225, magic: 220, drops: ["幻獸之魂", "赤色精氣石", "上級精髓", "小型憤怒精髓"] },
+  { name: "青臉夜叉金剛", mapId: "sumeru", grade: 9, physical: 250, magic: 265, drops: ["須彌石", "夜叉金剛之角", "上級精髓", "小型憤怒精髓"] },
+  { name: "辟寒金剛", mapId: "sumeru", grade: 9, physical: 270, magic: 270, drops: ["須彌石", "金剛碎片", "上級精髓", "小型憤怒精髓"] },
+  { name: "紫賢金剛", mapId: "sumeru", grade: 9, physical: 280, magic: 280, drops: ["須彌石", "紫賢寶珠", "上級精髓", "小型憤怒精髓"] },
+  { name: "強力棍兵", mapId: "sumeru", grade: 9, physical: 285, magic: 285, drops: ["須彌石", "鬼煞之棍", "上級精髓", "小型憤怒精髓"] },
+  { name: "神獸玄武", mapId: "sumeru", grade: 10, physical: 265, magic: 275, drops: ["神獸之魂(玄武)", "玄武甲片", "須彌石", "小型憤怒精髓"] },
+  { name: "神獸白虎", mapId: "sumeru", grade: 10, physical: 280, magic: 285, drops: ["神獸之魂(白虎)", "白虎之牙", "須彌石", "小型憤怒精髓"] },
+  { name: "多聞天王", mapId: "sumeru", grade: 10, physical: 298, magic: 295, drops: ["多聞天王的冠飾", "神獸之魂(玄武)", "須彌石", "小型憤怒精髓"], boss: true },
+  { name: "廣目天王", mapId: "sumeru", grade: 10, physical: 295, magic: 299, drops: ["廣目天王的寶珠", "神獸之魂(白虎)", "須彌石", "小型憤怒精髓"], boss: true },
 ];
+
+// Combat HP, MP, attack and XP come from the stable dungeon ID; map drops stay here.
+export const sourceEnemies: SourceEnemy[] = sourceEnemyDefinitions.map((enemy) => {
+  const id = monsterDungeonKeys[enemy.name as keyof typeof monsterDungeonKeys];
+  const combat = id ? ECOLOGY_MONSTERS[id] : undefined;
+  return { ...enemy, xp: combat?.xp ?? enemy.xp ?? 0, ...(combat ? { dungeonId: id, hp: combat.hp, mp: combat.mp, attack: combat.atk } : {}) };
+});
+
+const sourceEnemiesByDungeonKey = new Map<string, SourceEnemy>();
+for (const enemy of sourceEnemies) {
+  if (enemy.dungeonId) sourceEnemiesByDungeonKey.set(enemy.dungeonId, enemy);
+}
+
+export function sourceEnemyForDungeonKey(key: string): SourceEnemy | undefined {
+  return sourceEnemiesByDungeonKey.get(key);
+}
 
 export function sourceEnemyForMap(mapId: string, stage: number, isBoss: boolean, preferredName?: string) {
   const candidates = sourceEnemies.filter((enemy) => enemy.mapId === mapId && Boolean(enemy.boss) === isBoss);

@@ -4,7 +4,7 @@ import { ACTIVE_MERCENARY_LIMIT } from "./guild-migration";
 import { heroTotalAttributes } from "./hero-rules";
 import { addInventoryItem } from "./inventory-layout";
 import { battleMaps } from "./reference-data";
-import { sourceEnemies } from "./v17-content";
+import { sourceEnemyForDungeonKey } from "./v17-content";
 import { combatStats, vitalStats } from "./vitals-engine";
 import type { Equipment, GameState, Hero, Unit } from "./game-state";
 
@@ -69,7 +69,7 @@ export function runDungeonAction(
   if (!result.reward) return next;
 
   const reward = result.reward, battleMembers = 1 + deployedMercs.length, shareXp = Math.floor(reward.xp / Math.max(1, battleMembers));
-  const sourceEnemy = sourceEnemies.find((enemy) => enemy.mapId === previous.battleMap && enemy.name === DUNGEONS[result.state.key].name);
+  const sourceEnemy = sourceEnemyForDungeonKey(result.state.key);
   const sourceDrop = sourceEnemy?.drops || [], specialCoinDrop = sourceDrop.includes("[新手]兌換銅錢"), materialDrops = sourceDrop.filter((item) => item !== "[新手]兌換銅錢" && item !== "古錢箱");
   const selectedDrop = materialDrops.length ? materialDrops[Math.min(materialDrops.length - 1, Math.floor(Math.max(0, Math.min(.999999, choice)) * materialDrops.length))] : null;
   const ancientCoinBox = sourceEnemy?.mapId === "starter-outskirts" ? ["古錢箱"] : [];

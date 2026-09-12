@@ -1,17 +1,13 @@
-﻿/** 副本狀態機：純函式，不建立計時器、不改動傳入物件，方便驗證每次結算。 */
-import {ECOLOGY_MONSTERS,pickZoneMonster} from './monster-ecology.ts';
+/** 副本狀態機：純函式，不建立計時器、不改動傳入物件，方便驗證每次結算。 */
+import {ECOLOGY_MONSTERS,LEGACY_DUNGEON_MONSTERS,pickZoneMonster} from './monster-ecology.ts';
 import {goToInn,recoverAtInn} from './inn-engine.ts';
-import {formationTarget,rearDodge,type BattlePosition} from './formation-position.ts';
+import {type BattlePosition} from './formation-position.ts';
 import {gersangWorldMap} from './gersang-world-map.ts';
 import {RealtimeBattleSystem} from './realtime-battle-engine.js';
+import {mitigatedDamage} from './combat-damage.js';
 export const DUNGEONS = {
  ...ECOLOGY_MONSTERS,
- pirate:{name:'海賊',level:15,hp:800,mp:40,atk:35,dex:20,xp:150,gold:120,drop:.25,loot:['boots']},
- snowWoman:{name:'雪女',level:40,hp:4000,mp:200,atk:120,dex:45,xp:800,gold:600,drop:.55,loot:['helmet','staff']},
- abyssKing:{name:'閻王',level:80,hp:25000,mp:500,atk:350,dex:70,xp:5000,gold:3000,drop:.8,loot:['armor']},
- wolf:{name:'幽冥狼',level:10,hp:300,mp:0,atk:15,dex:12,xp:100,gold:80,drop:.2,loot:['staff','armor','helmet','boots']},
- snake:{name:'冥界大蛇',level:40,hp:2500,mp:100,atk:65,dex:30,xp:500,gold:350,drop:.55,loot:['helmet','helmet','boots','boots','staff','armor']},
- king:{name:'閻王',level:80,hp:15000,mp:400,atk:220,dex:60,xp:2400,gold:2000,drop:.9,loot:['armor','armor','staff','staff','helmet','boots']}
+ ...LEGACY_DUNGEON_MONSTERS,
 } as const;
 export type DungeonKey=keyof typeof DUNGEONS;
 /** 劇情首領以單體戰鬥呈現，其餘遭遇維持 12 格部隊。 */
@@ -44,9 +40,8 @@ export type DungeonHero={hp:number;mp:number;maxHp:number;maxMp:number;str:numbe
 export type DungeonPartyMember={uid:string;name:string;hp:number;maxHp:number;mp?:number;maxMp?:number;position:BattlePosition;defense?:number;attack?:number;attackInterval?:number};
 /** 依攻擊力與防禦力計算實際傷害，並加入 90%～110% 的自然浮動。 */
 export function calculateDamage(attacker:{atk:number},defender:{def:number},random=Math.random){
- const damageMultiplier=100/(100+Math.max(0,defender.def||0));
  const randomFactor=0.9+random()*0.2;
- return Math.max(1,Math.round(Math.max(0,attacker.atk||0)*damageMultiplier*randomFactor));
+ return mitigatedDamage(attacker.atk,defender.def,randomFactor);
 }
 export const freshDungeon=():DungeonState=>({status:'idle',phase:'接敵',distance:100,damageCursor:0,zone:'hanyang',key:'e_raccoon',enemyHp:DUNGEONS.e_raccoon.hp,normalAt:0,skillAt:0,spawnAt:0,innHealAt:0,enemyShieldAt:0,enemyShatterAt:0,enemyShieldUntil:0,stamp:0,logs:[],serial:0,events:[],eventSerial:0,spawnSerial:0});
 export const dungeonBusy=(state?:DungeonState)=>!!state&&state.status!=='idle';
@@ -102,24 +97,6 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   const uniqueLoot=[...new Set(e.loot)],rareRate=.0001,rareIndex=Math.floor(roll/rareRate);
   reward={xp:e.xp,gold:0,loot:rareIndex<uniqueLoot.length?uniqueLoot[rareIndex]:null,materials};
   log('成功擊敗 '+e.name+'！獲得 '+e.xp+' 經驗。');if(materials.length)log('🎁 噴寶：獲得【'+materials.join('】、【')+'】！')};
- const hit=(skill=false)=>{
-  if(state.status!=='fighting'||allDown())return;
-  if(state.phase!=='交戰'){state.phase='交戰';state.distance=0;log('部隊向前推進，遭遇敵方【'+enemy().name+'大軍】！')}
-  if(skill){if(mp<40||now<state.skillAt)return;mp-=40;state.skillAt=now+3000}
-  else{if(now<state.normalAt)return;state.normalAt=now+1000}
-  // 蛇龍出水：固定基礎傷害 5,000，再加上全體已僱用傭兵智力總和 × 10；不受一般 ATK 或武器倍率影響。
-  const attack=state.cursedUid==='hero'&&now<(state.curseUntil||0)?hero.attack*.75:hero.attack;
-  const gaze=!skill&&hero.amaterasuGaze&&choice<.03;
-  let damage=Math.max(1,Math.floor(skill?5000+hero.mercenaryIntelligence*10:hero.str*2+attack));
-  if(gaze){damage*=10;state.fearUntil=now+5000;log('☀️【天照大神的凝視】觸發！造成 10 倍暴擊，'+enemy().name+' 陷入恐懼：防禦 -20%，持續 5 秒。')}
-  else if(state.fearUntil&&now<state.fearUntil)damage=Math.floor(damage*1.2);
-  if(state.enemyShieldUntil&&now<state.enemyShieldUntil)damage=Math.max(1,Math.floor(damage*.7));
-  const critical=skill||gaze||(!skill&&choice<.2);state.enemyHp=Math.max(0,state.enemyHp-damage);event('hero',damage,skill,!skill&&critical);const front=members.find(member=>member.hp>0&&member.position==='前排'),rear=members.find(member=>member.hp>0&&member.position==='後排');log((critical?'💥 暴擊！ ':'')+(skill?'主角施放了 [蛇龍出水]':'商隊協同攻擊')+'，造成 '+damage+' 點傷害！');if(front)log('⚔️ [前排] '+front.name+' 突入敵陣，輸出加成 20%！');else if(rear)log('🏹 [後排] '+rear.name+' 在安全後方持續輸出！');
-  if(!state.enemyHp)victory();
- };
- const counter=()=>{if(state.status!=='fighting'||state.phase!=='交戰')return;const target=formationTarget(members,state.damageCursor||0);if(!target)return recover();state.damageCursor=(state.damageCursor||0)+1;if(rearDodge(target.position,retaliationRoll)){log('🏹 [後排] '+target.name+' 閃過 '+enemy().name+' 的攻擊！');return}const curseReduction=target.uid===state.cursedUid&&now<(state.curseUntil||0)?.7:1,damage=state.key==='e_lake_gale_altur'?enemy().atk:calculateDamage({atk:enemy().atk},{def:Math.floor((target.defense||0)*curseReduction)},()=>retaliationRoll);target.hp=Math.max(0,target.hp-damage);syncHero();event('enemy',damage);log('⚔️ ['+target.position+'] '+target.name+' 正在抵擋傷害，受到 '+damage+' 點傷害！');if(allDown())recover()};
- const castGaleSkills=()=>{if(state.key!=='e_lake_gale_altur'||state.status!=='fighting')return;if(now>=(state.enemyShieldAt||0)){state.enemyShieldUntil=now+3000;state.enemyShieldAt=now+60000;log('🛡️ 狂風阿魯塔施放【白虎盾】，自身防禦提升 30%，持續 3 秒。')}if(now>=(state.enemyShatterAt||0)){const target=formationTarget(members,state.damageCursor||0);state.enemyShatterAt=now+30000;if(target){target.hp=Math.max(0,target.hp-2000);event('enemy',2000);log('🌪️ 狂風阿魯塔施放【風碎】，無視防禦造成 2000 點傷害！');if(allDown())recover()}}};
- const castStarfishSkills=()=>{if(state.key!=='e_japan_sea_golden_starfish'||state.status!=='fighting')return;const e=enemy();if(now>=(state.enemyRegenUntil||0)){state.enemyRegenUntil=now+60000;state.enemyHp=Math.min(e.hp,state.enemyHp+Math.floor(e.atk*1.5));log('✨ 黃金海星施放【恢復術】，恢復 '+Math.floor(e.atk*1.5)+' 點生命，並獲得持續療癒 3 秒。')}if(now<(state.enemyRegenUntil||0)&&now%1000<100){state.enemyHp=Math.min(e.hp,state.enemyHp+Math.floor(e.hp*.005))}if(now>=(state.enemyFlameAt||0)&&Math.random()<.3){state.enemyFlameAt=now+1000;state.burnStacks=Math.min(3,(state.burnStacks||0)+1);state.burnUntil=now+6000;for(const target of members){if(target.hp<=0)continue;const damage=calculateDamage({atk:Math.floor(e.atk*1.8)},{def:target.defense||0},()=>retaliationRoll);target.hp=Math.max(0,target.hp-damage);event('enemy',damage)}log('🔥 黃金海星被動觸發【火焰燎原】，全體受到火屬性傷害，灼燒 '+state.burnStacks+' 層。')}if(state.burnUntil&&now<state.burnUntil){const burn=Math.floor(e.atk*.15*Math.max(1,state.burnStacks||1));for(const target of members)if(target.hp>0){target.hp=Math.max(0,target.hp-burn);event('enemy',burn)}if(burn)log('🔥 灼燒持續造成 '+burn+' 點傷害。');if(allDown())recover()}if(now>=(state.enemyCurseAt||0)){state.enemyCurseAt=now+60000;const target=members.filter(member=>member.hp>0).sort((a,b)=>(b.attack||0)-(a.attack||0))[0];if(target){state.cursedUid=target.uid;state.curseUntil=now+8000;log('🌀 黃金海星施放【詛咒】，'+target.name+' 的攻擊 -25%、防禦 -30%，受到傷害 +15%，持續 8 秒。')}}};
  const castTigerSkills=(combat:RealtimeBattleSystem)=>{if(state.key!=='e_white_tiger_fierce_tiger'||state.status!=='fighting')return;const e=enemy(),tiger=combat.enemies[0];if(!tiger||!tiger.alive||combat.winner)return;state.tigerMp=state.tigerMp??e.mp;state.tigerBleeds=state.tigerBleeds||{};
   // 白虎凶煞：生命低於 40% 後永久進入凶煞，攻速 4 倍並啟用撕裂機率。
   if(!state.tigerRageActive&&tiger.hp<=tiger.maxHp*.4){state.tigerRageActive=true;tiger.attackInterval=Math.max(.05,tiger.attackInterval/4);log('🐯【白虎凶煞】狂虎生命低於 40%，攻擊速度與移動速度提升 300%，近身攻擊有機率撕裂。')}

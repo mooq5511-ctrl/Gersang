@@ -3,6 +3,8 @@
  * Time is supplied by the caller through update(deltaSeconds), so it can run
  * from requestAnimationFrame, a server tick, or an offline simulation loop.
  */
+import { mitigatedDamage } from './combat-damage.js';
+
 export class Unit {
   constructor({ id, side, hp, maxHp, atk, def, attackInterval = 1.5, cooldown = 0, mp = 0, skillPower = 0, position }) {
     if (!id) throw new Error('Unit.id is required.');
@@ -105,7 +107,7 @@ export class RealtimeBattleSystem {
 
   damageFor(attacker, defender, multiplier = 1, skill = false) {
     const attackPower = skill && attacker.skillPower > 0 ? attacker.skillPower : attacker.atk * multiplier;
-    return Math.max(1, Math.round(attackPower * (100 / (100 + defender.def))));
+    return mitigatedDamage(attackPower, defender.def);
   }
 
   /**

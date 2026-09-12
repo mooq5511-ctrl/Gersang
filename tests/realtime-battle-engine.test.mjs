@@ -1,11 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RealtimeBattleSystem } from '../app/realtime-battle-engine.js';
-import { dungeonStep, freshDungeon } from '../app/dungeon-engine.ts';
+import { calculateDamage, dungeonStep, freshDungeon } from '../app/dungeon-engine.ts';
 
 const unit = (id, side, row, col, overrides = {}) => ({
   id, side, hp: 100, maxHp: 100, atk: 10, def: 0,
   attackInterval: 1, position: { row, col }, ...overrides,
+});
+
+test('realtime and boss attacks use the same armor mitigation', () => {
+  const battle = new RealtimeBattleSystem([], []);
+  const attacker = { atk: 100, skillPower: 0 };
+  const defender = { def: 50 };
+  assert.equal(battle.damageFor(attacker, defender), calculateDamage({ atk: 100 }, { def: 50 }, () => 0.5));
+  assert.equal(calculateDamage({ atk: 100 }, { def: 50 }, () => 0), 60);
+  assert.equal(calculateDamage({ atk: 100 }, { def: 50 }, () => 1), 73);
 });
 
 test('opening attacks resolve simultaneously even when both units die', () => {
