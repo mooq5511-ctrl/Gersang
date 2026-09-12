@@ -1,4 +1,4 @@
-export type Grade = "merc" | "general" | "special";
+﻿export type Grade = "merc" | "general" | "special";
 export type EquipmentSlot = "weapon" | "armor" | "helm" | "boots" | "accessory";
 
 export type MercenaryDef = {
@@ -35,13 +35,6 @@ export const mercenaries: MercenaryDef[] = [
   { id: "skcaptain", name: "海盜骷髏船長", job: "特殊將領", grade: "special", city: "釜山", str: 77, agi: 51, intel: 33, vit: 71, cost: 18000, idle: char("char_056_pirate_skeleton_captain_N.png"), attack: char("char_054_pirate_skeleton_captain_A.png"), sprites: ["char_054_pirate_skeleton_captain_A.png", "char_055_pirate_skeleton_captain_D.png", "char_056_pirate_skeleton_captain_N.png", "char_057_pirate_skeleton_captain_R.png"].map(char), skill: "船長號令" },
 ];
 
-export const cities = [
-  { id: "seoul", name: "漢陽", fee: 0, good: "高麗人參", base: 820, accent: "#d7ad59" },
-  { id: "nanjing", name: "南京", fee: 1500, good: "絲綢", base: 1050, accent: "#df785f" },
-  { id: "kyoto", name: "京都", fee: 2200, good: "漆器", base: 1380, accent: "#c890d8" },
-  { id: "beijing", name: "北京", fee: 2600, good: "藥材", base: 1210, accent: "#8bc8a0" },
-  { id: "busan", name: "釜山", fee: 1900, good: "海產", base: 900, accent: "#69a8d4" },
-] as const;
 
 export const formations = [
   { id: "goose", name: "雁行陣", detail: "全隊攻擊 +12%", atk: 1.12, def: 1 },
