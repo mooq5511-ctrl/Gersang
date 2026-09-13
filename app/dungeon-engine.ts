@@ -12,6 +12,8 @@ export const DUNGEONS = {
 export type DungeonKey=keyof typeof DUNGEONS;
 /** 劇情首領以單體戰鬥呈現，其餘遭遇維持 12 格部隊。 */
 export const isBossMonster=(name?:string)=>name==='海賊王'||name==='狂風阿魯塔'||name==='黃金海星'||name==='狂虎'||name==='多聞天王'||name==='廣目天王';
+/** One uniform roll per normal encounter; bosses always spawn alone. */
+export const normalEncounterCount=(roll:number)=>1+Math.min(11,Math.floor(Math.max(0,Number.isFinite(roll)?roll:0)*12));
 /** 地圖資料是畫面鎖定與實際傳送的唯一來源；等級、戰鬥力兩條件必須同時滿足。 */
 export const WORLD_ZONES=[
  {id:'hanyang',nation:'korea',name:gersangWorldMap.korea.stages[0].name,level:1,power:0,enemy:'e_raccoon',mood:'朝鮮 · 漢陽城外',loot:gersangWorldMap.korea.stages[0].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.korea.stages[0].monster.drops},
@@ -35,7 +37,7 @@ export type BattleEvent={id:number;attacker:'hero'|'enemy';target:'hero'|'enemy'
 export type RealtimeBattleUnitState={id:string;side:'player'|'enemy';hp:number;maxHp:number;atk:number;def:number;attackInterval:number;cooldown:number;mp:number;skillPower?:number;position:{row:number;col:number}};
 export type RealtimeBattleEventState={id:number;timeMs:number;type:string;actorId?:string;targetId?:string;sourcePosition?:{row:number;col:number};targetPosition?:{row:number;col:number};ability?:string;damage?:number;hpAfter?:number;winner?:string};
 export type RealtimeBattleSnapshot={players:RealtimeBattleUnitState[];enemies:RealtimeBattleUnitState[];skillMultiplier:number;autoSkill:boolean;timeMs:number;running:boolean;winner:'player'|'enemy'|'draw'|null;eventId:number;events:RealtimeBattleEventState[]};
-export type DungeonState={realtime?:RealtimeBattleSnapshot;realtimeCursor?:number;events?:BattleEvent[];eventSerial?:number;spawnSerial?:number;innHealAt?:number;enemyShieldAt?:number;enemyShatterAt?:number;enemyShieldUntil?:number;enemyRegenUntil?:number;enemyFlameAt?:number;enemyCurseAt?:number;burnUntil?:number;burnStacks?:number;cursedUid?:string;curseUntil?:number;fearUntil?:number;tigerMp?:number;tigerHowlAt?:number;tigerRageActive?:boolean;tigerSlowUntil?:number;tigerBleeds?:Record<string,{until:number;next:number}>;/** 指定狩獵時鎖定下一次重生的目標。 */lockedEnemyKey?:DungeonKey;status:'idle'|'fighting'|'respawning'|'recovering';phase?:'接敵'|'交戰';distance?:number;damageCursor?:number;zone?:ZoneId;key:DungeonKey;enemyHp:number;normalAt:number;skillAt:number;spawnAt:number;stamp:number;pauseAt?:number;logs:string[];serial:number};
+export type DungeonState={realtime?:RealtimeBattleSnapshot;realtimeCursor?:number;enemyCount?:number;events?:BattleEvent[];eventSerial?:number;spawnSerial?:number;innHealAt?:number;enemyShieldAt?:number;enemyShatterAt?:number;enemyShieldUntil?:number;enemyRegenUntil?:number;enemyFlameAt?:number;enemyCurseAt?:number;burnUntil?:number;burnStacks?:number;cursedUid?:string;curseUntil?:number;fearUntil?:number;tigerMp?:number;tigerHowlAt?:number;tigerRageActive?:boolean;tigerSlowUntil?:number;tigerBleeds?:Record<string,{until:number;next:number}>;/** 指定狩獵時鎖定下一次重生的目標。 */lockedEnemyKey?:DungeonKey;status:'idle'|'fighting'|'respawning'|'recovering';phase?:'接敵'|'交戰';distance?:number;damageCursor?:number;zone?:ZoneId;key:DungeonKey;enemyHp:number;normalAt:number;skillAt:number;spawnAt:number;stamp:number;pauseAt?:number;logs:string[];serial:number};
 export type DungeonHero={hp:number;mp:number;maxHp:number;maxMp:number;str:number;dex:number;mercenaryIntelligence:number;attack:number;defense:number;staff:boolean;amaterasuGaze?:boolean};
 export type DungeonPartyMember={uid:string;name:string;hp:number;maxHp:number;mp?:number;maxMp?:number;position:BattlePosition;defense?:number;attack?:number;attackInterval?:number};
 /** 依攻擊力與防禦力計算實際傷害，並加入 90%～110% 的自然浮動。 */
@@ -55,7 +57,7 @@ export function teleportDungeon(old:DungeonState,level:number,power:number,now:n
   pauseAt:dungeonBusy(old)?old.pauseAt:now,spawnAt:0,normalAt:Math.max(now,old.normalAt),
   logs:['已傳送至 '+zone.name+'！',...old.logs].slice(0,40)};
 }
-export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key:DungeonKey=old.key,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0,party:DungeonPartyMember[]=[],passiveDamage=0,materialRolls:number[]=[1,1,1],autoSkill=false):{state:DungeonState;hp:number;mp:number;party:DungeonPartyMember[];reward:null|{xp:number;gold:number;loot:string|null;materials:string[]}}{
+export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key:DungeonKey=old.key,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0,party:DungeonPartyMember[]=[],passiveDamage=0,materialRolls:number[]=[1,1,1],autoSkill=false,encounterCountRoll=.999999):{state:DungeonState;hp:number;mp:number;party:DungeonPartyMember[];reward:null|{xp:number;gold:number;loot:string|null;materials:string[]}}{
  const state={...old,logs:[...old.logs]};let hp=hero.hp,mp=hero.mp;
  const members=(party.length?party:[{uid:'hero',name:'主角',hp,maxHp:hero.maxHp,position:'前排' as const}]).map(member=>({...member}));
  const heroMember=()=>members.find(member=>member.uid==='hero');
@@ -85,8 +87,8 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   const occupied=new Set<string>();
   const formationPoint=(member:DungeonPartyMember,index:number)=>{const columns=member.position==='前排'?[3,2,1,0]:member.position==='後排'?[0,1,2,3]:[2,1,3,0],firstRow=index%3,rows=[firstRow,...[0,1,2].filter(row=>row!==firstRow)];for(const col of columns)for(const row of rows){const key=row+':'+col;if(!occupied.has(key)){occupied.add(key);return{row,col}}}return{row:Math.floor(index/4),col:index%4}};
   const playerUnits=members.slice(0,12).map((member,index)=>({id:member.uid,side:'player',hp:member.hp,maxHp:member.maxHp,atk:Math.max(1,member.attack||hero.attack),def:Math.max(0,member.defense||0),attackInterval:member.attackInterval||1.5,cooldown:0,mp:member.uid==='hero'?mp:member.mp||0,skillPower:member.uid==='hero'?5000+hero.mercenaryIntelligence*10:Math.max(1,(member.attack||hero.attack)*2),position:formationPoint(member,index)}));
- const e=enemy();const boss=isBossMonster(e.name);const enemyCount=boss?1:12;const enemyUnits=Array.from({length:enemyCount},(_,index)=>({id:`enemy-${index+1}`,side:'enemy',hp:e.hp,maxHp:e.hp,atk:e.atk,def:Math.max(0,('physical' in e&&typeof e.physical==='number'?e.physical:0)),attackInterval:Math.max(.6,2.2-e.dex/100),cooldown:0,mp:index===0?Math.min(100,e.mp):0,position:boss?{row:1,col:1}:{row:Math.floor(index/4),col:index%4}}));
- const combat=new RealtimeBattleSystem(playerUnits,enemyUnits,{autoSkill});combat.startBattle();state.realtimeCursor=0;syncRealtime(combat);log(`即時戰鬥開始：${playerUnits.length} 名商隊成員對抗 ${boss?'首領 1 隻':'12 隻'}${e.name}。`);
+ const e=enemy();const boss=isBossMonster(e.name);const enemyCount=boss?1:normalEncounterCount(encounterCountRoll);state.enemyCount=enemyCount;const enemyUnits=Array.from({length:enemyCount},(_,index)=>({id:`enemy-${index+1}`,side:'enemy',hp:e.hp,maxHp:e.hp,atk:e.atk,def:Math.max(0,('physical' in e&&typeof e.physical==='number'?e.physical:0)),attackInterval:Math.max(.6,2.2-e.dex/100),cooldown:0,mp:index===0?Math.min(100,e.mp):0,position:boss?{row:1,col:1}:{row:Math.floor(index/4),col:index%4}}));
+ const combat=new RealtimeBattleSystem(playerUnits,enemyUnits,{autoSkill});combat.startBattle();state.realtimeCursor=0;syncRealtime(combat);log(`即時戰鬥開始：${playerUnits.length} 名商隊成員對抗 ${boss?'首領 ':''}${enemyCount} 隻${e.name}。`);
  };
  const recover=()=>{syncHero();const inn=goToInn({hp,maxHp:hero.maxHp,status:'正常'},now),returnKey=state.lockedEnemyKey||'e_raccoon';state.status='recovering';state.phase='接敵';state.distance=100;state.zone='hanyang';state.key=returnKey;state.enemyHp=DUNGEONS[returnKey].hp;state.realtime=undefined;state.realtimeCursor=0;state.spawnAt=0;state.innHealAt=inn.nextHealAt;state.spawnSerial=(state.spawnSerial||0)+1;log('商隊全員倒下，已撤回漢陽客棧。');log('戰鬥失敗，已自動返回漢陽客棧療傷。')};
  // 先切換狀態再產生獎勵，快速連點或同回合後攻都不會重複結算。
@@ -95,8 +97,10 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   const materials=(zone.enemy===state.key?zone.dropTable:[]).filter((drop,index)=>(materialRolls[index]??1)*100<=drop.rate).map(drop=>drop.item);
   // 神裝採固定個別機率：怪物掉落池內的每一件裝備均為 0.01%，且單次最多掉一件。
   const uniqueLoot=[...new Set(e.loot)],rareRate=.0001,rareIndex=Math.floor(roll/rareRate);
-  reward={xp:e.xp,gold:0,loot:rareIndex<uniqueLoot.length?uniqueLoot[rareIndex]:null,materials};
-  log('成功擊敗 '+e.name+'！獲得 '+e.xp+' 經驗。');if(materials.length)log('🎁 噴寶：獲得【'+materials.join('】、【')+'】！')};
+  const defeatedCount=isBossMonster(e.name)?1:(state.realtime?.enemies.length??state.enemyCount??1);
+  const totalXp=e.xp*defeatedCount;
+  reward={xp:totalXp,gold:0,loot:rareIndex<uniqueLoot.length?uniqueLoot[rareIndex]:null,materials};
+  log('成功擊敗 '+defeatedCount+' 隻'+e.name+'！獲得 '+totalXp+' 經驗。');if(materials.length)log('🎁 噴寶：獲得【'+materials.join('】、【')+'】！')};
  const castTigerSkills=(combat:RealtimeBattleSystem)=>{if(state.key!=='e_white_tiger_fierce_tiger'||state.status!=='fighting')return;const e=enemy(),tiger=combat.enemies[0];if(!tiger||!tiger.alive||combat.winner)return;state.tigerMp=state.tigerMp??e.mp;state.tigerBleeds=state.tigerBleeds||{};
   // 白虎凶煞：生命低於 40% 後永久進入凶煞，攻速 4 倍並啟用撕裂機率。
   if(!state.tigerRageActive&&tiger.hp<=tiger.maxHp*.4){state.tigerRageActive=true;tiger.attackInterval=Math.max(.05,tiger.attackInterval/4);log('🐯【白虎凶煞】狂虎生命低於 40%，攻擊速度與移動速度提升 300%，近身攻擊有機率撕裂。')}
@@ -123,7 +127,7 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
    const inn=recoverAtInn({hp,maxHp:hero.maxHp,status:'客棧中'},state.innHealAt||now,now);hp=inn.player.hp;const recoveringHero=heroMember();if(recoveringHero)recoveringHero.hp=hp;state.innHealAt=inn.nextHealAt;
    if(inn.player.status==='正常'){state.status='idle';log('生命值已全滿，離開客棧，商隊可再次出發。')}
  }else if(state.status==='respawning'&&now>=state.spawnAt){
-   state.key=state.lockedEnemyKey||pickZoneMonster(state.zone,spawnRoll);state.events=[];state.spawnSerial=(state.spawnSerial||0)+1;state.enemyHp=enemy().hp;state.enemyShieldAt=state.key==='e_lake_gale_altur'?now+60000:0;state.enemyShatterAt=state.key==='e_lake_gale_altur'?now+30000:0;state.enemyShieldUntil=0;state.tigerMp=state.key==='e_white_tiger_fierce_tiger'?enemy().mp:0;state.tigerHowlAt=now+3000;state.tigerRageActive=false;state.tigerSlowUntil=0;state.tigerBleeds={};state.status='fighting';state.phase='交戰';state.distance=0;state.normalAt=Math.max(now,state.normalAt);log(isBossMonster(enemy().name)?'首領重新出現，商隊立即重新鎖敵。':'下一支 12 隻怪物部隊出現，商隊立即重新鎖敵。');beginRealtime();
+   state.key=state.lockedEnemyKey||pickZoneMonster(state.zone,spawnRoll);state.events=[];state.spawnSerial=(state.spawnSerial||0)+1;state.enemyHp=enemy().hp;state.enemyShieldAt=state.key==='e_lake_gale_altur'?now+60000:0;state.enemyShatterAt=state.key==='e_lake_gale_altur'?now+30000:0;state.enemyShieldUntil=0;state.tigerMp=state.key==='e_white_tiger_fierce_tiger'?enemy().mp:0;state.tigerHowlAt=now+3000;state.tigerRageActive=false;state.tigerSlowUntil=0;state.tigerBleeds={};state.status='fighting';state.phase='交戰';state.distance=0;state.normalAt=Math.max(now,state.normalAt);beginRealtime();log(isBossMonster(enemy().name)?'首領重新出現，商隊立即重新鎖敵。':`下一支 ${state.enemyCount} 隻怪物部隊出現，商隊立即重新鎖敵。`);
   }else if(state.status==='fighting'){
    if(allDown())recover();
    else {if(!state.realtime)beginRealtime();else{const combat=RealtimeBattleSystem.fromSnapshot(state.realtime);combat.autoSkill=autoSkill;combat.update(elapsedMs/1000);castTigerSkills(combat);syncRealtime(combat);if(combat.winner==='player')victory();else if(combat.winner==='enemy'||combat.winner==='draw')recover()}}

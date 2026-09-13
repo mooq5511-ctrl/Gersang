@@ -52,6 +52,9 @@ export type Unit = {
   templateId: string;
   nation: NationId | "legacy";
   tier: 0 | 1 | 2 | 3;
+  /** Current mercenary class name; omitted on legacy saves and filled during migration. */
+  jobClass?: string;
+  growthMultipliers?: { str: number; agi: number; intel: number; vit: number };
   special: boolean;
   awakened?: boolean;
   physicalResist?: number;

@@ -1,0 +1,36 @@
+.battle-world-map-tools { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+.battle-world-map-tools > span { padding:7px 10px; border:1px solid #d5a84d55; border-radius:999px; background:#151d1acc; color:#ead590; font-size:.72rem; white-space:nowrap; }
+.monster-codex-trigger { display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:8px 12px; border:1px solid #d5a84d88; border-radius:8px; background:#292416; color:#f7df9d; font-size:13px; cursor:pointer; white-space:nowrap; }
+.monster-codex-trigger:hover,.monster-codex-trigger:focus-visible { border-color:#f7db8c; outline:2px solid #f7db8c77; }
+.monster-codex-dialog { display:flex; flex-direction:column; width:min(960px,calc(100vw - 24px)); max-width:none; height:min(720px,calc(100dvh - 24px)); max-height:calc(100dvh - 24px); gap:12px; overflow:hidden; border:1px solid #a88b54; border-radius:12px; background:#111b1a; color:#f5e9c9; box-shadow:0 22px 70px #000d; }
+.monster-codex-dialog [data-slot="dialog-title"] { color:#f0d892; font-size:23px; }
+.monster-codex-dialog [data-slot="dialog-description"] { color:#b8c3ba; }
+.monster-codex-dialog [data-slot="dialog-close"] { color:#f6e5ba; }
+.monster-codex-controls { display:grid; gap:8px; min-width:0; }
+.monster-codex-search { display:flex; align-items:center; gap:8px; min-width:0; padding:7px 10px; border:1px solid #8f784b; border-radius:6px; background:#0b1212; }
+.monster-codex-search input { width:100%; min-width:0; border:0; outline:0; background:transparent; color:#f5e9c9; font:inherit; }
+.monster-codex-filters { display:flex; gap:6px; min-width:0; margin:0; padding:0 0 3px; overflow-x:auto; border:0; }
+.monster-codex-filters button { flex:none; padding:6px 10px; border:1px solid #756344; border-radius:6px; background:#1d2825; color:#d1d8ce; cursor:pointer; }
+.monster-codex-filters button[aria-pressed="true"] { border-color:#e8bd68; background:#48351d; color:#ffe4a3; }
+.monster-codex-layout { display:grid; grid-template-columns:minmax(210px,35%) minmax(0,1fr); gap:12px; flex:1; min-height:0; }
+.monster-codex-list,.monster-codex-detail { min-width:0; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; border:1px solid #655b43; border-radius:8px; background:#0b1414; }
+.monster-codex-list { display:flex; flex-direction:column; gap:3px; padding:6px; }
+.monster-codex-list button { display:flex; justify-content:space-between; align-items:center; gap:6px; width:100%; padding:9px; border:1px solid transparent; border-radius:5px; background:#192322; color:#eee4cb; text-align:left; cursor:pointer; }
+.monster-codex-list button:hover,.monster-codex-list button[aria-pressed="true"] { border-color:#e3b75e; background:#352c1b; }
+.monster-codex-list button span { display:grid; gap:3px; min-width:0; }
+.monster-codex-list button small { color:#abb7ae; }
+.monster-codex-list button em { color:#e9ba68; font-size:12px; font-style:normal; white-space:nowrap; }
+.monster-codex-list p { padding:12px; color:#bcc3b8; }
+.monster-codex-detail { padding:16px; }
+.monster-codex-detail header small { color:#c9ab70; }
+.monster-codex-detail h3 { margin:4px 0 14px; color:#ffdda0; font-size:24px; }
+.monster-codex-detail h4 { margin:18px 0 8px; color:#e6c67f; }
+.monster-codex-detail p { margin:9px 0; color:#d3d9ce; }
+.monster-codex-detail p b { color:#f2d28d; }
+.monster-codex-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; margin:0 0 16px; }
+.monster-codex-stats div { min-width:0; padding:9px; border:1px solid #766543; border-radius:5px; background:#1b2725; }
+.monster-codex-stats dt { color:#b4bdb2; font-size:11px; }
+.monster-codex-stats dd { margin:4px 0 0; overflow-wrap:anywhere; color:#ffe3a1; font-weight:700; }
+.monster-codex-drops { display:flex; flex-wrap:wrap; gap:7px; margin:0; padding:0; list-style:none; }
+.monster-codex-drops li { padding:6px 9px; border:1px solid #6d7452; border-radius:5px; background:#202e27; color:#e2e8d3; }
+@media(max-width:650px) { .monster-codex-dialog { padding:12px; } .monster-codex-layout { grid-template-columns:1fr; grid-template-rows:minmax(112px,36%) minmax(0,1fr); } .monster-codex-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }

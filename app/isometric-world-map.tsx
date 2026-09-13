@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { TOWN_MAP_BACKGROUND } from "./town-map-config";
 
 const COLS = 12;
 const ROWS = 12;
@@ -102,6 +103,7 @@ export function IsometricWorldMap({
 
         preload() {
           this.load.image("map-hero", heroImage);
+          this.load.image("town-background", TOWN_MAP_BACKGROUND.src);
           this.load.image("map-portal", "/game-assets/map-field-portal-0.png");
           this.load.image("map-inn", "/game-assets/building-korea-inn-0.png");
           this.load.image("map-market", "/game-assets/building-korea-market-0.png");
@@ -148,8 +150,16 @@ export function IsometricWorldMap({
 
         private drawWorld() {
           this.children.removeAll();
+          this.add.image(this.scale.width / 2, this.scale.height / 2, "town-background")
+            .setDisplaySize(this.scale.width, this.scale.height)
+            .setDepth(-100);
           this.originX = this.scale.width / 2;
           this.originY = Math.max(36, (this.scale.height - ROWS * TILE_H) / 2 - 8);
+
+          // The artwork already contains the village roads and buildings. Keep Phaser as
+          // an interaction/position layer so a second set of tile art does not look pasted on.
+          return;
+
           const roads = new Set<string>();
           for (let i = 0; i < COLS; i++) { roads.add(`${i},4`); roads.add(`${i},10`); }
           for (let i = 0; i < ROWS; i++) roads.add(`6,${i}`);
@@ -167,6 +177,8 @@ export function IsometricWorldMap({
             ], true);
             if (!isRoad && (col * 5 + row * 3) % 5 === 0) this.drawGrassTuft(point.x + 8, point.y + 22, 40 + col + row);
           }
+          // Keep the isometric guide visible while allowing the town artwork to read through.
+          ground.setAlpha(0.34);
           this.drawStoneBorder();
           this.drawFacility(1, 1, "map-inn", "客棧", 108, 94);
           this.drawFacility(8, 1, "map-mercenary", "傭兵公會", 112, 96);
@@ -283,7 +295,8 @@ export function IsometricWorldMap({
       gameRef.current = new Phaser.Game({
         type: Phaser.AUTO,
         parent: hostRef.current,
-        backgroundColor: "#315f63",
+        transparent: true,
+        backgroundColor: "rgba(0,0,0,0)",
         scale: { mode: Phaser.Scale.RESIZE, width: "100%", height: "100%" },
         render: { antialias: true },
         scene: WorldScene,

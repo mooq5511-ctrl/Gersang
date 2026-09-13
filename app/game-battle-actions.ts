@@ -7,6 +7,7 @@ import { battleMaps } from "./reference-data";
 import { sourceEnemyForDungeonKey } from "./v17-content";
 import { combatStats, vitalStats } from "./vitals-engine";
 import type { Equipment, GameState, Hero, Unit } from "./game-state";
+import { awardFusionCores } from "./fusion-core-rewards";
 
 type BattleActionDependencies = {
   notify: (message: string) => void;
@@ -48,7 +49,7 @@ export function runDungeonAction(
   action: DungeonAction,
   now: number,
   key: DungeonKey | undefined,
-  rolls: { roll?: number; choice?: number; spawnRoll?: number; retaliationRoll?: number; materialRolls?: number[] },
+  rolls: { roll?: number; choice?: number; spawnRoll?: number; encounterCountRoll?: number; retaliationRoll?: number; materialRolls?: number[]; fusionCoreRoll?: number },
   deps: DungeonActionDependencies,
 ): GameState {
   const roll = rolls.roll ?? .99, choice = rolls.choice ?? 0, spawnRoll = rolls.spawnRoll ?? 0, retaliationRoll = rolls.retaliationRoll ?? 0, materialRolls = rolls.materialRolls ?? [1, 1, 1];
@@ -61,7 +62,7 @@ export function runDungeonAction(
   const party = fighters.map((unit) => { const stats = vitalStats(unit), combat = combatStats(unit); return { uid: unit.uid, name: unit.name, hp: stats.hp, maxHp: stats.maxHp, mp: stats.mp, maxMp: stats.maxMp, position: unit.position, defense: combat.defense, attack: combat.attack, attackInterval: Math.max(.6, 2.2 - combat.speed / 100) }; });
   const passiveDamage = deployedMercs.reduce((sum, unit) => sum + Math.max(0, Math.floor(combatStats(unit).attack * .18)), 0);
   const amaterasuSet = Object.values(previous.hero.equip).filter((item) => item?.name.startsWith("T10 天照")).length >= 5;
-  const result = dungeonStep(previous.dungeon || freshDungeon(), { ...vital, str: total.str, dex: total.agi, mercenaryIntelligence, attack, defense: combatStats(previous.hero).defense, staff: previous.hero.equip.weapon?.name === DIVINE_EQUIPMENT.staff.name, amaterasuGaze: amaterasuSet }, action, now, key, roll, choice, spawnRoll, retaliationRoll, party, passiveDamage, materialRolls, previous.autoSkill);
+  const result = dungeonStep(previous.dungeon || freshDungeon(), { ...vital, str: total.str, dex: total.agi, mercenaryIntelligence, attack, defense: combatStats(previous.hero).defense, staff: previous.hero.equip.weapon?.name === DIVINE_EQUIPMENT.staff.name, amaterasuGaze: amaterasuSet }, action, now, key, roll, choice, spawnRoll, retaliationRoll, party, passiveDamage, materialRolls, previous.autoSkill, rolls.encounterCountRoll);
   const remaining = new globalThis.Map(result.party.map((unit) => [unit.uid, unit]));
   let next: GameState = { ...previous, dungeon: result.state, hero: { ...previous.hero, hp: remaining.get("hero")?.hp ?? result.hp, mp: remaining.get("hero")?.mp ?? result.mp }, mercs: previous.mercs.map((unit) => { const fighter = remaining.get(unit.uid); return fighter ? { ...unit, hp: fighter.hp, mp: fighter.mp ?? unit.mp } : unit; }) };
   if (result.state.status === "recovering" && previous.hero.status !== "客棧中") next = deps.enterInn(next, now, result.state.logs[0], result.state);
@@ -76,6 +77,11 @@ export function runDungeonAction(
   const droppedMaterials = [...reward.materials, ...(selectedDrop ? [selectedDrop] : []), ...ancientCoinBox];
   const defeatedNewbieBoss = result.state.key === "e_starter_pirate_king", defeatedLakeBoss = result.state.key === "e_lake_gale_altur", defeatedGoldenStarfish = result.state.key === "e_japan_sea_golden_starfish";
   next = { ...next, hero: deps.grantXp(next.hero, shareXp), mercs: next.mercs.map((unit) => activeIds.has(unit.uid) ? deps.grantXp(unit, shareXp) : unit), gold: next.gold + reward.gold, kills: next.kills + 1, newbieBossDefeated: next.newbieBossDefeated || defeatedNewbieBoss, lakeBossDefeated: next.lakeBossDefeated || defeatedLakeBoss, goldenStarfishDefeated: next.goldenStarfishDefeated || defeatedGoldenStarfish, newbieCoins: next.newbieCoins + (specialCoinDrop ? 1 : 0), logs: deps.addLog(next.logs, `成功擊敗副本怪物，獲得 ${reward.xp} 經驗；${battleMembers} 名出戰角色均分，每人 ${shareXp} 經驗。`) };
+  const fusionCoreDrop = (rolls.fusionCoreRoll ?? roll) < 0.05 ? 1 : 0;
+  if (fusionCoreDrop) {
+    next = awardFusionCores(next, fusionCoreDrop);
+    next = { ...next, logs: deps.addLog(next.logs, "戰利品：獲得融合核心 ×1。") };
+  }
   if (specialCoinDrop) next = { ...next, logs: deps.addLog(next.logs, "獲得特殊貨幣【新手兌換銅錢】×1。") };
   if (defeatedNewbieBoss) next = { ...next, logs: deps.addLog(next.logs, "海賊王已被擊敗，千年湖地圖現已開放。") };
   if (defeatedLakeBoss) next = { ...next, logs: deps.addLog(next.logs, "狂風阿魯塔已被擊敗，日本海底洞現已開放。") };

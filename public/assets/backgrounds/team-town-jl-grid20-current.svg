@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 768" width="1024" height="768" role="img" aria-label="江戶城鎮 X0 到 20、Y0 到 20 網格座標預覽">
+  <defs>
+    <pattern id="grid" width="51.2" height="38.4" patternUnits="userSpaceOnUse">
+      <path d="M 51.2 0 H 0 V 38.4" fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="1"/>
+    </pattern>
+    <style>
+      .label { font: 700 17px "Microsoft JhengHei", sans-serif; fill: #fff; paint-order: stroke; stroke: #17130d; stroke-width: 4px; stroke-linejoin: round; }
+      .axis { font: 600 14px "Microsoft JhengHei", sans-serif; fill: #fff; paint-order: stroke; stroke: #111; stroke-width: 3px; }
+      .point { fill: #101820; stroke-width: 3px; }
+    </style>
+  </defs>
+  <image href="team-town-jl.webp" width="1024" height="768"/>
+  <rect width="1024" height="768" fill="url(#grid)"/>
+  <rect width="1024" height="44" fill="#101820" fill-opacity="0.9"/>
+  <text class="label" x="12" y="29">江戶城鎮座標預覽 · X0–20 / Y0–20</text>
+  <g class="axis">
+    <text x="2" y="60">0</text><text x="103" y="60">2</text><text x="205" y="60">4</text><text x="308" y="60">6</text><text x="410" y="60">8</text><text x="507" y="60">10</text><text x="610" y="60">12</text><text x="712" y="60">14</text><text x="815" y="60">16</text><text x="917" y="60">18</text><text x="994" y="60">20</text>
+    <text x="4" y="119">Y3</text><text x="4" y="234">Y6</text><text x="4" y="349">Y9</text><text x="4" y="464">Y12</text><text x="4" y="579">Y15</text><text x="4" y="694">Y18</text>
+  </g>
+  <g>
+    <circle class="point" cx="204.8" cy="422.4" r="18" stroke="#f2c14d"/>
+    <text class="label" x="228" y="428">江戶城 (4,11)</text>
+    <circle class="point" cx="358.4" cy="537.6" r="18" stroke="#f2c14d"/>
+    <text class="label" x="382" y="543">市集 (7,14)</text>
+    <circle class="point" cx="716.8" cy="537.6" r="18" stroke="#57d9e6"/>
+    <text class="label" x="741" y="543">城門 (14,14)</text>
+    <circle class="point" cx="870.4" cy="307.2" r="18" stroke="#57d9e6"/>
+    <text class="label" x="782" y="282">港口 (17,8)</text>
+  </g>
+</svg>

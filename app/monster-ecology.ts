@@ -1,7 +1,7 @@
 ﻿/** 隨機地域怪物：沿用已確認示範版的原創數值；舊怪物 ID 留在主資料庫供舊資料相容。 */
 export const ECOLOGY_MONSTERS={
  e_starter_raccoon:{name:'狸貓',level:1,hp:16,mp:0,atk:6,dex:10,xp:7,gold:7,drop:.06,loot:['boots']},
- e_starter_wako:{name:'倭寇',level:1,hp:16,mp:0,atk:10,dex:12,xp:7,gold:7,drop:.06,loot:['boots']},
+ e_starter_wako:{name:'倭寇',level:1,hp:16,mp:0,atk:10,dex:12,xp:1000000,gold:7,drop:.06,loot:['boots']},
  e_starter_gunner:{name:'鐵炮倭寇',level:1,hp:20,mp:0,atk:10,dex:12,xp:10,gold:10,drop:.07,loot:['boots']},
  e_starter_bandit:{name:'山賊',level:1,hp:20,mp:0,atk:8,dex:11,xp:8,gold:8,drop:.06,loot:['boots']},
  e_starter_pirate:{name:'海賊',level:1,hp:140,mp:12,atk:49,dex:20,xp:40,gold:40,drop:.12,loot:['boots']},

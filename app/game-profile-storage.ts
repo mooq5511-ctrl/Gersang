@@ -43,8 +43,14 @@ export function readCharacterSave(storage: Storage, slot: number) {
 
 function normalizeStoredMercenary(unit: Unit, index: number): Unit {
   const isMazu = unit.templateId === "merchant-mazu";
+  // Tier 0 was the old representation of an unpromoted mercenary. Migrate it
+  // (and missing/invalid values) to the current Tier 1 base class.
+  const rawTier = Number(unit.tier);
+  const tier: Unit["tier"] = rawTier === 2 || rawTier === 3 ? rawTier : 1;
   return {
     ...unit,
+    tier,
+    jobClass: typeof unit.jobClass === "string" && unit.jobClass.trim() ? unit.jobClass : unit.name,
     level: Math.min(LEVEL_CAP, Math.max(1, Number(unit.level) || 1)),
     ...(isMazu ? { str: 5000, agi: 5000, vit: 5000, intel: 5000, hp: Number.isFinite(Number(unit.hp)) ? Math.max(0,Math.min(Number(unit.hp),50000)) : 50000, mp: Number.isFinite(Number(unit.mp)) ? Math.max(0,Math.min(Number(unit.mp),5000)) : 5000 } : {}),
     image: gersangUnitArt(unit.templateId, unit.name, index),
@@ -80,6 +86,7 @@ export function restoreGame(raw: unknown): GameState {
     mercs: Array.isArray(parsed.mercs) ? parsed.mercs.map((unit, index) => normalizeStoredMercenary(unit as Unit,index)) : next.mercs,
     restingMercs: Array.isArray(parsed.restingMercs) ? parsed.restingMercs.slice(0, 10).map((unit, index) => normalizeStoredMercenary(unit as Unit,index)) : next.restingMercs,
     inventory: Array.isArray(parsed.inventory) ? parsed.inventory.map((item) => ({ ...normalizeStoredItem(item), bonus: item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }, resist: item.resist || { physical: 0, magic: 0 } })) : next.inventory,
+    fusionCores: Number.isFinite(parsed.fusionCores) ? Math.max(0, Math.floor(parsed.fusionCores!)) : next.fusionCores,
     soulStones: Number.isFinite(parsed.soulStones) ? Math.max(0, Number(parsed.soulStones)) : next.soulStones,
     awakeningStones: Number.isFinite(parsed.awakeningStones) ? Math.max(0, Number(parsed.awakeningStones)) : next.awakeningStones,
     materials: parsed.materials && typeof parsed.materials === "object" ? parsed.materials : {},

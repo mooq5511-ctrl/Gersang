@@ -90,6 +90,26 @@ reload_behavior: active dungeon never offline-simulates; any busy dungeon resume
 
 Migration pipeline=`migrateSevenSlotSave(raw)`→`migrateV14(raw)`→`Object.assign restore v30 defaults`→normalize hero/merc/resting vitals→`applyGersangVisuals`→`retainGuildRoster`. `retainGuildRoster` accepts only known `merchant-*` templates, returns gear from removed units, caps active IDs to 11. Preserve order/idempotence.
 
+### Equipment skill eligibility helper
+
+`app/equipmentSkill.js` is a standalone, UI-free JavaScript module. Its only responsibility is deciding whether an equipment skill is effective for a supplied character:
+
+```js
+isHeroExclusiveSkillEffective(character, equipment): boolean
+```
+
+The character is eligible only when `character.id === "hero_main"` and the equipment explicitly declares `exclusiveTo: "hero_main"` (or `skill.exclusiveTo: "hero_main"`). Unmarked equipment and non-hero characters return `false`. The module exports both the named function and the default function, plus `HERO_MAIN_ID`.
+
+### Monster sprite asset helper
+
+`app/monsterAssets.js` is a standalone, data-only JavaScript module. It exports a `database` object containing 56 current monster IDs and their `spriteUrl` paths, plus:
+
+```js
+getSprite(monsterId): string | undefined
+```
+
+`getSprite` returns the mapped asset path for a known monster ID and `undefined` for unknown IDs. It contains no battle, rendering, React, or DOM logic. The referenced 16 unique asset files were verified to exist under `public/assets`.
+
 ## 3::CURRENT_COMBAT_TRUTH
 
 ### 3.1 realtime dungeon path (live world-map UI)
@@ -208,6 +228,8 @@ UI naming drift: Site metadata title in `layout.tsx`/Sites metadata may still sa
 |`app/caravan-status.tsx`|Squad UI + floating inventory/wanderer/rest/formation windows.|
 |`app/hero-status-panel.tsx`,`ability-panel.tsx`,`vital-bars.tsx`|Hero/member stat display and allocation; +1/+100 logic callback in GameV15.|
 |`app/equipment-slots.ts`|8-slot compatibility/equip/unequip/migration.|
+|`app/equipmentSkill.js`|Pure hero-only equipment-skill eligibility check; no DOM, React, or battle UI dependencies.|
+|`app/monsterAssets.js`|Pure monster ID→`spriteUrl` database and `getSprite(monsterId)` lookup; 56 IDs, no DOM or battle logic.|
 |`app/divine-equipment.ts`|Rare fixed equipment and detail lines.|
 |`app/mythic-forge.ts`|Thunder/Azure/Chiyou/Amaterasu recipes, stats, set membership/images.|
 |`app/equipment-market.ts`|Equipment sale price/single/all.|
@@ -239,7 +261,7 @@ UI naming drift: Site metadata title in `layout.tsx`/Sites metadata may still sa
 
 ## 7::DELIVERED_FEATURE_LEDGER
 
-DONE/visible: rename map action to 世界地圖; four-capital city UI; male/female character creation; 3 profiles; shared30 warehouse; active11+hero; rest10; Mazu recruit; roster active/withdraw; semantic formation editor; realtime 12v12 left-right stage; 12 identical monster clone display; per-unit cooldown/MP/autoskill/event animation; monster selection persistence through waves; starter/lake/japan-sea/white-tiger monster datasets; boss unlock flags; loot materials list/search/toggle; ancient coin box quantity/open/coins/rare 大吉; no dungeon silver; split XP; hero XP/credit curve; +100 allocation; pharmacy quantities + auto thresholds; equipment filters/sell-all/material prices; random shop quality; 8 equipment slots + gem socket quantity/name/stats; Azure/Chiyou/Amaterasu assets/stats/exchange; equipment codex; readability CSS; Phaser town map; published Sites v60 before handoff file.
+DONE/visible: rename map action to 世界地圖; four-capital city UI; male/female character creation; 3 profiles; shared30 warehouse; active11+hero; rest10; Mazu recruit; roster active/withdraw; semantic formation editor; realtime 12v12 left-right stage; 12 identical monster clone display; per-unit cooldown/MP/autoskill/event animation; monster selection persistence through waves; starter/lake/japan-sea/white-tiger monster datasets; boss unlock flags; loot materials list/search/toggle; ancient coin box quantity/open/coins/rare 大吉; no dungeon silver; split XP; hero XP/credit curve; +100 allocation; pharmacy quantities + auto thresholds; equipment filters/sell-all/material prices; random shop quality; 8 equipment slots + gem socket quantity/name/stats; Azure/Chiyou/Amaterasu assets/stats/exchange; equipment codex; standalone `equipmentSkill.js` hero-only skill eligibility helper with verification; standalone `monsterAssets.js` monster sprite database and verified `getSprite` lookup; readability CSS; Phaser town map; published Sites v60 before handoff file.
 
 PARTIAL/inconsistent: boss skills/statuses vs realtime engine; front multiplier/rear dodge vs realtime engine; Amaterasu headgear/staff naming; metadata/product name; tests; duplicated monster/drop sources; old 20-city data still exists although UI=4; `WORLD_ZONES` is old 12-stage layer while battleMap offers newer named maps; realtime enemy DEF uses `physical` percentage as flat DEF; enemy MP/skills generic only; combat event ability lacks actual skill name.
 

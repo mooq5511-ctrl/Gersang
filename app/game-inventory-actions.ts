@@ -138,7 +138,7 @@ export function socketGemAction(state: GameState, targetUid: string, slot: Equip
   return targetUid === "hero" ? { ...common, hero: { ...state.hero, equip } } : { ...common, mercs: state.mercs.map((unit) => unit.uid === targetUid ? { ...unit, equip } : unit) };
 }
 
-export function openAncientCoinBoxAction(state: GameState, requestedAmount: number, rolls: Array<{ coins: number; rareReward: string | null }>, addLog: Log): GameState {
+export function openAncientCoinBoxAction(state: GameState, requestedAmount: number, rolls: Array<{ coins: number; rareReward: string | null; fusionCores?: number }>, addLog: Log): GameState {
   const boxes = Math.max(0, Math.floor(state.materials["古錢箱"] || 0));
   if (!boxes) return state;
   const opened = Math.min(boxes, Math.max(1, Math.floor(requestedAmount))), openedRolls = rolls.slice(0, opened), coins = openedRolls.reduce((sum, roll) => sum + roll.coins, 0), materials = { ...state.materials };
@@ -146,8 +146,8 @@ export function openAncientCoinBoxAction(state: GameState, requestedAmount: numb
   const rareCounts: Record<string, number> = {};
   for (const roll of openedRolls) if (roll.rareReward) rareCounts[roll.rareReward] = (rareCounts[roll.rareReward] || 0) + 1;
   for (const [name, count] of Object.entries(rareCounts)) materials[name] = (materials[name] || 0) + count;
-  const rareText = Object.entries(rareCounts).map(([name, count]) => `【${name}】×${count}`).join("、");
-  return { ...state, materials, newbieCoins: state.newbieCoins + coins, logs: addLog(state.logs, `開啟「古錢箱」×${opened}，獲得【新手兌換銅錢】×${coins}${rareText ? `，稀有獎勵${rareText}` : ""}。`) };
+  const rareText = Object.entries(rareCounts).map(([name, count]) => `【${name}】×${count}`).join("、"), fusionCores = openedRolls.reduce((sum, roll) => sum + Math.max(0, Math.floor(roll.fusionCores || 0)), 0);
+  return { ...state, materials, newbieCoins: state.newbieCoins + coins, fusionCores: state.fusionCores + fusionCores, logs: addLog(state.logs, `開啟「古錢箱」×${opened}，獲得【新手兌換銅錢】×${coins}${fusionCores ? `，融合核心 ×${fusionCores}` : ""}${rareText ? `，稀有獎勵${rareText}` : ""}。`) };
 }
 
 export function depositWarehouseItemAction(state: GameState, warehouse: Equipment[], itemUid: string, limit: number, addLog: Log): { game: GameState; warehouse: Equipment[]; error?: string } {

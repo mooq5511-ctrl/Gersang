@@ -73,8 +73,9 @@
 .classic-live-game .battle-sky { min-height:330px; }
 
 .classic-live-game .isometric-map-tab { padding:0; overflow:hidden; background:#315f63; }
-.isometric-world { position:relative; width:100%; height:100%; min-height:420px; overflow:hidden; background:#315f63; }
-.isometric-world-canvas,.isometric-world-canvas canvas { display:block; width:100%!important; height:100%!important; }
+.isometric-world { position:relative; width:100%; height:100%; min-height:420px; overflow:hidden; background-color:#315f63; background-image:url("/assets/backgrounds/team-town-jl.webp"); background-size:cover; background-position:center; background-repeat:no-repeat; }
+.isometric-world-canvas { position:absolute; inset:0; z-index:1; }
+.isometric-world-canvas,.isometric-world-canvas canvas { display:block; width:100%!important; height:100%!important; background:transparent!important; }
 .isometric-world-heading { position:absolute; top:12px; left:14px; z-index:5; display:grid; grid-template-columns:auto auto; align-items:baseline; gap:0 8px; min-width:150px; padding:8px 11px; border:1px solid #a88d55; background:#0b1715dc; box-shadow:0 4px 14px #0008; pointer-events:none; }
 .isometric-world-heading small { grid-column:1/-1; color:#a99d81; font-size:10px; }
 .isometric-world-heading strong { color:#f0d47d; font-family:serif; font-size:18px; letter-spacing:2px; }
@@ -141,6 +142,20 @@
   .isometric-destinations button { min-width:54px; padding:5px; }
   .isometric-destinations span { display:none; }
 }
+
+/* Single viewport battle HUD: only designated content panes may scroll. */
+html:has(.classic-live-game),
+body:has(.classic-live-game),
+body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
+.classic-live-game { height:100vh; min-height:0; max-height:100vh; overflow:hidden; }
+.classic-live-game .tab-panel { min-height:0; scrollbar-width:none; }
+.classic-live-game .tab-panel:has(.dungeon-panel) { overflow-y:auto; overflow-x:hidden; scrollbar-width:none; }
+.classic-live-game .tab-panel::-webkit-scrollbar { display:none; }
+.classic-live-game .party-rail { max-height:84.5vh; overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; overscroll-behavior:contain; }
+.classic-live-game .dungeon-panel { min-height:0; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; scrollbar-width:thin; overscroll-behavior:contain; }
+.classic-live-game .dungeon-panel .realtime-stage-scroll { flex:0 0 auto; min-height:180px; max-height:min(500px,45vh); overflow:auto; scrollbar-width:thin; }
+.classic-live-game .dungeon-panel .dungeon-log { max-height:clamp(90px,18vh,220px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
+.classic-live-game .dungeon-panel .dungeon-notes { max-height:24vh; overflow-y:auto; overscroll-behavior:contain; }
 
 .game-frame {
   isolation: isolate;
