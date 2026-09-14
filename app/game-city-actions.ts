@@ -2,6 +2,7 @@ import { dungeonBusy } from "./dungeon-engine";
 import { recoverVitals } from "./vitals-engine";
 import { worldCities } from "./v15-data";
 import type { GameState, Hero, Unit } from "./game-state";
+import { grantTerritoryXp } from "./game-progression";
 
 type Log = (logs: string[], message: string) => string[];
 type GrantXp = <T extends Unit | Hero>(unit: T, amount: number) => T;
@@ -18,5 +19,5 @@ export function restAtInnAction(state: GameState, priceFactor: number, cityName:
   if (dungeonBusy(state.dungeon)) { notify("副本戰鬥期間無法入住，請先撤退。"); return state; }
   const cost = Math.floor(1800 * priceFactor);
   if (state.gold < cost) { notify(`入住客棧需要 ${cost.toLocaleString()} 兩。`); return state; }
-  return { ...state, gold: state.gold - cost, hero: recoverVitals(grantXp(state.hero, 700)), mercs: state.mercs.map((unit) => recoverVitals(state.active.includes(unit.uid) ? grantXp(unit, 550) : unit)), logs: addLog(state.logs, `在${cityName}客棧休息，全員 HP / MP 恢復至上限，主角與出戰傭兵獲得修練經驗。`) };
+  return { ...state, gold: state.gold - cost, hero: recoverVitals(grantTerritoryXp(state, state.hero, 700)), mercs: state.mercs.map((unit) => recoverVitals(state.active.includes(unit.uid) ? grantTerritoryXp(state, unit, 550) : unit)), logs: addLog(state.logs, `在${cityName}客棧休息，全員 HP / MP 恢復至上限，主角與出戰傭兵獲得修練經驗。`) };
 }

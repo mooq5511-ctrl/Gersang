@@ -5,18 +5,18 @@ export type InnSession={player:InnPlayer;nextHealAt:number};
 export const INN_HEAL_AMOUNT=10;
 export const INN_HEAL_INTERVAL=2000;
 
-export function goToInn(player:InnPlayer,now:number):InnSession{
- return {player:{...player,hp:Math.max(0,Math.min(player.maxHp,player.hp)),status:'客棧中'},nextHealAt:now+INN_HEAL_INTERVAL};
+export function goToInn(player:InnPlayer,now:number,healInterval=INN_HEAL_INTERVAL):InnSession{
+ return {player:{...player,hp:Math.max(0,Math.min(player.maxHp,player.hp)),status:'客棧中'},nextHealAt:now+healInterval};
 }
 
 export function leaveInn(player:InnPlayer):InnPlayer{
  return player.hp>=player.maxHp?{...player,hp:player.maxHp,status:'正常'}:player;
 }
 
-export function recoverAtInn(player:InnPlayer,nextHealAt:number,now:number):InnSession{
+export function recoverAtInn(player:InnPlayer,nextHealAt:number,now:number,healInterval=INN_HEAL_INTERVAL):InnSession{
  if(player.status!=='客棧中'||now<nextHealAt)return {player,nextHealAt};
  const healed=leaveInn({...player,hp:Math.min(player.maxHp,player.hp+INN_HEAL_AMOUNT)});
- return {player:healed,nextHealAt:healed.status==='正常'?0:now+INN_HEAL_INTERVAL};
+ return {player:healed,nextHealAt:healed.status==='正常'?0:now+healInterval};
 }
 
 export function payInn(player:InnPlayer,gold:number){

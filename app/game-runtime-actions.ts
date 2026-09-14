@@ -3,6 +3,7 @@ import { goToInn, leaveInn, payInn } from "./inn-engine";
 import { worldCities } from "./v15-data";
 import { recoverVitals, vitalStats } from "./vitals-engine";
 import type { GameState } from "./game-state";
+import { territoryHealInterval } from "./guild-territory";
 
 export function appendGameLog(logs: string[], message: string) {
   return [message, ...logs].slice(0, 40);
@@ -15,7 +16,7 @@ export function enemyMaxForStage(stage: number, mapMultiplier = 1) {
 }
 
 export function enterGameInnAction(previous: GameState, now: number, message: string, dungeon = previous.dungeon): GameState {
-  const vital = vitalStats(previous.hero), session = goToInn({ hp: vital.hp, maxHp: vital.maxHp, status: previous.hero.status }, now);
+  const vital = vitalStats(previous.hero), session = goToInn({ hp: vital.hp, maxHp: vital.maxHp, status: previous.hero.status }, now, territoryHealInterval(previous.territory));
   const battle = { ...(dungeon || freshDungeon()), status: "recovering" as const, zone: "hanyang" as const, stamp: now, spawnAt: 0, innHealAt: session.nextHealAt, pauseAt: dungeon?.pauseAt || now };
   return { ...previous, city: worldCities.find((city) => city.name === "漢陽")?.id || previous.city, hero: { ...previous.hero, hp: session.player.hp, status: session.player.status }, dungeon: battle, idleStamp: now, logs: appendGameLog(previous.logs, message) };
 }

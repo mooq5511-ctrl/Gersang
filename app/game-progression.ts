@@ -3,6 +3,7 @@ import { heroPersonalPower } from "./hero-rules";
 import { LEVEL_CAP, xpForNextLevel } from "./level-progression";
 import { vitalStats } from "./vitals-engine";
 import type { Equipment, GameState, Hero, Unit } from "./game-state";
+import { territoryBonus } from "./guild-territory";
 
 export const xpNeed = (level: number) => xpForNextLevel(level);
 
@@ -16,6 +17,10 @@ export function grantXp<T extends Unit | Hero>(unit: T, amount: number): T {
     return { ...upgraded, hp: vitalStats(upgraded).maxHp } as T;
   }
   return { ...unit, xp, level, points };
+}
+
+export function grantTerritoryXp<T extends Unit | Hero>(game: GameState, unit: T, amount: number): T {
+  return grantXp(unit, Math.floor(amount * (1 + territoryBonus(game.territory, "xp"))));
 }
 
 export function grantCreditXp(game: GameState, amount: number): GameState {

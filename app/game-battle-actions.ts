@@ -8,6 +8,8 @@ import { sourceEnemyForDungeonKey } from "./v17-content";
 import { combatStats, vitalStats } from "./vitals-engine";
 import type { Equipment, GameState, Hero, Unit } from "./game-state";
 import { awardFusionCores } from "./fusion-core-rewards";
+import { territoryBonus, territoryHealInterval } from "./guild-territory";
+import { grantTerritoryXp } from "./game-progression";
 
 type BattleActionDependencies = {
   notify: (message: string) => void;
@@ -62,12 +64,12 @@ export function runDungeonAction(
   const party = fighters.map((unit) => { const stats = vitalStats(unit), combat = combatStats(unit); return { uid: unit.uid, name: unit.name, hp: stats.hp, maxHp: stats.maxHp, mp: stats.mp, maxMp: stats.maxMp, position: unit.position, defense: combat.defense, attack: combat.attack, attackInterval: Math.max(.6, 2.2 - combat.speed / 100) }; });
   const passiveDamage = deployedMercs.reduce((sum, unit) => sum + Math.max(0, Math.floor(combatStats(unit).attack * .18)), 0);
   const amaterasuSet = Object.values(previous.hero.equip).filter((item) => item?.name.startsWith("T10 天照")).length >= 5;
-  const result = dungeonStep(previous.dungeon || freshDungeon(), { ...vital, str: total.str, dex: total.agi, mercenaryIntelligence, attack, defense: combatStats(previous.hero).defense, staff: previous.hero.equip.weapon?.name === DIVINE_EQUIPMENT.staff.name, amaterasuGaze: amaterasuSet }, action, now, key, roll, choice, spawnRoll, retaliationRoll, party, passiveDamage, materialRolls, previous.autoSkill, rolls.encounterCountRoll);
+  const result = dungeonStep(previous.dungeon || freshDungeon(), { ...vital, str: total.str, dex: total.agi, mercenaryIntelligence, attack, defense: combatStats(previous.hero).defense, staff: previous.hero.equip.weapon?.name === DIVINE_EQUIPMENT.staff.name, amaterasuGaze: amaterasuSet }, action, now, key, roll, choice, spawnRoll, retaliationRoll, party, passiveDamage, materialRolls, previous.autoSkill, rolls.encounterCountRoll, territoryHealInterval(previous.territory));
   const remaining = new globalThis.Map(result.party.map((unit) => [unit.uid, unit]));
   let next: GameState = { ...previous, dungeon: result.state, hero: { ...previous.hero, hp: remaining.get("hero")?.hp ?? result.hp, mp: remaining.get("hero")?.mp ?? result.mp }, mercs: previous.mercs.map((unit) => { const fighter = remaining.get(unit.uid); return fighter ? { ...unit, hp: fighter.hp, mp: fighter.mp ?? unit.mp } : unit; }) };
   const battleMembers = 1 + deployedMercs.length;
   const shareXp = Math.floor(result.xpEarned / battleMembers);
-  if (result.killsEarned) next = { ...next, hero: deps.grantXp(next.hero, shareXp), mercs: next.mercs.map((unit) => activeIds.has(unit.uid) ? deps.grantXp(unit, shareXp) : unit), kills: next.kills + result.killsEarned, logs: deps.addLog(next.logs, `擊敗 ${result.killsEarned} 隻怪物，獲得 ${result.xpEarned} 經驗；${battleMembers} 名出戰角色均分，每人 ${shareXp} 經驗。`) };
+  if (result.killsEarned) next = { ...next, hero: grantTerritoryXp(next, next.hero, shareXp), mercs: next.mercs.map((unit) => activeIds.has(unit.uid) ? grantTerritoryXp(next, unit, shareXp) : unit), kills: next.kills + result.killsEarned, logs: deps.addLog(next.logs, `擊敗 ${result.killsEarned} 隻怪物，獲得 ${result.xpEarned} 經驗；${battleMembers} 名出戰角色均分，每人 ${Math.floor(shareXp * (1 + territoryBonus(next.territory, "xp")))} 經驗（含領地加成）。`) };
   if (result.state.status === "recovering" && previous.hero.status !== "客棧中") next = deps.enterInn(next, now, result.state.logs[0], result.state);
   else if (result.state.status === "idle" && previous.hero.status === "客棧中") next = deps.leaveInn(next);
   if (!result.reward) return next;

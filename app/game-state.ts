@@ -5,6 +5,7 @@ import type { PlayerStatus } from "./inn-engine";
 import type { TradeState } from "./trade-engine";
 import type { NationId } from "./v15-data";
 import type { ExchangePurchases } from "./village-exchange";
+import type { GuildTerritory } from "./guild-territory";
 
 /** Persistent save keys. These names are compatibility contracts with existing players. */
 export const PROFILE_INDEX = "bt52_v19_character_profiles";
@@ -106,6 +107,7 @@ export type GameState = {
   dungeon?: DungeonState;
   version: 30;
   trade: TradeState;
+  territory: GuildTerritory;
   credit: number;
   creditXp: number;
   creditLevel: number;

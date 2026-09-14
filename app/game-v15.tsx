@@ -60,7 +60,7 @@ import { MonsterCompendium } from './monster-compendium';
 import { parseStoredArray, preserveCorruptStorage } from './storage-guards';
 import { heroNationProfiles, medicineCatalog, SHOP_QUALITY } from "./game-config";
 import { createGameTickRolls, settleCurrentGame } from "./game-loop";
-import { grantCreditXp, grantXp, unitPower, xpNeed } from "./game-progression";
+import { grantCreditXp, grantXp, grantTerritoryXp, unitPower, xpNeed } from "./game-progression";
 import { restAtInnAction, travelCityAction } from "./game-city-actions";
 import { claimContractAction, contractProgress } from "./game-contract-actions";
 import { formatGameNumber as format } from "./game-display";
@@ -77,7 +77,6 @@ import { profileFromGame, readCharacterSave, restoreGame, saveCharacterProfile, 
 import {
   PROFILE_INDEX,
   SHARED_WAREHOUSE_SAVE,
-  WAREHOUSE_LIMIT,
   profileSaveKey,
   type CharacterProfile,
   type CityService,
@@ -87,6 +86,7 @@ import {
   type Unit,
 } from "./game-state";
 import './gersang-archive.css';
+import { enhanceEquipment, upgradeBuilding, warehouseLimit, type BuildingId } from './guild-territory';
 
 const slots = EQUIPMENT_SLOTS;
 const bossMonsterArt:Record<string,string> = {
@@ -361,7 +361,7 @@ export default function GameV15() {
   function simulateHeroLoot() {
     if(dungeonBusy(game.dungeon)){setNotice('副本或療傷期間暫停此操作，請先完成療傷。');return;}
     setGame(previous=>{
-      return {...previous,hero:grantXp(previous.hero,10),logs:addLog(previous.logs,'模擬打怪：主角獲得 10 經驗。')};
+      return {...previous,hero:grantTerritoryXp(previous, previous.hero, 10),logs:addLog(previous.logs,'模擬打怪：主角獲得 10 經驗（含領地加成）。')};
     });
   }
 
@@ -403,7 +403,7 @@ export default function GameV15() {
   }
 
   function depositToWarehouse(itemUid: string) {
-    const result = depositWarehouseItemAction(game, sharedWarehouse, itemUid, WAREHOUSE_LIMIT, addLog);
+    const result = depositWarehouseItemAction(game, sharedWarehouse, itemUid, warehouseLimit(game.territory), addLog);
     if (result.error) { setNotice(result.error); return; }
     if (result.game === game) return;
     setGame(result.game);
@@ -415,6 +415,15 @@ export default function GameV15() {
     if (result.game === game) return;
     setGame(result.game);
     setSharedWarehouse(result.warehouse);
+  }
+
+  function upgradeTerritoryBuilding(id: BuildingId) {
+    setGame(previous => { const result = upgradeBuilding(previous, id); if (result.error) setNotice(result.error); return result.game; });
+  }
+
+  function enhanceTerritoryEquipment(itemUid: string) {
+    const roll = Math.random();
+    setGame(previous => { const result = enhanceEquipment(previous, itemUid, roll); if (result.error) setNotice(result.error); return result.game; });
   }
 
   function restAtInn() {
@@ -660,7 +669,7 @@ export default function GameV15() {
 
 
         <TabsContent value="squad" className="tab-panel">
-          <CaravanStatus busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} restingMercs={game.restingMercs} active={game.active} toggleActive={toggleActive} storeMercenary={storeMercenary} withdrawRestingMercenary={withdrawRestingMercenary} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet}
+          <CaravanStatus territory={game.territory} upgradeBuilding={upgradeTerritoryBuilding} enhanceEquipment={enhanceTerritoryEquipment} busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} restingMercs={game.restingMercs} active={game.active} toggleActive={toggleActive} storeMercenary={storeMercenary} withdrawRestingMercenary={withdrawRestingMercenary} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet}
             navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now(),spawnRoll=Math.random();setGame(previous=>{
               const old=previous.dungeon||freshDungeon();
               const deployed=[previous.hero,...previous.mercs.filter(unit=>previous.active.slice(0,ACTIVE_MERCENARY_LIMIT).includes(unit.uid))];
@@ -680,7 +689,7 @@ export default function GameV15() {
             promote={(uid,targetTier)=>setGame(previous=>promoteMercenary(previous,uid,targetTier))}
             promotionItems={{fusionCores:game.fusionCores,soulStones:game.soulStones,awakeningStones:game.awakeningStones}}
             hire={()=>{ const index=Math.floor(Math.random()*merchantMercenaries.length); recruitMerchant(merchantMercenaries[index],index); }}
-            train={()=>setGame(previous=>dungeonBusy(previous.dungeon)?previous:({...previous,hero:grantXp(previous.hero,100),mercs:previous.mercs.map(unit=>grantXp(unit,100)),logs:addLog(previous.logs,'模擬打怪：主角與所有已僱用傭兵各獲得 100 經驗。')}))}
+            train={()=>setGame(previous=>dungeonBusy(previous.dungeon)?previous:({...previous,hero:grantTerritoryXp(previous, previous.hero,100),mercs:previous.mercs.map(unit=>grantTerritoryXp(previous,unit,100)),logs:addLog(previous.logs,'模擬打怪：主角與所有已僱用傭兵各獲得 100 經驗（含領地加成）。')}))}
             allocate={addStat} />
         </TabsContent>
 
@@ -721,8 +730,8 @@ export default function GameV15() {
               {cityService === "weapon" && <div className="enchant-counter"><div><strong>附魔裝備櫃</strong><p>購入與目前關卡相符、附帶 1～3 條魔法屬性的隨機裝備。</p></div><Button onClick={buyMagicEquipment}><ShoppingBag />12,000 兩</Button></div>}
             </div>}
 
-            {cityService === "warehouse" && <div className="city-service-body warehouse-service"><div className="panel-title"><Warehouse /><h2>三角色共用倉庫</h2><span>{sharedWarehouse.length}/{WAREHOUSE_LIMIT} 格</span></div><Progress value={sharedWarehouse.length / WAREHOUSE_LIMIT * 100} />
-              <div className="warehouse-columns"><section><h3>{game.hero.name} 的物品欄</h3>{game.inventory.length ? game.inventory.map((item) => <article key={item.uid}><img src={item.image} alt="" /><span><strong>{item.name}</strong><small>{item.rarity}・{slotLabels[item.slot]}</small></span><Button size="sm" disabled={sharedWarehouse.length >= WAREHOUSE_LIMIT} onClick={() => depositToWarehouse(item.uid)}>存入</Button></article>) : <p>目前沒有可存入的裝備。</p>}</section>
+            {cityService === "warehouse" && <div className="city-service-body warehouse-service"><div className="panel-title"><Warehouse /><h2>三角色共用倉庫</h2><span>{sharedWarehouse.length}/{warehouseLimit(game.territory)} 格</span></div><Progress value={sharedWarehouse.length / warehouseLimit(game.territory) * 100} />
+              <div className="warehouse-columns"><section><h3>{game.hero.name} 的物品欄</h3>{game.inventory.length ? game.inventory.map((item) => <article key={item.uid}><img src={item.image} alt="" /><span><strong>{item.name}</strong><small>{item.rarity}・{slotLabels[item.slot]}</small></span><Button size="sm" disabled={sharedWarehouse.length >= warehouseLimit(game.territory)} onClick={() => depositToWarehouse(item.uid)}>存入</Button></article>) : <p>目前沒有可存入的裝備。</p>}</section>
               <section><h3>共用倉庫・三名角色皆可取用</h3>{sharedWarehouse.length ? sharedWarehouse.map((item) => <article key={item.uid}><img src={item.image} alt="" /><span><strong>{item.name}</strong><small>{item.rarity}・{slotLabels[item.slot]}</small></span><Button size="sm" variant="outline" onClick={() => withdrawFromWarehouse(item.uid)}>取出</Button></article>) : <p>倉庫目前是空的。</p>}</section></div>
             </div>}
 

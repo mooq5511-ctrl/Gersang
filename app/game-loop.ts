@@ -6,9 +6,10 @@ import type { GameState, Hero, Unit } from "./game-state";
 import { runDungeonAction } from "./game-battle-actions";
 import { rollEquipment } from "./game-equipment-factory";
 import { formatGameNumber } from "./game-display";
-import { grantCreditXp, grantXp } from "./game-progression";
+import { grantCreditXp, grantXp, grantTerritoryXp } from "./game-progression";
 import { appendGameLog, enemyMaxForStage, enterGameInnAction, leaveGameInnAction } from "./game-runtime-actions";
 import { resolveRoadEncounterAction } from "./game-trade-actions";
+import { territoryBonus } from "./guild-territory";
 
 /** Random values are sampled once per tick so React retries cannot change an outcome. */
 export function createGameTickRolls() {
@@ -43,14 +44,14 @@ export function settleGameLoop(previous: GameState, rolls: GameTickRolls, deps: 
     next = { ...next, dungeon: { ...next.dungeon!, pauseAt: now } };
     if (next.trade.caravan) next = { ...next, trade: { ...next.trade, caravan: { ...next.trade.caravan, startedAt: next.trade.caravan.startedAt + pause } } };
     if (previous.dungeon!.status === "recovering") return { ...next, idleStamp: now };
-    const idle = settleCaravanIdle(previous.idleStamp, now, Math.max(previous.stage, previous.hero.level));
+    const idle = settleCaravanIdle(previous.idleStamp, now, Math.max(previous.stage, previous.hero.level), territoryBonus(previous.territory, "idle"));
     return deps.grantCreditXp({ ...next, idleStamp: idle.stamp, gold: next.gold + idle.gold, credit: next.credit + idle.credit }, idle.credit);
   }
-  const idle = settleCaravanIdle(previous.idleStamp, now, Math.max(previous.stage, previous.hero.level));
+  const idle = settleCaravanIdle(previous.idleStamp, now, Math.max(previous.stage, previous.hero.level), territoryBonus(previous.territory, "idle"));
   if (idle.stamp !== previous.idleStamp) previous = deps.grantCreditXp({ ...previous, idleStamp: idle.stamp, gold: previous.gold + idle.gold, credit: previous.credit + idle.credit }, idle.credit);
   const result = advanceTrade(previous.trade, previous.gold, now);
   if (!result.trips && !result.encounters) return previous;
-  let next: GameState = { ...previous, trade: result.trade, gold: result.gold, hero: deps.grantXp(previous.hero, result.xp), mercs: previous.mercs.map((unit) => previous.active.includes(unit.uid) ? deps.grantXp(unit, Math.floor(result.xp * .8)) : unit), logs: result.trips ? deps.addLog(previous.logs, `商隊完成 ${result.trips} 趟交易，淨利 ${deps.format(result.profit)} 兩；主角與出戰傭兵獲得經驗。`) : previous.logs };
+  let next: GameState = { ...previous, trade: result.trade, gold: result.gold, hero: grantTerritoryXp(previous, previous.hero, result.xp), mercs: previous.mercs.map((unit) => previous.active.includes(unit.uid) ? grantTerritoryXp(previous, unit, Math.floor(result.xp * .8)) : unit), logs: result.trips ? deps.addLog(previous.logs, `商隊完成 ${result.trips} 趟交易，淨利 ${deps.format(result.profit)} 兩；主角與出戰傭兵獲得經驗。`) : previous.logs };
   for (let index = 0; index < result.encounters; index++) next = deps.resolveRoadEncounter(next);
   return next;
 }

@@ -1,4 +1,4 @@
-import { profileSaveKey, serializeGameForStorage, type CharacterProfile, type Equipment, type GameState, SHARED_WAREHOUSE_SAVE, WAREHOUSE_LIMIT } from "./game-state";
+import { profileSaveKey, serializeGameForStorage, type CharacterProfile, type Equipment, type GameState, SHARED_WAREHOUSE_SAVE } from "./game-state";
 import { restoreTrade } from "./trade-engine";
 import { dungeonBusy, freshDungeon } from "./dungeon-engine";
 import { migrateSevenSlotSave, normalizeStoredItem } from "./equipment-slots";
@@ -11,6 +11,7 @@ import { normalizeVitals } from "./vitals-engine";
 import { applyGersangVisuals, sanitizeEquip } from "./game-save-normalizers";
 import { freshGame, heroPortrait, isNationId, makeHero } from "./game-hero-factory";
 import { worldCities } from "./v15-data";
+import { restoreTerritory } from "./guild-territory";
 import type { Hero, Unit } from "./game-state";
 
 export function writeProfileIndex(storage: Storage, profiles: Array<CharacterProfile | null>) {
@@ -22,7 +23,7 @@ export function writeCharacterSave(storage: Storage, slot: number, game: GameSta
 }
 
 export function writeSharedWarehouse(storage: Storage, warehouse: Equipment[]) {
-  storage.setItem(SHARED_WAREHOUSE_SAVE, JSON.stringify(warehouse.slice(0, WAREHOUSE_LIMIT)));
+  storage.setItem(SHARED_WAREHOUSE_SAVE, JSON.stringify(warehouse));
 }
 
 export function saveCharacterProfile(storage: Storage, profiles: Array<CharacterProfile | null>, slot: number, game: GameState, profile: CharacterProfile) {
@@ -62,7 +63,7 @@ function normalizeStoredMercenary(unit: Unit, index: number): Unit {
 /** Restores only the current character-save schema; legacy V14-V18 imports are intentionally unsupported. */
 export function restoreGame(raw: unknown): GameState {
   raw = migrateSevenSlotSave(raw);
-  let next = freshGame();
+  const next = freshGame();
   if (!raw || typeof raw !== "object") return next;
   const parsed = raw as Partial<GameState> & { version?: number; hero?: Partial<Hero> };
   const heroNation = isNationId(parsed.hero?.nation) ? parsed.hero.nation : next.hero.nation;
@@ -73,6 +74,7 @@ export function restoreGame(raw: unknown): GameState {
   Object.assign(next, parsed, {
     version: 30,
     trade: restoreTrade(parsed.trade),
+    territory: restoreTerritory(parsed.territory),
     credit: Number.isFinite(parsed.credit) ? Math.max(0, Math.floor(parsed.credit!)) : 0,
     creditXp: Number.isFinite(parsed.creditXp) ? Math.max(0, Math.floor(parsed.creditXp!)) : 0,
     creditLevel: Math.max(1, Math.min(LEVEL_CAP, Math.floor(parsed.creditLevel || 1))),
