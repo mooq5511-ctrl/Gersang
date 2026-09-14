@@ -10,11 +10,14 @@ export type LevelProgress = {
 export const LEVEL_CAP = 300;
 export const LEVEL_CAP_TOTAL_XP = 2_000_000_000;
 
-// 前兩級固定為 100、500；後續以平滑三次曲線逐級增加。
-const xpCosts = Array.from({ length: LEVEL_CAP - 1 }, (_, index) =>
-  100 + 400 * index + Math.floor(0.9987 * index ** 3),
-);
-xpCosts[xpCosts.length - 1] += LEVEL_CAP_TOTAL_XP - xpCosts.reduce((sum, cost) => sum + cost, 0);
+// 前兩級固定為 100、500；稍放緩中期需求，並維持 Lv.300 累積 20 億。
+const levels = Array.from({ length: LEVEL_CAP - 1 }, (_, index) => index);
+const linearTotal = levels.reduce((sum, index) => sum + 100 + 400 * index, 0);
+const exponent = 3.12;
+const coefficient = (LEVEL_CAP_TOTAL_XP - linearTotal) / levels.reduce((sum, index) => sum + index ** exponent, 0);
+const xpCosts = levels.map((index) => 100 + 400 * index + Math.floor(coefficient * index ** exponent));
+let roundingRemainder = LEVEL_CAP_TOTAL_XP - xpCosts.reduce((sum, cost) => sum + cost, 0);
+for (let index = xpCosts.length - 1; roundingRemainder > 0; index--, roundingRemainder--) xpCosts[index]++;
 
 let accumulatedXp = 0;
 export const LEVEL_PROGRESSION: readonly LevelProgress[] = Array.from({ length: LEVEL_CAP }, (_, index) => {

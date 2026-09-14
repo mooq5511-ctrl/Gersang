@@ -9,7 +9,9 @@ export function appendGameLog(logs: string[], message: string) {
 }
 
 export function enemyMaxForStage(stage: number, mapMultiplier = 1) {
-  return Math.floor(250 * Math.pow(1.145, stage - 1) * (stage % 10 === 0 ? 4.5 : 1) * mapMultiplier);
+  const safeStage = Number.isFinite(stage) ? Math.max(1, Math.floor(stage)) : 1;
+  const hp = 250 * Math.pow(1.1, safeStage - 1) * (safeStage % 10 === 0 ? 1.5 : 1) * mapMultiplier;
+  return Math.max(1, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(hp)));
 }
 
 export function enterGameInnAction(previous: GameState, now: number, message: string, dungeon = previous.dungeon): GameState {

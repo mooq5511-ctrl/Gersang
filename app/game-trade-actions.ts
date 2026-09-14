@@ -15,7 +15,7 @@ import type { Hero, Unit } from "./game-state";
 
 export function dispatchTradeAction(state: GameState, routeId: string, now: number, addLog: (logs: string[], message: string) => string[]) {
   if (dungeonBusy(state.dungeon)) return { ...state, logs: addLog(state.logs, "請先結束副本並完成療傷。") };
-  const result = dispatchTrade(state.trade, state.gold, routeId, state.stage, state.active.length, now);
+  const result = dispatchTrade(state.trade, state.gold, routeId, Math.max(state.stage, state.hero.level), state.active.length, now);
   if (result.error) return { ...state, logs: addLog(state.logs, result.error) };
   const route = TRADE_ROUTES.find((item) => item.id === routeId)!;
   return { ...state, gold: result.gold, trade: result.trade, logs: addLog(state.logs, route.from + " → " + route.to + "：商隊裝載「" + route.good + "」啟航。") };

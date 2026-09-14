@@ -19,7 +19,7 @@ export const OFFLINE_LIMIT = 8 * 60 * 60 * 1000;
 export const MAX_CARGO_LEVEL = 20;
 export const freshTrade = (): TradeState => ({ reputation: 0, cargoLevel: 1, totalProfit: 0, trips: 0, selectedRouteId: "hanji", auto: true, caravan: null });
 export const cargoCapacity = (level: number) => 10 + (level - 1) * 5;
-export const upgradeCost = (level: number) => Math.floor(6000 * Math.pow(1.55, level - 1));
+export const upgradeCost = (level: number) => Math.floor(30_000 * Math.pow(1.15, level - 1));
 const safe = (value: unknown, fallback = 0) => typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : fallback;
 
 /** 跑商不再觸發隨機遭遇；戰鬥只由地圖選擇的指定怪物開始。 */
@@ -58,7 +58,7 @@ export function voyageQuote(route: TradeRoute, level: number, escorts: number, n
   const multiplier = cargo / 10;
   return {
     routeId: route.id, startedAt: now, duration: route.seconds * 1000, cargo,
-    cost: Math.floor(route.cost * multiplier),
+    cost: Math.floor(route.cost * Math.pow(multiplier, 1.1)),
     revenue: Math.floor(route.sale * multiplier * (1 + Math.min(10, Math.max(0, escorts)) * 0.015)),
     reputation: route.rewardRep, xp: route.rewardRep * 8,
     encounterSeed: 0, encountersResolved: 0,

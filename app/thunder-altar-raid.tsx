@@ -11,6 +11,7 @@ type Status = "ready" | "fighting" | "failed" | "cleared";
 type Phase = 0 | 1 | 2;
 
 const ENTRY_COST = 50_000;
+const BURST_COOLDOWN = 10;
 const BOSSES = [
   { name: "喵兒", title: "雷影妖姬", time: 240, hp: 5_000_000, skill: "殘影分身：範圍傷害可快速瓦解分身；命中不足時首領閃避提高。", enrage: "千影獵殺" },
   { name: "守護弓手・泰貞", title: "雷弦守護者", time: 240, hp: 8_000_000, skill: "蓄力貫穿箭：以護盾承傷，或使用控場打斷蓄力。", enrage: "萬箭雷鳴" },
@@ -30,11 +31,11 @@ export function ThunderAltarRaid({ credit, power, materials, azureSetPieces, chi
   const [seconds, setSeconds] = useState(240);
   const [phaseSeconds, setPhaseSeconds] = useState<number>(BOSSES[0].time);
   const [integrity, setIntegrity] = useState(100);
-  const [burstReady, setBurstReady] = useState(true);
+  const [burstCooldown, setBurstCooldown] = useState(0);
   const [message, setMessage] = useState("祭壇封印尚未解除。");
   const raidPower = Math.max(1_000, power);
   const setBonus=(pieces:number,bonus:[number,number,number])=>pieces>=5?bonus[2]:pieces>=3?bonus[1]:pieces>=2?bonus[0]:0;
-  const dps = Math.max(50, Math.floor(raidPower * .12 * (1+setBonus(azureSetPieces,[.1,.2,.35])+setBonus(chiyouSetPieces,[.12,.25,.4])+setBonus(amaterasuSetPieces,[.15,.3,.45]))));
+  const dps = Math.max(50, Math.floor(raidPower * .25 * (1+setBonus(azureSetPieces,[.1,.2,.35])+setBonus(chiyouSetPieces,[.12,.25,.4])+setBonus(amaterasuSetPieces,[.15,.3,.45]))));
 
   const finishFailure = (passed: Phase) => {
     const rewards: Record<string, number> = passed === 0 ? { "雷祭印記": 1, "小型雷之屬性石": 3 } : passed === 1 ? { "雷祭印記": 2, "小型雷之屬性石": 6, "喵兒的尾巴": 1 } : { "雷祭印記": 3, "小型雷之屬性石": 10, "喵兒的尾巴": 1, "雷電的箭矢": 1 };
@@ -55,8 +56,8 @@ export function ThunderAltarRaid({ credit, power, materials, azureSetPieces, chi
       setSeconds(value => Math.max(0, value - 1));
       setPhaseSeconds(value => Math.max(0, value - 1));
       setHp(value => Math.max(0, value - dps));
-      setIntegrity(value => Math.max(0, value - (phase === 0 ? 0.35 : phase === 1 ? 0.65 : 1.05)));
-      setBurstReady(true);
+      setIntegrity(value => Math.max(0, value - (phase === 0 ? 0.1 : phase === 1 ? 0.15 : 0.2)));
+      setBurstCooldown(value => Math.max(0, value - 1));
     }, 1000);
     return () => window.clearInterval(timer);
   }, [status, dps, phase]);
@@ -73,12 +74,12 @@ export function ThunderAltarRaid({ credit, power, materials, azureSetPieces, chi
 
   const start = () => {
     if (credit < ENTRY_COST) { onNotice("信用值不足，需要 50,000 信用值才能進入雷霆祭壇。"); return; }
-    onEnter(); setStatus("fighting"); setPhase(0); setMaxHp(BOSSES[0].hp); setHp(BOSSES[0].hp); setSeconds(240); setPhaseSeconds(BOSSES[0].time); setIntegrity(100); setMessage("雷霆祭壇開啟：喵兒以殘影包圍隊伍。 ");
+    onEnter(); setStatus("fighting"); setPhase(0); setMaxHp(BOSSES[0].hp); setHp(BOSSES[0].hp); setSeconds(240); setPhaseSeconds(BOSSES[0].time); setIntegrity(100); setBurstCooldown(0); setMessage("雷霆祭壇開啟：喵兒以殘影包圍隊伍。 ");
   };
   const burst = () => {
-    if (status !== "fighting" || !burstReady) return;
+    if (status !== "fighting" || burstCooldown > 0) return;
     const bonus = Math.floor(dps * (phase === 0 ? 12 : phase === 1 ? 10 : 14));
-    setHp(value => Math.max(0, value - bonus)); setBurstReady(false); setMessage(`合擊雷印命中，造成 ${bonus.toLocaleString()} 點爆發傷害。`);
+    setHp(value => Math.max(0, value - bonus)); setBurstCooldown(BURST_COOLDOWN); setMessage(`合擊雷印命中，造成 ${bonus.toLocaleString()} 點爆發傷害。`);
   };
 
   const boss = BOSSES[phase];
@@ -92,7 +93,7 @@ export function ThunderAltarRaid({ credit, power, materials, azureSetPieces, chi
         <div><div className="raid-label"><span><Swords />{boss.name} HP</span><b>{Math.ceil(hp).toLocaleString()} / {maxHp.toLocaleString()}</b></div><Progress value={Math.max(0, hp / maxHp * 100)} /></div>
         <div><div className="raid-label"><span><Shield />隊伍穩定度</span><b>{Math.ceil(integrity)}%</b></div><Progress value={integrity} className="raid-integrity" /></div>
         <p className="raid-message"><Sparkles />{message}</p>
-        <Button className="raid-burst" disabled={status !== "fighting" || !burstReady} onClick={burst}>合擊雷印・爆發傷害</Button>
+        <Button className="raid-burst" disabled={status !== "fighting" || burstCooldown > 0} onClick={burst}>{burstCooldown > 0 ? `合擊雷印・冷卻 ${burstCooldown} 秒` : "合擊雷印・爆發傷害"}</Button>
       </div>
     </section>
     <footer className="raid-loot"><strong>通關保底</strong><span>雷祭印記 ×6</span><span>小型雷之屬性石 ×20</span><span>精氣之珠碎片 ×12</span><span>鹿亞之角 ×1</span></footer>

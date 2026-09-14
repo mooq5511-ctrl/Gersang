@@ -43,10 +43,10 @@ export function settleGameLoop(previous: GameState, rolls: GameTickRolls, deps: 
     next = { ...next, dungeon: { ...next.dungeon!, pauseAt: now } };
     if (next.trade.caravan) next = { ...next, trade: { ...next.trade, caravan: { ...next.trade.caravan, startedAt: next.trade.caravan.startedAt + pause } } };
     if (previous.dungeon!.status === "recovering") return { ...next, idleStamp: now };
-    const idle = settleCaravanIdle(previous.idleStamp, now);
+    const idle = settleCaravanIdle(previous.idleStamp, now, Math.max(previous.stage, previous.hero.level));
     return deps.grantCreditXp({ ...next, idleStamp: idle.stamp, gold: next.gold + idle.gold, credit: next.credit + idle.credit }, idle.credit);
   }
-  const idle = settleCaravanIdle(previous.idleStamp, now);
+  const idle = settleCaravanIdle(previous.idleStamp, now, Math.max(previous.stage, previous.hero.level));
   if (idle.stamp !== previous.idleStamp) previous = deps.grantCreditXp({ ...previous, idleStamp: idle.stamp, gold: previous.gold + idle.gold, credit: previous.credit + idle.credit }, idle.credit);
   const result = advanceTrade(previous.trade, previous.gold, now);
   if (!result.trips && !result.encounters) return previous;

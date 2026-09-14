@@ -598,7 +598,7 @@ export default function GameV15() {
         </TabsContent>
 
         <TabsContent value="trade" className="tab-panel">
-          <TradePanel trade={game.trade} gold={game.gold} stage={game.stage} escorts={game.active.length} logs={game.logs} lastEncounter={game.lastEncounter}
+          <TradePanel trade={game.trade} gold={game.gold} stage={Math.max(game.stage, game.hero.level)} escorts={game.active.length} logs={game.logs} lastEncounter={game.lastEncounter}
             onDispatch={sendCaravan} onUpgrade={upgradeCaravan}
             onSelect={(selectedRouteId) => setGame((previous) => ({ ...previous, trade: { ...previous.trade, selectedRouteId } }))}
             onToggleAuto={() => setGame((previous) => ({ ...previous, trade: { ...previous.trade, auto: !previous.trade.auto } }))} />
