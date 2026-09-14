@@ -65,18 +65,21 @@ export function runDungeonAction(
   const result = dungeonStep(previous.dungeon || freshDungeon(), { ...vital, str: total.str, dex: total.agi, mercenaryIntelligence, attack, defense: combatStats(previous.hero).defense, staff: previous.hero.equip.weapon?.name === DIVINE_EQUIPMENT.staff.name, amaterasuGaze: amaterasuSet }, action, now, key, roll, choice, spawnRoll, retaliationRoll, party, passiveDamage, materialRolls, previous.autoSkill, rolls.encounterCountRoll);
   const remaining = new globalThis.Map(result.party.map((unit) => [unit.uid, unit]));
   let next: GameState = { ...previous, dungeon: result.state, hero: { ...previous.hero, hp: remaining.get("hero")?.hp ?? result.hp, mp: remaining.get("hero")?.mp ?? result.mp }, mercs: previous.mercs.map((unit) => { const fighter = remaining.get(unit.uid); return fighter ? { ...unit, hp: fighter.hp, mp: fighter.mp ?? unit.mp } : unit; }) };
+  const battleMembers = 1 + deployedMercs.length;
+  const shareXp = Math.floor(result.xpEarned / battleMembers);
+  if (result.killsEarned) next = { ...next, hero: deps.grantXp(next.hero, shareXp), mercs: next.mercs.map((unit) => activeIds.has(unit.uid) ? deps.grantXp(unit, shareXp) : unit), kills: next.kills + result.killsEarned, logs: deps.addLog(next.logs, `擊敗 ${result.killsEarned} 隻怪物，獲得 ${result.xpEarned} 經驗；${battleMembers} 名出戰角色均分，每人 ${shareXp} 經驗。`) };
   if (result.state.status === "recovering" && previous.hero.status !== "客棧中") next = deps.enterInn(next, now, result.state.logs[0], result.state);
   else if (result.state.status === "idle" && previous.hero.status === "客棧中") next = deps.leaveInn(next);
   if (!result.reward) return next;
 
-  const reward = result.reward, battleMembers = 1 + deployedMercs.length, shareXp = Math.floor(reward.xp / Math.max(1, battleMembers));
+  const reward = result.reward;
   const sourceEnemy = sourceEnemyForDungeonKey(result.state.key);
   const sourceDrop = sourceEnemy?.drops || [], specialCoinDrop = sourceDrop.includes("[新手]兌換銅錢"), materialDrops = sourceDrop.filter((item) => item !== "[新手]兌換銅錢" && item !== "古錢箱");
   const selectedDrop = materialDrops.length ? materialDrops[Math.min(materialDrops.length - 1, Math.floor(Math.max(0, Math.min(.999999, choice)) * materialDrops.length))] : null;
   const ancientCoinBox = sourceEnemy?.mapId === "starter-outskirts" ? ["古錢箱"] : [];
   const droppedMaterials = [...reward.materials, ...(selectedDrop ? [selectedDrop] : []), ...ancientCoinBox];
   const defeatedNewbieBoss = result.state.key === "e_starter_pirate_king", defeatedLakeBoss = result.state.key === "e_lake_gale_altur", defeatedGoldenStarfish = result.state.key === "e_japan_sea_golden_starfish";
-  next = { ...next, hero: deps.grantXp(next.hero, shareXp), mercs: next.mercs.map((unit) => activeIds.has(unit.uid) ? deps.grantXp(unit, shareXp) : unit), gold: next.gold + reward.gold, kills: next.kills + 1, newbieBossDefeated: next.newbieBossDefeated || defeatedNewbieBoss, lakeBossDefeated: next.lakeBossDefeated || defeatedLakeBoss, goldenStarfishDefeated: next.goldenStarfishDefeated || defeatedGoldenStarfish, newbieCoins: next.newbieCoins + (specialCoinDrop ? 1 : 0), logs: deps.addLog(next.logs, `成功擊敗副本怪物，獲得 ${reward.xp} 經驗；${battleMembers} 名出戰角色均分，每人 ${shareXp} 經驗。`) };
+  next = { ...next, gold: next.gold + reward.gold, newbieBossDefeated: next.newbieBossDefeated || defeatedNewbieBoss, lakeBossDefeated: next.lakeBossDefeated || defeatedLakeBoss, goldenStarfishDefeated: next.goldenStarfishDefeated || defeatedGoldenStarfish, newbieCoins: next.newbieCoins + (specialCoinDrop ? 1 : 0), logs: deps.addLog(next.logs, `成功擊敗副本怪物，本場共擊敗 ${result.state.creditedKills || 1} 隻，累計獲得 ${reward.xp} 經驗。`) };
   const fusionCoreDrop = (rolls.fusionCoreRoll ?? roll) < 0.05 ? 1 : 0;
   if (fusionCoreDrop) {
     next = awardFusionCores(next, fusionCoreDrop);
