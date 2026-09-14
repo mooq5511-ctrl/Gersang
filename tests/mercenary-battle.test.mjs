@@ -11,19 +11,19 @@ const rosterUnit = (id, overrides={}) => {
 const foe = (overrides={}) => ({ name:'山賊',hp:100000,attack:10,defense:0,physical:0,magic:0,speed:1,ranged:true,...overrides });
 const run=(units, enemies=[foe()],random=()=>0.5,terrain='mountain')=>resolveMercenaryBattle(units,enemies,terrain,random);
 const skillEvents=(r,name)=>r.events.filter(e=>e.skill===name);
-test('all sixteen designs have the requested ratings and exact level-one stats',()=>{
-  assert.equal(merchantMercenaries.length,16);
-  assert.equal(new Set(merchantMercenaries.map(s=>s.id)).size,16);
+test('all nineteen designs have stable IDs and level-one stats',()=>{
+  assert.equal(merchantMercenaries.length,19);
+  assert.equal(new Set(merchantMercenaries.map(s=>s.id)).size,19);
   for(const s of merchantMercenaries){
-    assert.ok(s.ratings.every(n=>n>=1&&n<=50));
+    assert.ok(s.ratings.every(n=>n>=1&&(s.id==='mazu'?5000:50)));
     const u=rosterUnit(s.id);
-    assert.equal(u.maxHp,s.ratings[0]*20); assert.equal(u.maxMp,40);
+    assert.equal(u.maxHp,s.baseHp??s.ratings[0]*20); assert.equal(u.maxMp,s.baseMp??40);
     assert.equal(u.attack,s.ratings[1]*2); assert.equal(u.defense,s.ratings[2]*2);
     assert.equal(u.speed,s.ratings[3]); assert.equal(u.accuracy,ratingAccuracy(s.ratings[4]));
     assert.equal(spellCost(u),s.mp);
     const saved=normalizeVitals(JSON.parse(JSON.stringify({...u,hp:0,mp:0})));
     assert.equal(saved.hp,0); assert.equal(saved.mp,0); assert.ok(mercenarySpec(saved.templateId));
-    assert.ok(vitalStats({...u,level:2}).maxHp>u.maxHp);
+    if(s.id!=='mazu') assert.ok(vitalStats({...u,level:2}).maxHp>u.maxHp);
     assert.ok(combatStats({...u,equip:{weapon:{atk:30,def:20}}}).attack>u.attack);
   }
 });

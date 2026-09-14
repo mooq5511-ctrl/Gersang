@@ -34,8 +34,8 @@ export function resolveMercenaryBattle(party: TacticalFighter[], enemies: Tactic
   const setEffect = (a: Actor, key: string, value: number, duration: number) => a.effects.set(key, { value, until: rounds + duration - 1 });
   const woodland = ['forest', 'mountain', 'stockade'].includes(terrain);
   const speed = (a: Actor) => Math.max(1, ((a.unit.speed ?? 25) - (a.slowFlat.until >= rounds ? a.slowFlat.value : 0)) * (a.spec?.id === 'hunter' && woodland ? 1.15 : 1) * (1 - Math.max(effect(a, 'cannonSlow'), effect(a, 'hunterSlow'))));
-  const attack = (a: Actor) => a.unit.attack * (1 + a.stacks * 0.03) * (1 - Math.max(effect(a, 'shamanWeak'), effect(a, 'elephantWeak')));
-  const defense = (a: Actor) => a.unit.defense * (a.spec?.id === 'shield' && a.unit.hp > a.maxHp * 0.5 ? 1.2 : 1) * (1 - effect(a, 'spearArmor'));
+  const attack = (a: Actor) => a.unit.attack * (a.spec?.id === 'blade' ? 1 + a.stacks * 0.03 : 1) * (a.spec?.id === 'sanada' && a.unit.hp < a.maxHp * .45 ? 1.15 : 1) * (1 - Math.max(effect(a, 'shamanWeak'), effect(a, 'elephantWeak')));
+  const defense = (a: Actor) => a.unit.defense * (a.spec?.id === 'shield' && a.unit.hp > a.maxHp * 0.5 ? 1.2 : 1) * (a.spec?.id === 'sanada' && a.unit.hp < a.maxHp * .45 ? 1.15 : 1) * (1 - Math.max(effect(a, 'spearArmor'),effect(a,'sanadaArmor')));
   const lowest = (list: Actor[]) => [...list].sort((a, b) => a.unit.hp / a.maxHp - b.unit.hp / b.maxHp)[0];
   const front = (list: Actor[]) => { const f = list.filter(a => !a.back); return f.length ? f : list; };
   const formationFront=(list:Actor[])=>{const rank=Math.min(...list.map(a=>positionRank(a.unit.position)));return list.filter(a=>positionRank(a.unit.position)===rank)};
@@ -86,9 +86,11 @@ export function resolveMercenaryBattle(party: TacticalFighter[], enemies: Tactic
     if (!target.side && rounds <= 2) {
       if (magic && openingPassives.has('shaman')) damage *= 0.9;
       if (!magic && openingPassives.has('escort')) damage *= 0.92;
+      if (target.unit.position==='前排' && openingPassives.has('sanada')) damage *= 0.9;
     }
     if (target.foe?.bandit && woodland && rounds <= 2) damage *= 0.85;
     const dealt = applyDamage(source, target, Math.max(1, Math.floor(damage * guardReduction)), magic);
+    if (dealt > 0 && source.spec?.id === 'swordmaster') { source.stacks = Math.min(3, source.stacks + 1); log(source, '劍氣凝神', source, source.stacks); }
     log(source, magic ? '法術傷害' : '物理傷害', target, dealt);
     return true;
   };
@@ -163,6 +165,9 @@ export function resolveMercenaryBattle(party: TacticalFighter[], enemies: Tactic
           case 'hunter': if (strike(target,1.2)) { setEffect(target,'hunterSlow',0.4,2); if (target.foe?.kind==='beast' && !target.foe.boss && !target.root) target.root=1; } break;
           case 'elephant': for (const t of front(targets).slice(0,3)) if (strike(t,1,false,true)) setEffect(t,'elephantWeak',0.15,2); break;
           case 'priest': for (const t of alive(0)) { t.shield=Math.max(t.shieldUntil>=rounds ? t.shield : 0,Math.floor(t.maxHp*0.1)); t.shieldUntil=rounds+1; t.blind=0; log(a,'梵音護陣・護盾',t,t.shield); } break;
+          case 'swordmaster': { const victim=lowest(front(targets));const empowered=a.stacks>=3;if(empowered)a.stacks=0;strike(victim,2.1*(empowered?1.35:1),false,false,empowered ? .15 : 0);if(victim.unit.hp<=0)a.stacks=Math.min(3,a.stacks+1);break; }
+          case 'sanada': for(const t of targets.filter(t=>Math.abs(t.pos-target.pos)<=1).slice(0,3))if(strike(t,1.55,false,true)&&t.foe?.boss)setEffect(t,'sanadaArmor',.12,1);break;
+          case 'mazu': for(const t of targets)strike(t,10,true,true);for(const t of alive(0))heal(a,t,t.maxHp*.5,'海神護航・治療');break;
         }
       } else {
         const legacySpell = !spec && !!a.unit.skill && a.unit.cost > 0 && a.unit.mp >= a.unit.cost;
