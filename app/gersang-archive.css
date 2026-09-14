@@ -1,3 +1,4 @@
+.equipment-codex-categories { display: flex; gap: 6px; flex-wrap: wrap; margin: 0; padding: 0; border: 0; }
 .archive-layout { display: grid; grid-template-columns: minmax(300px,.72fr) minmax(0,1.55fr); gap: 12px; }
 .archive-expedition { align-self: start; position: sticky; top: 12px; }
 .archive-hero { min-height: 285px; display: grid; grid-template-columns: minmax(150px,42%) 1fr; align-items: center; gap: 20px; padding: 20px; border: 1px solid #8a683744; border-radius: 10px; background: radial-gradient(circle at 23% 40%,#9d5b2936,transparent 44%),#0b1115; }

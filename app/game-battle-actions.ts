@@ -10,6 +10,7 @@ import type { Equipment, GameState, Hero, Unit } from "./game-state";
 import { awardFusionCores } from "./fusion-core-rewards";
 import { territoryBonus, territoryHealInterval } from "./guild-territory";
 import { grantTerritoryXp } from "./game-progression";
+import { makeTierEquipmentDrop, pickTierEquipmentDrop } from "./tier-equipment";
 
 type BattleActionDependencies = {
   notify: (message: string) => void;
@@ -51,7 +52,7 @@ export function runDungeonAction(
   action: DungeonAction,
   now: number,
   key: DungeonKey | undefined,
-  rolls: { roll?: number; choice?: number; spawnRoll?: number; encounterCountRoll?: number; retaliationRoll?: number; materialRolls?: number[]; fusionCoreRoll?: number },
+  rolls: { roll?: number; choice?: number; spawnRoll?: number; encounterCountRoll?: number; retaliationRoll?: number; materialRolls?: number[]; fusionCoreRoll?: number; gearDropRoll?: number; gearChoiceRoll?: number },
   deps: DungeonActionDependencies,
 ): GameState {
   const roll = rolls.roll ?? .99, choice = rolls.choice ?? 0, spawnRoll = rolls.spawnRoll ?? 0, retaliationRoll = rolls.retaliationRoll ?? 0, materialRolls = rolls.materialRolls ?? [1, 1, 1];
@@ -95,6 +96,13 @@ export function runDungeonAction(
     const materials = { ...next.materials };
     for (const material of droppedMaterials) materials[material] = (materials[material] || 0) + 1;
     next = { ...next, materials, logs: deps.addLog(next.logs, `噴寶：獲得【${droppedMaterials.join("】、【")}】！`) };
+  }
+  const tierSpec = pickTierEquipmentDrop(sourceEnemy?.mapId, next.hero.level, !!sourceEnemy?.boss, rolls.gearDropRoll ?? 1, rolls.gearChoiceRoll ?? 0);
+  if (tierSpec) {
+    const tierDrop = makeTierEquipmentDrop(tierSpec, `tier-${tierSpec.id}-${now}-${result.state.serial}`, sourceEnemy?.name || "未知怪物");
+    const pickup = addInventoryItem(next.inventory, tierDrop);
+    const message = pickup.error ? `背包已滿，無法拾取「${tierDrop.name}」。` : `怪物掉落：獲得「${tierDrop.name}」（Lv.${tierSpec.requiredLevel}）。`;
+    next = { ...next, inventory: pickup.inventory, logs: deps.addLog(next.logs, message), dungeon: { ...next.dungeon!, logs: [message, ...next.dungeon!.logs].slice(0, 40) } };
   }
   const spec = reward.loot ? DIVINE_EQUIPMENT[reward.loot as keyof typeof DIVINE_EQUIPMENT] : null;
   if (!spec) return next;

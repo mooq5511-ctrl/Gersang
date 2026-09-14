@@ -8,6 +8,7 @@ import { medicineCatalog } from "./game-config";
 import { officialGems } from "./v17-content";
 import { normalizeVitals, recoverVitals, vitalStats } from "./vitals-engine";
 import type { Equipment, GameState, Hero, MagicAffix, Unit } from "./game-state";
+import { makeTierEquipment, tierEquipmentPrice, tierEquipmentShopCatalog } from "./tier-equipment";
 
 type Log = (logs: string[], message: string) => string[];
 type Format = (value: number) => string;
@@ -61,6 +62,19 @@ export function forgeThunderItemAction(state: GameState, id: ThunderForgeId, uid
 export function purchaseEquipmentAction(state: GameState, item: Equipment, price: number, message: string, addLog: Log, notify: (message: string) => void): GameState {
   if (state.gold < price) { notify("裝備商店資金不足。"); return state; }
   return { ...state, gold: state.gold - price, inventory: [item, ...state.inventory], logs: addLog(state.logs, message) };
+}
+
+/** Validates the temporary high-tier shop source independently of the shop UI. */
+export function purchaseTierEquipmentAction(state: GameState, itemId: string, priceFactor: number, cityName: string, uid: string, addLog: Log, notify: (message: string) => void): GameState {
+  const spec = tierEquipmentShopCatalog.find((item) => item.id === itemId);
+  if (!spec) return state;
+  if (state.hero.level < spec.requiredLevel) { notify(`需要 Lv.${spec.requiredLevel} 才能購買「${spec.name}」。`); return state; }
+  const price = Math.floor(tierEquipmentPrice(spec) * priceFactor);
+  if (state.gold < price) { notify("裝備商店資金不足。"); return state; }
+  const item = makeTierEquipment(spec, uid, `${cityName}商店・過渡供應`);
+  const pickup = addInventoryItem(state.inventory, item);
+  if (pickup.error) { notify("背包已滿，無法購買裝備。"); return state; }
+  return { ...state, gold: state.gold - price, inventory: pickup.inventory, logs: addLog(state.logs, `購入「${item.name}」（Lv.${spec.requiredLevel}），支付 ${price.toLocaleString("zh-TW")} 兩。`) };
 }
 
 export function equipInventoryItemAction(state: GameState, itemUid: string, requestedSlot: EquipmentSlot | undefined, targetUid: string, addLog: Log): GameState {
