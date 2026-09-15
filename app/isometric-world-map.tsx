@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { TOWN_MAP_BACKGROUND } from "./town-map-config";
+import { VILLAGE_NPCS, type NpcId } from "./npc-dialogue";
 
 const COLS = 12;
 const ROWS = 12;
@@ -73,10 +74,12 @@ export function IsometricWorldMap({
   cityName,
   heroImage,
   onEnter,
+  onNpcTalk,
 }: {
   cityName: string;
   heroImage: string;
   onEnter: (destination: Destination) => void;
+  onNpcTalk: (npcId: NpcId) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<{ destroy: (removeCanvas: boolean) => void } | null>(null);
@@ -312,6 +315,11 @@ export function IsometricWorldMap({
   return (
     <section className="isometric-world" aria-label={`${cityName}斜角城鎮地圖`}>
       <div ref={hostRef} className="isometric-world-canvas" />
+      <div className="village-npc-layer" aria-label="漢陽村 NPC">
+        {VILLAGE_NPCS.map(npc => <button key={npc.id} type="button" className="village-npc-pin" style={{ left: `${npc.map.x}%`, top: `${npc.map.y}%` }} onClick={() => onNpcTalk(npc.id)} aria-label={`與${npc.role}${npc.name}交談`}>
+          <span>●</span><b>{npc.name}</b><small>{npc.role}</small>
+        </button>)}
+      </div>
       <header className="isometric-world-heading"><small>目前所在</small><strong>{cityName}</strong><span>點擊地面移動</span></header>
       <nav className="isometric-destinations" aria-label="快速前往據點">
         <button type="button" onClick={() => navigate("city")}><b>市集</b><span>商店與客棧</span></button>

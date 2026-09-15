@@ -48,6 +48,8 @@ import { gameplayContracts as legacyContracts, officialEquipment, officialGems, 
 const gameplayContracts = legacyContracts.filter(contract => !['tier1','tier2','awakened'].includes(contract.metric));
 import { TradePanel } from "./trade-panel";
 import { IsometricWorldMap } from "./isometric-world-map";
+import { NpcDialoguePanel } from "./npc-dialogue-panel";
+import { completeNpcQuest, npcById, npcGreeting, recordNpcLine, startNpcQuest, type NpcId } from "./npc-dialogue";
 import { ThunderAltarRaid } from "./thunder-altar-raid";
 import { THUNDER_FORGE_ITEMS, mythicSetPieceCount, type MythicSet, type ThunderForgeId } from './mythic-forge';
 import { LEVEL_CAP } from "./level-progression";
@@ -135,6 +137,8 @@ export default function GameV15() {
   const [gemSlot, setGemSlot] = useState<EquipmentSlot>('armor');
   const [gemAmount, setGemAmount] = useState(1);
   const [sharedWarehouse, setSharedWarehouse] = useState<Equipment[]>([]);
+  const [activeNpcId, setActiveNpcId] = useState<NpcId | null>(null);
+  const [npcOpeningLine, setNpcOpeningLine] = useState("");
   const warehouseWritable = useRef(true);
   const loaded = useRef(false);
 
@@ -534,6 +538,35 @@ export default function GameV15() {
     setGame(previous => forgeThunderItemAction(previous, id, uid, gersangItemArt, addLog, setNotice));
   }
 
+  function handleNpcAction({ option, npc }: { option: { label: string; reply: string; affinity?: number; service?: CityService; openContracts?: boolean; quest?: "start" | "complete" }; npc: NonNullable<ReturnType<typeof npcById>> }) {
+    setGame(previous => {
+      let next = recordNpcLine(previous, npc.id, `${npc.name}：${option.reply}`);
+      if (option.affinity) next = { ...next, npcProgress: { ...next.npcProgress, affinity: { ...next.npcProgress.affinity, [npc.id]: Math.min(100, (next.npcProgress.affinity[npc.id] || 0) + option.affinity) } } };
+      if (option.quest === "start") {
+        next = startNpcQuest(next, npc);
+        if (next !== previous) next = { ...next, logs: addLog(next.logs, `接受村莊委託「${npc.quest?.name || ""}」。`) };
+      }
+      if (option.quest === "complete") {
+        const beforeGold = next.gold;
+        next = completeNpcQuest(next, npc);
+        if (next.gold !== beforeGold) next = { ...next, logs: addLog(next.logs, `完成村莊委託「${npc.quest?.name || ""}」，獲得 ${format(next.gold - beforeGold)} 兩。`) };
+      }
+      return next;
+    });
+    if (option.service) { setCityService(option.service); setActiveTab("city"); setActiveNpcId(null); }
+    if (option.openContracts) { setActiveTab("contracts"); setActiveNpcId(null); }
+    if (npc.id === "lee-taesan" && option.label === "前往世界地圖") { setActiveTab("battle"); setActiveNpcId(null); }
+  }
+
+  function openNpcDialogue(npcId: NpcId) {
+    const npc = npcById(npcId);
+    if (!npc) return;
+    const greeting = npcGreeting(game, npc);
+    setNpcOpeningLine(greeting);
+    setGame(previous => recordNpcLine(previous, npc.id, `${npc.name}：${greeting}`));
+    setActiveNpcId(npcId);
+  }
+
   function redeemWandererSet(set: Extract<MythicSet,'azure'|'chiyou'|'amaterasu'>) {
     const pieces=Object.values(THUNDER_FORGE_ITEMS).filter(recipe=>recipe.set===set);
     const setName={azure:'青龍',chiyou:'蚩尤',amaterasu:'天照'}[set];
@@ -603,13 +636,14 @@ export default function GameV15() {
         </TabsList>
 
         <TabsContent value="map" className="tab-panel isometric-map-tab">
-          <IsometricWorldMap cityName={currentCity.name} heroImage={game.hero.image} onEnter={(destination) => {
+          <IsometricWorldMap cityName={currentCity.name} heroImage={game.hero.image} onNpcTalk={openNpcDialogue} onEnter={(destination) => {
             if (destination === "city") { setCityService("mercenary"); setActiveTab("city"); }
             else if (destination === "trade") setActiveTab("trade");
             else if (destination === "raid") setActiveTab("raid");
             else if (destination === "battle") setActiveTab("battle");
             else setActiveTab("squad");
           }} />
+          {activeNpcId && npcById(activeNpcId) && <NpcDialoguePanel npc={npcById(activeNpcId)!} game={game} initialLine={npcOpeningLine} onAction={handleNpcAction} onClose={() => setActiveNpcId(null)} />}
         </TabsContent>
 
         <TabsContent value="trade" className="tab-panel">

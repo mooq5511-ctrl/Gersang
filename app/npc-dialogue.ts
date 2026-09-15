@@ -1,0 +1,101 @@
+import { contractProgress } from "./game-contract-actions";
+import type { GameState } from "./game-state";
+
+export type NpcId =
+  | "kim-seongho" | "choi-daesan" | "han-sowol" | "heo-muncheol" | "hong-museong"
+  | "wang-deokchang" | "lee-taesan" | "baegun-elder" | "jang-miryung" | "jo-manbok";
+
+export type NpcProgress = {
+  met: string[];
+  affinity: Record<string, number>;
+  activeQuests: string[];
+  completedQuests: string[];
+  history: Array<{ npcId: string; text: string; at: number }>;
+};
+
+export type NpcQuest = {
+  id: string;
+  name: string;
+  metric: "stage" | "kills" | "mercs" | "materials" | "equipment";
+  target: number;
+  reward: { gold: number; affinity: number };
+};
+
+export type NpcService = "mercenary" | "weapon" | "armor" | "inn" | "pharmacy" | "exchange";
+export type NpcOption = { label: string; reply: string; pages?: string[]; affinity?: number; service?: NpcService; openContracts?: boolean; quest?: "start" | "complete"; hidden?: boolean };
+export type VillageNpc = {
+  id: NpcId;
+  name: string;
+  role: string;
+  portrait?: string;
+  map: { x: number; y: number };
+  first: string;
+  beforeQuest: string;
+  inProgress: string;
+  afterQuest: string;
+  hidden?: { requirement: (state: GameState) => boolean; label: string; reply: string };
+  quest?: NpcQuest;
+  options: NpcOption[];
+};
+
+export const DEFAULT_NPC_PORTRAIT = "/game-assets/merchant-0.png";
+
+export const VILLAGE_NPCS: VillageNpc[] = [
+  { id: "kim-seongho", name: "金成浩", role: "漢陽村長", map: { x: 39, y: 31 }, first: "遠來的商客，歡迎來到漢陽。村子的安寧，需要每一位旅人的照看。", beforeQuest: "城外巡路仍不太平。若你願意，替我巡查一番吧。", inProgress: "巡防任務尚未完成，路上多加小心。", afterQuest: "你守住了漢陽的商路。村民都會記得這份情。", quest: { id: "npc-hanyang-patrol", name: "漢陽巡防", metric: "kills", target: 5, reward: { gold: 2400, affinity: 4 } }, options: [{ label: "接受巡防", reply: "請在野外擊敗 5 隻敵人後回來。", pages: ["漢陽靠著這條路與外地往來。", "別忘了：平安抵達，比戰利品更重要。"], quest: "start" }, { label: "查看委託", reply: "村莊委託會與冒險委託共用你的進度。", openContracts: true }, { label: "向村長致意", reply: "願你的商隊一路平安。", affinity: 1 }] },
+  { id: "choi-daesan", name: "崔大山", role: "鐵匠", map: { x: 25, y: 58 }, first: "我是崔大山。好鐵不怕火煉，商隊也是。", beforeQuest: "帶些戰利品回來，我替你看看能不能派上用場。", inProgress: "材料還沒湊齊；多在野外走走。", afterQuest: "材料成色不錯。你的眼光也越來越像行家了。", quest: { id: "npc-forge-supplies", name: "鍛造備料", metric: "materials", target: 3, reward: { gold: 1800, affinity: 3 } }, options: [{ label: "接受備料", reply: "收集任意 3 件怪物材料後回來。", quest: "start" }, { label: "看看武器", reply: "武器舖的貨架已為你打開。", service: "weapon" }, { label: "聊聊鍛造", reply: "武器的分量，來自你握住它的決心。", affinity: 1 }] },
+  { id: "han-sowol", name: "韓素月", role: "裁縫", map: { x: 19, y: 42 }, first: "韓素月在此。披風、甲衣，總要合身才走得遠。", beforeQuest: "我想替巡商縫一批護具，先幫我找些材料吧。", inProgress: "線還沒備足呢，別急著催我。", afterQuest: "這批布料正好。下次來，讓我替你量身。", quest: { id: "npc-tailor-thread", name: "巡商護具", metric: "materials", target: 6, reward: { gold: 2600, affinity: 4 } }, options: [{ label: "接下護具委託", reply: "收集 6 件材料，素月會完成護具訂單。", quest: "start" }, { label: "看看防具", reply: "防具舖的庫存已開啟。", service: "armor" }, { label: "稱讚手藝", reply: "謝謝。每一針都要能替人擋下風霜。", affinity: 1 }] },
+  { id: "heo-muncheol", name: "許文哲", role: "藥師", map: { x: 73, y: 48 }, first: "許文哲，行醫配藥。出門在外，先顧好性命。", beforeQuest: "藥櫃缺少新鮮藥材，請替我採集一些。", inProgress: "藥材還不夠，切記不要逞強。", afterQuest: "藥材很新鮮。這份心意我收下了。", quest: { id: "npc-herbal-remedy", name: "藥櫃補貨", metric: "materials", target: 9, reward: { gold: 3200, affinity: 5 } }, options: [{ label: "接受採藥", reply: "收集 9 件材料後回來配藥。", quest: "start" }, { label: "購買藥品", reply: "藥店已開啟，按需要備藥吧。", service: "pharmacy" }, { label: "請教養生", reply: "慢行、飲水、備藥，遠比逞強重要。", affinity: 1 }] },
+  { id: "hong-museong", name: "洪武成", role: "傭兵仲介", portrait: "/game-assets/merchant-1.png", map: { x: 62, y: 31 }, first: "洪武成。要找能並肩作戰的夥伴？來對地方了。", beforeQuest: "先證明你能帶好一支隊伍，我才替你介紹可靠人選。", inProgress: "隊伍的名冊還不夠熱鬧。", afterQuest: "你已懂得帶人。公會的大門隨時為你開著。", quest: { id: "npc-mercenary-intro", name: "商團引薦", metric: "mercs", target: 1, reward: { gold: 2200, affinity: 4 } }, options: [{ label: "接受引薦考驗", reply: "招募 1 位傭兵後回來。", quest: "start" }, { label: "前往傭兵公會", reply: "公會名冊已備妥。", service: "mercenary" }, { label: "詢問隊形", reply: "讓每個人站在擅長的位置，勝算自然更高。", affinity: 1 }] },
+  { id: "wang-deokchang", name: "王德昌", role: "富商", portrait: "/game-assets/merchant-2.png", map: { x: 48, y: 59 }, first: "王德昌，做的是長久生意。信譽與消息一樣值錢。", beforeQuest: "市集需要更多周轉貨，替我蒐集一些材料。", inProgress: "商路還在等你的貨。", afterQuest: "好貨，好交情。往後有稀罕消息，我會先想到你。", quest: { id: "npc-merchant-stock", name: "市集周轉", metric: "materials", target: 12, reward: { gold: 4800, affinity: 6 } }, hidden: { requirement: state => (state.npcProgress.affinity["wang-deokchang"] || 0) >= 3, label: "詢問私下商訊", reply: "真正的商機，往往藏在人人都忽略的貨單裡。" }, options: [{ label: "接受周轉委託", reply: "收集 12 件材料，協助市集補貨。", quest: "start" }, { label: "前往材料交易所", reply: "市集的收購櫃檯已開啟。", service: "exchange" }, { label: "談談商道", reply: "利潤會波動，信用不能。", affinity: 1 }] },
+  { id: "lee-taesan", name: "李泰山", role: "城門守衛", map: { x: 84, y: 69 }, first: "李泰山值守城門。出城前，確認隊伍與補給。", beforeQuest: "城外路線得由熟手探過。推進行程後，再回來報告。", inProgress: "還沒到約定的路標，別鬆懈。", afterQuest: "回報收到了。城門會為可靠的商團敞開。", quest: { id: "npc-gate-scout", name: "城外探路", metric: "stage", target: 3, reward: { gold: 2600, affinity: 4 } }, options: [{ label: "接受探路", reply: "推進至第 3 關後回來。", quest: "start" }, { label: "前往世界地圖", reply: "城門已開，野外地圖就在前方。" }, { label: "詢問警戒", reply: "看路、看天，也要看隊友的狀態。", affinity: 1 }] },
+  { id: "baegun-elder", name: "白雲老人", role: "隱居智者", map: { x: 33, y: 20 }, first: "雲來雲去，商路亦然。坐一會兒吧，年輕人。", beforeQuest: "若能從歷練中帶回見聞，我再說些舊事給你聽。", inProgress: "數一數你走過的路，答案就在其中。", afterQuest: "你已見過足夠多的風浪，這段舊事就託付給你。", quest: { id: "npc-elder-wisdom", name: "雲遊見聞", metric: "kills", target: 12, reward: { gold: 4000, affinity: 6 } }, hidden: { requirement: state => state.stage >= 5, label: "聽白雲老人說舊事", reply: "漢陽的路從不是一人鋪成；記得替後來者留一盞燈。" }, options: [{ label: "接受見聞之約", reply: "擊敗 12 隻敵人後再來。", quest: "start" }, { label: "請教修行", reply: "前行不是只為抵達，也是為了看清自己。", affinity: 1 }] },
+  { id: "jang-miryung", name: "張美玲", role: "客棧掌櫃", portrait: "/game-assets/merchant-3.png", map: { x: 54, y: 43 }, first: "張美玲的客棧，熱湯、好床，還有不外傳的消息。", beforeQuest: "旅人總要有一身像樣行頭。添幾件裝備再回來聊。", inProgress: "客棧的火還熱著，等你帶回好消息。", afterQuest: "看來你的商隊已經整裝待發。今晚這桌酒我請。", quest: { id: "npc-inn-gear", name: "整裝出發", metric: "equipment", target: 3, reward: { gold: 3000, affinity: 5 } }, options: [{ label: "接受整裝建議", reply: "持有 3 件裝備後回來。", quest: "start" }, { label: "入住客棧", reply: "客棧已備好房間。", service: "inn" }, { label: "打聽消息", reply: "商隊剛從港口回來，說東海的風向變了。", affinity: 1 }] },
+  { id: "jo-manbok", name: "趙萬福", role: "流浪商人", portrait: "/game-assets/merchant-0.png", map: { x: 69, y: 68 }, first: "趙萬福，四海為家。有些貨，只在剛好遇見時才買得到。", beforeQuest: "走得更遠，我才拿得出更稀罕的貨。", inProgress: "路還沒走夠呢，朋友。", afterQuest: "我就知道你辦得到。這份貨單，只給肯走遠路的人。", quest: { id: "npc-wanderer-route", name: "遠行商路", metric: "stage", target: 5, reward: { gold: 5200, affinity: 7 } }, hidden: { requirement: state => (state.npcProgress.affinity["jo-manbok"] || 0) >= 3, label: "查看隱藏貨單", reply: "流浪商人的貨單永遠不會寫在招牌上。" }, options: [{ label: "接受遠行考驗", reply: "推進至第 5 關後再來找我。", quest: "start" }, { label: "前往材料交易所", reply: "我在那裡留了一份可公開交易的貨單。", service: "exchange" }, { label: "交換旅行故事", reply: "最好的貨，往往是路上聽來的一句真話。", affinity: 1 }] },
+];
+
+export function freshNpcProgress(): NpcProgress { return { met: [], affinity: {}, activeQuests: [], completedQuests: [], history: [] }; }
+
+export function normalizeNpcProgress(value: unknown): NpcProgress {
+  const empty = freshNpcProgress();
+  if (!value || typeof value !== "object") return empty;
+  const source = value as Partial<NpcProgress>;
+  return {
+    met: Array.isArray(source.met) ? source.met.filter((id): id is string => typeof id === "string") : [],
+    affinity: source.affinity && typeof source.affinity === "object" ? Object.fromEntries(Object.entries(source.affinity).filter(([, score]) => Number.isFinite(score)).map(([id, score]) => [id, Math.max(0, Math.min(100, Math.floor(Number(score))))])) : {},
+    activeQuests: Array.isArray(source.activeQuests) ? source.activeQuests.filter((id): id is string => typeof id === "string") : [],
+    completedQuests: Array.isArray(source.completedQuests) ? source.completedQuests.filter((id): id is string => typeof id === "string") : [],
+    history: Array.isArray(source.history) ? source.history.filter((entry): entry is { npcId: string; text: string; at: number } => !!entry && typeof entry === "object" && typeof (entry as { npcId?: unknown }).npcId === "string" && typeof (entry as { text?: unknown }).text === "string").slice(0, 80) : [],
+  };
+}
+
+export function npcById(id: string) { return VILLAGE_NPCS.find(npc => npc.id === id); }
+export function npcQuestState(state: GameState, npc: VillageNpc) {
+  const quest = npc.quest;
+  if (!quest) return "none" as const;
+  if (state.npcProgress.completedQuests.includes(quest.id)) return "complete" as const;
+  if (state.npcProgress.activeQuests.includes(quest.id)) return "active" as const;
+  return "before" as const;
+}
+export function npcQuestProgress(state: GameState, quest: NpcQuest) { return contractProgress(state, quest.metric); }
+export function npcGreeting(state: GameState, npc: VillageNpc) {
+  if (!state.npcProgress.met.includes(npc.id)) return npc.first;
+  const phase = npcQuestState(state, npc);
+  return phase === "complete" ? npc.afterQuest : phase === "active" ? npc.inProgress : npc.beforeQuest;
+}
+
+export function recordNpcLine(state: GameState, npcId: string, text: string) {
+  const npcProgress = normalizeNpcProgress(state.npcProgress);
+  return { ...state, npcProgress: { ...npcProgress, met: npcProgress.met.includes(npcId) ? npcProgress.met : [...npcProgress.met, npcId], history: [{ npcId, text, at: Date.now() }, ...npcProgress.history].slice(0, 80) } };
+}
+
+export function startNpcQuest(state: GameState, npc: VillageNpc) {
+  const quest = npc.quest;
+  if (!quest || state.npcProgress.activeQuests.includes(quest.id) || state.npcProgress.completedQuests.includes(quest.id)) return state;
+  return { ...state, npcProgress: { ...state.npcProgress, activeQuests: [...state.npcProgress.activeQuests, quest.id] } };
+}
+
+export function completeNpcQuest(state: GameState, npc: VillageNpc) {
+  const quest = npc.quest;
+  if (!quest || !state.npcProgress.activeQuests.includes(quest.id) || npcQuestProgress(state, quest) < quest.target) return state;
+  return { ...state, gold: state.gold + quest.reward.gold, npcProgress: { ...state.npcProgress, activeQuests: state.npcProgress.activeQuests.filter(id => id !== quest.id), completedQuests: [...state.npcProgress.completedQuests, quest.id], affinity: { ...state.npcProgress.affinity, [npc.id]: Math.min(100, (state.npcProgress.affinity[npc.id] || 0) + quest.reward.affinity) } } };
+}

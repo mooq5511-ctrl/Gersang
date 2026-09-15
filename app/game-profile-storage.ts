@@ -10,6 +10,7 @@ import { exchangeAttackBonus } from "./village-exchange";
 import { normalizeVitals } from "./vitals-engine";
 import { applyGersangVisuals, sanitizeEquip } from "./game-save-normalizers";
 import { freshGame, heroPortrait, isNationId, makeHero } from "./game-hero-factory";
+import { normalizeNpcProgress } from "./npc-dialogue";
 import { worldCities } from "./v15-data";
 import { restoreTerritory } from "./guild-territory";
 import type { Hero, Unit } from "./game-state";
@@ -98,6 +99,7 @@ export function restoreGame(raw: unknown): GameState {
     autoMedicine: { healing: Math.min(99, Math.max(0, Math.floor(Number(parsed.autoMedicine?.healing) || 0))), mana: Math.min(99, Math.max(0, Math.floor(Number(parsed.autoMedicine?.mana) || 0))) },
     autoMedicineAt: { healing: 0, mana: 0 },
     claimedContracts: Array.isArray(parsed.claimedContracts) ? parsed.claimedContracts : [],
+    npcProgress: normalizeNpcProgress(parsed.npcProgress),
     lastSeen: Number(parsed.lastSeen) || Date.now(),
   });
   if (dungeonBusy(parsed.dungeon)) {

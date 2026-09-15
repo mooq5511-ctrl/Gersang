@@ -6,6 +6,7 @@ import type { TradeState } from "./trade-engine";
 import type { NationId } from "./v15-data";
 import type { ExchangePurchases } from "./village-exchange";
 import type { GuildTerritory } from "./guild-territory";
+import type { NpcProgress } from "./npc-dialogue";
 
 /** Persistent save keys. These names are compatibility contracts with existing players. */
 export const PROFILE_INDEX = "bt52_v19_character_profiles";
@@ -137,6 +138,8 @@ export type GameState = {
   autoMedicine: { healing: number; mana: number };
   autoMedicineAt: { healing: number; mana: number };
   claimedContracts: string[];
+  /** Village NPC dialogue, affinity, and quest state; persisted with the character. */
+  npcProgress: NpcProgress;
   lastEncounter: string;
   enemyHp: number;
   formation: string;
