@@ -2,14 +2,22 @@ import type { Equipment, GameState } from "./game-state";
 
 export const TERRITORY_ENTRY_ID = "guild-territory";
 export const TERRITORY_UNLOCK_LEVEL = 20;
+export const BUILDING_LEVEL_CAP = 100;
+
+// The first ten levels retain the original balance. From level 11 onward,
+// gains accelerate toward a powerful level-100 target, giving the long
+// progression a meaningful endgame payoff without changing early saves.
+const CURVE_START_LEVEL = 10;
+const CURVE_EXPONENT = 1.2;
+const COST_EXPONENT = 1.45;
 
 export const BUILDINGS = {
-  flag: { name: "商團旗幟", icon: "🚩", maxLevel: 5, baseCost: 2000, description: "所有百分比加成 +1%／級" },
-  waystation: { name: "驛站", icon: "🐎", maxLevel: 10, baseCost: 1200, description: "放置金錢與信用 +2%／級" },
-  lounge: { name: "休息室", icon: "🛏️", maxLevel: 10, baseCost: 1500, description: "戰敗客棧療傷速度 +3%／級" },
-  training: { name: "訓練場", icon: "⚔️", maxLevel: 10, baseCost: 1800, description: "角色與傭兵經驗 +2%／級" },
-  warehouse: { name: "倉庫", icon: "📦", maxLevel: 8, baseCost: 2500, description: "三角色共用倉庫 +10 格／級" },
-  smithy: { name: "鐵匠鋪", icon: "🔨", maxLevel: 6, baseCost: 5000, description: "開放裝備強化，成功率 +1.5 個百分點／級", unlockLevel: 50 },
+  flag: { name: "商團旗幟", icon: "🚩", maxLevel: BUILDING_LEVEL_CAP, baseCost: 2000, description: "所有百分比加成：Lv.1–10 每級 +1%，Lv.100 共 +40%" },
+  waystation: { name: "驛站", icon: "🐎", maxLevel: BUILDING_LEVEL_CAP, baseCost: 1200, description: "放置金錢與信用：Lv.1–10 每級 +2%，Lv.100 共 +120%" },
+  lounge: { name: "休息室", icon: "🛏️", maxLevel: BUILDING_LEVEL_CAP, baseCost: 1500, description: "戰敗客棧療傷：Lv.1–10 每級 +3%，Lv.100 共 +160%" },
+  training: { name: "訓練場", icon: "⚔️", maxLevel: BUILDING_LEVEL_CAP, baseCost: 1800, description: "角色與傭兵經驗：Lv.1–10 每級 +2%，Lv.100 共 +120%" },
+  warehouse: { name: "倉庫", icon: "📦", maxLevel: BUILDING_LEVEL_CAP, baseCost: 2500, description: "三角色共用倉庫：Lv.1–10 每級 +10 格，Lv.100 共 +1,000 格" },
+  smithy: { name: "鐵匠鋪", icon: "🔨", maxLevel: BUILDING_LEVEL_CAP, baseCost: 5000, description: "裝備強化成功率：Lv.1–10 每級 +1.5 個百分點，Lv.100 共 +35 個百分點", unlockLevel: 50 },
 } as const;
 
 export type BuildingId = keyof typeof BUILDINGS;
@@ -32,21 +40,55 @@ export function restoreTerritory(raw: unknown): GuildTerritory {
   return result;
 }
 
+function clampLevel(level: number): number {
+  return Math.max(0, Math.min(BUILDING_LEVEL_CAP, Math.floor(level)));
+}
+
+/**
+ * Interpolates from the original level-10 value to the new level-100 cap.
+ * The exponent above one makes the late levels more rewarding while keeping
+ * the curve continuous at level 10.
+ */
+function curvedValue(level: number, atTen: number, atHundred: number): number {
+  const safeLevel = clampLevel(level);
+  if (safeLevel <= CURVE_START_LEVEL) return atTen * safeLevel / CURVE_START_LEVEL;
+  const progress = (safeLevel - CURVE_START_LEVEL) / (BUILDING_LEVEL_CAP - CURVE_START_LEVEL);
+  return atTen + (atHundred - atTen) * progress ** CURVE_EXPONENT;
+}
+
+export function buildingEffect(id: BuildingId, level: number): number {
+  const targets: Record<BuildingId, [number, number]> = {
+    flag: [0.1, 0.4],
+    waystation: [0.2, 1.2],
+    lounge: [0.3, 1.6],
+    training: [0.2, 1.2],
+    warehouse: [100, 1000],
+    smithy: [0.15, 0.35],
+  };
+  return curvedValue(level, ...targets[id]);
+}
+
 export function buildingCost(id: BuildingId, currentLevel: number): number {
-  return BUILDINGS[id].baseCost * (currentLevel + 1) ** 2;
+  const nextLevel = clampLevel(currentLevel + 1);
+  if (nextLevel <= CURVE_START_LEVEL) return BUILDINGS[id].baseCost * nextLevel ** 2;
+  // Keep the original quadratic prices through Lv.10, then extend them with
+  // a gentler 1.45-power curve and a small late-game surcharge.
+  const scaled = 100 * (nextLevel / CURVE_START_LEVEL) ** COST_EXPONENT;
+  const surcharge = 1 + (nextLevel - CURVE_START_LEVEL) * 0.003;
+  return Math.round(BUILDINGS[id].baseCost * scaled * surcharge);
 }
 
 export function territoryBonus(territory: GuildTerritory | undefined, target: "idle" | "xp" | "recovery" | "smithy"): number {
   const levels = territory?.buildings || freshTerritory().buildings;
-  const own = target === "idle" ? levels.waystation * 0.02
-    : target === "xp" ? levels.training * 0.02
-    : target === "recovery" ? levels.lounge * 0.03
-    : levels.smithy * 0.015;
-  return own + levels.flag * 0.01;
+  const own = target === "idle" ? buildingEffect("waystation", levels.waystation)
+    : target === "xp" ? buildingEffect("training", levels.training)
+    : target === "recovery" ? buildingEffect("lounge", levels.lounge)
+    : buildingEffect("smithy", levels.smithy);
+  return own + buildingEffect("flag", levels.flag);
 }
 
 export function warehouseLimit(territory: GuildTerritory | undefined): number {
-  return 30 + (territory?.buildings.warehouse || 0) * 10;
+  return 30 + Math.round(buildingEffect("warehouse", territory?.buildings.warehouse || 0));
 }
 
 export function territoryHealInterval(territory: GuildTerritory | undefined): number {

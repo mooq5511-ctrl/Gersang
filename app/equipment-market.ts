@@ -5,7 +5,7 @@ export type SellableEquipment = {
   resist?:{physical?:number;magic?:number};
 };
 
-const RARITY_MULTIPLIER:Record<string,number>={普通:1,稀有:1.35,史詩:1.8,傳說:2.6};
+const RARITY_MULTIPLIER:Record<string,number>={普通:1,稀有:1.35,史詩:1.8,傳說:2.6,金色:4};
 
 /** 裝備回收價只取決於裝備本身，確保所有背包入口顯示與實際入帳完全一致。 */
 export function equipmentSellPrice(item:SellableEquipment){

@@ -21,12 +21,13 @@ function scale(value: number | undefined, multiplier: number) { return Math.floo
 function scaleMagic(magic: MagicAffix[], multiplier: number) { return magic.map((affix) => { const value = scale(affix.value, multiplier); return { ...affix, value, text: affix.text.replace(/\+(\d+)%/, "+" + value + "%") }; }); }
 
 export function applyShopQuality(item: Equipment, rarity = rollShopQuality()): Equipment {
-  const multiplier = SHOP_QUALITY[rarity].multiplier, name = item.name.replace(/^(普通|稀有|史詩|傳說)・/, "");
+  const multiplier = SHOP_QUALITY[rarity].multiplier, name = item.name.replace(/^(普通|稀有|史詩|傳說|金色)・/, "");
   return { ...item, name: rarity + "・" + name, atk: scale(item.atk, multiplier), def: scale(item.def, multiplier), hp: scale(item.hp, multiplier), rarity, magic: scaleMagic(item.magic, multiplier), bonus: { str: scale(item.bonus?.str, multiplier), agi: scale(item.bonus?.agi, multiplier), intel: scale(item.bonus?.intel, multiplier), vit: scale(item.bonus?.vit, multiplier) }, resist: { physical: scale(item.resist?.physical, multiplier), magic: scale(item.resist?.magic, multiplier) }, source: "四國城市商店・" + rarity + "品質 x" + multiplier };
 }
 
-export function rollEquipment(stage: number, guaranteed = false): Equipment {
-  const base = wearableCatalog[Math.floor(Math.random() * wearableCatalog.length)], magicCount = guaranteed ? Math.min(3, 1 + Math.floor(stage / 20)) : Math.min(3, Math.max(1, Math.floor(stage / 15))), magic = [...magicAffixes].sort(() => Math.random() - .5).slice(0, magicCount);
+export function rollEquipment(stage: number, guaranteed = false, slot?: Equipment["slot"]): Equipment {
+  const catalog = slot ? wearableCatalog.filter((entry) => entry.slot === slot) : wearableCatalog;
+  const base = catalog[Math.floor(Math.random() * catalog.length)] || wearableCatalog[0], magicCount = guaranteed ? Math.min(3, 1 + Math.floor(stage / 20)) : Math.min(3, Math.max(1, Math.floor(stage / 15))), magic = [...magicAffixes].sort(() => Math.random() - .5).slice(0, magicCount);
   const rarity: Equipment["rarity"] = magicCount >= 3 ? "傳說" : magicCount === 2 ? "史詩" : stage >= 10 ? "稀有" : "普通";
   return { uid: makeUid(base.id), name: (rarity === "普通" ? "" : rarity + "・") + base.name, slot: base.slot, atk: base.atk + stage * 2, def: base.def + Math.floor(stage * 1.4), hp: base.hp + stage * 6, image: base.image, enhance: 0, rarity, magic: magic.map((affix) => ({ ...affix })), bonus: { str: 0, agi: 0, intel: 0, vit: 0 }, resist: { physical: 0, magic: 0 } };
 }

@@ -37,7 +37,7 @@ export type Equipment = {
   hp: number;
   image: string;
   enhance: number;
-  rarity: "普通" | "稀有" | "史詩" | "傳說";
+  rarity: "普通" | "稀有" | "史詩" | "傳說" | "金色";
   magic: MagicAffix[];
   requiredLevel?: number;
   source?: string;

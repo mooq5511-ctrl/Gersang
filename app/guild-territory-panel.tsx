@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Equipment } from "./game-state";
+import { EQUIPMENT_FUSION_RECIPES, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
 import {
   BUILDINGS, BUILDING_IDS, TERRITORY_UNLOCK_LEVEL, buildingCost, enhancementChance,
   enhancementCost, territoryBonus, territoryHealInterval, warehouseLimit,
@@ -13,16 +14,41 @@ type Props = {
   inventory: Equipment[];
   upgrade: (id: BuildingId) => void;
   enhance: (itemUid: string) => void;
+  fuseAll: (rarity: FusionSourceRarity) => void;
 };
 
-export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, upgrade, enhance }: Props) {
+export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, upgrade, enhance, fuseAll }: Props) {
   const [selectedItem, setSelectedItem] = useState("");
+  const [fusionRarity, setFusionRarity] = useState<FusionSourceRarity>("普通");
+  const [fusionItems, setFusionItems] = useState<string[]>([]);
   const item = inventory.find((entry) => entry.uid === selectedItem);
   const open = heroLevel >= TERRITORY_UNLOCK_LEVEL;
   const smithyOpen = territory.buildings.smithy > 0;
+  const recipe = EQUIPMENT_FUSION_RECIPES.find((entry) => entry.sourceRarity === fusionRarity)!;
+  const fusionCandidates = inventory.filter((entry) => isFusionIngredient(entry, fusionRarity));
+  const selectedFusionItems = fusionItems.filter((uid) => fusionCandidates.some((entry) => entry.uid === uid));
+  const selectedFusionSlot = fusionCandidates.find((entry) => entry.uid === selectedFusionItems[0])?.slot;
+  const autoFusionSlot = selectedFusionSlot || fusionCandidates.find((entry) => fusionCandidates.filter((candidate) => candidate.slot === entry.slot).length >= recipe.ingredientCount)?.slot;
+  const autoFusionItems = autoFusionSlot ? fusionCandidates.filter((entry) => entry.slot === autoFusionSlot).slice(0, recipe.ingredientCount) : [];
+  const toggleFusionItem = (uid: string) => setFusionItems((current) => {
+    if (current.includes(uid)) return current.filter((entry) => entry !== uid);
+    const candidate = fusionCandidates.find((entry) => entry.uid === uid);
+    const currentSlot = fusionCandidates.find((entry) => entry.uid === current[0])?.slot;
+    if (!candidate || current.length >= recipe.ingredientCount || (currentSlot && currentSlot !== candidate.slot)) return current;
+    return [...current, uid];
+  });
+  const bulkItemCount = [...new Set(fusionCandidates.map((entry) => entry.slot))].reduce((total, slot) => total + Math.floor(fusionCandidates.filter((entry) => entry.slot === slot).length / recipe.ingredientCount) * recipe.ingredientCount, 0);
+  const bulkBatchCount = bulkItemCount / recipe.ingredientCount;
+  const confirmFusion = () => {
+    if (!bulkItemCount) return;
+    const warning = recipe.successRate < 1 ? `成功率 ${Math.round(recipe.successRate * 100)}%，失敗時 5 件材料會全部消失。` : "本次合成保證成功。";
+    if (!window.confirm(`確定要將背包中 ${bulkItemCount} 件${fusionRarity}裝備全部合成為${recipe.targetRarity}品質嗎？\n各部位會分開合成，共執行 ${bulkBatchCount} 組；${warning}`)) return;
+    fuseAll(fusionRarity);
+    setFusionItems([]);
+  };
 
   return <div className="guild-territory-panel">
-    <p className="territory-intro">主角 Lv.{TERRITORY_UNLOCK_LEVEL} 開放經營。建造與升級立即完成，永久加成按百分比直接相加；每名角色各自經營領地。</p>
+    <p className="territory-intro">主角 Lv.{TERRITORY_UNLOCK_LEVEL} 開放經營。Lv.1–10 沿用原有成長，Lv.11–100 以加速曲線衝刺終局獎勵；建造與升級立即完成，永久加成按百分比直接相加，每名角色各自經營領地。</p>
     <div className="territory-summary" aria-label="目前領地加成">
       <span>放置收益 <b>+{Math.round(territoryBonus(territory, "idle") * 100)}%</b></span>
       <span>經驗 <b>+{Math.round(territoryBonus(territory, "xp") * 100)}%</b></span>
@@ -53,6 +79,23 @@ export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, upg
         {item && <span>成功率 {Math.round(enhancementChance(territory, item) * 1000) / 10}%・花費 {enhancementCost(item).toLocaleString()} 兩</span>}
         <button type="button" disabled={!item || item.enhance >= 10 || gold < enhancementCost(item)} onClick={() => item && enhance(item.uid)}>強化裝備</button>
       </div> : <p>主角 Lv.50 後建造鐵匠鋪即可使用。</p>}
+    </section>
+    <section className="territory-smithy equipment-fusion" aria-label="裝備合成工坊">
+      <h3>商團工坊・裝備合成</h3>
+      <p>以 5 件同品質、同部位的背包裝備合成同部位的下一階品質。普通→稀有為保底；越高階成功率越低，失敗時 5 件材料裝備會全部消失。已強化或已鑲嵌的裝備不可投入。</p>
+      <div className="territory-smithy-controls fusion-controls">
+        <label>材料品質<select value={fusionRarity} onChange={(event) => { setFusionRarity(event.target.value as FusionSourceRarity); setFusionItems([]); }}>
+          {EQUIPMENT_FUSION_RECIPES.map((entry) => <option key={entry.sourceRarity} value={entry.sourceRarity}>{entry.sourceRarity} → {entry.targetRarity}・成功 {Math.round(entry.successRate * 100)}%</option>)}
+        </select></label>
+        <span>已選 {selectedFusionItems.length}/{recipe.ingredientCount} 件・成功率 {Math.round(recipe.successRate * 100)}%</span>
+        <button type="button" disabled={!autoFusionItems.length} onClick={() => setFusionItems(autoFusionItems.map((entry) => entry.uid))}>自動選取 5 件</button>
+        <button type="button" className="fusion-submit" disabled={!bulkItemCount} onClick={confirmFusion}>一鍵合成全部 {recipe.targetRarity}品質</button>
+      </div>
+      {fusionCandidates.length ? <div className="fusion-item-grid">
+        {fusionCandidates.map((entry) => <button key={entry.uid} type="button" disabled={Boolean(selectedFusionSlot && selectedFusionSlot !== entry.slot)} className={selectedFusionItems.includes(entry.uid) ? "selected" : ""} aria-pressed={selectedFusionItems.includes(entry.uid)} onClick={() => toggleFusionItem(entry.uid)}>
+          <strong>{entry.name}</strong><small>{entry.rarity}・{entry.slot}</small>
+        </button>)}
+      </div> : <p className="fusion-empty">沒有可投入的{fusionRarity}裝備。請準備未強化、未鑲嵌的背包裝備。</p>}
     </section>
   </div>;
 }

@@ -74,7 +74,8 @@ import { SceneMusic, type SceneMusicKind } from './scene-music';
 import { runDungeonAction, selectBattleMapAction } from "./game-battle-actions";
 import { dispatchTradeAction, upgradeCaravanAction } from "./game-trade-actions";
 import { allocateAttributeAction, cyclePositionAction, promoteMercenary, recruitMerchantAction, storeMercenaryAction, toggleActiveAction, withdrawMercenaryAction } from "./game-squad-actions";
-import { applyAutoMedicineAction, buyMaterialAction, buyMedicineAction, consumeMedicineAction, depositWarehouseItemAction, equipInventoryItemAction, forgeThunderItemAction, forgeVillageWeaponAction, openAncientCoinBoxAction, purchaseEquipmentAction, purchaseTierEquipmentAction, sellAllInventoryEquipmentAction, sellAllMaterialsAction, sellInventoryEquipmentAction, sellMaterialAction, socketGemAction, unequipInventoryItemAction, withdrawWarehouseItemAction } from "./game-inventory-actions";
+import { applyAutoMedicineAction, buyMaterialAction, buyMedicineAction, consumeMedicineAction, depositWarehouseItemAction, equipInventoryItemAction, forgeThunderItemAction, forgeVillageWeaponAction, fuseAllInventoryEquipmentAction, openAncientCoinBoxAction, purchaseEquipmentAction, purchaseTierEquipmentAction, sellAllInventoryEquipmentAction, sellAllMaterialsAction, sellInventoryEquipmentAction, sellMaterialAction, socketGemAction, unequipInventoryItemAction, withdrawWarehouseItemAction } from "./game-inventory-actions";
+import type { FusionSourceRarity } from "./equipment-fusion";
 import { TIER_EQUIPMENT_DROP_REGIONS, tierEquipmentPrice, tierEquipmentShopCatalog, type TierEquipment } from "./tier-equipment";
 import { profileFromGame, readCharacterSave, restoreGame, saveCharacterProfile, writeCharacterSave, writeProfileIndex, writeSharedWarehouse } from "./game-profile-storage";
 import {
@@ -435,6 +436,9 @@ export default function GameV15() {
     const roll = Math.random();
     setGame(previous => { const result = enhanceEquipment(previous, itemUid, roll); if (result.error) setNotice(result.error); return result.game; });
   }
+  function fuseAllTerritoryEquipment(sourceRarity: FusionSourceRarity) {
+    setGame(previous => fuseAllInventoryEquipmentAction(previous, sourceRarity, Math.random, addLog, setNotice));
+  }
 
   function restAtInn() {
     // 戰敗療傷中再次點擊客棧，直接走付費快速治療；不再被 dungeonBusy 擋住。
@@ -710,7 +714,7 @@ export default function GameV15() {
 
 
         <TabsContent value="squad" className="tab-panel">
-          <CaravanStatus territory={game.territory} upgradeBuilding={upgradeTerritoryBuilding} enhanceEquipment={enhanceTerritoryEquipment} busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} restingMercs={game.restingMercs} active={game.active} toggleActive={toggleActive} storeMercenary={storeMercenary} withdrawRestingMercenary={withdrawRestingMercenary} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet}
+          <CaravanStatus territory={game.territory} upgradeBuilding={upgradeTerritoryBuilding} enhanceEquipment={enhanceTerritoryEquipment} fuseAllEquipment={fuseAllTerritoryEquipment} busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} restingMercs={game.restingMercs} active={game.active} toggleActive={toggleActive} storeMercenary={storeMercenary} withdrawRestingMercenary={withdrawRestingMercenary} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet}
             navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now(),spawnRoll=Math.random();setGame(previous=>{
               const old=previous.dungeon||freshDungeon();
               const deployed=[previous.hero,...previous.mercs.filter(unit=>previous.active.slice(0,ACTIVE_MERCENARY_LIMIT).includes(unit.uid))];

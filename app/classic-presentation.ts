@@ -5,6 +5,7 @@ export function rarityPresentation(rarity?:string){
   case '稀有':return {className:'rarity-rare',label:'稀有'};
   case '史詩':return {className:'rarity-epic',label:'史詩'};
   case '傳說':return {className:'rarity-mythic',label:'傳說'};
+  case '金色':return {className:'rarity-gold',label:'金色'};
   default:return {className:'rarity-common',label:'普通'};
  }
 }

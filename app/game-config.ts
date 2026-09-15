@@ -23,4 +23,5 @@ export const SHOP_QUALITY: Record<Equipment["rarity"], { chance: number; multipl
   "稀有": { chance: 10, multiplier: 1.5 },
   "史詩": { chance: 0.2, multiplier: 10 },
   "傳說": { chance: 0.05, multiplier: 150 },
+  "金色": { chance: 0, multiplier: 1000 },
 };

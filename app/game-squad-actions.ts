@@ -3,6 +3,7 @@ import { nextBattlePosition } from "./formation-position";
 import type { MercenarySpec } from "./mercenary-roster";
 import type { GameState, Unit } from "./game-state";
 import { calculateLevelBasedBonus, canPromoteMercenary, MERCENARY_PROMOTION_TREES, type JobTier, type PromotionItemId } from "./mercenary-promotions";
+import { normalizeVitals } from "./vitals-engine";
 
 type Log = (logs: string[], message: string) => string[];
 type Attribute = "str" | "agi" | "intel" | "vit";
@@ -34,7 +35,16 @@ export function promoteMercenary(
     const costs = Object.fromEntries(promotionItemKeys.map((item) => [item, state[item]])) as Record<PromotionItemId, number>;
     for (const cost of target.requiredItems) costs[cost.itemId] -= cost.quantity;
     const attributePointBonus = calculateLevelBasedBonus(unit.level);
-    const promoted: Unit = { ...unit, tier: nextTier, jobClass: target.name, name: target.name, points: unit.points + attributePointBonus, growthMultipliers: target.growthMultipliers };
+    const promoted: Unit = normalizeVitals({
+      ...unit,
+      tier: nextTier,
+      jobClass: target.name,
+      name: target.name,
+      level: 1,
+      xp: 0,
+      points: unit.points + attributePointBonus,
+      growthMultipliers: target.growthMultipliers,
+    });
     const members = [...state[location]];
     members[index] = promoted;
     return {
@@ -43,7 +53,7 @@ export function promoteMercenary(
       fusionCores: costs.fusionCores,
       soulStones: costs.soulStones,
       awakeningStones: costs.awakeningStones,
-      logs: addLog(state.logs, `「${unit.name}」已轉職為「${target.name}」，獲得屬性點 ${attributePointBonus.toLocaleString()} 點。`),
+      logs: addLog(state.logs, `「${unit.name}」已轉職為「${target.name}」，等級重置為 Lv.1、經驗歸零，獲得屬性點 ${attributePointBonus.toLocaleString()} 點。`),
     };
   }
   return { ...state, logs: addLog(state.logs, "找不到指定的傭兵。") };

@@ -68,7 +68,7 @@ function cuteAtlasCell(column: number, row: number) {
 
 /** Returns a cute, item-specific image for ordinary gear, with a safe fallback. */
 export function cuteEquipmentArt(name: string | undefined, fallback: string) {
-  const plainName = (name || "").replace(/^(普通|稀有|史詩|傳說)・/, "").replace(/^\+\d+的[^的]+的/, "");
+  const plainName = (name || "").replace(/^(普通|稀有|史詩|傳說|金色)・/, "").replace(/^\+\d+的[^的]+的/, "");
   const cell = cuteEquipmentCells[plainName];
   return cell ? cuteAtlasCell(...cell) : fallback;
 }
