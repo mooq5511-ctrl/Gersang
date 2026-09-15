@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { BookOpen, Heart, LockKeyhole, Store, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DEFAULT_NPC_PORTRAIT, npcGreeting, npcQuestProgress, npcQuestState, type NpcOption, type VillageNpc } from "./npc-dialogue";
+import { DEFAULT_NPC_PORTRAIT, npcGreeting, npcPortraitSprite, npcQuestProgress, npcQuestState, type NpcOption, type VillageNpc } from "./npc-dialogue";
 import type { GameState } from "./game-state";
 
 type DialogueAction = { option: NpcOption; npc: VillageNpc };
@@ -30,6 +30,7 @@ export function NpcDialoguePanel({
   const quest = npc.quest;
   const progress = quest ? npcQuestProgress(game, quest) : 0;
   const history = useMemo(() => game.npcProgress.history.filter(entry => entry.npcId === npc.id), [game.npcProgress.history, npc.id]);
+  const portraitSprite = npcPortraitSprite(npc);
   const visibleOptions = npc.options.filter(option => {
     if (option.quest === "start") return phase === "before";
     if (option.quest === "complete") return phase === "active" && !!quest && progress >= quest.target;
@@ -49,8 +50,9 @@ export function NpcDialoguePanel({
       <article className="npc-dialogue-card">
         <button className="npc-dialogue-close" type="button" aria-label="關閉對話" onClick={onClose}><X /></button>
         <aside className="npc-portrait-frame">
-          <img src={npc.portrait || DEFAULT_NPC_PORTRAIT} alt={`${npc.name}立繪`} onError={event => { event.currentTarget.src = DEFAULT_NPC_PORTRAIT; }} />
-          {!npc.portrait && <small>預設立繪</small>}
+          {portraitSprite
+            ? <div role="img" aria-label={`${npc.name}立繪`} className="npc-portrait-sprite" style={{ backgroundImage: `url(${portraitSprite.src})`, backgroundPosition: portraitSprite.position }} />
+            : <><img src={npc.portrait || DEFAULT_NPC_PORTRAIT} alt={`${npc.name}立繪`} onError={event => { event.currentTarget.src = DEFAULT_NPC_PORTRAIT; }} /><small>預設立繪</small></>}
         </aside>
         <div className="npc-dialogue-main">
           <header><div><small>{npc.role}</small><h2>{npc.name}</h2></div><span className="npc-affinity"><Heart />好感 {affinity}/100</span></header>

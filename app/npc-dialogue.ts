@@ -28,6 +28,8 @@ export type VillageNpc = {
   name: string;
   role: string;
   portrait?: string;
+  /** CSS position in the shared 5 × 2 NPC portrait sheet. */
+  portraitPosition?: string;
   map: { x: number; y: number };
   first: string;
   beforeQuest: string;
@@ -39,9 +41,10 @@ export type VillageNpc = {
 };
 
 export const DEFAULT_NPC_PORTRAIT = "/game-assets/merchant-0.png";
+export const HANYANG_NPC_PORTRAIT_SHEET = "/assets/npc/hanyang-village-portraits-v1.png";
 
 export const VILLAGE_NPCS: VillageNpc[] = [
-  { id: "kim-seongho", name: "金成浩", role: "漢陽村長", map: { x: 39, y: 31 }, first: "遠來的商客，歡迎來到漢陽。村子的安寧，需要每一位旅人的照看。", beforeQuest: "城外巡路仍不太平。若你願意，替我巡查一番吧。", inProgress: "巡防任務尚未完成，路上多加小心。", afterQuest: "你守住了漢陽的商路。村民都會記得這份情。", quest: { id: "npc-hanyang-patrol", name: "漢陽巡防", metric: "kills", target: 5, reward: { gold: 2400, affinity: 4 } }, options: [{ label: "接受巡防", reply: "請在野外擊敗 5 隻敵人後回來。", pages: ["漢陽靠著這條路與外地往來。", "別忘了：平安抵達，比戰利品更重要。"], quest: "start" }, { label: "查看委託", reply: "村莊委託會與冒險委託共用你的進度。", openContracts: true }, { label: "向村長致意", reply: "願你的商隊一路平安。", affinity: 1 }] },
+  { id: "kim-seongho", name: "金成浩", role: "漢陽村長", portrait: HANYANG_NPC_PORTRAIT_SHEET, portraitPosition: "0% 0%", map: { x: 39, y: 31 }, first: "遠來的商客，歡迎來到漢陽。村子的安寧，需要每一位旅人的照看。", beforeQuest: "城外巡路仍不太平。若你願意，替我巡查一番吧。", inProgress: "巡防任務尚未完成，路上多加小心。", afterQuest: "你守住了漢陽的商路。村民都會記得這份情。", quest: { id: "npc-hanyang-patrol", name: "漢陽巡防", metric: "kills", target: 5, reward: { gold: 2400, affinity: 4 } }, options: [{ label: "接受巡防", reply: "請在野外擊敗 5 隻敵人後回來。", pages: ["漢陽靠著這條路與外地往來。", "別忘了：平安抵達，比戰利品更重要。"], quest: "start" }, { label: "查看委託", reply: "村莊委託會與冒險委託共用你的進度。", openContracts: true }, { label: "向村長致意", reply: "願你的商隊一路平安。", affinity: 1 }] },
   { id: "choi-daesan", name: "崔大山", role: "鐵匠", map: { x: 25, y: 58 }, first: "我是崔大山。好鐵不怕火煉，商隊也是。", beforeQuest: "帶些戰利品回來，我替你看看能不能派上用場。", inProgress: "材料還沒湊齊；多在野外走走。", afterQuest: "材料成色不錯。你的眼光也越來越像行家了。", quest: { id: "npc-forge-supplies", name: "鍛造備料", metric: "materials", target: 3, reward: { gold: 1800, affinity: 3 } }, options: [{ label: "接受備料", reply: "收集任意 3 件怪物材料後回來。", quest: "start" }, { label: "看看武器", reply: "武器舖的貨架已為你打開。", service: "weapon" }, { label: "聊聊鍛造", reply: "武器的分量，來自你握住它的決心。", affinity: 1 }] },
   { id: "han-sowol", name: "韓素月", role: "裁縫", map: { x: 19, y: 42 }, first: "韓素月在此。披風、甲衣，總要合身才走得遠。", beforeQuest: "我想替巡商縫一批護具，先幫我找些材料吧。", inProgress: "線還沒備足呢，別急著催我。", afterQuest: "這批布料正好。下次來，讓我替你量身。", quest: { id: "npc-tailor-thread", name: "巡商護具", metric: "materials", target: 6, reward: { gold: 2600, affinity: 4 } }, options: [{ label: "接下護具委託", reply: "收集 6 件材料，素月會完成護具訂單。", quest: "start" }, { label: "看看防具", reply: "防具舖的庫存已開啟。", service: "armor" }, { label: "稱讚手藝", reply: "謝謝。每一針都要能替人擋下風霜。", affinity: 1 }] },
   { id: "heo-muncheol", name: "許文哲", role: "藥師", map: { x: 73, y: 48 }, first: "許文哲，行醫配藥。出門在外，先顧好性命。", beforeQuest: "藥櫃缺少新鮮藥材，請替我採集一些。", inProgress: "藥材還不夠，切記不要逞強。", afterQuest: "藥材很新鮮。這份心意我收下了。", quest: { id: "npc-herbal-remedy", name: "藥櫃補貨", metric: "materials", target: 9, reward: { gold: 3200, affinity: 5 } }, options: [{ label: "接受採藥", reply: "收集 9 件材料後回來配藥。", quest: "start" }, { label: "購買藥品", reply: "藥店已開啟，按需要備藥吧。", service: "pharmacy" }, { label: "請教養生", reply: "慢行、飲水、備藥，遠比逞強重要。", affinity: 1 }] },
@@ -52,6 +55,15 @@ export const VILLAGE_NPCS: VillageNpc[] = [
   { id: "jang-miryung", name: "張美玲", role: "客棧掌櫃", portrait: "/game-assets/merchant-3.png", map: { x: 54, y: 43 }, first: "張美玲的客棧，熱湯、好床，還有不外傳的消息。", beforeQuest: "旅人總要有一身像樣行頭。添幾件裝備再回來聊。", inProgress: "客棧的火還熱著，等你帶回好消息。", afterQuest: "看來你的商隊已經整裝待發。今晚這桌酒我請。", quest: { id: "npc-inn-gear", name: "整裝出發", metric: "equipment", target: 3, reward: { gold: 3000, affinity: 5 } }, options: [{ label: "接受整裝建議", reply: "持有 3 件裝備後回來。", quest: "start" }, { label: "入住客棧", reply: "客棧已備好房間。", service: "inn" }, { label: "打聽消息", reply: "商隊剛從港口回來，說東海的風向變了。", affinity: 1 }] },
   { id: "jo-manbok", name: "趙萬福", role: "流浪商人", portrait: "/game-assets/merchant-0.png", map: { x: 69, y: 68 }, first: "趙萬福，四海為家。有些貨，只在剛好遇見時才買得到。", beforeQuest: "走得更遠，我才拿得出更稀罕的貨。", inProgress: "路還沒走夠呢，朋友。", afterQuest: "我就知道你辦得到。這份貨單，只給肯走遠路的人。", quest: { id: "npc-wanderer-route", name: "遠行商路", metric: "stage", target: 5, reward: { gold: 5200, affinity: 7 } }, hidden: { requirement: state => (state.npcProgress.affinity["jo-manbok"] || 0) >= 3, label: "查看隱藏貨單", reply: "流浪商人的貨單永遠不會寫在招牌上。" }, options: [{ label: "接受遠行考驗", reply: "推進至第 5 關後再來找我。", quest: "start" }, { label: "前往材料交易所", reply: "我在那裡留了一份可公開交易的貨單。", service: "exchange" }, { label: "交換旅行故事", reply: "最好的貨，往往是路上聽來的一句真話。", affinity: 1 }] },
 ];
+
+const HANYANG_NPC_PORTRAIT_POSITIONS: Record<NpcId, string> = {
+  "kim-seongho": "0% 0%", "choi-daesan": "25% 0%", "han-sowol": "50% 0%", "heo-muncheol": "75% 0%", "hong-museong": "100% 0%",
+  "wang-deokchang": "0% 100%", "lee-taesan": "25% 100%", "baegun-elder": "50% 100%", "jang-miryung": "75% 100%", "jo-manbok": "100% 100%",
+};
+
+export function npcPortraitSprite(npc: VillageNpc) {
+  return { src: HANYANG_NPC_PORTRAIT_SHEET, position: npc.portraitPosition || HANYANG_NPC_PORTRAIT_POSITIONS[npc.id] };
+}
 
 export function freshNpcProgress(): NpcProgress { return { met: [], affinity: {}, activeQuests: [], completedQuests: [], history: [] }; }
 
