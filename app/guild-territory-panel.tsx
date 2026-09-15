@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Equipment } from "./game-state";
-import { EQUIPMENT_FUSION_RECIPES, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
+import { EQUIPMENT_FUSION_RECIPES, FUSION_RARITY_LABEL, fusionItemKey, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
 import {
   BUILDINGS, BUILDING_IDS, TERRITORY_UNLOCK_LEVEL, buildingCost, enhancementChance,
   enhancementCost, territoryBonus, territoryHealInterval, warehouseLimit,
@@ -27,22 +27,24 @@ export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, upg
   const recipe = EQUIPMENT_FUSION_RECIPES.find((entry) => entry.sourceRarity === fusionRarity)!;
   const fusionCandidates = inventory.filter((entry) => isFusionIngredient(entry, fusionRarity));
   const selectedFusionItems = fusionItems.filter((uid) => fusionCandidates.some((entry) => entry.uid === uid));
-  const selectedFusionSlot = fusionCandidates.find((entry) => entry.uid === selectedFusionItems[0])?.slot;
-  const autoFusionSlot = selectedFusionSlot || fusionCandidates.find((entry) => fusionCandidates.filter((candidate) => candidate.slot === entry.slot).length >= recipe.ingredientCount)?.slot;
-  const autoFusionItems = autoFusionSlot ? fusionCandidates.filter((entry) => entry.slot === autoFusionSlot).slice(0, recipe.ingredientCount) : [];
+  const selectedFusionEntry = fusionCandidates.find((entry) => entry.uid === selectedFusionItems[0]);
+  const selectedFusionKey = selectedFusionEntry ? fusionItemKey(selectedFusionEntry) : undefined;
+  const autoFusionEntry = fusionCandidates.find((entry) => fusionCandidates.filter((candidate) => fusionItemKey(candidate) === fusionItemKey(entry)).length >= recipe.ingredientCount);
+  const autoFusionKey = selectedFusionKey || (autoFusionEntry ? fusionItemKey(autoFusionEntry) : undefined);
+  const autoFusionItems = autoFusionKey ? fusionCandidates.filter((entry) => fusionItemKey(entry) === autoFusionKey).slice(0, recipe.ingredientCount) : [];
   const toggleFusionItem = (uid: string) => setFusionItems((current) => {
     if (current.includes(uid)) return current.filter((entry) => entry !== uid);
     const candidate = fusionCandidates.find((entry) => entry.uid === uid);
-    const currentSlot = fusionCandidates.find((entry) => entry.uid === current[0])?.slot;
-    if (!candidate || current.length >= recipe.ingredientCount || (currentSlot && currentSlot !== candidate.slot)) return current;
+    const currentKey = fusionCandidates.find((entry) => entry.uid === current[0]);
+    if (!candidate || current.length >= recipe.ingredientCount || (currentKey && fusionItemKey(currentKey) !== fusionItemKey(candidate))) return current;
     return [...current, uid];
   });
-  const bulkItemCount = [...new Set(fusionCandidates.map((entry) => entry.slot))].reduce((total, slot) => total + Math.floor(fusionCandidates.filter((entry) => entry.slot === slot).length / recipe.ingredientCount) * recipe.ingredientCount, 0);
+  const bulkItemCount = [...new Set(fusionCandidates.map(fusionItemKey))].reduce((total, key) => total + Math.floor(fusionCandidates.filter((entry) => fusionItemKey(entry) === key).length / recipe.ingredientCount) * recipe.ingredientCount, 0);
   const bulkBatchCount = bulkItemCount / recipe.ingredientCount;
   const confirmFusion = () => {
     if (!bulkItemCount) return;
     const warning = recipe.successRate < 1 ? `成功率 ${Math.round(recipe.successRate * 100)}%，失敗時 5 件材料會全部消失。` : "本次合成保證成功。";
-    if (!window.confirm(`確定要將背包中 ${bulkItemCount} 件${fusionRarity}裝備全部合成為${recipe.targetRarity}品質嗎？\n各部位會分開合成，共執行 ${bulkBatchCount} 組；${warning}`)) return;
+    if (!window.confirm(`確定要將背包中 ${bulkItemCount} 件${FUSION_RARITY_LABEL[fusionRarity]}裝備全部合成為${FUSION_RARITY_LABEL[recipe.targetRarity]}嗎？\n同名稱、同部位會分開合成，名稱不會改變，共執行 ${bulkBatchCount} 組；${warning}`)) return;
     fuseAll(fusionRarity);
     setFusionItems([]);
   };
@@ -82,17 +84,17 @@ export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, upg
     </section>
     <section className="territory-smithy equipment-fusion" aria-label="裝備合成工坊">
       <h3>商團工坊・裝備合成</h3>
-      <p>以 5 件同品質、同部位的背包裝備合成同部位的下一階品質。普通→稀有為保底；越高階成功率越低，失敗時 5 件材料裝備會全部消失。已強化或已鑲嵌的裝備不可投入。</p>
+      <p>以 5 件同名稱、同品質、同部位的背包裝備合成為下一階品質，產出名稱與部位完全不變。白→綠為保底；綠→藍、藍→紫、紫→金依序降低成功率，失敗時 5 件材料裝備會全部消失。已強化或已鑲嵌的裝備不可投入。</p>
       <div className="territory-smithy-controls fusion-controls">
         <label>材料品質<select value={fusionRarity} onChange={(event) => { setFusionRarity(event.target.value as FusionSourceRarity); setFusionItems([]); }}>
-          {EQUIPMENT_FUSION_RECIPES.map((entry) => <option key={entry.sourceRarity} value={entry.sourceRarity}>{entry.sourceRarity} → {entry.targetRarity}・成功 {Math.round(entry.successRate * 100)}%</option>)}
+          {EQUIPMENT_FUSION_RECIPES.map((entry) => <option key={entry.sourceRarity} value={entry.sourceRarity}>{FUSION_RARITY_LABEL[entry.sourceRarity]} → {FUSION_RARITY_LABEL[entry.targetRarity]}・成功 {Math.round(entry.successRate * 100)}%</option>)}
         </select></label>
         <span>已選 {selectedFusionItems.length}/{recipe.ingredientCount} 件・成功率 {Math.round(recipe.successRate * 100)}%</span>
         <button type="button" disabled={!autoFusionItems.length} onClick={() => setFusionItems(autoFusionItems.map((entry) => entry.uid))}>自動選取 5 件</button>
         <button type="button" className="fusion-submit" disabled={!bulkItemCount} onClick={confirmFusion}>一鍵合成全部 {recipe.targetRarity}品質</button>
       </div>
       {fusionCandidates.length ? <div className="fusion-item-grid">
-        {fusionCandidates.map((entry) => <button key={entry.uid} type="button" disabled={Boolean(selectedFusionSlot && selectedFusionSlot !== entry.slot)} className={selectedFusionItems.includes(entry.uid) ? "selected" : ""} aria-pressed={selectedFusionItems.includes(entry.uid)} onClick={() => toggleFusionItem(entry.uid)}>
+        {fusionCandidates.map((entry) => <button key={entry.uid} type="button" disabled={Boolean(selectedFusionKey && selectedFusionKey !== fusionItemKey(entry))} className={selectedFusionItems.includes(entry.uid) ? "selected" : ""} aria-pressed={selectedFusionItems.includes(entry.uid)} onClick={() => toggleFusionItem(entry.uid)}>
           <strong>{entry.name}</strong><small>{entry.rarity}・{entry.slot}</small>
         </button>)}
       </div> : <p className="fusion-empty">沒有可投入的{fusionRarity}裝備。請準備未強化、未鑲嵌的背包裝備。</p>}

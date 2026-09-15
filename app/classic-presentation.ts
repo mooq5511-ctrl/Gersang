@@ -2,11 +2,11 @@
 export function rarityPresentation(rarity?:string){
  switch(rarity){
   case '優良':return {className:'rarity-uncommon',label:'優良'};
-  case '稀有':return {className:'rarity-rare',label:'稀有'};
-  case '史詩':return {className:'rarity-epic',label:'史詩'};
-  case '傳說':return {className:'rarity-mythic',label:'傳說'};
+  case '稀有':return {className:'rarity-uncommon',label:'綠色・稀有'};
+  case '史詩':return {className:'rarity-epic',label:'藍色・史詩'};
+  case '傳說':return {className:'rarity-mythic',label:'紫色・傳說'};
   case '金色':return {className:'rarity-gold',label:'金色'};
-  default:return {className:'rarity-common',label:'普通'};
+  default:return {className:'rarity-common',label:'白色・普通'};
  }
 }
 /** 舊存檔日誌仍是純文字；分類時先判斷失敗，避免把「掉落無法拾取」誤標成獎勵。 */

@@ -25,6 +25,12 @@ export function applyShopQuality(item: Equipment, rarity = rollShopQuality()): E
   return { ...item, name: rarity + "・" + name, atk: scale(item.atk, multiplier), def: scale(item.def, multiplier), hp: scale(item.hp, multiplier), rarity, magic: scaleMagic(item.magic, multiplier), bonus: { str: scale(item.bonus?.str, multiplier), agi: scale(item.bonus?.agi, multiplier), intel: scale(item.bonus?.intel, multiplier), vit: scale(item.bonus?.vit, multiplier) }, resist: { physical: scale(item.resist?.physical, multiplier), magic: scale(item.resist?.magic, multiplier) }, source: "四國城市商店・" + rarity + "品質 x" + multiplier };
 }
 
+/** Promotes an existing item by the relative quality multiplier without changing its identity. */
+export function advanceEquipmentQuality(item: Equipment, rarity: Equipment["rarity"]): Equipment {
+  const multiplier = SHOP_QUALITY[rarity].multiplier / SHOP_QUALITY[item.rarity].multiplier;
+  return { ...item, name: item.name.replace(/^(普通|稀有|史詩|傳說|金色)・/, ""), atk: scale(item.atk, multiplier), def: scale(item.def, multiplier), hp: scale(item.hp, multiplier), rarity, magic: scaleMagic(item.magic, multiplier), bonus: { str: scale(item.bonus?.str, multiplier), agi: scale(item.bonus?.agi, multiplier), intel: scale(item.bonus?.intel, multiplier), vit: scale(item.bonus?.vit, multiplier) }, resist: { physical: scale(item.resist?.physical, multiplier), magic: scale(item.resist?.magic, multiplier) } };
+}
+
 export function rollEquipment(stage: number, guaranteed = false, slot?: Equipment["slot"]): Equipment {
   const catalog = slot ? wearableCatalog.filter((entry) => entry.slot === slot) : wearableCatalog;
   const base = catalog[Math.floor(Math.random() * catalog.length)] || wearableCatalog[0], magicCount = guaranteed ? Math.min(3, 1 + Math.floor(stage / 20)) : Math.min(3, Math.max(1, Math.floor(stage / 15))), magic = [...magicAffixes].sort(() => Math.random() - .5).slice(0, magicCount);

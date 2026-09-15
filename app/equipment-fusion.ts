@@ -9,6 +9,22 @@ export const EQUIPMENT_FUSION_RECIPES = [
 
 export type FusionSourceRarity = (typeof EQUIPMENT_FUSION_RECIPES)[number]["sourceRarity"];
 
+export const FUSION_RARITY_LABEL: Record<Equipment["rarity"], string> = {
+  "普通": "白色・普通",
+  "稀有": "綠色・稀有",
+  "史詩": "藍色・史詩",
+  "傳說": "紫色・傳說",
+  "金色": "金色",
+};
+
+export function fusionBaseName(name: string) {
+  return name.replace(/^(普通|稀有|史詩|傳說|金色)・/, "");
+}
+
+export function fusionItemKey(item: Pick<Equipment, "slot" | "name">) {
+  return `${item.slot}\u0000${fusionBaseName(item.name)}`;
+}
+
 export function fusionRecipe(rarity: string) {
   return EQUIPMENT_FUSION_RECIPES.find((recipe) => recipe.sourceRarity === rarity);
 }

@@ -2,8 +2,8 @@ import { buyMarketMaterial, sellAllMaterials, sellMaterial } from "./village-exc
 import { VILLAGE_WEAPONS, buyVillageWeapon, exchangeAttackBonus, type VillageWeaponId } from "./village-exchange";
 import { sellAllEquipmentFromInventory, sellEquipmentFromInventory } from "./equipment-market";
 import { addInventoryItem } from "./inventory-layout";
-import { applyShopQuality, rollEquipment } from "./game-equipment-factory";
-import { fusionRecipe, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
+import { advanceEquipmentQuality, makeUid } from "./game-equipment-factory";
+import { fusionBaseName, fusionItemKey, fusionRecipe, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
 import { THUNDER_FORGE_ITEMS, type ThunderForgeId } from "./mythic-forge";
 import { compatibleSlots, equipFromInventory, unequipToInventory, type EquipmentSlot } from "./equipment-slots";
 import { medicineCatalog } from "./game-config";
@@ -15,50 +15,25 @@ import { makeTierEquipment, tierEquipmentPrice, tierEquipmentShopCatalog } from 
 type Log = (logs: string[], message: string) => string[];
 type Format = (value: number) => string;
 
-export function fuseInventoryEquipmentAction(state: GameState, sourceRarity: FusionSourceRarity, selectedItemUids: string[], roll: number, addLog: Log, notify: (message: string) => void): GameState {
-  const recipe = fusionRecipe(sourceRarity);
-  const uniqueUids = [...new Set(selectedItemUids)];
-  if (!recipe || uniqueUids.length !== 5) { notify("請選擇剛好 5 件同品質、未強化且未鑲嵌的裝備。"); return state; }
-  const ingredients = uniqueUids.map((uid) => state.inventory.find((item) => item.uid === uid));
-  if (ingredients.some((item) => !item || !isFusionIngredient(item, sourceRarity))) {
-    notify("選取裝備已變更，請重新選擇可合成的裝備。");
-    return state;
-  }
-  const ingredientSlots = new Set(ingredients.map((item) => item!.slot));
-  if (ingredientSlots.size !== 1) { notify("裝備合成只能投入同一個部位的 5 件裝備。"); return state; }
-  const consumed = new Set(uniqueUids);
-  const inventory = state.inventory.filter((item) => !consumed.has(item.uid));
-  if (roll >= recipe.successRate) {
-    notify(`合成失敗：5 件${sourceRarity}裝備已消失。`);
-    return { ...state, inventory, logs: addLog(state.logs, `商團駐地裝備合成失敗，消耗 5 件${sourceRarity}裝備。`) };
-  }
-  const stage = Math.max(state.stage, state.hero.level);
-  const ingredientSlot = ingredients[0]!.slot;
-  const result = { ...applyShopQuality(rollEquipment(stage, true, ingredientSlot), recipe.targetRarity), source: `商團駐地・${sourceRarity}裝備合成` };
-  const pickup = addInventoryItem(inventory, result);
-  notify(`合成成功：獲得「${result.name}」！`);
-  return { ...state, inventory: pickup.inventory, logs: addLog(state.logs, `商團駐地合成成功：消耗 5 件${sourceRarity}裝備，獲得「${result.name}」。`) };
-}
-
 export function fuseAllInventoryEquipmentAction(state: GameState, sourceRarity: FusionSourceRarity, roll: () => number, addLog: Log, notify: (message: string) => void): GameState {
   const recipe = fusionRecipe(sourceRarity);
   if (!recipe) return state;
-  const candidatesBySlot = new Map<Equipment["slot"], Equipment[]>();
+  const candidatesByIdentity = new Map<string, Equipment[]>();
   for (const item of state.inventory) if (isFusionIngredient(item, sourceRarity)) {
-    const items = candidatesBySlot.get(item.slot) || [];
+    const key = fusionItemKey(item), items = candidatesByIdentity.get(key) || [];
     items.push(item);
-    candidatesBySlot.set(item.slot, items);
+    candidatesByIdentity.set(key, items);
   }
-  const batchesBySlot = [...candidatesBySlot.entries()].map(([slot, items]) => ({ slot, items: items.slice(0, Math.floor(items.length / recipe.ingredientCount) * recipe.ingredientCount) })).filter((entry) => entry.items.length);
-  const consumedCount = batchesBySlot.reduce((total, entry) => total + entry.items.length, 0);
-  if (!consumedCount) { notify(`至少需要 5 件同品質、同部位的${sourceRarity}裝備。`); return state; }
-  const consumed = new Set(batchesBySlot.flatMap((entry) => entry.items.map((item) => item.uid)));
+  const batchesByIdentity = [...candidatesByIdentity.values()].map((items) => ({ template: items[0], items: items.slice(0, Math.floor(items.length / recipe.ingredientCount) * recipe.ingredientCount) })).filter((entry) => entry.items.length);
+  const consumedCount = batchesByIdentity.reduce((total, entry) => total + entry.items.length, 0);
+  if (!consumedCount) { notify(`至少需要 5 件同名稱、同品質、同部位的${sourceRarity}裝備。`); return state; }
+  const consumed = new Set(batchesByIdentity.flatMap((entry) => entry.items.map((item) => item.uid)));
   let inventory = state.inventory.filter((item) => !consumed.has(item.uid));
-  const batches = consumedCount / recipe.ingredientCount, stage = Math.max(state.stage, state.hero.level);
+  const batches = consumedCount / recipe.ingredientCount;
   let successes = 0;
-  for (const { slot, items } of batchesBySlot) for (let index = 0; index < items.length / recipe.ingredientCount; index += 1) {
+  for (const { template, items } of batchesByIdentity) for (let index = 0; index < items.length / recipe.ingredientCount; index += 1) {
     if (roll() >= recipe.successRate) continue;
-    const result = { ...applyShopQuality(rollEquipment(stage, true, slot), recipe.targetRarity), source: `商團駐地・${sourceRarity}批次裝備合成` };
+    const result = { ...advanceEquipmentQuality({ ...template, uid: makeUid(`fusion-${template.slot}`), name: fusionBaseName(template.name), enhance: 0, socketGem: undefined }, recipe.targetRarity), source: `商團駐地・${fusionBaseName(template.name)}批次裝備合成` };
     inventory = addInventoryItem(inventory, result).inventory;
     successes += 1;
   }
