@@ -34,6 +34,7 @@ import {
   Warehouse,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -132,6 +133,7 @@ export default function GameV15() {
   const [characterNation, setCharacterNation] = useState<NationId>("taiwan");
   const [characterGender, setCharacterGender] = useState<"male"|"female">("male");
   const [notice, setNotice] = useState("");
+  const [returnReport, setReturnReport] = useState<{ minutes: number; gold: number; credit: number } | null>(null);
   const [selectedUid, setSelectedUid] = useState("hero");
   const [cityService, setCityService] = useState<CityService>("mercenary");
   const [medicineAmounts, setMedicineAmounts] = useState<Record<string, number>>({});
@@ -200,9 +202,12 @@ export default function GameV15() {
       let next = raw ? restoreGame(JSON.parse(raw)) : freshGame(profile.nation, profile.name);
       const now = currentTimestamp();
       const before = next.gold;
+      const beforeCredit = next.credit;
+      const awayMinutes = Math.max(0, Math.floor((now - next.lastSeen) / 60000));
       next = settleCurrentGame(next, { now, roll: .99, choice: 0, spawnRoll: 0, encounterCountRoll: createGameTickRolls().encounterCountRoll, retaliationRoll: 0, materialRolls: [1, 1, 1] });
-      if (now - next.lastSeen >= 60000) setNotice("離線跑商與途中遭遇已結算，資金增加 " + format(next.gold - before) + " 兩（最多 8 小時）。");
+      setReturnReport(awayMinutes >= 1 ? { minutes: awayMinutes, gold: next.gold - before, credit: next.credit - beforeCredit } : null);
       next.lastSeen = now;
+      writeCharacterSave(localStorage, slot, next);
       setGame(next);
       setSelectedUid("hero");
       setCityService("mercenary");
@@ -241,6 +246,7 @@ export default function GameV15() {
     const nextProfiles = saveCharacterProfile(localStorage, profiles, activeSlot, game, profileFromGame(activeSlot, game));
     setProfiles(nextProfiles);
     setActiveSlot(null);
+    setReturnReport(null);
     setCreatorSlot(null);
     setNotice("");
   }
@@ -638,6 +644,22 @@ export default function GameV15() {
 
       {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
       <SceneMusic scene={musicScene}/>
+      <Dialog open={returnReport !== null} onOpenChange={open => { if (!open) setReturnReport(null); }}>
+        <DialogContent className="caravan-return-report" showCloseButton={false}>
+          <span className="return-report-seal" aria-hidden="true">商</span>
+          <DialogTitle>商隊帶著收穫回來了</DialogTitle>
+          <DialogDescription>你離開了 {Math.floor((returnReport?.minutes || 0) / 60)} 小時 {(returnReport?.minutes || 0) % 60} 分鐘</DialogDescription>
+          <dl className="return-report-rewards">
+            <div><dt>金錢淨變動</dt><dd>{(returnReport?.gold || 0) >= 0 ? '+' : ''}{(returnReport?.gold || 0).toLocaleString('zh-TW')} <small>兩</small></dd></div>
+            <div><dt>信用增加</dt><dd>+{(returnReport?.credit || 0).toLocaleString('zh-TW')}</dd></div>
+          </dl>
+          <p>收益已自動入帳，放置累積上限為 8 小時。{(returnReport?.minutes || 0) > 480 ? '本次離開時間已超過累積上限。' : ''}</p>
+          {returnReport?.gold === 0 && returnReport.credit === 0 && <p>本次沒有新增收益；戰敗療傷期間不累積放置收益。</p>}
+          <div className="return-report-next"><small>接下來</small><strong>{mainObjective.title}</strong><p>{mainObjective.detail}</p></div>
+          <Button onClick={() => { setReturnReport(null); setActiveTab(mainObjective.tab); }}>繼續商隊旅程</Button>
+          <Button variant="ghost" onClick={() => setReturnReport(null)}>先看看城鎮</Button>
+        </DialogContent>
+      </Dialog>
 
       <section className="main-objective" aria-label="目前主線目標">
         <div><small>目前主線目標</small><strong>{mainObjective.title}</strong><span>{mainObjective.detail}</span></div>
