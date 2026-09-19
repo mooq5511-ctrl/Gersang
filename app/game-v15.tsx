@@ -267,6 +267,28 @@ export default function GameV15() {
   const cityArmors = officialEquipment.filter((item) => item.kind === "armor").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
   const cityWeapons = officialEquipment.filter((item) => item.kind === "weapon").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
   const musicScene:SceneMusicKind=activeTab==='battle'?'boss':game.hero.status==='客棧中'||(activeTab==='city'&&cityService==='inn')?'inn':activeTab==='city'||activeTab==='trade'?'merchant':'outskirts';
+  const mapGate = (map: typeof battleMaps[number]) => {
+    const stageReady = game.stage >= map.unlockStage;
+    const bossReady = map.id !== 'millennium-lake' || game.newbieBossDefeated;
+    const lakeReady = map.id !== 'japan-sea' || game.lakeBossDefeated;
+    const seaReady = map.id !== 'miasma-forest' || game.goldenStarfishDefeated;
+    const unlocked = stageReady && bossReady && lakeReady && seaReady;
+    const requirement = !stageReady ? `關卡進度 ${game.stage} / ${map.unlockStage}`
+      : !bossReady ? '擊敗海賊王'
+      : !lakeReady ? '擊敗狂風阿魯塔'
+      : !seaReady ? '擊敗黃金海星'
+      : '已開放';
+    return { unlocked, requirement };
+  };
+  const mainObjective = (() => {
+    if (game.hero.status === '客棧中') return { title: '恢復商隊戰力', detail: `生命 ${heroVital.hp} / ${heroVital.maxHp}，療傷完成後可再度出發。`, tab: 'city' };
+    if (game.hero.level < 20) return { title: '壯大商隊，建立第一座駐地', detail: `主角 Lv.${game.hero.level} / Lv.20，商團領地即將開放。`, tab: 'battle' };
+    if (game.territory.buildings.waystation < 1) return { title: '建立驛站，提升放置收益', detail: '商團領地已開放，第一級驛站可讓金錢與信用收益 +2%。', tab: 'squad' };
+    if (!game.newbieBossDefeated) return { title: '討伐海賊王，開通千年湖', detail: '在世界地圖選擇海賊王，突破下一段商路。', tab: 'battle' };
+    if (!game.lakeBossDefeated) return { title: '前往千年湖，追擊狂風阿魯塔', detail: '千年湖已開通；擊敗首領後可前往日本海底洞。', tab: 'battle' };
+    if (!game.goldenStarfishDefeated) return { title: '討伐黃金海星，開通白虎林', detail: '挑戰日本海底洞，取得前往白虎林的資格。', tab: 'battle' };
+    return { title: '持續壯大商隊', detail: '提高等級、強化隊伍，朝下一個地圖與傳說裝備前進。', tab: 'battle' };
+  })();
 
 
   function selectBattleMap(mapId: string) {
@@ -336,6 +358,17 @@ export default function GameV15() {
   }
 
   function equipItem(itemUid: string, requestedSlot?: EquipmentSlot, targetUid=selectedUid) {
+    const preview = equipInventoryItemAction(game, itemUid, requestedSlot, targetUid, addLog);
+    const before = targetUid === 'hero' ? game.hero : game.mercs.find(unit => unit.uid === targetUid);
+    const after = targetUid === 'hero' ? preview.hero : preview.mercs.find(unit => unit.uid === targetUid);
+    if (before && after && before !== after) {
+      const powerGain = unitPower(after) - unitPower(before);
+      const beforeCombat = combatStats(before), afterCombat = combatStats(after);
+      const attackGain = afterCombat.attack - beforeCombat.attack;
+      const defenseGain = afterCombat.defense - beforeCombat.defense;
+      const changes = [attackGain && `攻擊 ${attackGain > 0 ? '+' : ''}${format(attackGain)}`, defenseGain && `防禦 ${defenseGain > 0 ? '+' : ''}${format(defenseGain)}`, powerGain && `戰力 ${powerGain > 0 ? '+' : ''}${format(powerGain)}`].filter(Boolean);
+      if (changes.length) setNotice(`裝備生效：${changes.join('・')}`);
+    }
     setGame(previous => equipInventoryItemAction(previous, itemUid, requestedSlot, targetUid, addLog));
   }
 
@@ -606,6 +639,11 @@ export default function GameV15() {
       {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
       <SceneMusic scene={musicScene}/>
 
+      <section className="main-objective" aria-label="目前主線目標">
+        <div><small>目前主線目標</small><strong>{mainObjective.title}</strong><span>{mainObjective.detail}</span></div>
+        <Button type="button" variant="outline" onClick={() => setActiveTab(mainObjective.tab)}>前往</Button>
+      </section>
+
       <section id="inn-zone" className="forced-inn" hidden={game.hero.status!=='客棧中'} aria-live="polite">
         <BedDouble aria-hidden="true"/><div><small>漢陽客棧</small><h2>戰敗療傷中</h2><p>戰鬥已停止。每 2 秒自動恢復 10 點 HP，生命值全滿後會自動離開客棧。</p><Progress value={heroVital.hp/heroVital.maxHp*100} aria-label="客棧療傷進度"/></div>
         <Button type="button" onClick={()=>setGame(payGameInn)}>💰 付費快速治療<small>{quickHealCost.toLocaleString('zh-TW')} 兩</small></Button>
@@ -667,21 +705,21 @@ export default function GameV15() {
             <header className="battle-world-map-header"><div><small>東方商路</small><h2>世界地圖</h2><p>選擇已解鎖的區域後，即可指定怪物並持續戰鬥。</p></div><div className="battle-world-map-tools"><span>目前：{currentMap.name}</span><MonsterCompendium /></div></header>
             <nav className="battle-map-selector" aria-label="世界地圖清單">
               {battleMaps.map((map) => {
-                const unlocked = game.stage >= map.unlockStage && (map.id !== 'millennium-lake' || game.newbieBossDefeated) && (map.id !== 'japan-sea' || game.lakeBossDefeated) && (map.id !== 'miasma-forest' || game.goldenStarfishDefeated);
+                const { unlocked, requirement } = mapGate(map);
                 return <button type="button" key={map.id} className={'battle-map-card map-theme-'+map.theme+' '+(currentMap.id === map.id ? 'active ' : '')+(unlocked ? '' : 'locked')} disabled={!unlocked} onClick={() => selectBattleMap(map.id)}>
                   <span className="battle-map-card-icon" aria-hidden="true">{mapFeatureIcons[map.theme] || '✦'}</span>
-                  <span className="battle-map-card-copy"><small>{map.region}</small><strong>{map.name}</strong><em>{currentMap.id === map.id ? '目前位置' : unlocked ? '選擇地圖' : '尚未解鎖'}</em></span>
+                  <span className="battle-map-card-copy"><small>{map.region}</small><strong>{map.name}</strong><em>{currentMap.id === map.id ? '目前位置' : unlocked ? '選擇地圖' : requirement}</em></span>
                 </button>;
               })}
             </nav>
             <div className="battle-world-map" aria-label="世界地圖戰鬥區域">
               <span className="world-route route-one"/><span className="world-route route-two"/><span className="world-route route-three"/>
               {battleMaps.map((map) => {
-                const unlocked = game.stage >= map.unlockStage && (map.id !== 'millennium-lake' || game.newbieBossDefeated) && (map.id !== 'japan-sea' || game.lakeBossDefeated) && (map.id !== 'miasma-forest' || game.goldenStarfishDefeated);
+                const { unlocked, requirement } = mapGate(map);
                 const positions:Record<string,[number,number]>={'starter-outskirts':[13,70],'millennium-lake':[28,50],'japan-sea':[55,36],'miasma-forest':[48,68],'ice-temple':[72,48],'taj-mahal':[78,72],'sumeru':[48,18],'shambhala':[92,24]};
                 const [x,y]=positions[map.id]||[50,50];
                 return <button key={map.id} aria-label={`${map.name}・${unlocked ? '前往' : '尚未解鎖'}`} style={{'--map-x':x+'%','--map-y':y+'%'} as React.CSSProperties} className={'battle-map-node map-theme-'+map.theme+' '+(currentMap.id === map.id ? "active " : "") + (unlocked ? "" : "locked")} disabled={!unlocked} onClick={() => selectBattleMap(map.id)}>
-                  <span className="map-node-orb"/><span className="map-node-copy"><small>{map.region}</small><strong>{map.name}</strong><em>{currentMap.id === map.id ? "遠征中" : unlocked ? "前往" : map.id==='millennium-lake' ? "擊敗海賊王" : map.id==='japan-sea' ? "擊敗狂風阿魯塔" : map.id==='miasma-forest' ? "擊敗黃金海星" : "未解鎖"}</em></span>
+                  <span className="map-node-orb"/><span className="map-node-copy"><small>{map.region}</small><strong>{map.name}</strong><em>{currentMap.id === map.id ? "遠征中" : unlocked ? "前往" : requirement}</em></span>
                 </button>;
               })}
             </div>

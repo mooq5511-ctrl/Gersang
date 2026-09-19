@@ -290,6 +290,7 @@ button { font: inherit; }
 
 .notice svg { width: 17px; }
 .notice span { margin-left: auto; color: #bcae93; font-size: 0.75rem; }
+.main-objective{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:12px auto 0;padding:11px 14px;width:min(1180px,calc(100% - 28px));border:1px solid #d8af5c99;border-radius:12px;background:linear-gradient(100deg,#271b10,#111c20 62%);box-shadow:0 5px 18px #0007}.main-objective>div{display:grid;min-width:0;gap:2px}.main-objective small{color:#e2bd67;font-size:.67rem;letter-spacing:.08em}.main-objective strong{color:#fff0c5;font-size:.95rem}.main-objective span{overflow:hidden;color:#b9c7bf;font-size:.74rem;text-overflow:ellipsis;white-space:nowrap}.main-objective button{flex:0 0 auto;border-color:#d8af5c;color:#ffe7a4}@media(max-width:600px){.main-objective{align-items:flex-start;gap:10px;margin-top:8px;padding:10px}.main-objective span{white-space:normal;line-height:1.35}.main-objective button{padding:7px 10px;font-size:.75rem}}
 
 .game-tabs { margin-top: 14px; }
 
