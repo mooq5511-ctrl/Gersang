@@ -205,6 +205,7 @@ status_badges: app/battle-arena.tsx.battleUnitStatuses turns mercenaryState effe
 generals: app/game-data.ts defines five recruitable city generals; app/general-recruitment.tsx exposes them in their matching city, and general-{id} units use the ordinary roster, formation, persistence, and shared MP-based automatic-skill path
 material_trade: app/village-exchange.ts derives a positive fallback price for every v17 source-enemy drop, then overlays authored map and balance prices; bulk selling preserves unknown legacy items and ancient coin boxes
 npc_content: data/npcs/hanyang.ts owns all ten Hanyang NPC definitions, portrait positions, dialogue, quest objectives, rewards, and affinity gates; app/npc-dialogue.ts owns only types, lookup, progress, and persistence rules
+boss_abilities: data/skills/boss-abilities.ts owns realtime boss timing, damage, regeneration, curse, and burn values; dungeon-engine is the executor only
 ```
 
 UI naming drift: Site metadata title in `layout.tsx`/Sites metadata may still say older V29/商途 text while user wants `放置你的巨商魂`. Audit all `<title>`, login title, header branding, manifest before next public release.

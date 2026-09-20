@@ -7,7 +7,7 @@ import {MercenaryRealtimeBattleSystem} from './mercenary-realtime-battle.js';
 import {mitigatedDamage} from './combat-damage.js';
 import {newlyDefeatedExperience} from './dungeon-kill-xp.ts';
 import {mercenarySpec} from './mercenary-roster.ts';
-import {bossAbilitiesFor} from './boss-abilities.ts';
+import {bossAbilitiesFor} from '../data/skills/boss-abilities.ts';
 export const DUNGEONS = {
  ...ECOLOGY_MONSTERS,
  ...LEGACY_DUNGEON_MONSTERS,
