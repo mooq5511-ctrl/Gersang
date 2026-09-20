@@ -56,6 +56,13 @@ export function runDungeonAction(
   rolls: { roll?: number; choice?: number; spawnRoll?: number; encounterCountRoll?: number; retaliationRoll?: number; materialRolls?: number[]; fusionCoreRoll?: number; gearDropRoll?: number; gearChoiceRoll?: number },
   deps: DungeonActionDependencies,
 ): GameState {
+  if (action === "start" && key === "e_starter_pirate_king") {
+    const firstDeliveryComplete = previous.npcProgress.completedQuests.includes("npc-first-caravan-delivery");
+    const firstGreenEquipped = previous.firstGreenEquipped || [previous.hero, ...previous.mercs, ...previous.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== "普通"));
+    if (!firstDeliveryComplete || previous.hero.level < 20 || previous.territory.buildings.waystation < 1 || !firstGreenEquipped) {
+      return { ...previous, logs: deps.addLog(previous.logs, "海賊王挑戰尚未開放：請完成第一份商隊委託、升至 Lv.20、建立驛站並穿戴第一件綠裝。") };
+    }
+  }
   const roll = rolls.roll ?? .99, choice = rolls.choice ?? 0, spawnRoll = rolls.spawnRoll ?? 0, retaliationRoll = rolls.retaliationRoll ?? 0, materialRolls = rolls.materialRolls ?? [1, 1, 1];
   const total = heroTotalAttributes(previous.hero), vital = vitalStats(previous.hero);
   const activeIds = new Set(previous.active.slice(0, ACTIVE_MERCENARY_LIMIT));
@@ -71,7 +78,11 @@ export function runDungeonAction(
   let next: GameState = { ...previous, dungeon: result.state, hero: { ...previous.hero, hp: remaining.get("hero")?.hp ?? result.hp, mp: remaining.get("hero")?.mp ?? result.mp }, mercs: previous.mercs.map((unit) => { const fighter = remaining.get(unit.uid); return fighter ? { ...unit, hp: fighter.hp, mp: fighter.mp ?? unit.mp } : unit; }) };
   const battleMembers = 1 + deployedMercs.length;
   const shareXp = Math.floor(result.xpEarned / battleMembers);
-  if (result.killsEarned) next = { ...next, hero: grantTerritoryXp(next, next.hero, shareXp), mercs: next.mercs.map((unit) => activeIds.has(unit.uid) ? grantTerritoryXp(next, unit, shareXp) : unit), kills: next.kills + result.killsEarned, logs: deps.addLog(next.logs, `擊敗 ${result.killsEarned} 隻怪物，獲得 ${result.xpEarned} 經驗；${battleMembers} 名出戰角色均分，每人 ${Math.floor(shareXp * (1 + territoryBonus(next.territory, "xp")))} 經驗（含領地加成）。`) };
+  if (result.killsEarned) {
+    const isFirstDeliveryTarget = previous.npcProgress.activeQuests.includes("npc-first-caravan-delivery") && result.state.key === "e_starter_raccoon";
+    const deliveryKills = isFirstDeliveryTarget ? next.starterDeliveryKills + result.killsEarned : next.starterDeliveryKills;
+    next = { ...next, hero: grantTerritoryXp(next, next.hero, shareXp), mercs: next.mercs.map((unit) => activeIds.has(unit.uid) ? grantTerritoryXp(next, unit, shareXp) : unit), kills: next.kills + result.killsEarned, starterDeliveryKills: deliveryKills, logs: deps.addLog(next.logs, `擊敗 ${result.killsEarned} 隻怪物，獲得 ${result.xpEarned} 經驗；${battleMembers} 名出戰角色均分，每人 ${Math.floor(shareXp * (1 + territoryBonus(next.territory, "xp")))} 經驗（含領地加成）。`) };
+  }
   if (result.state.status === "recovering" && previous.hero.status !== "客棧中") next = deps.enterInn(next, now, result.state.logs[0], result.state);
   else if (result.state.status === "idle" && previous.hero.status === "客棧中") next = deps.leaveInn(next);
   if (!result.reward) return next;

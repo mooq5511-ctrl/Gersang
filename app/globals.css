@@ -172,6 +172,11 @@ button { font: inherit; }
 .creator-nations strong { color: #f2ddb0; font-size: 0.95rem; }
 .creator-nations small { overflow: hidden; color: #a5afb1; font-size: 0.7rem; text-overflow: ellipsis; white-space: nowrap; }
 .creator-nations em { color: var(--nation-color); font-size: 0.68rem; font-style: normal; }
+.creator-origin { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 14px; min-height: 100px; padding: 10px 14px; border: 1px solid #d5a84d55; border-radius: 10px; background: linear-gradient(90deg, #d5a84d12, #0b1115); }
+.creator-origin img { width: 82px; height: 94px; object-fit: contain; object-position: bottom; image-rendering: pixelated; }
+.creator-origin span { display: grid; gap: 5px; }
+.creator-origin strong { color: #f2ddb0; }
+.creator-origin small { color: #a5afb1; }
 .creator-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .character-switch { align-self: stretch; height: auto; min-height: 50px; }
 
@@ -1640,6 +1645,7 @@ footer {
   .character-slot > img, .empty-slot-mark { width: 90px; height: 108px; }
   .character-name-field { grid-template-columns: 1fr; gap: 6px; }
   .creator-nations { grid-template-columns: 1fr; }
+  .creator-origin { grid-template-columns: 72px minmax(0, 1fr); }
   .city-country-grid { grid-template-columns: 1fr; }
   .city-service-tabs { grid-template-columns: repeat(2, 1fr); }
   .city-heading { min-height: 110px; padding: 16px; }

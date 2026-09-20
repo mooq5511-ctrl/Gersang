@@ -42,7 +42,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formations, mercenaries, type MercenaryDef } from "./game-data";
 import {
   nations,
-  NationId,
   worldCities,
 } from "./v15-data";
 import { battleMaps } from "./reference-data";
@@ -62,7 +61,7 @@ import { MATERIAL_BUY_PRICES, MATERIAL_PRICES, VILLAGE_WEAPONS, exchangeAttackBo
 import { GersangArchive } from './gersang-archive';
 import { MonsterCompendium } from './monster-compendium';
 import { parseStoredArray, preserveCorruptStorage } from './storage-guards';
-import { heroNationProfiles, medicineCatalog, SHOP_QUALITY } from "./game-config";
+import { medicineCatalog, SHOP_QUALITY } from "./game-config";
 import { createGameTickRolls, settleCurrentGame } from "./game-loop";
 import { grantCreditXp, grantXp, grantTerritoryXp, unitPower, xpNeed } from "./game-progression";
 import { restAtInnAction, travelCityAction } from "./game-city-actions";
@@ -70,7 +69,7 @@ import { claimContractAction, contractProgress } from "./game-contract-actions";
 import { formatGameNumber as format } from "./game-display";
 import { appendGameLog as addLog, enemyMaxForStage as enemyMax, enterGameInnAction as enterGameInn, leaveGameInnAction as leaveGameInn, payGameInnAction as payGameInn } from "./game-runtime-actions";
 import { applyShopQuality, makeOfficialEquipment, makeUid as uid, rollEquipment } from "./game-equipment-factory";
-import { emptyEquipment, freshGame, heroPortrait, isNationId } from "./game-hero-factory";
+import { emptyEquipment, freshGame, heroPortrait, isNationId, STARTER_NATION, STARTER_VILLAGE_NAME } from "./game-hero-factory";
 import { applyGersangVisuals } from "./game-save-normalizers";
 import { SceneMusic, type SceneMusicKind } from './scene-music';
 import { runDungeonAction, selectBattleMapAction } from "./game-battle-actions";
@@ -111,6 +110,8 @@ const bossMonsterArt:Record<string,string> = {
   '強力棍兵': '/assets/monsters/sumeru/virupaksa-area.jpg',
 };
 const slotLabels = EQUIPMENT_LABELS;
+const FIRST_CARAVAN_QUEST_ID = "npc-first-caravan-delivery";
+const FIRST_CARAVAN_TARGET = 3;
 const mapFeatureIcons: Record<string, string> = { field: "🌾", lake: "🌊", sea: "⚓", forest: "🌲", ice: "❄️", desert: "☀️", sumeru: "⛰️", shambhala: "🏯" };
 
 function currentTimestamp() {
@@ -132,7 +133,6 @@ export default function GameV15() {
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
   const [creatorSlot, setCreatorSlot] = useState<number | null>(null);
   const [characterName, setCharacterName] = useState("");
-  const [characterNation, setCharacterNation] = useState<NationId>("taiwan");
   const [characterGender, setCharacterGender] = useState<"male"|"female">("male");
   const [notice, setNotice] = useState("");
   const [returnReport, setReturnReport] = useState<{ minutes: number; gold: number; credit: number } | null>(null);
@@ -201,7 +201,7 @@ export default function GameV15() {
       const raw = readCharacterSave(localStorage, slot);
       if (raw) backupBeforeGuildMigration(localStorage, profileSaveKey(slot), raw);
       if (raw) backupBeforeEquipmentMigration(localStorage, profileSaveKey(slot), raw);
-      let next = raw ? restoreGame(JSON.parse(raw)) : freshGame(profile.nation, profile.name);
+      let next = raw ? restoreGame(JSON.parse(raw)) : freshGame(profile.name, profile.gender === 'female' ? 'female' : 'male');
       const now = currentTimestamp();
       const before = next.gold;
       const beforeCredit = next.credit;
@@ -227,7 +227,7 @@ export default function GameV15() {
       setNotice("請輸入角色名稱。");
       return;
     }
-    const next = freshGame(characterNation, name, characterGender);
+    const next = freshGame(name, characterGender);
     const nextProfiles = [...profiles];
     nextProfiles[creatorSlot] = profileFromGame(creatorSlot, next);
     localStorage.setItem(profileSaveKey(creatorSlot), JSON.stringify(next));
@@ -271,7 +271,8 @@ export default function GameV15() {
   const heroXpNeeded=xpNeed(game.hero.level);
   const quickHealCost=Math.max(0,heroVital.maxHp-heroVital.hp)*2;
   const currentNation = nations.find((nation) => nation.id === currentCity.nation) || nations[0];
-  const heroNation = nations.find((nation) => nation.id === game.hero.nation) || nations[0];
+  const displayCityName = currentCity.id === "hanyang" ? STARTER_VILLAGE_NAME : currentCity.name;
+  const firstCaravanBossReady = game.npcProgress.completedQuests.includes(FIRST_CARAVAN_QUEST_ID) && game.hero.level >= 20 && game.territory.buildings.waystation >= 1 && (game.firstGreenEquipped || [game.hero, ...game.mercs, ...game.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== '普通')));
   const cityArmors = officialEquipment.filter((item) => item.kind === "armor").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
   const cityWeapons = officialEquipment.filter((item) => item.kind === "weapon").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
   const musicScene:SceneMusicKind=activeTab==='battle'?'boss':game.hero.status==='客棧中'||(activeTab==='city'&&cityService==='inn')?'inn':activeTab==='city'||activeTab==='trade'?'merchant':'outskirts';
@@ -290,6 +291,13 @@ export default function GameV15() {
   };
   const mainObjective = (() => {
     if (game.hero.status === '客棧中') return { title: '恢復商隊戰力', detail: `生命 ${heroVital.hp} / ${heroVital.maxHp}，療傷完成後可再度出發。`, tab: 'city' };
+    const firstDeliveryCompleted = game.npcProgress.completedQuests.includes(FIRST_CARAVAN_QUEST_ID);
+    const firstDeliveryActive = game.npcProgress.activeQuests.includes(FIRST_CARAVAN_QUEST_ID);
+    if (!firstDeliveryCompleted) {
+      if (!firstDeliveryActive) return { title: '在漢陽接下第一份商隊委託', detail: '向新手村村長金成浩接下送貨委託，清出通往港口的驛路。', tab: 'map', npcId: 'kim-seongho' as NpcId };
+      if (game.starterDeliveryKills < FIRST_CARAVAN_TARGET) return { title: '清出送貨驛路', detail: `擊敗新手村郊外的狸貓 ${Math.min(game.starterDeliveryKills, FIRST_CARAVAN_TARGET)} / ${FIRST_CARAVAN_TARGET}。只計算委託期間的指定怪物。`, tab: 'battle', mapId: 'starter-outskirts', monsterName: '狸貓' };
+      return { title: '回漢陽交付第一份商隊委託', detail: '貨物已能安全送達港口；向金成浩回報，領取白裝短劍與啟程資金。', tab: 'map', npcId: 'kim-seongho' as NpcId };
+    }
     if (game.hero.level < 20) return { title: '壯大商隊，建立第一座駐地', detail: `主角 Lv.${game.hero.level} / Lv.20，商團領地即將開放。`, tab: 'battle' };
     if (game.territory.buildings.waystation < 1) return { title: '建立驛站，提升放置收益', detail: `資金 ${Math.floor(game.gold).toLocaleString('zh-TW')} / 1,200 兩；建成後放置收益 +2%。`, tab: 'squad', window: 'territory' as const };
     const equippedGreen = game.firstGreenEquipped || [game.hero, ...game.mercs, ...game.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== '普通'));
@@ -304,12 +312,28 @@ export default function GameV15() {
       const count = Math.min(5, group?.length || 0);
       return { title: count === 5 ? '合成第一件綠裝' : '收集同名白裝，準備第一次合成', detail: `${group?.[0].name || '同名同部位白裝'} ${count} / 5；${count === 5 ? '材料齊全，白→綠成功率 100%。' : `還差 ${5 - count} 件。只計算背包內未強化、未鑲嵌的裝備。`}`, tab: 'squad', window: 'territory' as const };
     }
-    if (!game.newbieBossDefeated) return { title: '討伐海賊王，開通千年湖', detail: '在世界地圖選擇海賊王，突破下一段商路。', tab: 'battle' };
+    if (!game.newbieBossDefeated) return { title: '討伐海賊王，開通千年湖', detail: '第一輪成長已完成；挑戰新手村郊外的海賊王，突破下一段商路。', tab: 'battle', mapId: 'starter-outskirts', monsterName: '海賊王' };
     if (!game.lakeBossDefeated) return { title: '前往千年湖，追擊狂風阿魯塔', detail: '千年湖已開通；擊敗首領後可前往日本海底洞。', tab: 'battle' };
     if (!game.goldenStarfishDefeated) return { title: '討伐黃金海星，開通白虎林', detail: '挑戰日本海底洞，取得前往白虎林的資格。', tab: 'battle' };
     return { title: '持續壯大商隊', detail: '提高等級、強化隊伍，朝下一個地圖與傳說裝備前進。', tab: 'battle' };
   })();
   function goToObjective() {
+    if (mainObjective.npcId) {
+      setActiveTab('map');
+      openNpcDialogue(mainObjective.npcId);
+      return;
+    }
+    if (mainObjective.mapId && mainObjective.monsterName) {
+      setGame(previous => {
+        const moved = selectBattleMapAction(previous, mainObjective.mapId!, { notify: setNotice, enemyMax, addLog });
+        const target = sourceEnemies.find(enemy => enemy.mapId === mainObjective.mapId && enemy.name === mainObjective.monsterName);
+        const key = target?.dungeonId;
+        if (!target || !key) return moved;
+        return { ...moved, selectedMonster: target.name, enemyHp: target.hp || moved.enemyHp, dungeon: { ...freshDungeon(), key, lockedEnemyKey: key, enemyHp: DUNGEONS[key].hp }, logs: addLog(moved.logs, `主線目標已指向：${target.name}。`) };
+      });
+      setActiveTab('battle');
+      return;
+    }
     if (mainObjective.tab === 'city') setCityService('inn');
     if (mainObjective.tab === 'squad') setSquadDestination(previous => ({ key: previous.key + 1, window: mainObjective.window }));
     setActiveTab(mainObjective.tab);
@@ -566,20 +590,19 @@ export default function GameV15() {
           <div className="character-slot-grid">
             {[0, 1, 2].map((slot) => {
               const profile = profiles[slot];
-              const nation = profile ? nations.find((entry) => entry.id === profile.nation) : null;
-              return profile && nation ? (
-                <article className="character-slot occupied" key={slot} style={{ "--nation-color": nation.color } as React.CSSProperties}>
+              return profile ? (
+                <article className="character-slot occupied" key={slot} style={{ "--nation-color": '#b78a4e' } as React.CSSProperties}>
                   <span className="slot-number">角色欄位 {slot + 1}</span>
-                  <img src={heroPortrait(profile.nation, profile.gender)} alt={profile.name} />
-                  <div><small>{nation.name}・{heroNationProfiles[profile.nation].title}</small><h2>{profile.name}</h2><p>Lv.{profile.level}・世界地圖進度</p><em>起始城市・{nation.capital}</em></div>
+                  <img src={heroPortrait(STARTER_NATION, profile.gender)} alt={profile.name} />
+                  <div><small>新手村商隊・{profile.gender === 'female' ? '女性主角' : '男性主角'}</small><h2>{profile.name}</h2><p>Lv.{profile.level}・世界地圖進度</p><em>出生地・{STARTER_VILLAGE_NAME}</em></div>
                   <Button onClick={() => enterCharacter(slot)}><Play />進入遊戲</Button>
                 </article>
               ) : (
                 <article className="character-slot empty" key={slot}>
                   <span className="slot-number">角色欄位 {slot + 1}</span>
                   <div className="empty-slot-mark"><Crown /></div>
-                  <div><h2>尚未建立角色</h2><p>選擇國家並建立新的商團主角。</p></div>
-                  <Button variant="outline" onClick={() => { setCreatorSlot(slot); setCharacterName(""); setCharacterNation("taiwan"); setCharacterGender("male"); }}>建立角色</Button>
+                  <div><h2>尚未建立角色</h2><p>從新手村出發，建立新的商團主角。</p></div>
+                  <Button variant="outline" onClick={() => { setCreatorSlot(slot); setCharacterName(""); setCharacterGender("male"); }}>建立角色</Button>
                 </article>
               );
             })}
@@ -587,17 +610,10 @@ export default function GameV15() {
 
           {creatorSlot !== null && (
             <section className="character-creator">
-              <div className="panel-title"><Crown /><h2>建立角色・欄位 {creatorSlot + 1}</h2><span>選定後仍可遊歷四國</span></div>
+              <div className="panel-title"><Crown /><h2>建立角色・欄位 {creatorSlot + 1}</h2><span>出生地・{STARTER_VILLAGE_NAME}</span></div>
               <label className="character-name-field"><span>角色名稱</span><input maxLength={12} value={characterName} onChange={(event) => setCharacterName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") createCharacter(); }} placeholder="輸入 1～12 個字" /></label>
               <div className="creator-genders" aria-label="選擇性別"><Button type="button" variant={characterGender === "male" ? "default" : "outline"} onClick={() => setCharacterGender("male")}>男性主角</Button><Button type="button" variant={characterGender === "female" ? "default" : "outline"} onClick={() => setCharacterGender("female")}>女性主角</Button></div>
-              <div className="creator-nations">
-                {nations.map((nation) => {
-                  const profile = heroNationProfiles[nation.id];
-                  return <button type="button" key={nation.id} aria-label={`選擇${nation.name}角色`} className={characterNation === nation.id ? "active" : ""} style={{ "--nation-color": nation.color } as React.CSSProperties} onClick={() => setCharacterNation(nation.id)}>
-                    <img src={heroPortrait(nation.id, characterGender)} alt="" /><span><strong>{nation.name}</strong><small>{profile.title}・{nation.capital}</small><em>{profile.skill}</em></span>
-                  </button>;
-                })}
-              </div>
+              <div className="creator-origin"><img src={heroPortrait(STARTER_NATION, characterGender)} alt="" /><span><strong>{STARTER_VILLAGE_NAME}</strong><small>第一份商隊委託，從清出港口驛路開始。</small></span></div>
               <div className="creator-actions"><Button variant="outline" onClick={() => setCreatorSlot(null)}>取消</Button><Button onClick={createCharacter}><Sparkles />建立並開始</Button></div>
             </section>
           )}
@@ -621,7 +637,16 @@ export default function GameV15() {
       if (option.quest === "complete") {
         const beforeGold = next.gold;
         next = completeNpcQuest(next, npc);
-        if (next.gold !== beforeGold) next = { ...next, logs: addLog(next.logs, `完成村莊委託「${npc.quest?.name || ""}」，獲得 ${format(next.gold - beforeGold)} 兩。`) };
+        if (next.gold !== beforeGold) {
+          let rewardLog = `完成村莊委託「${npc.quest?.name || ""}」，獲得 ${format(next.gold - beforeGold)} 兩。`;
+          if (npc.quest?.id === FIRST_CARAVAN_QUEST_ID) {
+            const whiteSword: Equipment = { uid: uid('first-caravan-sword'), name: '商路短劍', slot: 'weapon', atk: 18, def: 0, hp: 0, image: gersangItemArt('weapon'), enhance: 0, rarity: '普通', magic: [], bonus: { str: 0, agi: 0, intel: 0, vit: 0 }, resist: { physical: 0, magic: 0 }, requiredLevel: 1, source: '第一份商隊委託' };
+            const pickup = addInventoryItem(next.inventory, whiteSword);
+            next = { ...next, inventory: pickup.inventory };
+            rewardLog += pickup.error ? '背包已滿，白裝短劍暫無法收下。' : '獲得白裝「商路短劍」。';
+          }
+          next = { ...next, logs: addLog(next.logs, rewardLog) };
+        }
       }
       return next;
     });
@@ -703,7 +728,7 @@ export default function GameV15() {
       <footer className="classic-live-footer">
         <section className="classic-live-identity">
           <img src={game.hero.image} alt="" />
-          <div><small>LV {game.hero.level} · {heroNation.name}{game.hero.job}</small><strong>{game.hero.name}</strong><span>{currentCity.name} · 世界地圖進度</span></div>
+          <div><small>LV {game.hero.level} · {game.hero.job}</small><strong>{game.hero.name}</strong><span>{displayCityName} · 世界地圖進度</span></div>
         </section>
         <section className="classic-live-resources">
           <div><Coins /><span>{format(game.gold)} 兩</span></div>
@@ -729,7 +754,7 @@ export default function GameV15() {
         </TabsList>
 
         <TabsContent value="map" className="tab-panel isometric-map-tab">
-          <IsometricWorldMap cityName={currentCity.name} heroImage={game.hero.image} onNpcTalk={openNpcDialogue} onEnter={(destination) => {
+          <IsometricWorldMap cityName={displayCityName} heroImage={game.hero.image} onNpcTalk={openNpcDialogue} onEnter={(destination) => {
             if (destination === "city") { setCityService("mercenary"); setActiveTab("city"); }
             else if (destination === "trade") setActiveTab("trade");
             else if (destination === "raid") setActiveTab("raid");
@@ -776,7 +801,7 @@ export default function GameV15() {
             </div>
             <p className="battle-world-map-description">{currentMap.region}・{currentMap.description}　生命 ×{currentMap.hpMultiplier}・金錢 ×{currentMap.goldMultiplier}</p>
             {TIER_EQUIPMENT_DROP_REGIONS.filter(region => region.mapId === currentMap.id).map(region => <p key={region.id} className="battle-world-map-description">本區怪物掉落：Lv.{region.tiers.join('／Lv.')} 系列裝備（達到對應等級後可掉落；一般 4%、首領 12%）</p>)}
-            {sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・依關卡輪替"}</strong></div><span>點選卡片即可開始自動戰鬥</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id).map(enemy => <button type="button" key={enemy.name} className={(game.selectedMonster === enemy.name ? "active " : "")+(enemy.boss ? "boss-target" : "")} onClick={() => setGame(previous => { const key=enemy.dungeonId; const base={...previous,selectedMonster:enemy.name,enemyHp:enemy.hp||previous.enemyHp,dungeon:key?{...freshDungeon(),key,lockedEnemyKey:key,enemyHp:DUNGEONS[key].hp}:previous.dungeon,logs:addLog(previous.logs,`${enemy.boss?'首領挑戰：':'指定遭遇怪物：'}${enemy.name}，自動開始持續戰鬥。`)}; return key ? runDungeonAction(base,'start',Date.now(),key,{roll:Math.random(),choice:Math.random(),spawnRoll:0,encounterCountRoll:Math.random(),retaliationRoll:Math.random(),materialRolls:[Math.random(),Math.random(),Math.random()],fusionCoreRoll:Math.random()},{addLog,grantXp,enterInn:enterGameInn,leaveInn:leaveGameInn}) : base; })}>{bossMonsterArt[enemy.name]&&<img className="monster-choice-art" src={bossMonsterArt[enemy.name]} alt={`${enemy.name}插圖`}/>}<div><strong>{enemy.name}</strong><em>{enemy.boss ? (game.newbieBossDefeated?"已討伐・可再戰":"首領挑戰") : game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>MP <b>{enemy.mp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>掉落：{enemy.drops.join("、")}</p></button>)}</div></section>}
+            {sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・依關卡輪替"}</strong></div><span>點選卡片即可開始自動戰鬥</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id).map(enemy => { const bossLocked = enemy.name === '海賊王' && !firstCaravanBossReady; return <button type="button" key={enemy.name} disabled={bossLocked} className={(game.selectedMonster === enemy.name ? "active " : "")+(enemy.boss ? "boss-target" : "")} onClick={() => setGame(previous => { const key=enemy.dungeonId; const base={...previous,selectedMonster:enemy.name,enemyHp:enemy.hp||previous.enemyHp,dungeon:key?{...freshDungeon(),key,lockedEnemyKey:key,enemyHp:DUNGEONS[key].hp}:previous.dungeon,logs:addLog(previous.logs,`${enemy.boss?'首領挑戰：':'指定遭遇怪物：'}${enemy.name}，自動開始持續戰鬥。`)}; return key ? runDungeonAction(base,'start',Date.now(),key,{roll:Math.random(),choice:Math.random(),spawnRoll:0,encounterCountRoll:Math.random(),retaliationRoll:Math.random(),materialRolls:[Math.random(),Math.random(),Math.random()],fusionCoreRoll:Math.random()},{addLog,grantXp,enterInn:enterGameInn,leaveInn:leaveGameInn}) : base; })}>{bossMonsterArt[enemy.name]&&<img className="monster-choice-art" src={bossMonsterArt[enemy.name]} alt={`${enemy.name}插圖`}/>}<div><strong>{enemy.name}</strong><em>{bossLocked ? '完成第一輪成長後開放' : enemy.boss ? (game.newbieBossDefeated?"已討伐・可再戰":"首領挑戰") : game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>MP <b>{enemy.mp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>{bossLocked ? '條件：完成第一份委託、Lv.20、驛站與第一件綠裝。' : `掉落：${enemy.drops.join("、")}`}</p></button>; })}</div></section>}
             <DungeonPanel hero={game.hero} party={[game.hero,...game.mercs.filter(unit=>game.active.includes(unit.uid)).slice(0,11)]} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} autoSkill={game.autoSkill} toggleAutoSkill={()=>setGame(previous=>({...previous,autoSkill:!previous.autoSkill,logs:addLog(previous.logs,previous.autoSkill?'已關閉技能自動施放。':'已開啟技能自動施放。')}))} mapName={currentMap.name} mapRegion={currentMap.region} medicineQuickbar={<div className="battle-medicine-float" aria-label="隨身藥袋">{medicineCatalog.filter(medicine=>medicine.id==='healing'||medicine.id==='mana').map(medicine=>{const medicineKey=medicine.id as 'healing'|'mana'; const resource=medicineKey==='healing'?'HP':'MP'; return <div className="battle-medicine-item" key={medicine.id}><button type="button" disabled={!game.medicines[medicine.id]} onClick={()=>consumeMedicine(medicine.id)} title={`${medicine.name}：${medicine.effect}`}><Pill /><span>{medicine.name}</span><b>×{game.medicines[medicine.id]||0}</b></button><label title={`設定${medicine.name}自動使用門檻；0% 為關閉`}><small>{game.autoMedicine[medicineKey] ? `自動 ${resource} ≤` : '自動關閉'}</small><input aria-label={`${medicine.name}自動使用門檻`} type="number" min="0" max="99" value={game.autoMedicine[medicineKey]} onChange={event=>{const threshold=Math.min(99,Math.max(0,Math.floor(Number(event.target.value)||0)));setGame(previous=>({...previous,autoMedicine:{...previous.autoMedicine,[medicineKey]:threshold}}));}}/><span>%</span></label></div>;})}</div>} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()],gearDropRoll=Math.random(),gearChoiceRoll=Math.random();setGame(previous=>runDungeonAction(previous,action,now,key,{roll,choice,spawnRoll:0,encounterCountRoll:Math.random(),retaliationRoll,materialRolls,gearDropRoll,gearChoiceRoll},{addLog,grantXp,enterInn:enterGameInn,leaveInn:leaveGameInn}));}}/>
           </section>
           <div className="battle-grid">

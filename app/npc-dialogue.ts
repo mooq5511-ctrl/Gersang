@@ -4,7 +4,7 @@ import type { GameState } from "./game-state";
 
 export type NpcId = "kim-seongho" | "choi-daesan" | "han-sowol" | "heo-muncheol" | "hong-museong" | "wang-deokchang" | "lee-taesan" | "baegun-elder" | "jang-miryung" | "jo-manbok";
 export type NpcProgress = { met: string[]; affinity: Record<string, number>; activeQuests: string[]; completedQuests: string[]; history: Array<{ npcId: string; text: string; at: number }>; };
-export type NpcQuest = { id: string; name: string; metric: "stage" | "kills" | "mercs" | "materials" | "equipment"; target: number; reward: { gold: number; affinity: number }; };
+export type NpcQuest = { id: string; name: string; metric: "stage" | "kills" | "mercs" | "materials" | "equipment" | "starterDelivery"; target: number; reward: { gold: number; affinity: number }; };
 export type NpcService = "mercenary" | "weapon" | "armor" | "inn" | "pharmacy" | "exchange";
 export type NpcOption = { label: string; reply: string; pages?: string[]; affinity?: number; service?: NpcService; openContracts?: boolean; quest?: "start" | "complete"; hidden?: boolean };
 export type VillageNpc = { id: NpcId; name: string; role: string; portrait?: string; portraitPosition?: string; map: { x: number; y: number }; first: string; beforeQuest: string; inProgress: string; afterQuest: string; hidden?: { requirement: (state: GameState) => boolean; label: string; reply: string }; quest?: NpcQuest; options: NpcOption[]; };

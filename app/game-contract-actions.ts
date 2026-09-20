@@ -8,6 +8,7 @@ type Log = (logs: string[], message: string) => string[];
 export function contractProgress(state: GameState, metric: string) {
   if (metric === "stage") return state.stage;
   if (metric === "kills") return state.kills;
+  if (metric === "starterDelivery") return state.starterDeliveryKills;
   if (metric === "mercs") return state.mercs.length;
   if (metric === "tier1") return state.mercs.filter((unit) => unit.tier >= 1).length;
   if (metric === "tier2") return state.mercs.filter((unit) => unit.tier >= 2).length;

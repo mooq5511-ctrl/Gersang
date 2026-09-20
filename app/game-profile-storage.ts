@@ -80,6 +80,7 @@ export function restoreGame(raw: unknown): GameState {
     credit: Number.isFinite(parsed.credit) ? Math.max(0, Math.floor(parsed.credit!)) : 0,
     creditXp: Number.isFinite(parsed.creditXp) ? Math.max(0, Math.floor(parsed.creditXp!)) : 0,
     creditLevel: Math.max(1, Math.min(LEVEL_CAP, Math.floor(parsed.creditLevel || 1))),
+    starterDeliveryKills: Number.isFinite(parsed.starterDeliveryKills) ? Math.max(0, Math.floor(parsed.starterDeliveryKills!)) : 0,
     newbieBossDefeated: parsed.newbieBossDefeated === true,
     lakeBossDefeated: parsed.lakeBossDefeated === true,
     goldenStarfishDefeated: parsed.goldenStarfishDefeated === true,
