@@ -21,6 +21,10 @@ deployment: OpenAI Sites project_id exists in .openai/hosting.json; Claude/other
 
 NONNEGOTIABLE: preserve old saves; never delete/rename storage keys without migration; keep `active` cap=11 mercs + hero=12; resting cap=10; equipment slots=8; dungeon enemies=12 clones; battle orientation=player-left/enemy-right; player front=`col3`, enemy front=`col0`; game data/assets may be user-provided/third-party—do not assume redistribution rights; do not commit `.env*`, build folders, tokens, credentials.
 
+## ALPHA_DEVELOPMENT_POLICY (2026-09-20)
+
+The sole current product goal is a fully playable single-player web RPG Alpha. Prioritize functional systems over polish: missing art must never block NPC dialogue, quests, combat, drops, equipment, shops, mercenaries, leaders, formations, maps, or persistence. Use a placeholder, silhouette, icon, emoji, or color block until the Alpha is feature-complete; do not add new final art during this phase. Keep new content data-driven and route image references through a replaceable placeholder asset path whenever practical, so artwork can be swapped during Beta without gameplay-code changes. Preserve already-working gameplay and saves while progressively moving new content toward modular data sources.
+
 ## 1::SYSTEM_GRAPH
 
 ```text
@@ -202,7 +206,10 @@ caravan_floating:
   wanderer: 3 mythic-set exchange
   rest: 10 slots
   formation: semantic front/mid/rear cycling; locked while dungeonBusy
-battle_stage: 900x500 logical CSS stage inside horizontal scroll; 60px portraits; player left/enemy right; 3 rows x4 cols; damage/status animation in battle-impact.css
+battle_stage: 900x700 theatre CSS stage inside horizontal scroll; enemy/boss above and up to 12 player portraits below; logical formation remains semantic 3 rows x4 cols; damage/status animation in battle-impact.css
+battle_visuals: app/battle-visual-data.ts owns monster art paths, sprite-sheet crops, and the shared /assets/placeholders/monster-placeholder.svg fallback; do not add image mappings directly in battle components
+generals: app/game-data.ts defines five recruitable city generals; app/general-recruitment.tsx exposes them in their matching city, and general-{id} units use the ordinary roster, formation, persistence, and shared MP-based automatic-skill path
+material_trade: app/village-exchange.ts derives a positive fallback price for every v17 source-enemy drop, then overlays authored map and balance prices; bulk selling preserves unknown legacy items and ancient coin boxes
 ```
 
 UI naming drift: Site metadata title in `layout.tsx`/Sites metadata may still say older V29/商途 text while user wants `放置你的巨商魂`. Audit all `<title>`, login title, header branding, manifest before next public release.
@@ -261,7 +268,7 @@ UI naming drift: Site metadata title in `layout.tsx`/Sites metadata may still sa
 
 ## 7::DELIVERED_FEATURE_LEDGER
 
-DONE/visible: rename map action to 世界地圖; four-capital city UI; male/female character creation; 3 profiles; shared30 warehouse; active11+hero; rest10; Mazu recruit; roster active/withdraw; semantic formation editor; realtime 12v12 left-right stage; 12 identical monster clone display; per-unit cooldown/MP/autoskill/event animation; monster selection persistence through waves; starter/lake/japan-sea/white-tiger monster datasets; boss unlock flags; loot materials list/search/toggle; ancient coin box quantity/open/coins/rare 大吉; no dungeon silver; split XP; hero XP/credit curve; +100 allocation; pharmacy quantities + auto thresholds; equipment filters/sell-all/material prices; random shop quality; 8 equipment slots + gem socket quantity/name/stats; Azure/Chiyou/Amaterasu assets/stats/exchange; equipment codex; standalone `equipmentSkill.js` hero-only skill eligibility helper with verification; standalone `monsterAssets.js` monster sprite database and verified `getSprite` lookup; readability CSS; Phaser town map; published Sites v60 before handoff file.
+DONE/visible: rename map action to 世界地圖; four-capital city UI; male/female character creation; 3 profiles; shared30 warehouse; active11+hero; rest10; Mazu recruit; roster active/withdraw; semantic formation editor; realtime 12v12 top-bottom theatre stage; 12 identical monster clone display; per-unit cooldown/MP/autoskill/event animation; monster selection persistence through waves; starter/lake/japan-sea/white-tiger monster datasets; boss unlock flags; loot materials list/search/toggle; ancient coin box quantity/open/coins/rare 大吉; no dungeon silver; split XP; hero XP/credit curve; +100 allocation; pharmacy quantities + auto thresholds; equipment filters/sell-all/material prices; random shop quality; 8 equipment slots + gem socket quantity/name/stats; Azure/Chiyou/Amaterasu assets/stats/exchange; equipment codex; standalone `equipmentSkill.js` hero-only skill eligibility helper with verification; standalone `monsterAssets.js` monster sprite database and verified `getSprite` lookup; readability CSS; Phaser town map; published Sites v60 before handoff file.
 
 PARTIAL/inconsistent: boss skills/statuses vs realtime engine; front multiplier/rear dodge vs realtime engine; Amaterasu headgear/staff naming; metadata/product name; tests; duplicated monster/drop sources; old 20-city data still exists although UI=4; `WORLD_ZONES` is old 12-stage layer while battleMap offers newer named maps; realtime enemy DEF uses `physical` percentage as flat DEF; enemy MP/skills generic only; combat event ability lacks actual skill name.
 

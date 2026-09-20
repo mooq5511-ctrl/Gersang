@@ -72,6 +72,37 @@ test('world-map debuffs, sword energy and priest MP recovery take effect', () =>
   const priest = new MercenaryRealtimeBattleSystem([player('priest', { hp: 500, mp: 0 })], [enemy('foe', { atk: 0 })]); priest.startBattle(); priest.update(2); assert.ok(priest.events.some(event => event.type === 'restore-mp' && event.amount === 4));
 });
 
+test('a full Amaterasu set gives the hero its realtime gaze critical and fear', () => {
+  const hero = player('hero', { templateId: '', amaterasuGaze: true, mp: 0, atk: 60 });
+  const foe = enemy('foe', { hp: 1000, maxHp: 1000 });
+  const battle = new MercenaryRealtimeBattleSystem([hero], [foe], { autoSkill: false });
+  battle.roll = () => 0;
+  battle.startBattle();
+  assert.ok(battle.events.some(event => event.type === 'skill' && event.skillName === '天照大神的凝視'));
+  assert.equal(battle.enemies[0].state.effects.amaterasuFearDefense.value, .2);
+  assert.ok(battle.events.some(event => event.type === 'damage' && event.actorId === 'hero' && event.damage === 600));
+});
+
+test('realtime formations apply the front attack bonus and rear dodge rule', () => {
+  const front = new MercenaryRealtimeBattleSystem([player('spear', { formationPosition: '前排' })], [enemy('foe')]);
+  assert.equal(front.attack(front.players[0]), 72);
+  const rear = new MercenaryRealtimeBattleSystem([player('spear', { formationPosition: '後排' })], [enemy('foe', { atk: 60 })]);
+  rear.roll = () => 0;
+  assert.equal(rear.planHit(rear.enemies[0], rear.players[0], 1, false, false, false, '', false), null);
+  assert.ok(rear.events.some(event => event.type === 'miss' && event.skillName === '後排閃避'));
+});
+
+test('a recruited general uses the shared automatic-skill resource system and keeps its skill event', () => {
+  const battle = new MercenaryRealtimeBattleSystem(
+    [player('mulan', { templateId: 'general-mulan', mp: 100, maxMp: 100, generalSkillName: '月華斬' })],
+    [enemy('foe', { hp: 1000, maxHp: 1000 })], { autoSkill: true, seed: 1 },
+  );
+  battle.startBattle();
+  assert.ok(battle.events.some(event => event.type === 'skill' && event.actorId === 'mulan' && event.skillName === '月華斬'));
+  assert.equal(battle.players[0].mp, 0);
+  assert.equal(MercenaryRealtimeBattleSystem.fromSnapshot(battle.snapshot()).players[0].generalSkillName, '月華斬');
+});
+
 for (const spec of merchantMercenaries) test(`world-map dungeonStep deploys ${spec.id} by independent ID`, () => {
   const hero = { hp: 100, maxHp: 1000, mp: 0, maxMp: 40, str: 1, dex: 1, mercenaryIntelligence: 0, attack: 1, defense: 0, staff: false };
   const party = [

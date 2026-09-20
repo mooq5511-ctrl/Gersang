@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">怪物暫代圖</title><desc id="desc">尚未替換正式美術的怪物剪影</desc>
+  <rect width="160" height="160" rx="18" fill="#241411"/>
+  <path d="M30 124c8-39 28-63 50-63s42 24 50 63H30Z" fill="#8b3d36"/>
+  <path d="M49 65 37 35l26 15M111 65l12-30-26 15" fill="#d98a58"/>
+  <circle cx="62" cy="88" r="8" fill="#fff1c5"/><circle cx="98" cy="88" r="8" fill="#fff1c5"/>
+  <path d="M58 113q22 15 44 0" fill="none" stroke="#1b0c0a" stroke-width="8" stroke-linecap="round"/>
+</svg>

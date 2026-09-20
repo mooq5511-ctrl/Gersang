@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {MATERIAL_BUY_PRICES,MATERIAL_PRICES,VILLAGE_WEAPONS,buyMarketMaterial,buyVillageWeapon,exchangeAttackBonus,sellAllMaterials,sellMaterial,weaponCost} from '../app/village-exchange.ts';
 import {combatStats} from '../app/vitals-engine.ts';
+import {sourceEnemies} from '../app/v17-content.ts';
 
 test('all world materials have a positive village buy price',()=>{
  assert.ok(Object.keys(MATERIAL_PRICES).length>=24);
@@ -10,6 +11,7 @@ test('all world materials have a positive village buy price',()=>{
  assert.equal(MATERIAL_PRICES['高級旗槍'],8000);
  assert.equal(MATERIAL_PRICES['肉類'],25);
  assert.equal(MATERIAL_BUY_PRICES['肉類'],50);
+ assert.ok(sourceEnemies.flatMap(enemy=>enemy.drops).every(item=>MATERIAL_PRICES[item]>0));
 });
 
 test('selling one material pays its price and removes empty stacks',()=>{

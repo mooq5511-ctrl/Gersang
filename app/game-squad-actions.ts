@@ -1,4 +1,5 @@
 import { ACTIVE_MERCENARY_LIMIT } from "./guild-migration";
+import type { MercenaryDef } from "./game-data";
 import { nextBattlePosition } from "./formation-position";
 import type { MercenarySpec } from "./mercenary-roster";
 import type { GameState, Unit } from "./game-state";
@@ -72,6 +73,24 @@ export function recruitMerchantAction(
   }
   const unit = createUnit(spec, index);
   return { ...state, gold: state.gold - cost, mercs: [...state.mercs, unit], active: [...state.active, unit.uid].slice(0, ACTIVE_MERCENARY_LIMIT), logs: addLog(state.logs, `招募 ${spec.name}，已加入護商隊。`) };
+}
+
+/** Recruits a data-defined general into the same roster and formation system as ordinary mercenaries. */
+export function recruitGeneralAction(
+  state: GameState,
+  general: MercenaryDef,
+  createUnit: (general: MercenaryDef) => Unit,
+  addLog: Log,
+): GameState {
+  const templateId = `general-${general.id}`;
+  if (state.mercs.some((unit) => unit.templateId === templateId) || state.restingMercs.some((unit) => unit.templateId === templateId)) {
+    return { ...state, logs: addLog(state.logs, `將帥「${general.name}」已在商團名冊中。`) };
+  }
+  if (state.gold < general.cost || state.mercs.length >= ACTIVE_MERCENARY_LIMIT) {
+    return { ...state, logs: addLog(state.logs, state.mercs.length >= ACTIVE_MERCENARY_LIMIT ? "商隊傭兵名冊已滿：請先安排成員至休息處。" : `招募將帥「${general.name}」的資金不足。`) };
+  }
+  const unit = createUnit(general);
+  return { ...state, gold: state.gold - general.cost, mercs: [...state.mercs, unit], active: [...state.active, unit.uid].slice(0, ACTIVE_MERCENARY_LIMIT), logs: addLog(state.logs, `招募將帥「${general.name}」，已加入護商隊。`) };
 }
 
 export function allocateAttributeAction(state: GameState, selectedUid: string, stat: Attribute, amount = 1): GameState {

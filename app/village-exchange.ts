@@ -1,11 +1,17 @@
 import { gersangStages } from './gersang-world-map.ts';
+import { sourceEnemies } from './v17-content.ts';
+
+/** Every declared monster drop remains tradable even before a bespoke price is tuned. */
+const SOURCE_DROP_FALLBACK_PRICES = Object.fromEntries(
+  sourceEnemies.flatMap((enemy) => enemy.drops.map((item) => [item, 100] as const)),
+);
 
 /** 地圖掉落物的村莊收購價，直接由同一份地圖資料推導，避免戰利品與商店價格脫節。 */
 export const MATERIAL_PRICES: Record<string, number> = {
+  ...SOURCE_DROP_FALLBACK_PRICES,
   ...Object.fromEntries(gersangStages.flatMap(stage => stage.monster.drops.map(drop => [drop.item, drop.price]))),
   '[隨便的]咒術秘訣': 1200,
   '藍色精氣石': 30,
-  '舊斧頭': 5000,
   '下級精髓': 25,
   '古錢箱': 1,
   '舊木劍': 2500,
@@ -35,26 +41,26 @@ export const MATERIAL_PRICES: Record<string, number> = {
   '獨角鬼的紅色袋子': 50000,
   '文若寶劍': 25000,
   '火之印章': 33,
-  '獨角鬼的黃玉戒指': 0,
+  '獨角鬼的黃玉戒指': 5000,
   '獨角鬼的藍色袋子': 50000,
   '龍頭火繩槍': 80000,
-  '水之印章': 0,
+  '水之印章': 500,
   '獨角鬼的黃色袋子': 50000,
   '笞刑斧': 80000,
-  '雷之印章': 0,
+  '雷之印章': 500,
   '獨角鬼的綠色袋子': 50000,
   '大將弓': 80000,
-  '風之印章': 0,
+  '風之印章': 500,
   '神木種子': 12000,
   '舊龍頭火繩槍': 33333,
   '[龍麟做成的]咒術秘訣': 50000,
   '雙刃弓': 30000,
-  '古代神獸之精髓': 0,
-  '小型憤怒精髓': 0,
+  '古代神獸之精髓': 5000,
+  '小型憤怒精髓': 300,
   '鈴鐺刀': 8000,
   '楓葉石': 33,
   '神漢男巫的帽子': 33,
-  '被封印的力量碎片': 0,
+  '被封印的力量碎片': 5000,
   '紅摺扇': 5000,
   '[天璣]咒術秘訣': 60000,
   '邪靈巫師的頭巾': 33,
