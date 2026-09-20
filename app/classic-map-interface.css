@@ -165,9 +165,15 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
 .classic-live-game .tab-panel::-webkit-scrollbar { display:none; }
 .classic-live-game .party-rail { max-height:84.5vh; overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; overscroll-behavior:contain; }
 .classic-live-game .dungeon-panel { min-height:0; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; scrollbar-width:thin; overscroll-behavior:contain; }
-.classic-live-game .dungeon-panel .realtime-stage-scroll { flex:0 0 auto; min-height:180px; max-height:min(500px,45vh); overflow:auto; scrollbar-width:thin; }
+.classic-live-game .dungeon-panel .battle-viewport { flex:0 0 auto; height:max(1px,min(calc(100vh - 216px),702px)); height:max(1px,min(calc(100dvh - 216px),702px)); }
+.classic-live-game .dungeon-panel .realtime-stage-scroll { flex:0 0 auto; max-height:none; overflow:hidden; scrollbar-width:none; }
 .classic-live-game .dungeon-panel .dungeon-log { max-height:clamp(90px,18vh,220px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
 .classic-live-game .dungeon-panel .dungeon-notes { max-height:24vh; overflow-y:auto; overscroll-behavior:contain; }
+
+@media (min-width:981px) {
+  /* The party rail is an overlay in this layout; start battle content beyond it. */
+  .classic-live-game .tab-panel:has(.dungeon-panel) > .battle-map-panel { margin-left:calc(8.2vw - 6px); }
+}
 
 .game-frame {
   isolation: isolate;

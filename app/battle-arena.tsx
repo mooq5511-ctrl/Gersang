@@ -1,10 +1,11 @@
 /* eslint-disable next/no-img-element */
-import {useEffect,useRef} from 'react';
+import {useEffect,useRef,useState,type CSSProperties} from 'react';
 import {DUNGEONS,isBossMonster,type DungeonState,type RealtimeBattleEventState,type RealtimeBattleUnitState} from './dungeon-engine';
 import {vitalStats} from './vitals-engine';
 import type {CaravanMember} from './caravan-status';
 import {Flame,Frown,Shield,Skull} from 'lucide-react';
 import {BATTLE_MONSTER_CROP,battleMonsterImage} from './battle-visual-data';
+import {BATTLE_SCENE_HEIGHT,BATTLE_SCENE_WIDTH,calculateBattleScale} from './battle-viewport';
 
 /** 3 × 4 邏輯陣型轉換成 900 × 500 戰場座標。 */
 export function gridToPixel(side:'player'|'enemy',row:number,col:number){return{x:side==='player'?75+col*88:561+col*88,y:120+row*145}}
@@ -44,17 +45,37 @@ function UnitSprite({unit,name,level,image,timeMs,boss=false,tiger=false,theater
 }
 
 export function BattleArena({state,hero,party}:{state:DungeonState;hero:CaravanMember & {nation?:string};party:CaravanMember[]}){
- const root=useRef<HTMLDivElement>(null),seen=useRef(0),spawn=useRef(state.spawnSerial||0);
+ const root=useRef<HTMLDivElement>(null),viewport=useRef<HTMLDivElement>(null),seen=useRef(0),spawn=useRef(state.spawnSerial||0),[scale,setScale]=useState(0);
+ useEffect(()=>{
+  const element=viewport.current;
+  if(!element)return;
+  const updateScale=()=>{
+   const surface=element.querySelector<HTMLElement>('.realtime-stage-scroll');
+   if(!surface)return;
+   const width=surface.clientWidth,height=surface.clientHeight;
+   const next=calculateBattleScale(width,height);
+   setScale(previous=>Math.abs(previous-next)<0.001?previous:next);
+  };
+  updateScale();
+  if(typeof ResizeObserver==='undefined'){
+   window.addEventListener('resize',updateScale);
+   return()=>window.removeEventListener('resize',updateScale);
+  }
+  const observer=new ResizeObserver(updateScale);
+  observer.observe(element);
+  return()=>observer.disconnect();
+ },[]);
  useEffect(()=>{if(!root.current)return;if(spawn.current!==(state.spawnSerial||0)){seen.current=0;spawn.current=state.spawnSerial||0;restartAnimation(root.current,'realtime-stage-spawn')}const events=state.realtime?.events||[];for(const event of events)if(event.id>seen.current)playEventLog(root.current,event);if(events.length)seen.current=Math.max(seen.current,...events.map(event=>event.id))},[state.realtime?.eventId,state.realtime?.events,state.spawnSerial]);
  const monster=DUNGEONS[state.key],boss=state.key==='e_white_tiger_fierce_tiger'||isBossMonster(monster.name),v=vitalStats(hero),players=state.realtime?.players||[],enemies=state.realtime?.enemies||[],memberById=new Map(party.map(member=>[member.uid,member]));
  const enemyCount=state.realtime?.enemies.length??state.enemyCount??0;
  const enemySlots=Array.from({length:enemyCount},(_,index)=>enemies[index]||({id:`enemy-${index+1}`,side:'enemy',hp:state.status==='fighting'?monster.hp:0,maxHp:monster.hp,atk:monster.atk,def:0,attackInterval:1.5,cooldown:0,mp:0,position:boss?{row:1,col:1}:{row:Math.floor(index/4),col:index%4}} as RealtimeBattleUnitState));
  const timeMs=state.realtime?.timeMs||0;
- return <div className="realtime-stage-scroll" aria-label={enemyCount?`${enemyCount} 名敵軍在上、${players.length||party.length} 名我方傭兵在下的即時自動戰鬥`:'即時自動戰鬥場景，等待遭遇'}><div className={'realtime-battle-stage realtime-battle-theater'+(state.status==='fighting'?' realtime-stage-fighting':'')} ref={root}>
+ const stageStyle={'--battle-scale':scale,'--battle-design-width':`${BATTLE_SCENE_WIDTH}px`,'--battle-design-height':`${BATTLE_SCENE_HEIGHT}px`} as CSSProperties;
+ return <div className="battle-viewport" ref={viewport} aria-label="完整戰鬥畫面"><div className="realtime-stage-scroll" aria-label={enemyCount?`${enemyCount} 名敵軍在上、${players.length||party.length} 名我方傭兵在下的即時自動戰鬥`:'即時自動戰鬥場景，等待遭遇'}><div className={'realtime-battle-stage realtime-battle-theater'+(state.status==='fighting'?' realtime-stage-fighting':'')} style={stageStyle} ref={root}>
   <section className="battle-theater-camp battle-theater-enemy"><header className="realtime-camp-label enemy"><strong>{boss?'首領・':''}{monster.name}</strong><span>{enemySlots.filter(unit=>unit.hp>0).length}／{enemyCount} 存活</span></header><div className={'battle-theater-enemy-units'+(boss?' battle-theater-boss':'')}>
    {enemySlots.map(unit=><UnitSprite key={unit.id} unit={unit} name={monster.name} level={monster.level} image={battleMonsterImage(monster.name,state.key)} timeMs={timeMs} boss={boss} tiger={state.key==='e_white_tiger_fierce_tiger'} theater/>)}</div></section>
   <div className="realtime-stage-divider"><b>VS</b></div>
   <section className="battle-theater-camp battle-theater-player"><header className="realtime-camp-label player"><strong>我方商隊</strong><span>{players.filter(unit=>unit.hp>0).length||party.filter(unit=>(unit.hp||0)>0).length}／{party.length} 存活</span></header><div className="battle-theater-player-units">
    {players.length?players.map((unit,index)=>{const member=memberById.get(unit.id)||party[index];return member?<UnitSprite key={unit.id} unit={unit} name={member.name} level={member.level} image={member.image} timeMs={timeMs} theater/>:null}):party.slice(0,12).map((member,index)=><UnitSprite key={member.uid} unit={{id:member.uid,side:'player',hp:member.hp||0,maxHp:member.maxHp||1,atk:1,def:0,attackInterval:1.5,cooldown:0,mp:index===0?v.mp:member.mp||0,position:{row:Math.floor(index/4),col:index%4}}} name={member.name} level={member.level} image={member.image} timeMs={timeMs} theater/>)}</div></section>
- </div></div>;
+ </div></div></div>;
 }
