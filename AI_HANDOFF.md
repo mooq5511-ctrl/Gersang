@@ -148,18 +148,11 @@ Critical constants/current semantics:
 - Dungeon reward: gold=0; XP=monster.xp divided floor by `(1+deployedMercs)` and given to each deployed actor; starter-outskirts always adds `古錢箱`; optional special coin/material; loot equipment rare roll=0.01% per unique loot entry, max one.
 - Unlock flags: pirate king→千年湖; 狂風阿魯塔→日本海底洞; 黃金海星→白虎林. Map gate is implemented in battle-map UI predicates in `game-v15.tsx`, not `WORLD_ZONES.zoneUnlocked` alone.
 - All starter-outskirts monsters drop `古錢箱`; opening N boxes consumes N and adds random 1..10 coins/box. Four rare 大吉 items each checked at 0.01%/box; stored in `materials`.
-- Front semantic position adds +20% when calculating aggregate hero attack and legacy combat; realtime per-unit ATK currently uses raw `combatStats(member).attack` in `beginRealtime`, so front +20% is NOT applied to realtime individual unit ATK despite UI rule text. Rear 50% dodge exists in legacy helpers but realtime engine does NOT implement dodge.
+- Front semantic position adds +20% damage and rear semantic position has a 50% realtime dodge chance; both rules run per individual battle unit and are preserved in the snapshot.
 
-### 3.2 known combat integration gap (highest priority)
+### 3.2 realtime boss/status implementation
 
-`dungeonStep` still defines legacy closures `hit/counter/castGaleSkills/castStarfishSkills`; realtime tick branch never calls them. Therefore these requested boss mechanics are currently data/log/UI remnants, not reliably active in `RealtimeBattleSystem`:
-
-- 狂風阿魯塔 intended ATK=1000; 白虎盾 MP500/+30% DEF/3s/CD60; 風碎 MP500/true 2000/CD30.
-- 黃金海星 intended ATK=1500; 恢復術 150% ATK + 0.5% maxHP/s*3/CD60; 火焰燎原 passive 30% proc, 180% AoE + burn 15% ATK/s*6 stack3; 詛咒 -25% ATK/-30% DEF/8s/damage taken+15%/CD60.
-- 天照5pc intended passive: basic attack 3%→hero ATK*10 crit + fear DEF-20% 5s. `amaterasuGaze` is passed but realtime engine has no gaze logic.
-- Shield/fear icons in `BattleArena` read legacy timestamps; because realtime path does not update these timestamps, icons normally do not activate.
-
-Next AI should extend `Unit` with ability/status metadata or add deterministic event middleware in realtime engine; do not re-enable old aggregate `hit/counter` alongside realtime damage (would double-hit). Make boss skill events explicit (`ability`, status add/remove), snapshot-safe, clone policy defined (probably commander enemy-1 only), and test large-delta equivalence.
+`boss-abilities.ts` is the authoritative data source for realtime boss mechanics. `dungeonStep` applies them only through the active `MercenaryRealtimeBattleSystem`; do not re-enable legacy aggregate `hit/counter` paths or damage will be doubled. Boss effects, the 天照五件套恐懼、護盾、詛咒與最多三層灼燒 are snapshot-safe. `BattleArena` now converts active serialized effects into visible unit badges: shield, armor, fear, curse, burn stacks, poison and control. Future battle UI work should add cooldown/readiness display without deriving state from text logs.
 
 ### 3.3 legacy road combat
 
@@ -208,6 +201,7 @@ caravan_floating:
   formation: semantic front/mid/rear cycling; locked while dungeonBusy
 battle_stage: 900x700 theatre CSS stage inside horizontal scroll; enemy/boss above and up to 12 player portraits below; logical formation remains semantic 3 rows x4 cols; damage/status animation in battle-impact.css
 battle_visuals: app/battle-visual-data.ts owns monster art paths, sprite-sheet crops, and the shared /assets/placeholders/monster-placeholder.svg fallback; do not add image mappings directly in battle components
+status_badges: app/battle-arena.tsx.battleUnitStatuses turns mercenaryState effects into visible unit badges; boss burn is stored as effects.bossBurn so it survives snapshots
 generals: app/game-data.ts defines five recruitable city generals; app/general-recruitment.tsx exposes them in their matching city, and general-{id} units use the ordinary roster, formation, persistence, and shared MP-based automatic-skill path
 material_trade: app/village-exchange.ts derives a positive fallback price for every v17 source-enemy drop, then overlays authored map and balance prices; bulk selling preserves unknown legacy items and ancient coin boxes
 ```

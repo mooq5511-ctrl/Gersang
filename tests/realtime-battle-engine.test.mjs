@@ -159,6 +159,7 @@ test('golden starfish regenerates, curses, and can trigger its flame damage over
   assert.equal(player.mercenaryState.effects.bossCurseAttack.value, .25);
   assert.equal(player.mercenaryState.effects.bossCurseDefense.value, .3);
   assert.equal(player.mercenaryState.effects.bossCurseVulnerability.value, .15);
+  assert.ok(player.mercenaryState.effects.bossBurn.value >= 1);
   assert.ok(events.some(event => event.type === 'skill' && event.skillName === '火焰燎原'));
   assert.ok(events.some(event => event.type === 'damage' && event.skillName === '灼燒'));
 });
