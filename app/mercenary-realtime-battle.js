@@ -1,8 +1,10 @@
 import { RealtimeBattleSystem } from './realtime-battle-engine.js';
 import { mitigatedDamage } from './combat-damage.js';
 import { mercenarySpec } from './mercenary-roster.ts';
+import { AMATERASU_GAZE } from './equipment-set-effects.ts';
+import { formationDamageMultiplier, rearDodge } from './formation-position.ts';
 
-const freshState = () => ({ readyAt: 0, actions: 0, stacks: 0, lastTarget: '', streak: 0, survived: false, counterRound: -1, guardKey: '', guardUntil: 0, effects: {}, shield: 0, shieldUntil: 0 });
+const freshState = () => ({ readyAt: 0, actions: 0, stacks: 0, lastTarget: '', streak: 0, survived: false, counterRound: -1, guardKey: '', guardUntil: 0, effects: {}, shield: 0, shieldUntil: 0, bossRuntime: {} });
 const byRatio = (a, b) => a.hp / a.maxHp - b.hp / b.maxHp || a.id.localeCompare(b.id);
 
 /** World-map real-time skills use the same stable merchant IDs as the tactical encounter. */
@@ -28,6 +30,9 @@ export class MercenaryRealtimeBattleSystem extends RealtimeBattleSystem {
     unit.magicAttack = Boolean(raw.magicAttack);
     unit.ranged = raw.ranged !== false;
     unit.accuracy = Math.max(0.05, Math.min(1, Number(raw.accuracy ?? 1)));
+    unit.amaterasuGaze = Boolean(raw.amaterasuGaze);
+    unit.formationPosition = raw.formationPosition || '中排';
+    unit.generalSkillName = typeof raw.generalSkillName === 'string' ? raw.generalSkillName : '';
     unit.state = { ...freshState(), ...raw.mercenaryState, effects: { ...raw.mercenaryState?.effects } };
   }
 
@@ -45,15 +50,21 @@ export class MercenaryRealtimeBattleSystem extends RealtimeBattleSystem {
     unit.state.effects[key] = { value, until: this.timeMs + rounds * unit.attackInterval * 1000 + 1 };
   }
 
+  setTimedEffect(unit, key, value, durationMs) {
+    unit.state.effects[key] = { value, until: this.timeMs + durationMs };
+  }
+
   attack(unit) {
-    let amount = unit.atk * (1 - Math.max(this.effect(unit, 'shamanWeak'), this.effect(unit, 'elephantWeak')));
+    let amount = unit.atk * (1 - Math.max(this.effect(unit, 'shamanWeak'), this.effect(unit, 'elephantWeak'), this.effect(unit, 'bossCurseAttack')));
     if (unit.spec?.id === 'blade') amount *= 1 + unit.state.stacks * 0.03;
     if (unit.spec?.id === 'sanada' && unit.hp < unit.maxHp * 0.45) amount *= 1.15;
+    if (unit.side === 'player') amount *= formationDamageMultiplier(unit.formationPosition);
     return amount;
   }
 
   defense(unit) {
-    let amount = unit.def * (1 - Math.max(this.effect(unit, 'spearArmor'), this.effect(unit, 'sanadaArmor')));
+    let amount = unit.def * (1 - Math.max(this.effect(unit, 'spearArmor'), this.effect(unit, 'sanadaArmor'), this.effect(unit, 'bossCurseDefense'), this.effect(unit, 'amaterasuFearDefense')));
+    amount *= 1 + this.effect(unit, 'bossShield');
     if (unit.spec?.id === 'shield' && unit.hp > unit.maxHp * 0.5) amount *= 1.2;
     if (unit.spec?.id === 'sanada' && unit.hp < unit.maxHp * 0.45) amount *= 1.15;
     return amount;
@@ -128,6 +139,7 @@ export class MercenaryRealtimeBattleSystem extends RealtimeBattleSystem {
         this.log('skill', { actorId: actor.id, targetId: targets[0]?.id, skillName: spec.active, mpAfter: actor.mp });
       } else if (!spec && this.autoSkill && actor.mp >= 100) {
         actor.mp = 0;
+        if (actor.generalSkillName) this.log('skill', { actorId: actor.id, targetId: targets[0]?.id, skillName: actor.generalSkillName, mpAfter: actor.mp });
       } else actor.mp = Math.min(actor.maxMp, actor.mp + 20);
       if (spec?.id === 'priest' && actor.state.actions % 3 === 0) {
         const restored = Math.min(4, actor.maxMp - actor.mp);
@@ -180,7 +192,10 @@ export class MercenaryRealtimeBattleSystem extends RealtimeBattleSystem {
     if (this.roll() >= Math.min(1, Math.max(0.05, accuracy)) || (!magic && !area && target.spec?.id === 'ninja' && this.roll() < 0.15)) {
       this.log('miss', { actorId: actor.id, targetId: target.id }); return null;
     }
-    let raw = this.attack(actor) * multiplier;
+    if (target.side === 'player' && rearDodge(target.formationPosition, this.roll())) { this.log('miss', { actorId: actor.id, targetId: target.id, skillName: '後排閃避' }); return null; }
+    const amaterasuGaze = !cast && !genericSkill && actor.amaterasuGaze && this.roll() < AMATERASU_GAZE.procChance;
+    let raw = amaterasuGaze ? actor.atk * AMATERASU_GAZE.attackMultiplier : this.attack(actor) * multiplier;
+    if (amaterasuGaze) { this.setTimedEffect(original, 'amaterasuFearDefense', AMATERASU_GAZE.fearDefenseReduction, AMATERASU_GAZE.fearDurationMs); this.log('skill', { actorId: actor.id, targetId: original.id, skillName: AMATERASU_GAZE.name }); this.log('status', { actorId: actor.id, targetId: original.id, skillName: `恐懼・防禦 -${Math.round(AMATERASU_GAZE.fearDefenseReduction * 100)}%` }); }
     if (genericSkill) raw = actor.skillPower > 0 ? actor.skillPower : raw * this.skillMultiplier;
     if (actor.spec?.id === 'spear' && ['beast', 'cavalry'].includes(target.kind)) raw *= 1.15;
     if (actor.spec?.id === 'archer' && target.kind === 'beast') raw *= 1.2;
@@ -194,6 +209,7 @@ export class MercenaryRealtimeBattleSystem extends RealtimeBattleSystem {
     if (magic && this.timeMs < 2000 && this.players.some(unit => unit.alive && unit.spec?.id === 'shaman') && target.side === 'player') damage *= 0.9;
     if (!magic && this.timeMs < 2000 && this.players.some(unit => unit.alive && unit.spec?.id === 'escort') && target.side === 'player') damage *= 0.92;
     if (target.side === 'player' && target.position.col >= 2 && this.timeMs < 2000 && this.players.some(unit => unit.alive && unit.spec?.id === 'sanada')) damage *= 0.9;
+    damage *= 1 + this.effect(target, 'bossCurseVulnerability');
     return { actor, target, original, damage: Math.max(1, Math.floor(damage * reduction)), magic, cast, id };
   }
 
@@ -272,7 +288,10 @@ export class MercenaryRealtimeBattleSystem extends RealtimeBattleSystem {
       templateId: units[index].templateId, maxMp: units[index].maxMp, kind: units[index].kind,
       boss: units[index].boss, poisonAttack: units[index].poisonAttack, magicAttack: units[index].magicAttack,
       ranged: units[index].ranged, accuracy: units[index].accuracy,
-      mercenaryState: { ...units[index].state, effects: { ...units[index].state.effects } },
+      amaterasuGaze: units[index].amaterasuGaze,
+      formationPosition: units[index].formationPosition,
+      generalSkillName: units[index].generalSkillName,
+      mercenaryState: { ...units[index].state, effects: { ...units[index].state.effects }, bossRuntime: { ...units[index].state.bossRuntime } },
     }));
     return { ...result, players: enrich(result.players, this.players), enemies: enrich(result.enemies, this.enemies), seed: this.seed, aidApplied: this.aidApplied, terrain: this.terrain };
   }

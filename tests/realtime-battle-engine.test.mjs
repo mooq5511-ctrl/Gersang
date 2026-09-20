@@ -132,3 +132,34 @@ test('tiger slow and bleed expire during realtime combat', () => {
   assert.deepEqual(expired.state.tigerBleeds, {});
   assert.ok(Math.abs(expired.state.realtime.players[0].attackInterval - 1.5) < 1e-9);
 });
+
+test('gale altur applies its data-driven shield and wind shatter in realtime combat', () => {
+  const hero = { hp: 1e9, maxHp: 1e9, mp: 0, maxMp: 0, str: 1, dex: 1,
+    mercenaryIntelligence: 0, attack: 1, defense: 0, staff: false };
+  const started = dungeonStep(freshDungeon(), hero, 'start', 1000, 'e_lake_gale_altur');
+  const resolved = dungeonStep(started.state, hero, 'tick', 61000);
+  const events = resolved.state.realtime.events;
+  const gale = resolved.state.realtime.enemies[0];
+  assert.ok(events.some(event => event.type === 'skill' && event.skillName === '白虎盾'));
+  assert.ok(events.some(event => event.type === 'skill' && event.skillName === '風碎'));
+  assert.equal(gale.mercenaryState.effects.bossShield.value, .3);
+  assert.ok(events.some(event => event.type === 'damage' && event.skillName === '風碎' && event.damage === 2000));
+});
+
+test('golden starfish regenerates, curses, and can trigger its flame damage over time', () => {
+  const hero = { hp: 1e9, maxHp: 1e9, mp: 0, maxMp: 0, str: 1, dex: 1,
+    mercenaryIntelligence: 0, attack: 1, defense: 0, staff: false };
+  const started = dungeonStep(freshDungeon(), hero, 'start', 1000, 'e_japan_sea_golden_starfish');
+  const resolved = dungeonStep(started.state, hero, 'tick', 61000);
+  const afterBurn = dungeonStep(resolved.state, hero, 'tick', 62000);
+  const events = afterBurn.state.realtime.events;
+  const player = afterBurn.state.realtime.players[0];
+  assert.ok(events.some(event => event.type === 'skill' && event.skillName === '恢復術'));
+  assert.ok(events.some(event => event.type === 'skill' && event.skillName === '詛咒'));
+  assert.equal(player.mercenaryState.effects.bossCurseAttack.value, .25);
+  assert.equal(player.mercenaryState.effects.bossCurseDefense.value, .3);
+  assert.equal(player.mercenaryState.effects.bossCurseVulnerability.value, .15);
+  assert.ok(player.mercenaryState.effects.bossBurn.value >= 1);
+  assert.ok(events.some(event => event.type === 'skill' && event.skillName === '火焰燎原'));
+  assert.ok(events.some(event => event.type === 'damage' && event.skillName === '灼燒'));
+});

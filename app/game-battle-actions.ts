@@ -11,6 +11,7 @@ import { awardFusionCores } from "./fusion-core-rewards";
 import { territoryBonus, territoryHealInterval } from "./guild-territory";
 import { grantTerritoryXp } from "./game-progression";
 import { makeTierEquipmentDrop, pickTierEquipmentDrop } from "./tier-equipment";
+import { hasFullAmaterasuSet } from "./equipment-set-effects";
 
 type BattleActionDependencies = {
   notify: (message: string) => void;
@@ -62,9 +63,9 @@ export function runDungeonAction(
   const fighters = [previous.hero, ...deployedMercs], living = fighters.filter((unit) => vitalStats(unit).hp > 0);
   const mercenaryIntelligence = fighters.reduce((sum, unit) => sum + heroTotalAttributes(unit).intel, 0);
   const attack = living.reduce((sum, unit) => sum + combatStats(unit).attack * (unit.position === "前排" ? 1.2 : 1), 0);
-  const party = fighters.map((unit) => { const stats = vitalStats(unit), combat = combatStats(unit); return { uid: unit.uid, templateId: unit.templateId, name: unit.name, hp: stats.hp, maxHp: stats.maxHp, mp: stats.mp, maxMp: stats.maxMp, position: unit.position, defense: combat.defense, attack: combat.attack, accuracy: combat.accuracy, attackInterval: Math.max(.6, 2.2 - combat.speed / 100) }; });
+  const party = fighters.map((unit) => { const stats = vitalStats(unit), combat = combatStats(unit); return { uid: unit.uid, templateId: unit.templateId, name: unit.name, skill: unit.skill, hp: stats.hp, maxHp: stats.maxHp, mp: stats.mp, maxMp: stats.maxMp, position: unit.position, defense: combat.defense, attack: combat.attack, accuracy: combat.accuracy, attackInterval: Math.max(.6, 2.2 - combat.speed / 100) }; });
   const passiveDamage = deployedMercs.reduce((sum, unit) => sum + Math.max(0, Math.floor(combatStats(unit).attack * .18)), 0);
-  const amaterasuSet = Object.values(previous.hero.equip).filter((item) => item?.name.startsWith("T10 天照")).length >= 5;
+  const amaterasuSet = hasFullAmaterasuSet(previous.hero.equip);
   const result = dungeonStep(previous.dungeon || freshDungeon(), { ...vital, str: total.str, dex: total.agi, mercenaryIntelligence, attack, defense: combatStats(previous.hero).defense, staff: previous.hero.equip.weapon?.name === DIVINE_EQUIPMENT.staff.name, amaterasuGaze: amaterasuSet }, action, now, key, roll, choice, spawnRoll, retaliationRoll, party, passiveDamage, materialRolls, previous.autoSkill, rolls.encounterCountRoll, territoryHealInterval(previous.territory));
   const remaining = new globalThis.Map(result.party.map((unit) => [unit.uid, unit]));
   let next: GameState = { ...previous, dungeon: result.state, hero: { ...previous.hero, hp: remaining.get("hero")?.hp ?? result.hp, mp: remaining.get("hero")?.mp ?? result.mp }, mercs: previous.mercs.map((unit) => { const fighter = remaining.get(unit.uid); return fighter ? { ...unit, hp: fighter.hp, mp: fighter.mp ?? unit.mp } : unit; }) };
