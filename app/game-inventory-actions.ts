@@ -16,6 +16,7 @@ type Log = (logs: string[], message: string) => string[];
 type Format = (value: number) => string;
 
 export function fuseAllInventoryEquipmentAction(state: GameState, sourceRarity: FusionSourceRarity, roll: () => number, addLog: Log, notify: (message: string) => void): GameState {
+  if (state.hero.level < 20) { notify('商團領地在主角 Lv.20 開放。'); return state; }
   const recipe = fusionRecipe(sourceRarity);
   if (!recipe) return state;
   const candidatesByIdentity = new Map<string, Equipment[]>();
@@ -114,8 +115,8 @@ export function equipInventoryItemAction(state: GameState, itemUid: string, requ
   const unit = normalizeVitals(result.unit);
   const logs = addLog(state.logs, "已穿戴裝備，原部位裝備已交換回背包。");
   return targetUid === "hero"
-    ? { ...state, logs, inventory: result.inventory, hero: unit as Hero }
-    : { ...state, logs, inventory: result.inventory, mercs: state.mercs.map((old) => old.uid === targetUid ? unit : old) };
+    ? { ...state, firstGreenEquipped: state.firstGreenEquipped || Object.values(unit.equip).some(item => item && item.rarity !== '普通'), logs, inventory: result.inventory, hero: unit as Hero }
+    : { ...state, firstGreenEquipped: state.firstGreenEquipped || Object.values(unit.equip).some(item => item && item.rarity !== '普通'), logs, inventory: result.inventory, mercs: state.mercs.map((old) => old.uid === targetUid ? unit : old) };
 }
 
 export function unequipInventoryItemAction(state: GameState, slot: EquipmentSlot, targetUid: string, addLog: Log): GameState {

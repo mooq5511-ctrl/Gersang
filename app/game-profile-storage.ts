@@ -74,6 +74,7 @@ export function restoreGame(raw: unknown): GameState {
     : isNationId(parsed.city) ? worldCities.find((city) => city.nation === parsed.city)?.id || next.city : next.city;
   Object.assign(next, parsed, {
     version: 30,
+    firstGreenEquipped: parsed.firstGreenEquipped === true || [parsed.hero, ...(parsed.mercs || []), ...(parsed.restingMercs || [])].some(unit => unit?.equip && Object.values(unit.equip).some(item => item && item.rarity !== '普通')),
     trade: restoreTrade(parsed.trade),
     territory: restoreTerritory(parsed.territory),
     credit: Number.isFinite(parsed.credit) ? Math.max(0, Math.floor(parsed.credit!)) : 0,

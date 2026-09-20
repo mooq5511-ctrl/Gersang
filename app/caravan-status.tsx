@@ -20,6 +20,7 @@ import './guild-territory-layout.css';
 // 此面板只呈現真實遊戲資料；金錢與成長由遊戲唯一計時器結算。
 export type CaravanMember = VitalUnit & { uid:string; name:string; role:string; job?:string; image:string; xp:number; points:number; str:number; agi:number; position:BattlePosition };
 type Props = {
+  initialWindow?: 'inventory' | 'territory';
   battle:ReactNode;navigation:ReactNode;busy:boolean;
   territory:GuildTerritory;upgradeBuilding:(id:BuildingId)=>void;enhanceEquipment:(itemUid:string)=>void;fuseAllEquipment:(rarity:FusionSourceRarity)=>void;
   hero:CaravanMember; mercs:CaravanMember[]; restingMercs:CaravanMember[]; active:string[]; toggleActive:(uid:string)=>void; storeMercenary:(uid:string)=>void; withdrawRestingMercenary:(uid:string)=>void; gold:number; credit:number; creditXp:number; creditLevel:number; newbieCoins:number; redeemWandererSet:(set:'azure'|'chiyou'|'amaterasu')=>void; weight:number; maxWeight:number;
@@ -35,7 +36,7 @@ type Props = {
 export function CaravanStatus(p:Props) {
   // 戰力使用既有引擎，包含穿戴裝備。
   const [selectedRosterUid,setSelectedRosterUid]=useState(p.hero.uid);
-  const [activeWindow,setActiveWindow]=useState<'stats'|'inventory'|'wanderer'|'rest'|'formation'|'territory'|null>(null);
+  const [activeWindow,setActiveWindow]=useState<'stats'|'inventory'|'wanderer'|'rest'|'formation'|'territory'|null>(p.initialWindow || null);
   const selectedRoster=[p.hero,...p.mercs].find(unit=>unit.uid===selectedRosterUid)||p.hero;
   const deployed=[p.hero,...p.mercs.filter(unit=>p.active.includes(unit.uid))].slice(0,12);
   const formationRows=(['前排','中排','後排'] as const).map(position=>({position,units:deployed.filter(unit=>unit.position===position)}));

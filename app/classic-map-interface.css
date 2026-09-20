@@ -143,6 +143,18 @@
   .isometric-destinations span { display:none; }
 }
 
+/* Reserve a real HUD row for the objective instead of auto-placing it over the map. */
+@media (min-width:981px) {
+  .classic-live-game { grid-template-rows:50px 78px minmax(0,1fr) 60px; }
+  .classic-live-game > .main-objective { grid-column:1/-1; grid-row:2; width:100%; margin:0; border-radius:0; z-index:6; }
+  .classic-live-game .nav-list,.classic-live-game .tab-panel { grid-row:3; }
+  .classic-live-game .classic-live-footer { grid-row:4; }
+}
+@media (max-width:980px) {
+  .classic-live-game > .main-objective { position:absolute; top:0; left:0; width:100%; height:96px; margin:0; z-index:44; border-radius:0; }
+  .classic-live-game .tab-panel { top:96px; }
+}
+
 /* Single viewport battle HUD: only designated content panes may scroll. */
 html:has(.classic-live-game),
 body:has(.classic-live-game),

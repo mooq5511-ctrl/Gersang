@@ -107,6 +107,7 @@ export type CityService = "mercenary" | "weapon" | "armor" | "warehouse" | "inn"
 export type GameState = {
   dungeon?: DungeonState;
   version: 30;
+  firstGreenEquipped?: boolean;
   trade: TradeState;
   territory: GuildTerritory;
   credit: number;

@@ -77,7 +77,7 @@ import { runDungeonAction, selectBattleMapAction } from "./game-battle-actions";
 import { dispatchTradeAction, upgradeCaravanAction } from "./game-trade-actions";
 import { allocateAttributeAction, cyclePositionAction, promoteMercenary, recruitGeneralAction, recruitMerchantAction, storeMercenaryAction, toggleActiveAction, withdrawMercenaryAction } from "./game-squad-actions";
 import { applyAutoMedicineAction, buyMaterialAction, buyMedicineAction, consumeMedicineAction, depositWarehouseItemAction, equipInventoryItemAction, forgeThunderItemAction, forgeVillageWeaponAction, fuseAllInventoryEquipmentAction, openAncientCoinBoxAction, purchaseEquipmentAction, purchaseTierEquipmentAction, sellAllInventoryEquipmentAction, sellAllMaterialsAction, sellInventoryEquipmentAction, sellMaterialAction, socketGemAction, unequipInventoryItemAction, withdrawWarehouseItemAction } from "./game-inventory-actions";
-import type { FusionSourceRarity } from "./equipment-fusion";
+import { fusionItemKey, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
 import { TIER_EQUIPMENT_DROP_REGIONS, tierEquipmentPrice, tierEquipmentShopCatalog, type TierEquipment } from "./tier-equipment";
 import { profileFromGame, readCharacterSave, restoreGame, saveCharacterProfile, writeCharacterSave, writeProfileIndex, writeSharedWarehouse } from "./game-profile-storage";
 import {
@@ -120,6 +120,7 @@ function currentTimestamp() {
 export default function GameV15() {
   const [game, rawSetGame] = useState<GameState>(freshGame);
   const [activeTab, setActiveTab] = useState("map");
+  const [squadDestination, setSquadDestination] = useState<{ key: number; window?: 'inventory' | 'territory' }>({ key: 0 });
   // 所有存檔與取得路徑共用格位整理：保留已有位置與超額舊物，不截斷陣列。
   const setGame=useCallback((action:GameState|((previous:GameState)=>GameState))=>rawSetGame(previous=>{
     const next=typeof action==='function'?action(previous):action;
@@ -290,12 +291,29 @@ export default function GameV15() {
   const mainObjective = (() => {
     if (game.hero.status === '客棧中') return { title: '恢復商隊戰力', detail: `生命 ${heroVital.hp} / ${heroVital.maxHp}，療傷完成後可再度出發。`, tab: 'city' };
     if (game.hero.level < 20) return { title: '壯大商隊，建立第一座駐地', detail: `主角 Lv.${game.hero.level} / Lv.20，商團領地即將開放。`, tab: 'battle' };
-    if (game.territory.buildings.waystation < 1) return { title: '建立驛站，提升放置收益', detail: '商團領地已開放，第一級驛站可讓金錢與信用收益 +2%。', tab: 'squad' };
+    if (game.territory.buildings.waystation < 1) return { title: '建立驛站，提升放置收益', detail: `資金 ${Math.floor(game.gold).toLocaleString('zh-TW')} / 1,200 兩；建成後放置收益 +2%。`, tab: 'squad', window: 'territory' as const };
+    const equippedGreen = game.firstGreenEquipped || [game.hero, ...game.mercs, ...game.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== '普通'));
+    if (!equippedGreen) {
+      const green = game.inventory.find(item => item.rarity !== '普通' && (item.requiredLevel || 1) <= game.hero.level);
+      if (green) return { title: `裝上「${green.name}」，感受成長`, detail: '打開背包穿戴裝備，查看實際能力提升。', tab: 'squad', window: 'inventory' as const };
+      const groups = new globalThis.Map<string, Equipment[]>();
+      for (const item of game.inventory) if (isFusionIngredient(item, '普通') && (item.requiredLevel || 1) <= game.hero.level) {
+        const key = fusionItemKey(item); groups.set(key, [...(groups.get(key) || []), item]);
+      }
+      const group = [...groups.values()].sort((a, b) => b.length - a.length)[0];
+      const count = Math.min(5, group?.length || 0);
+      return { title: count === 5 ? '合成第一件綠裝' : '收集同名白裝，準備第一次合成', detail: `${group?.[0].name || '同名同部位白裝'} ${count} / 5；${count === 5 ? '材料齊全，白→綠成功率 100%。' : `還差 ${5 - count} 件。只計算背包內未強化、未鑲嵌的裝備。`}`, tab: 'squad', window: 'territory' as const };
+    }
     if (!game.newbieBossDefeated) return { title: '討伐海賊王，開通千年湖', detail: '在世界地圖選擇海賊王，突破下一段商路。', tab: 'battle' };
     if (!game.lakeBossDefeated) return { title: '前往千年湖，追擊狂風阿魯塔', detail: '千年湖已開通；擊敗首領後可前往日本海底洞。', tab: 'battle' };
     if (!game.goldenStarfishDefeated) return { title: '討伐黃金海星，開通白虎林', detail: '挑戰日本海底洞，取得前往白虎林的資格。', tab: 'battle' };
     return { title: '持續壯大商隊', detail: '提高等級、強化隊伍，朝下一個地圖與傳說裝備前進。', tab: 'battle' };
   })();
+  function goToObjective() {
+    if (mainObjective.tab === 'city') setCityService('inn');
+    if (mainObjective.tab === 'squad') setSquadDestination(previous => ({ key: previous.key + 1, window: mainObjective.window }));
+    setActiveTab(mainObjective.tab);
+  }
 
 
   function selectBattleMap(mapId: string) {
@@ -473,7 +491,7 @@ export default function GameV15() {
   }
 
   function upgradeTerritoryBuilding(id: BuildingId) {
-    setGame(previous => { const result = upgradeBuilding(previous, id); if (result.error) setNotice(result.error); return result.game; });
+    setGame(previous => { const result = upgradeBuilding(previous, id); if (result.error) setNotice(result.error); else if (id === 'waystation' && previous.territory.buildings.waystation === 0) setNotice('驛站建成！放置金錢與信用收益 +2%。下一步：準備第一件綠裝。'); return result.game; });
   }
 
   function enhanceTerritoryEquipment(itemUid: string) {
@@ -481,7 +499,13 @@ export default function GameV15() {
     setGame(previous => { const result = enhanceEquipment(previous, itemUid, roll); if (result.error) setNotice(result.error); return result.game; });
   }
   function fuseAllTerritoryEquipment(sourceRarity: FusionSourceRarity) {
-    setGame(previous => fuseAllInventoryEquipmentAction(previous, sourceRarity, Math.random, addLog, setNotice));
+    setGame(previous => {
+      const next = fuseAllInventoryEquipmentAction(previous, sourceRarity, Math.random, addLog, setNotice);
+      const result = next.inventory.find(item => !previous.inventory.some(old => old.uid === item.uid));
+      const base = result && previous.inventory.find(item => fusionItemKey(item) === fusionItemKey(result));
+      if (sourceRarity === '普通' && result && base) setNotice(`白→綠合成成功：${result.name}｜基礎攻擊 ${base.atk} → ${result.atk}・防禦 ${base.def} → ${result.def}・生命 ${base.hp} → ${result.hp}。前往背包穿戴。`);
+      return next;
+    });
   }
 
   function restAtInn() {
@@ -661,14 +685,14 @@ export default function GameV15() {
           <p>收益已自動入帳，放置累積上限為 8 小時。{(returnReport?.minutes || 0) > 480 ? '本次離開時間已超過累積上限。' : ''}</p>
           {returnReport?.gold === 0 && returnReport.credit === 0 && <p>本次沒有新增收益；戰敗療傷期間不累積放置收益。</p>}
           <div className="return-report-next"><small>接下來</small><strong>{mainObjective.title}</strong><p>{mainObjective.detail}</p></div>
-          <Button onClick={() => { setReturnReport(null); setActiveTab(mainObjective.tab); }}>繼續商隊旅程</Button>
+          <Button onClick={() => { setReturnReport(null); goToObjective(); }}>繼續商隊旅程</Button>
           <Button variant="ghost" onClick={() => setReturnReport(null)}>先看看城鎮</Button>
         </DialogContent>
       </Dialog>
 
       <section className="main-objective" aria-label="目前主線目標">
         <div><small>目前主線目標</small><strong>{mainObjective.title}</strong><span>{mainObjective.detail}</span></div>
-        <Button type="button" variant="outline" onClick={() => setActiveTab(mainObjective.tab)}>前往</Button>
+        <Button type="button" variant="outline" onClick={goToObjective}>前往</Button>
       </section>
 
       <section id="inn-zone" className="forced-inn" hidden={game.hero.status!=='客棧中'} aria-live="polite">
@@ -779,7 +803,7 @@ export default function GameV15() {
 
 
         <TabsContent value="squad" className="tab-panel">
-          <CaravanStatus territory={game.territory} upgradeBuilding={upgradeTerritoryBuilding} enhanceEquipment={enhanceTerritoryEquipment} fuseAllEquipment={fuseAllTerritoryEquipment} busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} restingMercs={game.restingMercs} active={game.active} toggleActive={toggleActive} storeMercenary={storeMercenary} withdrawRestingMercenary={withdrawRestingMercenary} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet}
+          <CaravanStatus key={squadDestination.key} initialWindow={squadDestination.window} territory={game.territory} upgradeBuilding={upgradeTerritoryBuilding} enhanceEquipment={enhanceTerritoryEquipment} fuseAllEquipment={fuseAllTerritoryEquipment} busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} restingMercs={game.restingMercs} active={game.active} toggleActive={toggleActive} storeMercenary={storeMercenary} withdrawRestingMercenary={withdrawRestingMercenary} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet}
             navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now(),spawnRoll=Math.random();setGame(previous=>{
               const old=previous.dungeon||freshDungeon();
               const deployed=[previous.hero,...previous.mercs.filter(unit=>previous.active.slice(0,ACTIVE_MERCENARY_LIMIT).includes(unit.uid))];
