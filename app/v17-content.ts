@@ -2,6 +2,7 @@ import { ECOLOGY_MONSTERS } from "./monster-ecology.ts";
 import { sourceEnemyDefinitions, type SourceEnemyDefinition } from "../data/monsters/world-map-enemies.ts";
 
 export type SourceEnemy = SourceEnemyDefinition & {
+  dungeonId?: keyof typeof ECOLOGY_MONSTERS;
   xp: number;
   hp?: number;
   mp?: number;
@@ -10,7 +11,7 @@ export type SourceEnemy = SourceEnemyDefinition & {
 
 // Combat HP, MP, attack and XP come from the stable dungeon ID; map drops stay here.
 export const sourceEnemies: SourceEnemy[] = sourceEnemyDefinitions.map((enemy) => {
-  const id = enemy.dungeonId;
+  const id = enemy.id in ECOLOGY_MONSTERS ? enemy.id as keyof typeof ECOLOGY_MONSTERS : undefined;
   const combat = id ? ECOLOGY_MONSTERS[id] : undefined;
   return { ...enemy, xp: combat?.xp ?? enemy.xp ?? 0, ...(combat ? { dungeonId: id, hp: combat.hp, mp: combat.mp, attack: combat.atk } : {}) };
 });

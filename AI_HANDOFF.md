@@ -53,7 +53,7 @@ AUTHORITATIVE_PATHS:
 
 - Root state/effects/UI wiring: `app/game-v15.tsx` (1906 LOC; monolith; most cross-system changes land here).
 - Current dungeon combat: `app/dungeon-engine.ts` + `app/realtime-battle-engine.js` + `app/battle-arena.tsx` + `app/dungeon-panel.tsx`.
-- Current monsters/drop metadata: `data/monsters/dungeon-monsters.ts` owns dungeon stats, legacy definitions, and ecology pools; `data/monsters/world-map-enemies.ts` owns map cards, localized drop lists, and each mapped card's stable DungeonKey. The legacy name→DungeonKey lookup is derived from those cards. `app/monster-ecology.ts` and `app/monster-ids.ts` are compatibility re-exports; `app/v17-content.ts` composes the two data sources into runtime map records.
+- Current monsters/drop metadata: `data/monsters/dungeon-monsters.ts` owns dungeon stats, legacy definitions, and ecology pools; `data/monsters/world-map-enemies.ts` owns 52 map cards with unique stable IDs and localized drops. Forty-four IDs link to dungeon combat definitions; eight Korean road-enemy IDs retain stage-derived road combat stats. The legacy name→DungeonKey lookup is derived from the linked cards. `app/monster-ecology.ts` and `app/monster-ids.ts` are compatibility re-exports; `app/v17-content.ts` composes the sources into runtime map records.
 - Current team stats: `app/vitals-engine.ts`; hero total attributes/power/weight: `app/hero-rules.ts`; roster specs: `app/mercenary-roster.ts`.
 - Current equipment: runtime `Equipment` type inside `game-v15.tsx`; slots/transactions=`equipment-slots.ts`; base shop items=`v15-data.ts`+`wearable-catalog.ts`+`data/items/official-equipment.ts`; gems=`data/items/official-gems.ts`; mythics=`mythic-forge.ts`; fixed rare dungeon drops=`divine-equipment.ts`; visuals=`gersang-visuals.ts`.
 - Current maps: tab battle-map cards=`reference-data.ts.battleMaps`; 4-region/12-stage route model=`gersang-world-map.ts`; dungeon zone compatibility layer=`dungeon-engine.ts.WORLD_ZONES`; isometric town=`isometric-world-map.tsx`.
@@ -206,7 +206,7 @@ generals: app/game-data.ts defines five recruitable city generals; app/general-r
 material_trade: app/village-exchange.ts derives a positive fallback price for every v17 source-enemy drop, then overlays authored map and balance prices; bulk selling preserves unknown legacy items and ancient coin boxes
 npc_content: data/npcs/hanyang.ts owns all ten Hanyang NPC definitions, portrait positions, dialogue, quest objectives, rewards, and affinity gates; app/npc-dialogue.ts owns only types, lookup, progress, and persistence rules
 boss_abilities: data/skills/boss-abilities.ts owns realtime boss timing, damage, regeneration, curse, and burn values; dungeon-engine is the executor only
-monster_data: data/monsters/dungeon-monsters.ts owns dungeon monster stats, legacy dungeon definitions, and ecology pools; app/monster-ecology.ts preserves the previous import surface
+monster_data: data/monsters/dungeon-monsters.ts owns dungeon monster stats, legacy dungeon definitions, and ecology pools; data/monsters/world-map-enemies.ts gives all 52 map cards unique IDs; app/monster-ecology.ts and app/monster-ids.ts preserve previous import surfaces
 ```
 
 UI naming drift: Site metadata title in `layout.tsx`/Sites metadata may still say older V29/商途 text while user wants `放置你的巨商魂`. Audit all `<title>`, login title, header branding, manifest before next public release.
@@ -221,7 +221,7 @@ UI naming drift: Site metadata title in `layout.tsx`/Sites metadata may still sa
 |`app/battle-arena.tsx`|DOM sprites/event animations/monster image map/gridToPixel.|
 |`app/dungeon-panel.tsx`,`dungeon.css`,`battle-impact.css`|Battle command/status/feed/stage styling.|
 |`data/monsters/dungeon-monsters.ts`|Authoritative dungeon monster stats, legacy definitions and ecology pools; `app/monster-ecology.ts` re-exports for compatibility.|
-|`data/monsters/world-map-enemies.ts`|Localized source monster cards/drops with stable dungeon IDs stored on each mapped card; derives the legacy name lookup.|
+|`data/monsters/world-map-enemies.ts`|52 localized source monster cards/drops with unique stable IDs; 44 link to dungeon stats and 8 retain road-stage combat scaling; derives the legacy name lookup.|
 |`data/items/official-equipment.ts`,`data/items/official-gems.ts`|Official city-shop equipment and socket-gem definitions.|
 |`data/contracts/gameplay-contracts.ts`|Gameplay contract definitions and rewards.|
 |`data/mercenaries/awakening-profiles.ts`|Awakening stat/skill profiles.|
