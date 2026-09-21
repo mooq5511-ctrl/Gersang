@@ -1,5 +1,5 @@
 import { RealtimeBattleSystem } from './realtime-battle-engine.js';
-import { mitigatedDamage } from './combat-damage.js';
+import { mitigatedDamage, resistanceMultiplier } from './combat-damage.js';
 import { mercenarySpec } from './mercenary-roster.ts';
 import { AMATERASU_GAZE } from './equipment-set-effects.ts';
 import { formationDamageMultiplier, rearDodge } from './formation-position.ts';
@@ -204,6 +204,10 @@ export class MercenaryRealtimeBattleSystem extends RealtimeBattleSystem {
     let pierce = id === 'gunner' ? 0.3 : 0;
     if (id === 'swordmaster' && actor.state.stacks >= 3) { raw *= 1.35; pierce = 0.15; actor.state.stacks = 0; }
     let damage = mitigatedDamage(raw, this.defense(target) * (1 - pierce));
+    if (target.side === 'player') {
+      const resistance = magic ? target.magicResist : target.physicalResist;
+      damage *= resistanceMultiplier(resistance);
+    }
     if (!magic && target.spec?.id === 'elephant') damage *= 0.88;
     if (!magic && !cast && !actor.ranged && target.spec?.id === 'spear') damage *= 0.9;
     if (magic && this.timeMs < 2000 && this.players.some(unit => unit.alive && unit.spec?.id === 'shaman') && target.side === 'player') damage *= 0.9;

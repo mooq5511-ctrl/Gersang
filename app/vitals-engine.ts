@@ -1,9 +1,10 @@
 import { mercenarySpec, ratingAccuracy } from './mercenary-roster.ts';
 import {formationTarget,rearDodge,type BattlePosition} from './formation-position.ts';
+import { resistanceMultiplier } from './combat-damage.js';
 export type VitalUnit = {
-  templateId?: string;
+  templateId?: string; physicalResist?: number; magicResist?: number;
   level: number; vit: number; intel: number; str?: number; agi?: number; tier?: number; hp?: number; mp?: number; maxHp?:number; flatAttackBonus?:number;
-  equip: Record<string, { hp?: number; atk?: number; def?: number; enhance?: number; bonus?: { str?: number; agi?: number; vit?: number; intel?: number }; magic?: { stat: string; value: number }[] } | null>;
+  equip: Record<string, { hp?: number; atk?: number; def?: number; enhance?: number; bonus?: { str?: number; agi?: number; vit?: number; intel?: number }; resist?: { physical?: number; magic?: number }; magic?: { stat: string; value: number }[] } | null>;
 };
 export function vitalStats(unit: VitalUnit) {
   const spec = mercenarySpec(unit.templateId);
@@ -12,12 +13,16 @@ export function vitalStats(unit: VitalUnit) {
   let equipmentHp = 0;
   let hpPercent = 0;
   let defense = 0;
+  let physicalResist = Number(unit.physicalResist) || 0;
+  let magicResist = Number(unit.magicResist) || 0;
   for (const item of Object.values(unit.equip)) {
     if (!item) continue;
     vitality += item.bonus?.vit || 0;
     intelligence += item.bonus?.intel || 0;
     equipmentHp += item.hp || 0;
     defense += item.def || 0;
+    physicalResist += item.resist?.physical || 0;
+    magicResist += item.resist?.magic || 0;
     for (const affix of item.magic || []) if (affix.stat === "hp") hpPercent += affix.value;
   }
   // 主角基礎上限存於 maxHp：初始 100、每次升級 +20；體質與裝備再動態加成。
@@ -28,7 +33,7 @@ export function vitalStats(unit: VitalUnit) {
   const maxHp = Math.max(1, Math.floor((unit.templateId==='hero' ? heroHp : mercenaryHp) * (1 + hpPercent / 100)));
   const maxMp = Math.max(1, Math.floor(unit.templateId==='hero' ? intelligence*4 : mercenaryMp));
   const clamp = (value: number | undefined, max: number) => typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(max, Math.floor(value))) : max;
-  return { maxHp, maxMp, hp: clamp(unit.hp, maxHp), mp: clamp(unit.mp, maxMp), defense, intelligence };
+  return { maxHp, maxMp, hp: clamp(unit.hp, maxHp), mp: clamp(unit.mp, maxMp), defense, intelligence, physicalResist, magicResist };
 }
 export function normalizeVitals<T extends VitalUnit>(unit: T): T & { hp: number; mp: number } {
   const { hp, mp } = vitalStats(unit);
@@ -70,12 +75,12 @@ export function enemyCombatStats(stage: number, health: number, boss = false) {
 }
 export function damageAfterDefense(attack: number, defense: number, resistance = 0) {
   const armor = Math.max(0, defense);
-  return Math.max(1, Math.floor(Math.max(0, attack) * (1 - Math.min(0.75, armor / (armor + 200))) * (1 - Math.min(85, Math.max(0, resistance)) / 100)));
+  return Math.max(1, Math.floor(Math.max(0, attack) * (1 - Math.min(0.75, armor / (armor + 200))) * resistanceMultiplier(resistance)));
 }
-export type Fighter = { uid: string; name: string; skill: string; hp: number; mp: number; attack: number; intelligence: number; defense: number; cost: number; speed?: number; position?:BattlePosition };
+export type Fighter = { uid: string; name: string; skill: string; hp: number; mp: number; attack: number; intelligence: number; defense: number; cost: number; speed?: number; position?:BattlePosition; physicalResist?: number; magicResist?: number };
 
 /** Each living fighter acts once per round. A spell is charged before its damage is applied. */
-export function resolveVitalBattle(party: Fighter[], enemy: { hp: number; attack: number; defense: number; physical: number; magic: number; speed?: number; bandit?: boolean; terrain?: string }, random = Math.random) {
+export function resolveVitalBattle(party: Fighter[], enemy: { hp: number; attack: number; defense: number; physical: number; magic: number; speed?: number; bandit?: boolean; terrain?: string; magicAttack?: boolean }, random = Math.random) {
   const fighters = party.map((fighter) => ({ ...fighter }));
   let enemyHp = enemy.hp;
   let rounds = 0;
@@ -116,7 +121,8 @@ export function resolveVitalBattle(party: Fighter[], enemy: { hp: number; attack
           slowedUntil.set(target.uid, rounds + 1);
           enemySkills.push("第 " + rounds + " 回合・攔路劈砍：" + target.name + " 受到 130% 攻擊傷害，移速 −1 至下回合結束（最低 1）。");
         }
-        const damage = damageAfterDefense(enemy.attack * multiplier, target.defense);
+        const resistance = enemy.magicAttack ? target.magicResist : target.physicalResist;
+        const damage = damageAfterDefense(enemy.attack * multiplier, target.defense, resistance);
         receivedDamage += Math.min(target.hp, damage);
         target.hp = Math.max(0, target.hp - damage);
         continue;

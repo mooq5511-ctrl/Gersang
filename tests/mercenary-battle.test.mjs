@@ -116,3 +116,11 @@ test('fallen units neither act nor grant opening auras',()=>{
   assert.equal(skillEvents(r,'押鏢老練').length,0); assert.equal(skillEvents(r,'山靈庇佑').length,0);
   assert.ok(!r.events.some(e=>e.actor==='東海鏢師'||e.actor==='朝鮮巫女'));
 });
+test('tactical world-map enemy attacks use the matching party resistance',()=>{
+  const member=rosterUnit('spear',{hp:100000,maxHp:100000,attack:0,defense:0,physicalResist:60,magicResist:60});
+  const unprotected=run([{...member,physicalResist:0,magicResist:0}],[foe({attack:100,ranged:true})],()=>0.5);
+  const physical=run([member],[foe({attack:100,ranged:true})],()=>0.5);
+  const magical=run([member],[foe({attack:100,magicAttack:true,ranged:true})],()=>0.5);
+  assert.ok(physical.receivedDamage<unprotected.receivedDamage);
+  assert.ok(magical.receivedDamage<unprotected.receivedDamage);
+});

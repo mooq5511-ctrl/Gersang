@@ -33,6 +33,18 @@ test('monster defense and party defense both affect actual encounters', () => {
   assert.ok(monsterArmor.enemyHp > normal.enemyHp);
   assert.ok(partyArmor.receivedDamage < normal.receivedDamage);
 });
+test('equipped physical and magic resistance reduce matching incoming attacks', () => {
+  const stats = vitalStats({ ...unit, physicalResist: 5, equip: { armor: { resist: { physical: 30, magic: 20 } } } });
+  assert.equal(stats.physicalResist, 35);
+  assert.equal(stats.magicResist, 20);
+  const base = { ...fighter, hp: 100000, mp: 0, attack: 0, defense: 0, speed: 1, position: '前排' };
+  const hostile = { ...enemy, hp: 1e9, attack: 100, speed: 100 };
+  const plain = resolveVitalBattle([base], hostile);
+  const physical = resolveVitalBattle([{ ...base, physicalResist: stats.physicalResist }], hostile);
+  const magical = resolveVitalBattle([{ ...base, magicResist: stats.magicResist }], { ...hostile, magicAttack: true });
+  assert.ok(physical.receivedDamage < plain.receivedDamage);
+  assert.ok(magical.receivedDamage < plain.receivedDamage);
+});
 test('old saves initialize full HP and MP; saved zero stays zero', () => {
   const full = normalizeVitals(unit);
   assert.equal(full.hp, vitalStats(unit).maxHp);

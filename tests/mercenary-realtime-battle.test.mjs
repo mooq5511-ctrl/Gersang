@@ -65,6 +65,18 @@ test('world-map defensive, healing and aura passives are live', () => {
   const monk = new MercenaryRealtimeBattleSystem([player('monk')], [enemy('foe', { atk: 10 })]); monk.roll = () => 0; monk.startBattle(); assert.ok(monk.events.some(event => event.skillName === '金鐘護體'));
 });
 
+test('world-map realtime applies matching equipment resistance and preserves it in snapshots', () => {
+  const battle = new MercenaryRealtimeBattleSystem([player('spear', { physicalResist: 20, magicResist: 55 })], [enemy('foe', { atk: 100 })], { autoSkill: false, seed: 11 });
+  const target = battle.players[0], attacker = battle.enemies[0];
+  const saved = MercenaryRealtimeBattleSystem.fromSnapshot(battle.snapshot());
+  const plain = battle.planHit(attacker, target, 1, true, false, false, '', false).damage;
+  target.magicResist = 0;
+  const unprotected = battle.planHit(attacker, target, 1, true, false, false, '', false).damage;
+  assert.ok(plain < unprotected);
+  assert.equal(saved.players[0].physicalResist, 20);
+  assert.equal(saved.players[0].magicResist, 55);
+});
+
 test('world-map debuffs, sword energy and priest MP recovery take effect', () => {
   const shaman = new MercenaryRealtimeBattleSystem([player('shaman')], [enemy('foe', { atk: 100 })]); shaman.startBattle(); assert.equal(shaman.attack(shaman.enemies[0]), 80);
   const spear = new MercenaryRealtimeBattleSystem([player('spear')], [enemy('foe', { def: 100 })]); spear.startBattle(); assert.equal(spear.defense(spear.enemies[0]), 85);

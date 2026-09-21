@@ -80,7 +80,8 @@ export function resolveMercenaryBattle(party: TacticalFighter[], enemies: Tactic
     if (source.spec?.id === 'archer' && target.foe?.kind === 'beast') { raw *= 1.2; log(source, '獵虎眼', target); }
     if (!magic && source.spec?.id === 'samurai' && source.unit.hp > source.maxHp * 0.7) raw *= 1.15;
     if (!magic && source.spec?.id === 'cannon' && !source.moved) raw *= 1.15;
-    let damage = damageAfterDefense(raw, defense(target) * (1 - pierce), magic ? target.foe?.magic ?? 0 : target.foe?.physical ?? 0);
+    const resistance = target.side ? (magic ? target.foe?.magic : target.foe?.physical) : (magic ? target.unit.magicResist : target.unit.physicalResist);
+    let damage = damageAfterDefense(raw, defense(target) * (1 - pierce), resistance ?? 0);
     if (!magic && basic && !source.foe?.ranged && target.spec?.id === 'spear') damage *= 0.9;
     if (!magic && target.spec?.id === 'elephant') damage *= 0.88;
     if (!target.side && rounds <= 2) {
