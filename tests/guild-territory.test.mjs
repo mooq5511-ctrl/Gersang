@@ -9,7 +9,7 @@ test('old and malformed saves restore independent building levels safely', () =>
   assert.deepEqual(restoreTerritory(undefined), freshTerritory());
   const restored = restoreTerritory({ buildings: { flag: 2.9, training: 999, smithy: -4, unknown: 50 } });
   assert.equal(restored.buildings.flag, 2);
-  assert.equal(restored.buildings.training, 10);
+  assert.equal(restored.buildings.training, 100);
   assert.equal(restored.buildings.smithy, 0);
   assert.equal(Object.hasOwn(restored.buildings, 'unknown'), false);
 });

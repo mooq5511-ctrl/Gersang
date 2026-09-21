@@ -1,11 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import ts from 'typescript';
 import {positionInventory,inventoryGrid,addInventoryItem} from '../app/inventory-layout.ts';
 import {emptyEquipmentSlots,equipFromInventory,unequipToInventory} from '../app/equipment-slots.ts';
 import {rollInventoryLoot} from '../app/inventory-loot.ts';
 import {DIVINE_EQUIPMENT} from '../app/divine-equipment.ts';
 import {heroPersonalPower,HERO_INITIAL_ATTRIBUTES} from '../app/hero-rules.ts';
+import {normalizeVitals,vitalStats} from '../app/vitals-engine.ts';
+const progressionSource=readFileSync(new URL('../app/game-progression.ts',import.meta.url),'utf8');
+const progressionCode=progressionSource.slice(progressionSource.indexOf('export function grantXp'),progressionSource.indexOf('export function grantTerritoryXp')).replace(/^export /gm,'');
+const progression=vm.createContext({vitalStats,xpNeed:()=>100,LEVEL_CAP:300});
+vm.runInContext(ts.transpileModule(progressionCode,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,progression);
+const actionSource=readFileSync(new URL('../app/game-inventory-actions.ts',import.meta.url),'utf8');
+const actionCode=actionSource.slice(actionSource.indexOf('export function equipInventoryItemAction'),actionSource.indexOf('type GrantXp =')) .replace(/^export /gm,'');
+const actions=vm.createContext({equipFromInventory,unequipToInventory,normalizeVitals,addLog:(logs,message)=>[message,...logs]});
+vm.runInContext(ts.transpileModule(actionCode,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,actions);
 const item=(id,bagSlot,slot='weapon')=>({uid:id,bagSlot,slot});
 const hero=()=>({...HERO_INITIAL_ATTRIBUTES,level:1,equip:emptyEquipmentSlots()});
 test('list mode compacts old holes and appends new drops',()=>{
@@ -57,10 +68,20 @@ test('50 percent boundary and all four equal drop intervals are supported',()=>{
   assert.deepEqual(DIVINE_EQUIPMENT.helmet.bonus,{str:0,agi:10,vit:30,intel:0});
   assert.deepEqual(DIVINE_EQUIPMENT.boots.bonus,{str:15,agi:40,vit:0,intel:0});
 });
-test('game simulation always grants XP and grid controls target hero not selected merc',()=>{
-  const source=readFileSync(new URL('../app/game-v15.tsx',import.meta.url),'utf8');
-  assert.match(source,/hero:grantXp\(previous.hero,100\),inventory:pickup.inventory/);
-  assert.match(source,/equipItem\(itemUid,undefined,'hero'\)/);assert.match(source,/unequipItem\(slot,'hero'\)/);
-  assert.match(source,/inventory:positionInventory\(next.inventory\)/);
-  assert.doesNotMatch(source,/toggleHeroDivine/);
+test('XP awards level the hero and inventory actions honor their explicit target',()=>{
+  const gameHero={uid:'hero',templateId:'hero',level:1,xp:0,points:0,vit:20,intel:10,maxHp:100,hp:80,mp:40,equip:emptyEquipmentSlots()};
+  const leveled=progression.grantXp(gameHero,100);
+  assert.equal(leveled.level,gameHero.level+1);
+  const gear={...DIVINE_EQUIPMENT.staff,uid:'hero-staff',bagSlot:0};
+  const game={hero:gameHero,mercs:[],inventory:[gear],logs:[]};
+  const heroEquipped=actions.equipInventoryItemAction(game,gear.uid,undefined,'hero',actions.addLog);
+  assert.equal(heroEquipped.hero.equip.weapon.uid,gear.uid);
+  const merc={...gameHero,uid:'merc-test',templateId:'merchant-spear',name:'測試傭兵'};
+  game.mercs=[merc];
+  const mercEquipped=actions.equipInventoryItemAction(game,gear.uid,undefined,merc.uid,actions.addLog);
+  assert.equal(mercEquipped.mercs[0].equip.weapon.uid,gear.uid);
+  assert.equal(mercEquipped.hero.equip.weapon,null);
+  const removed=actions.unequipInventoryItemAction(mercEquipped,'weapon',merc.uid,actions.addLog);
+  assert.equal(removed.mercs[0].equip.weapon,null);
+  assert.equal(removed.inventory[0].uid,gear.uid);
 });

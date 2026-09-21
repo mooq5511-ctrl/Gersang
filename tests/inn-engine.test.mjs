@@ -6,6 +6,15 @@ import ts from 'typescript';
 import {goToInn,leaveInn,recoverAtInn,payInn} from '../app/inn-engine.ts';
 import {vitalStats} from '../app/vitals-engine.ts';
 
+const progressionSource=readFileSync(new URL('../app/game-progression.ts',import.meta.url),'utf8');
+const grantCode=progressionSource.slice(progressionSource.indexOf('export function grantXp'),progressionSource.indexOf('export function grantTerritoryXp')).replace(/^export /gm,'');
+const progression=vm.createContext({vitalStats,xpNeed:()=>100,LEVEL_CAP:300});
+vm.runInContext(ts.transpileModule(grantCode,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,progression);
+const runtimeSource=readFileSync(new URL('../app/game-runtime-actions.ts',import.meta.url),'utf8');
+const runtimeCode=runtimeSource.slice(runtimeSource.indexOf('export function appendGameLog'),runtimeSource.indexOf('export function enemyMaxForStage'))+runtimeSource.slice(runtimeSource.indexOf('export function leaveGameInnAction'));
+const runtime=vm.createContext({vitalStats,leaveInn,payInn,recoverVitals:unit=>unit,freshDungeon:()=>({status:'idle'})});
+vm.runInContext(ts.transpileModule(runtimeCode.replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,runtime);
+
 test('goToInn sets status and schedules the first ten HP heal in two seconds',()=>{
  const entered=goToInn({hp:0,maxHp:100,status:'正常'},1000);
  assert.deepEqual(entered,{player:{hp:0,maxHp:100,status:'客棧中'},nextHealAt:3000});
@@ -28,12 +37,8 @@ test('payInn charges exactly two gold per missing HP and reports shortage',()=>{
 });
 
 test('hero level-up adds twenty base max HP and immediately fills it',()=>{
- const source=readFileSync(new URL('../app/game-v15.tsx',import.meta.url),'utf8');
- const code=source.slice(source.indexOf('function grantXp'),source.indexOf('function affixMultiplier'));
- const context=vm.createContext({vitalStats,xpNeed:level=>80+level*22});
- vm.runInContext(ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
  const hero={uid:'hero',templateId:'hero',level:1,xp:0,points:0,vit:20,intel:10,maxHp:100,hp:1,mp:1,equip:{}};
- const leveled=context.grantXp(hero,102);
+ const leveled=progression.grantXp(hero,100);
  assert.equal(leveled.level,2);assert.equal(leveled.maxHp,120);assert.equal(leveled.hp,120);assert.equal(leveled.points,5);
 });
 
@@ -43,7 +48,12 @@ test('published interface contains the requested HP and inn controls',()=>{
 });
 
 test('manual inn healing accepts recovering battle state and is not blocked as busy',()=>{
- const source=readFileSync(new URL('../app/game-v15.tsx',import.meta.url),'utf8');
- assert.match(source,/previous\.hero\.status==='客棧中'\|\|previous\.dungeon\?\.status==='recovering'/);
- assert.match(source,/if\(game\.hero\.status==='客棧中'\|\|game\.dungeon\?\.status==='recovering'\)\{setGame\(payGameInn\);return;\}/);
+ const hero={uid:'hero',templateId:'hero',level:1,vit:20,intel:10,maxHp:100,hp:40,mp:20,status:'正常',equip:{}};
+ const entered={hero,gold:1000,mercs:[],dungeon:{status:'recovering',logs:[]},logs:[]};
+ const healed=runtime.payGameInnAction(entered);
+ assert.equal(healed.hero.status,'正常');
+ assert.equal(vitalStats(healed.hero).hp,vitalStats(healed.hero).maxHp);
+ assert.equal(healed.gold,1000-(vitalStats(entered.hero).maxHp-vitalStats(entered.hero).hp)*2);
+ assert.equal(healed.dungeon.status,'idle');
+ assert.equal(runtime.payGameInnAction(healed),healed);
 });
