@@ -35,14 +35,17 @@ test('switch cancels previous fight and pending spawn, retains cooldown and paus
 test('high-zone defeat returns to hanyang with no reward and blocks re-entry during healing',()=>{
  const h={hp:1,mp:40,maxHp:80,maxMp:40,str:20,dex:1,int:10,attack:0,defense:0,staff:false};
  const s=teleportDungeon(freshDungeon(),36,500,1000,'yellow-emperor-mausoleum');const r=dungeonStep(s,h,'tick',2000);
- assert.equal(r.state.zone,'hanyang');assert.equal(r.state.key,'e_raccoon');assert.equal(r.state.enemyHp,60);assert.equal(r.hp,0);assert.equal(r.reward,null);assert.equal(r.state.logs[0],'戰鬥失敗，已自動返回漢陽客棧療傷。');assert.equal(teleportDungeon(r.state,99,99999,2100,'datun-mountain'),r.state);
+ assert.equal(r.state.zone,'hanyang');assert.equal(r.state.key,'e_raccoon');assert.equal(r.state.enemyHp,60);assert.equal(r.hp,0);assert.equal(r.reward,null);assert.equal(r.state.logs[0],'戰鬥失敗，已自動返回漢陽客棧療傷。');assert.ok(r.state.logs.some(log=>/商隊全員倒下/.test(log)));assert.equal(teleportDungeon(r.state,99,99999,2100,'datun-mountain'),r.state);
 });
 test('stage drop rates are evaluated and returned with the victory reward',()=>{
  const h={hp:999,mp:40,maxHp:999,maxMp:40,str:999,dex:99,int:10,attack:0,defense:0,staff:false};
  const s=teleportDungeon(freshDungeon(),1,0,1000,'hanyang');
- const hit=dungeonStep(s,h,'normal',1001,undefined,0,0,0,0,[],0,[0,0,0]);
+ const party=[{uid:'hero',name:'測試主角',hp:999,maxHp:999,mp:40,maxMp:40,position:'前排',attack:100000,defense:1000,attackInterval:1.5}];
+ const started=dungeonStep(s,h,'tick',1001,undefined,.5,0,0,0,party,0,[0,0,0],false,0);
+ const hit=dungeonStep(started.state,h,'tick',1051,undefined,.5,0,0,0,party,0,[0,0,0],false,0);
  assert.deepEqual(hit.reward.materials,['舊斧頭','肉類']);
  assert.match(hit.state.logs[0],/噴寶/);
+ assert.equal(dungeonStep(hit.state,h,'tick',1101,undefined,.5,0,0,0,party,0,[0,0,0],false,0).reward,null);
 });
 function demo(){
  const nodes=new Map();
