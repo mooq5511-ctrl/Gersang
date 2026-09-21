@@ -55,7 +55,7 @@ AUTHORITATIVE_PATHS:
 - Current dungeon combat: `app/dungeon-engine.ts` + `app/realtime-battle-engine.js` + `app/battle-arena.tsx` + `app/dungeon-panel.tsx`.
 - Current monsters/drop metadata: `data/monsters/dungeon-monsters.ts` owns dungeon stats, legacy definitions, and ecology pools; `data/monsters/world-map-enemies.ts` owns map cards, localized drop lists, and each mapped card's stable DungeonKey. The legacy name→DungeonKey lookup is derived from those cards. `app/monster-ecology.ts` and `app/monster-ids.ts` are compatibility re-exports; `app/v17-content.ts` composes the two data sources into runtime map records.
 - Current team stats: `app/vitals-engine.ts`; hero total attributes/power/weight: `app/hero-rules.ts`; roster specs: `app/mercenary-roster.ts`.
-- Current equipment: runtime `Equipment` type inside `game-v15.tsx`; slots/transactions=`equipment-slots.ts`; base shop items=`v15-data.ts`+`wearable-catalog.ts`+`v17-content.ts`; mythics=`mythic-forge.ts`; fixed rare dungeon drops=`divine-equipment.ts`; visuals=`gersang-visuals.ts`.
+- Current equipment: runtime `Equipment` type inside `game-v15.tsx`; slots/transactions=`equipment-slots.ts`; base shop items=`v15-data.ts`+`wearable-catalog.ts`+`data/items/official-equipment.ts`; gems=`data/items/official-gems.ts`; mythics=`mythic-forge.ts`; fixed rare dungeon drops=`divine-equipment.ts`; visuals=`gersang-visuals.ts`.
 - Current maps: tab battle-map cards=`reference-data.ts.battleMaps`; 4-region/12-stage route model=`gersang-world-map.ts`; dungeon zone compatibility layer=`dungeon-engine.ts.WORLD_ZONES`; isometric town=`isometric-world-map.tsx`.
 - CSS cascade order: `layout.tsx` imports `globals.css -> trade.css -> caravan-status.css -> hero-status.css -> inventory.css -> dungeon.css -> classic-fusion.css -> battle-impact.css -> ability-panel.css -> classic-map-interface.css -> readability.css`; later files override earlier.
 
@@ -222,7 +222,10 @@ UI naming drift: Site metadata title in `layout.tsx`/Sites metadata may still sa
 |`app/dungeon-panel.tsx`,`dungeon.css`,`battle-impact.css`|Battle command/status/feed/stage styling.|
 |`data/monsters/dungeon-monsters.ts`|Authoritative dungeon monster stats, legacy definitions and ecology pools; `app/monster-ecology.ts` re-exports for compatibility.|
 |`data/monsters/world-map-enemies.ts`|Localized source monster cards/drops with stable dungeon IDs stored on each mapped card; derives the legacy name lookup.|
-|`app/v17-content.ts`|Composes monster data with runtime stats and owns official equipment/gems/contracts.|
+|`data/items/official-equipment.ts`,`data/items/official-gems.ts`|Official city-shop equipment and socket-gem definitions.|
+|`data/contracts/gameplay-contracts.ts`|Gameplay contract definitions and rewards.|
+|`data/mercenaries/awakening-profiles.ts`|Awakening stat/skill profiles.|
+|`app/v17-content.ts`|Composes monster data with runtime stats and re-exports legacy content entry points.|
 |`app/gersang-world-map.ts`|4 nation regions, city/stage/drop route data used by WORLD_ZONES and material price defaults.|
 |`app/reference-data.ts`|Battle map selection metadata + obsolete archive categories.|
 |`app/isometric-world-map.tsx`|Phaser/A* isometric city navigation; callbacks switch tabs.|
