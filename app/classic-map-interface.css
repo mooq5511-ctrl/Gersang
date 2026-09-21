@@ -73,7 +73,7 @@
 .classic-live-game .battle-sky { min-height:330px; }
 
 .classic-live-game .isometric-map-tab { padding:0; overflow:hidden; background:#315f63; }
-.isometric-world { position:relative; width:100%; height:100%; min-height:420px; overflow:hidden; background-color:#315f63; background-image:url("/assets/backgrounds/team-town-jl.webp"); background-size:cover; background-position:center; background-repeat:no-repeat; }
+.isometric-world { position:relative; width:100%; height:100%; min-height:420px; overflow:hidden; background-color:#315f63; background-image:url("/assets/backgrounds/castle-ruins.jpg"); background-size:cover; background-position:center; background-repeat:no-repeat; }
 .isometric-world-canvas { position:absolute; inset:0; z-index:1; }
 .isometric-world-canvas,.isometric-world-canvas canvas { display:block; width:100%!important; height:100%!important; background:transparent!important; }
 .isometric-world-heading { position:absolute; top:12px; left:14px; z-index:5; display:grid; grid-template-columns:auto auto; align-items:baseline; gap:0 8px; min-width:150px; padding:8px 11px; border:1px solid #a88d55; background:#0b1715dc; box-shadow:0 4px 14px #0008; pointer-events:none; }
@@ -310,7 +310,7 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
   margin: 0;
   overflow: hidden;
   border: 0;
-  background: linear-gradient(180deg,#15191030,#090b0870),url('/assets/backgrounds/team-town-jl.webp') center/cover no-repeat;
+  background: linear-gradient(180deg,#15191030,#090b0870),url('/assets/backgrounds/castle-ruins.jpg') center/cover no-repeat;
   box-shadow: none;
 }
 .classic-live-game::before { background:linear-gradient(180deg,#080b09aa 0%,transparent 18%,transparent 64%,#06090766 100%); }

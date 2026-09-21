@@ -153,8 +153,9 @@ export function IsometricWorldMap({
 
         private drawWorld() {
           this.children.removeAll();
+          const backgroundScale = Math.max(this.scale.width / TOWN_MAP_BACKGROUND.width, this.scale.height / TOWN_MAP_BACKGROUND.height);
           this.add.image(this.scale.width / 2, this.scale.height / 2, "town-background")
-            .setDisplaySize(this.scale.width, this.scale.height)
+            .setDisplaySize(TOWN_MAP_BACKGROUND.width * backgroundScale, TOWN_MAP_BACKGROUND.height * backgroundScale)
             .setDepth(-100);
           this.originX = this.scale.width / 2;
           this.originY = Math.max(36, (this.scale.height - ROWS * TILE_H) / 2 - 8);

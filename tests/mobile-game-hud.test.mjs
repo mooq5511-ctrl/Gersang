@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const ui = readFileSync(new URL('../app/game-v15.tsx', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('../app/classic-map-interface.css', import.meta.url), 'utf8');
+const mapConfig = readFileSync(new URL('../app/town-map-config.ts', import.meta.url), 'utf8');
 
 test('classic game HUD exposes the full resource strip and all ten requested features', () => {
   for (const label of ['切換角色', '雷霞祭壇', '市集', '港口', '城門', '世界地圖', '主角與隊伍', '裝備圖鑑', '冒險委託', '秘寶圖鑑', '設定']) {
@@ -23,4 +24,10 @@ test('mobile HUD preserves touch-sized controls and keeps music/map shortcuts ou
   assert.match(styles, /\.classic-live-game \.isometric-destinations \{ display:none; \}/);
   assert.match(styles, /\.classic-live-game\s*>\s*\.scene-music-toggle\s*\{\s*position:fixed!important/);
   assert.match(styles, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+});
+
+test('the user-provided castle ruins artwork is wired as a proportion-preserving town backdrop', () => {
+  assert.equal(existsSync(new URL('../public/assets/backgrounds/castle-ruins.jpg', import.meta.url)), true);
+  assert.match(mapConfig, /src:\s*"\/assets\/backgrounds\/castle-ruins\.jpg"/);
+  assert.match(styles, /background-image:url\("\/assets\/backgrounds\/castle-ruins\.jpg"\)/);
 });

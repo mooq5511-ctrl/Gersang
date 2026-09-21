@@ -1,4 +1,4 @@
-/** Background-space coordinates for the Edo/isometric town artwork. */
+/** Background-space coordinates for the interactive town layer. */
 export type TownHotspotKind = "destination" | "npc" | "building";
 
 export interface TownHotspot {
@@ -15,9 +15,9 @@ export interface TownHotspot {
 export const TOWN_GRID_SIZE = 20 as const;
 
 export const TOWN_MAP_BACKGROUND = {
-  src: "/assets/backgrounds/team-town-jl.webp",
-  width: 1024,
-  height: 768,
+  src: "/assets/backgrounds/castle-ruins.jpg",
+  width: 392,
+  height: 220,
 } as const;
 
 /** Add new NPCs/buildings here; coordinates stay stable across responsive sizes. */
