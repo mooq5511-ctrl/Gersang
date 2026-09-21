@@ -20,7 +20,7 @@ export function grantXp<T extends Unit | Hero>(unit: T, amount: number): T {
 }
 
 export function grantTerritoryXp<T extends Unit | Hero>(game: GameState, unit: T, amount: number): T {
-  return grantXp(unit, Math.floor(amount * (1 + territoryBonus(game.territory, "xp"))));
+  return grantXp(unit, amount * (1 + territoryBonus(game.territory, "xp")));
 }
 
 export function grantCreditXp(game: GameState, amount: number): GameState {

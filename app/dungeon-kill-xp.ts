@@ -5,3 +5,10 @@ export function newlyDefeatedExperience(previousCredited: number, enemyHp: reado
   const kills = Math.max(0, defeated - credited);
   return { creditedKills: Math.max(credited, defeated), kills, xp: kills * xpPerEnemy };
 }
+
+/** Divide earned battle XP evenly without discarding a full party's remainder. */
+export function sharedBattleExperience(totalXp: number, partySize: number) {
+  const earned = Number.isFinite(totalXp) ? Math.max(0, totalXp) : 0;
+  const members = Number.isFinite(partySize) ? Math.max(1, Math.floor(partySize)) : 1;
+  return earned / members;
+}
