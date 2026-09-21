@@ -3,11 +3,24 @@ import assert from 'node:assert/strict';
 import { RealtimeBattleSystem } from '../app/realtime-battle-engine.js';
 import { calculateDamage, dungeonStep, freshDungeon, normalEncounterCount } from '../app/dungeon-engine.ts';
 
+const testParty = (size, attack = 1) => Array.from({ length: size }, (_, index) => ({
+  uid: index === 0 ? 'hero' : `merc-${index}`,
+  name: '測試隊員',
+  hp: 1e8,
+  maxHp: 1e8,
+  mp: 0,
+  maxMp: 0,
+  position: '前排',
+  attack,
+  defense: 0,
+  attackInterval: 1,
+}));
+
 test('normal encounter size is one through twelve, while bosses stay solo', () => {
   const hero = { hp: 1e8, maxHp: 1e8, mp: 0, maxMp: 0, str: 1, dex: 1,
     mercenaryIntelligence: 0, attack: 1, defense: 0, staff: false };
-  const start = (key, countRoll) => dungeonStep(freshDungeon(), hero, 'start', 1000, key,
-    .99, 0, 0, 0, [], 0, [1, 1, 1], false, countRoll).state;
+  const start = (key, countRoll, partySize = 12) => dungeonStep(freshDungeon(), hero, 'start', 1000, key,
+    .99, 0, 0, 0, testParty(partySize), 0, [1, 1, 1], false, countRoll).state;
   assert.equal(normalEncounterCount(0), 1);
   assert.equal(normalEncounterCount(.5), 7);
   assert.equal(normalEncounterCount(.999999), 12);
@@ -16,6 +29,9 @@ test('normal encounter size is one through twelve, while bosses stay solo', () =
     assert.equal(battle.enemyCount, expected);
     assert.equal(battle.realtime.enemies.length, expected);
   }
+  assert.equal(normalEncounterCount(.999999, 1), 1);
+  assert.equal(normalEncounterCount(.999999, 4), 4);
+  assert.equal(start('e_starter_raccoon', .999999, 1).realtime.enemies.length, 1);
   assert.equal(start('e_starter_pirate_king', .999999).realtime.enemies.length, 1);
 });
 
@@ -23,12 +39,12 @@ test('next normal wave samples a new encounter size', () => {
   const hero = { hp: 1e8, maxHp: 1e8, mp: 0, maxMp: 0, str: 1, dex: 1,
     mercenaryIntelligence: 0, attack: 1e9, defense: 0, staff: false };
   const first = dungeonStep(freshDungeon(), hero, 'start', 1000, 'e_starter_raccoon',
-    .99, 0, 0, 0, [], 0, [1, 1, 1], false, 0).state;
+    .99, 0, 0, 0, testParty(12, 1e9), 0, [1, 1, 1], false, 0).state;
   assert.equal(first.enemyCount, 1);
-  const settled = dungeonStep(first, hero, 'tick', 1050);
+  const settled = dungeonStep(first, hero, 'tick', 1050, undefined, .99, 0, 0, 0, testParty(12, 1e9));
   assert.equal(settled.state.status, 'respawning');
   const next = dungeonStep(settled.state, hero, 'tick', 1550, undefined,
-    .99, 0, 0, 0, [], 0, [1, 1, 1], false, .999999).state;
+    .99, 0, 0, 0, testParty(12, 1e9), 0, [1, 1, 1], false, .999999).state;
   assert.equal(next.enemyCount, 12);
   assert.equal(next.realtime.enemies.length, 12);
 });
@@ -37,12 +53,12 @@ test('normal monster experience scales with defeated count and pays once', () =>
   const hero = { hp: 1e8, maxHp: 1e8, mp: 0, maxMp: 0, str: 1, dex: 1,
     mercenaryIntelligence: 0, attack: 1e9, defense: 0, staff: false };
   const started = dungeonStep(freshDungeon(), hero, 'start', 1000, 'e_lake_red_thief',
-    .99, 0, 0, 0, [], 0, [1, 1, 1], false, .2);
+    .99, 0, 0, 0, testParty(12, 1e9), 0, [1, 1, 1], false, .2);
   assert.equal(started.state.enemyCount, 3);
-  const settled = dungeonStep(started.state, hero, 'tick', 10000);
+  const settled = dungeonStep(started.state, hero, 'tick', 10000, undefined, .99, 0, 0, 0, testParty(12, 1e9));
   assert.equal(settled.state.status, 'respawning');
   assert.equal(settled.reward.xp, 25 * 3);
-  assert.equal(dungeonStep(settled.state, hero, 'tick', 10050).reward, null);
+  assert.equal(dungeonStep(settled.state, hero, 'tick', 10050, undefined, .99, 0, 0, 0, testParty(12, 1e9)).reward, null);
 });
 
 const unit = (id, side, row, col, overrides = {}) => ({

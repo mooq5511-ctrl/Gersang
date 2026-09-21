@@ -16,7 +16,7 @@ export type DungeonKey=keyof typeof DUNGEONS;
 /** 劇情首領以單體戰鬥呈現，其餘遭遇維持 12 格部隊。 */
 export const isBossMonster=(name?:string)=>name==='海賊王'||name==='狂風阿魯塔'||name==='黃金海星'||name==='狂虎'||name==='多聞天王'||name==='廣目天王';
 /** One uniform roll per normal encounter; bosses always spawn alone. */
-export const normalEncounterCount=(roll:number)=>1+Math.min(11,Math.floor(Math.max(0,Number.isFinite(roll)?roll:0)*12));
+export const normalEncounterCount=(roll:number,partySize=12)=>{const limit=Math.min(12,Math.max(1,Math.floor(Number.isFinite(partySize)?partySize:12))),sample=Math.max(0,Math.min(.999999999,Number.isFinite(roll)?roll:0));return 1+Math.min(limit-1,Math.floor(sample*limit))};
 /** 地圖資料是畫面鎖定與實際傳送的唯一來源；等級、戰鬥力兩條件必須同時滿足。 */
 export const WORLD_ZONES=[
  {id:'hanyang',nation:'korea',name:gersangWorldMap.korea.stages[0].name,level:1,power:0,enemy:'e_raccoon',mood:'朝鮮 · 漢陽城外',loot:gersangWorldMap.korea.stages[0].monster.drops.map(drop=>drop.item).join('、'),dropTable:gersangWorldMap.korea.stages[0].monster.drops},
@@ -96,7 +96,7 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   const occupied=new Set<string>();
   const formationPoint=(member:DungeonPartyMember,index:number)=>{const columns=member.position==='前排'?[3,2,1,0]:member.position==='後排'?[0,1,2,3]:[2,1,3,0],firstRow=index%3,rows=[firstRow,...[0,1,2].filter(row=>row!==firstRow)];for(const col of columns)for(const row of rows){const key=row+':'+col;if(!occupied.has(key)){occupied.add(key);return{row,col}}}return{row:Math.floor(index/4),col:index%4}};
  const playerUnits=members.slice(0,12).map((member,index)=>({id:member.uid,side:'player',templateId:member.templateId||'',hp:member.hp,maxHp:member.maxHp,atk:Math.max(1,member.attack||hero.attack),def:Math.max(0,member.defense||0),magicDef:Math.max(0,member.defense||0),physicalResist:member.physicalResist||0,magicResist:member.magicResist||0,attackInterval:member.attackInterval||1.5,cooldown:0,mp:member.uid==='hero'?mp:member.mp||0,maxMp:member.maxMp||100,accuracy:member.accuracy??1,ranged:mercenarySpec(member.templateId)?.ranged??true,formationPosition:member.position,amaterasuGaze:member.uid==='hero'&&hero.amaterasuGaze===true,generalSkillName:member.templateId?.startsWith('general-')?member.skill:undefined,skillPower:member.uid==='hero'?5000+hero.mercenaryIntelligence*10:Math.max(1,(member.attack||hero.attack)*2),position:formationPoint(member,index)}));
-  const e=enemy();const boss=isBossMonster(e.name);const enemyCount=boss?1:normalEncounterCount(encounterCountRoll);state.enemyCount=enemyCount;state.creditedKills=0;
+  const e=enemy();const boss=isBossMonster(e.name);const enemyCount=boss?1:normalEncounterCount(encounterCountRoll,Math.min(12,members.length));state.enemyCount=enemyCount;state.creditedKills=0;
   const physicalDefense='physicalDefense' in e&&typeof e.physicalDefense==='number'?e.physicalDefense:0;
   const magicDefense='magicDefense' in e&&typeof e.magicDefense==='number'?e.magicDefense:physicalDefense;
   const enemyUnits=Array.from({length:enemyCount},(_,index)=>({id:`enemy-${index+1}`,side:'enemy',hp:e.hp,maxHp:e.hp,atk:e.atk,def:Math.max(0,physicalDefense),magicDef:Math.max(0,magicDefense),attackInterval:Math.max(.6,2.2-e.dex/100),cooldown:0,mp:index===0?Math.min(100,e.mp):0,boss,kind:/騎/.test(e.name)?'cavalry':/虎|狼|熊|鹿|獸|龜|蛇|狐|馬/.test(e.name)?'beast':'human',poisonAttack:/毒|蛇|蠍/.test(e.name),magicAttack:/術|巫|法/.test(e.name),ranged:/弓|砲|槍|法|術|巫/.test(e.name),position:boss?{row:1,col:1}:{row:Math.floor(index/4),col:index%4}}));

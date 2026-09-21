@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {dungeonStep,freshDungeon,DUNGEONS,WORLD_ZONES,normalEncounterCount} from '../app/dungeon-engine.ts';
 
 const hero={hp:100000,maxHp:100000,mp:40,maxMp:40,str:20,dex:15,mercenaryIntelligence:0,attack:10,defense:100,staff:false};
-const start=(key='e_raccoon',count=.999999)=>dungeonStep(freshDungeon(),hero,'start',1000,key,.99,0,0,0,[],0,[1,1,1],false,count);
+const party=size=>Array.from({length:size},(_,index)=>({uid:index===0?'hero':`merc-${index}`,name:'測試隊員',hp:hero.hp,maxHp:hero.maxHp,mp:hero.mp,maxMp:hero.maxMp,position:'前排',attack:hero.attack,defense:hero.defense,attackInterval:1}));
+const start=(key='e_raccoon',count=.999999,members=[])=>dungeonStep(freshDungeon(),hero,'start',1000,key,.99,0,0,0,members,0,[1,1,1],false,count);
 
 test('world-map zones resolve to valid data-backed encounter pools',()=>{
  assert.equal(WORLD_ZONES.length,12);
@@ -12,8 +13,9 @@ test('world-map zones resolve to valid data-backed encounter pools',()=>{
 });
 
 test('normal encounters scale from one to twelve enemies and bosses remain solo',()=>{
- assert.deepEqual([0,.5,.999999].map(normalEncounterCount),[1,7,12]);
- assert.equal(start('e_raccoon',.5).state.realtime.enemies.length,7);
+ assert.deepEqual([0,.5,.999999].map(roll=>normalEncounterCount(roll)),[1,7,12]);
+ assert.equal(start('e_raccoon',.5,party(12)).state.realtime.enemies.length,7);
+ assert.equal(start('e_raccoon',.999999,party(1)).state.realtime.enemies.length,1);
  assert.equal(start('e_lake_gale_altur').state.realtime.enemies.length,1);
 });
 
