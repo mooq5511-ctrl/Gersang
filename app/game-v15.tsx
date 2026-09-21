@@ -20,6 +20,8 @@ import {
   Castle,
   Coins,
   Crown,
+  Eye,
+  EyeOff,
   Gem,
   HeartPulse,
   Map,
@@ -113,6 +115,15 @@ const slotLabels = EQUIPMENT_LABELS;
 const FIRST_CARAVAN_QUEST_ID = "npc-first-caravan-delivery";
 const FIRST_CARAVAN_TARGET = 3;
 const mapFeatureIcons: Record<string, string> = { field: "🌾", lake: "🌊", sea: "⚓", forest: "🌲", ice: "❄️", desert: "☀️", sumeru: "⛰️", shambhala: "🏯" };
+const DEFAULT_BATTLE_PANEL_VISIBILITY = { partyVitals: true, mapNavigation: true, monsterSelection: true, battlefield: true, battleLogs: true };
+type BattlePanelVisibility = typeof DEFAULT_BATTLE_PANEL_VISIBILITY;
+const BATTLE_PANEL_LABELS: Array<[keyof BattlePanelVisibility, string]> = [
+  ["partyVitals", "出戰隊伍"],
+  ["mapNavigation", "地圖瀏覽"],
+  ["monsterSelection", "怪物選擇"],
+  ["battlefield", "戰鬥畫面"],
+  ["battleLogs", "戰鬥紀錄"],
+];
 
 function currentTimestamp() {
   return Date.now();
@@ -121,6 +132,7 @@ function currentTimestamp() {
 export default function GameV15() {
   const [game, rawSetGame] = useState<GameState>(freshGame);
   const [activeTab, setActiveTab] = useState("map");
+  const [battlePanelVisibility, setBattlePanelVisibility] = useState<BattlePanelVisibility>(DEFAULT_BATTLE_PANEL_VISIBILITY);
   const [squadDestination, setSquadDestination] = useState<{ key: number; window?: 'inventory' | 'territory' }>({ key: 0 });
   // 所有存檔與取得路徑共用格位整理：保留已有位置與超額舊物，不截斷陣列。
   const setGame=useCallback((action:GameState|((previous:GameState)=>GameState))=>rawSetGame(previous=>{
@@ -772,14 +784,26 @@ export default function GameV15() {
         </TabsContent>
 
         <TabsContent value="battle" className="tab-panel">
-          <section className="panel party-vitals">
+          <section className="battle-panel-visibility" aria-label="戰鬥頁面區塊顯示">
+            <strong>畫面區塊</strong>
+            <div>
+              {BATTLE_PANEL_LABELS.map(([key, label]) => {
+                const visible = battlePanelVisibility[key];
+                return <button key={key} type="button" role="switch" aria-checked={visible} aria-label={`${visible ? '隱藏' : '顯示'}${label}`} className={visible ? 'active' : ''} onClick={() => setBattlePanelVisibility(previous => ({ ...previous, [key]: !previous[key] }))}>
+                  {visible ? <Eye aria-hidden="true" /> : <EyeOff aria-hidden="true" />}
+                  <span>{label}</span><small>{visible ? '顯示' : '隱藏'}</small>
+                </button>;
+              })}
+            </div>
+          </section>
+          {battlePanelVisibility.partyVitals && <section className="panel party-vitals">
             <div className="panel-title"><Users /><h2>出戰隊伍</h2><span>簡易數值</span></div>
             <div className="combat-stat-pair"><span>出戰人數 <b>{1 + activeUnits.length}</b></span><span>總戰力 <b>{format(unitPower(game.hero) + activeUnits.reduce((sum, unit) => sum + unitPower(unit), 0))}</b></span><span>總力量 <b>{format([game.hero,...activeUnits].reduce((sum,unit)=>sum+heroTotalAttributes(unit).str,0))}</b></span><span>總智力 <b>{format([game.hero,...activeUnits].reduce((sum,unit)=>sum+heroTotalAttributes(unit).intel,0))}</b></span></div>
-          </section>
+          </section>}
           <section className="panel battle-map-panel">
             {import.meta.env.DEV&&<button type="button" className="battle-map-test-unlock" onClick={()=>setGame(previous=>({...previous,stage:Math.max(previous.stage,...battleMaps.map(map=>map.unlockStage)),newbieBossDefeated:true,lakeBossDefeated:true,goldenStarfishDefeated:true,logs:addLog(previous.logs,'測試模式：已解鎖全部戰鬥地圖。')}))}>測試用・解鎖全部地圖</button>}
             <header className="battle-world-map-header"><div><small>東方商路</small><h2>世界地圖</h2><p>選擇已解鎖的區域後，即可指定怪物並持續戰鬥。</p></div><div className="battle-world-map-tools"><span>目前：{currentMap.name}</span><MonsterCompendium /></div></header>
-            <nav className="battle-map-selector" aria-label="世界地圖清單">
+            {battlePanelVisibility.mapNavigation && <nav className="battle-map-selector" aria-label="世界地圖清單">
               {battleMaps.map((map) => {
                 const { unlocked, requirement } = mapGate(map);
                 return <button type="button" key={map.id} className={'battle-map-card map-theme-'+map.theme+' '+(currentMap.id === map.id ? 'active ' : '')+(unlocked ? '' : 'locked')} disabled={!unlocked} onClick={() => selectBattleMap(map.id)}>
@@ -787,8 +811,8 @@ export default function GameV15() {
                   <span className="battle-map-card-copy"><small>{map.region}</small><strong>{map.name}</strong><em>{currentMap.id === map.id ? '目前位置' : unlocked ? '選擇地圖' : requirement}</em></span>
                 </button>;
               })}
-            </nav>
-            <div className="battle-world-map" aria-label="世界地圖戰鬥區域">
+            </nav>}
+            {battlePanelVisibility.mapNavigation && <div className="battle-world-map" aria-label="世界地圖戰鬥區域">
               <span className="world-route route-one"/><span className="world-route route-two"/><span className="world-route route-three"/>
               {battleMaps.map((map) => {
                 const { unlocked, requirement } = mapGate(map);
@@ -798,18 +822,18 @@ export default function GameV15() {
                   <span className="map-node-orb"/><span className="map-node-copy"><small>{map.region}</small><strong>{map.name}</strong><em>{currentMap.id === map.id ? "遠征中" : unlocked ? "前往" : requirement}</em></span>
                 </button>;
               })}
-            </div>
+            </div>}
             <p className="battle-world-map-description">{currentMap.region}・{currentMap.description}　生命 ×{currentMap.hpMultiplier}・金錢 ×{currentMap.goldMultiplier}</p>
             {TIER_EQUIPMENT_DROP_REGIONS.filter(region => region.mapId === currentMap.id).map(region => <p key={region.id} className="battle-world-map-description">本區怪物掉落：Lv.{region.tiers.join('／Lv.')} 系列裝備（達到對應等級後可掉落；一般 4%、首領 12%）</p>)}
-            {sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・依關卡輪替"}</strong></div><span>點選卡片即可開始自動戰鬥</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id).map(enemy => { const bossLocked = enemy.name === '海賊王' && !firstCaravanBossReady; return <button type="button" key={enemy.name} disabled={bossLocked} className={(game.selectedMonster === enemy.name ? "active " : "")+(enemy.boss ? "boss-target" : "")} onClick={() => setGame(previous => { const key=enemy.dungeonId; const base={...previous,selectedMonster:enemy.name,enemyHp:enemy.hp||previous.enemyHp,dungeon:key?{...freshDungeon(),key,lockedEnemyKey:key,enemyHp:DUNGEONS[key].hp}:previous.dungeon,logs:addLog(previous.logs,`${enemy.boss?'首領挑戰：':'指定遭遇怪物：'}${enemy.name}，自動開始持續戰鬥。`)}; return key ? runDungeonAction(base,'start',Date.now(),key,{roll:Math.random(),choice:Math.random(),spawnRoll:0,encounterCountRoll:Math.random(),retaliationRoll:Math.random(),materialRolls:[Math.random(),Math.random(),Math.random()],fusionCoreRoll:Math.random()},{addLog,grantXp,enterInn:enterGameInn,leaveInn:leaveGameInn}) : base; })}>{bossMonsterArt[enemy.name]&&<img className="monster-choice-art" src={bossMonsterArt[enemy.name]} alt={`${enemy.name}插圖`}/>}<div><strong>{enemy.name}</strong><em>{bossLocked ? '完成第一輪成長後開放' : enemy.boss ? (game.newbieBossDefeated?"已討伐・可再戰":"首領挑戰") : game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>MP <b>{enemy.mp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>{bossLocked ? '條件：完成第一份委託、Lv.20、驛站與第一件綠裝。' : `掉落：${enemy.drops.join("、")}`}</p></button>; })}</div></section>}
-            <DungeonPanel hero={game.hero} party={[game.hero,...game.mercs.filter(unit=>game.active.includes(unit.uid)).slice(0,11)]} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} autoSkill={game.autoSkill} toggleAutoSkill={()=>setGame(previous=>({...previous,autoSkill:!previous.autoSkill,logs:addLog(previous.logs,previous.autoSkill?'已關閉技能自動施放。':'已開啟技能自動施放。')}))} mapName={currentMap.name} mapRegion={currentMap.region} medicineQuickbar={<div className="battle-medicine-float" aria-label="隨身藥袋">{medicineCatalog.filter(medicine=>medicine.id==='healing'||medicine.id==='mana').map(medicine=>{const medicineKey=medicine.id as 'healing'|'mana'; const resource=medicineKey==='healing'?'HP':'MP'; return <div className="battle-medicine-item" key={medicine.id}><button type="button" disabled={!game.medicines[medicine.id]} onClick={()=>consumeMedicine(medicine.id)} title={`${medicine.name}：${medicine.effect}`}><Pill /><span>{medicine.name}</span><b>×{game.medicines[medicine.id]||0}</b></button><label title={`設定${medicine.name}自動使用門檻；0% 為關閉`}><small>{game.autoMedicine[medicineKey] ? `自動 ${resource} ≤` : '自動關閉'}</small><input aria-label={`${medicine.name}自動使用門檻`} type="number" min="0" max="99" value={game.autoMedicine[medicineKey]} onChange={event=>{const threshold=Math.min(99,Math.max(0,Math.floor(Number(event.target.value)||0)));setGame(previous=>({...previous,autoMedicine:{...previous.autoMedicine,[medicineKey]:threshold}}));}}/><span>%</span></label></div>;})}</div>} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()],gearDropRoll=Math.random(),gearChoiceRoll=Math.random();setGame(previous=>runDungeonAction(previous,action,now,key,{roll,choice,spawnRoll:0,encounterCountRoll:Math.random(),retaliationRoll,materialRolls,gearDropRoll,gearChoiceRoll},{addLog,grantXp,enterInn:enterGameInn,leaveInn:leaveGameInn}));}}/>
+            {battlePanelVisibility.monsterSelection && sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・依關卡輪替"}</strong></div><span>點選卡片即可開始自動戰鬥</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id).map(enemy => { const bossLocked = enemy.name === '海賊王' && !firstCaravanBossReady; return <button type="button" key={enemy.name} disabled={bossLocked} className={(game.selectedMonster === enemy.name ? "active " : "")+(enemy.boss ? "boss-target" : "")} onClick={() => setGame(previous => { const key=enemy.dungeonId; const base={...previous,selectedMonster:enemy.name,enemyHp:enemy.hp||previous.enemyHp,dungeon:key?{...freshDungeon(),key,lockedEnemyKey:key,enemyHp:DUNGEONS[key].hp}:previous.dungeon,logs:addLog(previous.logs,`${enemy.boss?'首領挑戰：':'指定遭遇怪物：'}${enemy.name}，自動開始持續戰鬥。`)}; return key ? runDungeonAction(base,'start',Date.now(),key,{roll:Math.random(),choice:Math.random(),spawnRoll:0,encounterCountRoll:Math.random(),retaliationRoll:Math.random(),materialRolls:[Math.random(),Math.random(),Math.random()],fusionCoreRoll:Math.random()},{addLog,grantXp,enterInn:enterGameInn,leaveInn:leaveGameInn}) : base; })}>{bossMonsterArt[enemy.name]&&<img className="monster-choice-art" src={bossMonsterArt[enemy.name]} alt={`${enemy.name}插圖`}/>}<div><strong>{enemy.name}</strong><em>{bossLocked ? '完成第一輪成長後開放' : enemy.boss ? (game.newbieBossDefeated?"已討伐・可再戰":"首領挑戰") : game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>MP <b>{enemy.mp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>{bossLocked ? '條件：完成第一份委託、Lv.20、驛站與第一件綠裝。' : `掉落：${enemy.drops.join("、")}`}</p></button>; })}</div></section>}
+            {battlePanelVisibility.battlefield && <DungeonPanel hero={game.hero} party={[game.hero,...game.mercs.filter(unit=>game.active.includes(unit.uid)).slice(0,11)]} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} autoSkill={game.autoSkill} toggleAutoSkill={()=>setGame(previous=>({...previous,autoSkill:!previous.autoSkill,logs:addLog(previous.logs,previous.autoSkill?'已關閉技能自動施放。':'已開啟技能自動施放。')}))} mapName={currentMap.name} mapRegion={currentMap.region} medicineQuickbar={<div className="battle-medicine-float" aria-label="隨身藥袋">{medicineCatalog.filter(medicine=>medicine.id==='healing'||medicine.id==='mana').map(medicine=>{const medicineKey=medicine.id as 'healing'|'mana'; const resource=medicineKey==='healing'?'HP':'MP'; return <div className="battle-medicine-item" key={medicine.id}><button type="button" disabled={!game.medicines[medicine.id]} onClick={()=>consumeMedicine(medicine.id)} title={`${medicine.name}：${medicine.effect}`}><Pill /><span>{medicine.name}</span><b>×{game.medicines[medicine.id]||0}</b></button><label title={`設定${medicine.name}自動使用門檻；0% 為關閉`}><small>{game.autoMedicine[medicineKey] ? `自動 ${resource} ≤` : '自動關閉'}</small><input aria-label={`${medicine.name}自動使用門檻`} type="number" min="0" max="99" value={game.autoMedicine[medicineKey]} onChange={event=>{const threshold=Math.min(99,Math.max(0,Math.floor(Number(event.target.value)||0)));setGame(previous=>({...previous,autoMedicine:{...previous.autoMedicine,[medicineKey]:threshold}}));}}/><span>%</span></label></div>;})}</div>} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()],gearDropRoll=Math.random(),gearChoiceRoll=Math.random();setGame(previous=>runDungeonAction(previous,action,now,key,{roll,choice,spawnRoll:0,encounterCountRoll:Math.random(),retaliationRoll,materialRolls,gearDropRoll,gearChoiceRoll},{addLog,grantXp,enterInn:enterGameInn,leaveInn:leaveGameInn}));}}/>}
           </section>
-          <div className="battle-grid">
+          {battlePanelVisibility.battleLogs && <div className="battle-grid">
             <section className="panel log-panel">
               <div className="panel-title"><BookOpen /><h2>商團與戰鬥紀錄</h2></div>
               <div className="log-list">{game.logs.map((log, index) => <p key={index}>{log}</p>)}</div>
             </section>
-          </div>
+          </div>}
         </TabsContent>
 
         <TabsContent value="raid" className="tab-panel">
