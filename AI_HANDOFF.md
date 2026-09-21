@@ -19,7 +19,7 @@ git_remote: github=https://github.com/mooq5511-ctrl/Gersang.git; origin=local hi
 deployment: OpenAI Sites project_id exists in .openai/hosting.json; Claude/other AI normally deploy elsewhere unless returned to Sites-enabled environment
 ```
 
-NONNEGOTIABLE: preserve old saves; never delete/rename storage keys without migration; keep `active` cap=11 mercs + hero=12; resting cap=10; equipment slots=8; dungeon enemies=12 clones; battle orientation=player-left/enemy-right; player front=`col3`, enemy front=`col0`; game data/assets may be user-provided/third-party—do not assume redistribution rights; do not commit `.env*`, build folders, tokens, credentials.
+NONNEGOTIABLE: preserve old saves; never delete/rename storage keys without migration; keep `active` cap=11 mercs + hero=12; resting cap=10; equipment slots=8; dungeon enemies=12 clones; battle orientation=enemy-top/player-bottom; player front=`col3`, enemy front=`col0`; game data/assets may be user-provided/third-party—do not assume redistribution rights; do not commit `.env*`, build folders, tokens, credentials.
 
 ## ALPHA_DEVELOPMENT_POLICY (2026-09-20)
 
@@ -53,7 +53,7 @@ AUTHORITATIVE_PATHS:
 
 - Root state/effects/UI wiring: `app/game-v15.tsx` (1906 LOC; monolith; most cross-system changes land here).
 - Current dungeon combat: `app/dungeon-engine.ts` + `app/realtime-battle-engine.js` + `app/battle-arena.tsx` + `app/dungeon-panel.tsx`.
-- Current monsters/drop metadata: `app/monster-ecology.ts` (Dungeon stats/pools) + `app/v17-content.ts` (`sourceEnemies`, map monster cards/drop names) + hard map name→DungeonKey map near top of `game-v15.tsx`. These are duplicated sources and must be synchronized.
+- Current monsters/drop metadata: `data/monsters/dungeon-monsters.ts` owns dungeon stats, legacy definitions, and ecology pools; `data/monsters/world-map-enemies.ts` owns map cards, localized drop lists, and each mapped card's stable DungeonKey. The legacy name→DungeonKey lookup is derived from those cards. `app/monster-ecology.ts` and `app/monster-ids.ts` are compatibility re-exports; `app/v17-content.ts` composes the two data sources into runtime map records.
 - Current team stats: `app/vitals-engine.ts`; hero total attributes/power/weight: `app/hero-rules.ts`; roster specs: `app/mercenary-roster.ts`.
 - Current equipment: runtime `Equipment` type inside `game-v15.tsx`; slots/transactions=`equipment-slots.ts`; base shop items=`v15-data.ts`+`wearable-catalog.ts`+`v17-content.ts`; mythics=`mythic-forge.ts`; fixed rare dungeon drops=`divine-equipment.ts`; visuals=`gersang-visuals.ts`.
 - Current maps: tab battle-map cards=`reference-data.ts.battleMaps`; 4-region/12-stage route model=`gersang-world-map.ts`; dungeon zone compatibility layer=`dungeon-engine.ts.WORLD_ZONES`; isometric town=`isometric-world-map.tsx`.
@@ -124,7 +124,7 @@ GameV15 applyDungeon(previous,action,...)
  -> fighters=[hero,...activeMercs<=11]
  -> dungeonStep(state, heroDTO, action, ..., partyDTO, ..., autoSkill)
 start: beginRealtime()
- -> map party semantic position to unique 3x4 player coords: front cols[3,2,1,0], mid[2,1,3,0], rear[0,1,2,3], rows distributed
+ -> map party semantic position to unique 3x4 player coords: front cols[3,2,1,0], mid[2,1,3,0], rear[0,1,2,3], rows distributed; rendered as enemy top/player bottom
  -> 12 enemy clones same monster at row=floor(i/4),col=i%4
  -> RealtimeBattleSystem.startBattle(): all 24 living actors snapshot targets and strike simultaneously at t=0
 tick: shared React interval calls settleMerchantGame; dungeon due every >=50ms; engine update(elapsedMs/1000)
@@ -152,7 +152,7 @@ Critical constants/current semantics:
 
 ### 3.2 realtime boss/status implementation
 
-`boss-abilities.ts` is the authoritative data source for realtime boss mechanics. `dungeonStep` applies them only through the active `MercenaryRealtimeBattleSystem`; do not re-enable legacy aggregate `hit/counter` paths or damage will be doubled. Boss effects, the 天照五件套恐懼、護盾、詛咒與最多三層灼燒 are snapshot-safe. `BattleArena` now converts active serialized effects into visible unit badges: shield, armor, fear, curse, burn stacks, poison and control. Future battle UI work should add cooldown/readiness display without deriving state from text logs.
+`data/skills/boss-abilities.ts` is the authoritative data source for realtime boss mechanics. `dungeonStep` applies them only through the active `MercenaryRealtimeBattleSystem`; do not re-enable legacy aggregate `hit/counter` paths or damage will be doubled. Boss effects, the 天照五件套恐懼、護盾、詛咒與最多三層灼燒 are snapshot-safe. `BattleArena` now converts active serialized effects into visible unit badges: shield, armor, fear, curse, burn stacks, poison and control. Future battle UI work should add cooldown/readiness display without deriving state from text logs.
 
 ### 3.3 legacy road combat
 
@@ -206,6 +206,7 @@ generals: app/game-data.ts defines five recruitable city generals; app/general-r
 material_trade: app/village-exchange.ts derives a positive fallback price for every v17 source-enemy drop, then overlays authored map and balance prices; bulk selling preserves unknown legacy items and ancient coin boxes
 npc_content: data/npcs/hanyang.ts owns all ten Hanyang NPC definitions, portrait positions, dialogue, quest objectives, rewards, and affinity gates; app/npc-dialogue.ts owns only types, lookup, progress, and persistence rules
 boss_abilities: data/skills/boss-abilities.ts owns realtime boss timing, damage, regeneration, curse, and burn values; dungeon-engine is the executor only
+monster_data: data/monsters/dungeon-monsters.ts owns dungeon monster stats, legacy dungeon definitions, and ecology pools; app/monster-ecology.ts preserves the previous import surface
 ```
 
 UI naming drift: Site metadata title in `layout.tsx`/Sites metadata may still say older V29/商途 text while user wants `放置你的巨商魂`. Audit all `<title>`, login title, header branding, manifest before next public release.
@@ -219,8 +220,9 @@ UI naming drift: Site metadata title in `layout.tsx`/Sites metadata may still sa
 |`app/dungeon-engine.ts`|Dungeon FSM + realtime adapter + rewards/recovery; contains obsolete aggregate battle closures.|
 |`app/battle-arena.tsx`|DOM sprites/event animations/monster image map/gridToPixel.|
 |`app/dungeon-panel.tsx`,`dungeon.css`,`battle-impact.css`|Battle command/status/feed/stage styling.|
-|`app/monster-ecology.ts`|DungeonKey monster definitions/pools incl starter/lake/japan-sea/white-tiger.|
-|`app/v17-content.ts`|Source monster cards/drops + official equipment/gems/contracts; separate from dungeon stats.|
+|`data/monsters/dungeon-monsters.ts`|Authoritative dungeon monster stats, legacy definitions and ecology pools; `app/monster-ecology.ts` re-exports for compatibility.|
+|`data/monsters/world-map-enemies.ts`|Localized source monster cards/drops with stable dungeon IDs stored on each mapped card; derives the legacy name lookup.|
+|`app/v17-content.ts`|Composes monster data with runtime stats and owns official equipment/gems/contracts.|
 |`app/gersang-world-map.ts`|4 nation regions, city/stage/drop route data used by WORLD_ZONES and material price defaults.|
 |`app/reference-data.ts`|Battle map selection metadata + obsolete archive categories.|
 |`app/isometric-world-map.tsx`|Phaser/A* isometric city navigation; callbacks switch tabs.|
@@ -275,8 +277,8 @@ NOT_PRESENT/server: accounts/cloud save/backend/database/multiplayer/anti-cheat/
 ```yaml
 production_build: PASS (`pnpm build`, 2026-09-09 baseline); warning=client chunk >500kB; route `/` classified unknown by vinext static analysis but worker deploy succeeded
 live_deploy: Sites version60 succeeded at live URL before AI_HANDOFF addition
-tests_2026-09-10: total153 pass125 fail28 duration~0.49s
-interpretation: test suite is not green largely because behavior intentionally changed (5→11 roster, random encounters→0, turn combat→12v12 realtime, price0 allowed, UI copy changed). Some failures expose real integration gaps. Do not blindly make code match stale assertions; classify each failure against current user ledger first.
+tests_2026-09-20: total235 pass207 fail28 duration~21s
+interpretation: test suite is not green largely because behavior intentionally changed (5→11 roster, random encounters→0, turn combat→12v12 realtime, price0 allowed, UI copy changed). The 28 failures remain concentrated in these retired expectations; do not blindly make code match stale assertions. Classify a failure against the current user ledger before changing gameplay.
 notable_failing_groups:
  - battle sprite textual expectations old atlas markers
  - roster/migration tests expect5/9/16 instead of11/12/19
@@ -292,7 +294,7 @@ Required next verification sequence after code changes: targeted tests for touch
 ## 9::NEXT_AI_BOOT_PROMPT
 
 ```text
-Read AI_HANDOFF.md, package.json, app/game-v15.tsx, app/dungeon-engine.ts, app/realtime-battle-engine.js, app/battle-arena.tsx first. Treat GameState+storage migrations as compatibility-critical. Current live combat is realtime snapshot engine; never add legacy hit/counter damage in parallel. Before editing, state which duplicated data sources must stay synchronized. Preserve 11 merc+hero, 12 enemy clones, left/right 3x4 targeting, local saves, current assets. First task should be either (A) integrate boss/status/Amaterasu abilities into realtime engine with serializable status/events/tests, or (B) reconcile stale tests with current accepted requirements. Run pnpm build. Never commit secrets. Push to private github/main only when authorized.
+Read AI_HANDOFF.md, package.json, app/game-v15.tsx, app/dungeon-engine.ts, app/realtime-battle-engine.js, app/battle-arena.tsx first. Treat GameState+storage migrations as compatibility-critical. Current live combat is realtime snapshot engine; never add legacy hit/counter damage in parallel. Before editing, state which duplicated data sources must stay synchronized. Preserve 11 merc+hero, 12 enemy clones, top/bottom 3x4 battle presentation, local saves, current assets. First task should be either (A) continue modularizing duplicated monster/drop/map content into data directories, or (B) reconcile stale tests with current accepted requirements. Run pnpm build. Never commit secrets. Push to private github/main only when authorized.
 ```
 
 ## 10::CHANGE_HISTORY_HINTS
