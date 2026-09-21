@@ -111,13 +111,12 @@ test('dungeon awards one reward for a completed realtime boss battle', () => {
     mercenaryIntelligence: 0, attack: 1e9, defense: 0, staff: false };
   const started = dungeonStep(freshDungeon(), hero, 'start', 1000, 'e_lake_gale_altur');
   assert.equal(started.state.realtime.winner, 'player');
-  const settled = dungeonStep(started.state, hero, 'tick', 1050);
-  assert.equal(settled.reward.xp, 250000);
-  assert.equal(settled.state.status, 'respawning');
-  assert.equal(settled.state.serial, started.state.serial + 1);
-  const repeated = dungeonStep(settled.state, hero, 'tick', 1100);
+  assert.equal(started.reward.xp, 250000);
+  assert.equal(started.state.status, 'respawning');
+  assert.equal(started.state.serial, freshDungeon().serial + 1);
+  const repeated = dungeonStep(started.state, hero, 'tick', 1050);
   assert.equal(repeated.reward, null);
-  assert.equal(repeated.state.serial, settled.state.serial);
+  assert.equal(repeated.state.serial, started.state.serial);
 });
 
 test('tiger slow and bleed expire during realtime combat', () => {

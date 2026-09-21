@@ -113,6 +113,7 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   const totalXp=e.xp*defeatedCount;
   reward={xp:totalXp,gold:0,loot:rareIndex<uniqueLoot.length?uniqueLoot[rareIndex]:null,materials};
   log('成功擊敗 '+defeatedCount+' 隻'+e.name+'！獲得 '+totalXp+' 經驗。');if(materials.length)log('🎁 噴寶：獲得【'+materials.join('】、【')+'】！')};
+ const settleRealtimeOutcome=()=>{if(state.status!=='fighting')return;const outcome=(state as unknown as {realtime?:RealtimeBattleSnapshot}).realtime?.winner;if(outcome==='player')victory();else if(outcome==='enemy'||outcome==='draw')recover()};
  const runBossAbilities=(combat:MercenaryRealtimeBattleSystem)=>{const abilities=bossAbilitiesFor(state.key),boss=combat.enemies[0];if(!abilities||state.status!=='fighting'||!boss?.alive||combat.winner)return;
   type BurnState={stacks:number;until:number;next:number};type BossRuntime={cooldowns?:Record<string,number>;burns?:Record<string,BurnState>;eventCursor?:number};const bossWithState=boss as typeof boss&{state:{bossRuntime?:BossRuntime}};
   const runtime=bossWithState.state.bossRuntime||(bossWithState.state.bossRuntime={}),cooldowns=runtime.cooldowns||(runtime.cooldowns={}),burns=runtime.burns||(runtime.burns={}),time=combat.timeMs;
@@ -141,7 +142,7 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   state.key=key;state.enemyHp=DUNGEONS[key].hp;state.stamp=now;state.pauseAt=now;state.normalAt=now;state.skillAt=now;state.enemyShieldAt=now+60000;state.enemyShatterAt=now+30000;state.enemyShieldUntil=0;state.tigerMp=key==='e_white_tiger_fierce_tiger'?enemy().mp:0;state.tigerHowlAt=now+3000;state.tigerRageActive=false;state.tigerSlowUntil=0;state.tigerBleeds={};state.phase='交戰';state.distance=0;state.damageCursor=0;state.status=!allDown()?'fighting':'recovering';log('部隊向前推進，遭遇敵方【'+DUNGEONS[key].name+'大軍】！');
   state.enemyHp=enemy().hp;
   if(enemyCombatMultiplier()===2)log('⚡ 白虎林規則：出戰傭兵超過 5 名，敵方戰鬥能力提升為 2 倍！');
-  if(state.status==='fighting')beginRealtime();
+  if(state.status==='fighting'){beginRealtime();settleRealtimeOutcome()}
  }else if(action==='retreat'&&(state.status==='fighting'||state.status==='respawning')){
   state.status='recovering';state.stamp=now;log('撤回漢陽療傷，恢復後再出發。');
  }else if(action==='normal'||action==='skill'){log('即時自動戰鬥中，每名角色會依自己的攻速與 MP 自動行動。')}
@@ -152,12 +153,12 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
    const inn=recoverAtInn({hp,maxHp:hero.maxHp,status:'客棧中'},state.innHealAt||now,now,healInterval);hp=inn.player.hp;const recoveringHero=heroMember();if(recoveringHero)recoveringHero.hp=hp;state.innHealAt=inn.nextHealAt;
    if(inn.player.status==='正常'){state.status='idle';log('生命值已全滿，離開客棧，商隊可再次出發。')}
  }else if(state.status==='respawning'&&now>=state.spawnAt){
-   state.key=state.lockedEnemyKey||pickZoneMonster(state.zone,spawnRoll);state.events=[];state.spawnSerial=(state.spawnSerial||0)+1;state.enemyHp=enemy().hp;state.enemyShieldAt=state.key==='e_lake_gale_altur'?now+60000:0;state.enemyShatterAt=state.key==='e_lake_gale_altur'?now+30000:0;state.enemyShieldUntil=0;state.tigerMp=state.key==='e_white_tiger_fierce_tiger'?enemy().mp:0;state.tigerHowlAt=now+3000;state.tigerRageActive=false;state.tigerSlowUntil=0;state.tigerBleeds={};state.status='fighting';state.phase='交戰';state.distance=0;state.normalAt=Math.max(now,state.normalAt);beginRealtime();log(isBossMonster(enemy().name)?'首領重新出現，商隊立即重新鎖敵。':`下一支 ${state.enemyCount} 隻怪物部隊出現，商隊立即重新鎖敵。`);
+   state.key=state.lockedEnemyKey||pickZoneMonster(state.zone,spawnRoll);state.events=[];state.spawnSerial=(state.spawnSerial||0)+1;state.enemyHp=enemy().hp;state.enemyShieldAt=state.key==='e_lake_gale_altur'?now+60000:0;state.enemyShatterAt=state.key==='e_lake_gale_altur'?now+30000:0;state.enemyShieldUntil=0;state.tigerMp=state.key==='e_white_tiger_fierce_tiger'?enemy().mp:0;state.tigerHowlAt=now+3000;state.tigerRageActive=false;state.tigerSlowUntil=0;state.tigerBleeds={};state.status='fighting';state.phase='交戰';state.distance=0;state.normalAt=Math.max(now,state.normalAt);beginRealtime();log(isBossMonster(enemy().name)?'首領重新出現，商隊立即重新鎖敵。':`下一支 ${state.enemyCount} 隻怪物部隊出現，商隊立即重新鎖敵。`);settleRealtimeOutcome();
   }else if(state.status==='fighting'){
    if(allDown())recover();
-   else {if(!state.realtime){beginRealtime();const startedWinner=(state as unknown as {realtime?:RealtimeBattleSnapshot}).realtime?.winner;if(startedWinner==='player')victory();else if(startedWinner==='enemy'||startedWinner==='draw')recover()}else{
+   else {if(!state.realtime){beginRealtime();settleRealtimeOutcome()}else{
     // 舊存檔的即時戰鬥沒有傭兵 ID；從仍在隊伍中的角色補回，不重開戰局。
-    const restored={...state.realtime,terrain:state.realtime.terrain|| (state.key.startsWith('e_white_tiger_')?'forest':state.zone),players:state.realtime.players.map(unit=>{const member=members.find(item=>item.uid===unit.id),spec=mercenarySpec(member?.templateId);return{...unit,templateId:unit.templateId||member?.templateId,maxMp:unit.maxMp??member?.maxMp,accuracy:unit.accuracy??member?.accuracy,ranged:unit.ranged??spec?.ranged}})};
+   const restored={...state.realtime,terrain:state.realtime.terrain|| (state.key.startsWith('e_white_tiger_')?'forest':state.zone),players:state.realtime.players.map(unit=>{const member=members.find(item=>item.uid===unit.id),spec=mercenarySpec(member?.templateId);return{...unit,templateId:unit.templateId||member?.templateId,maxMp:unit.maxMp??member?.maxMp,accuracy:unit.accuracy??member?.accuracy,ranged:unit.ranged??spec?.ranged}})};
     const combat=MercenaryRealtimeBattleSystem.fromSnapshot(restored);combat.autoSkill=autoSkill;combat.update(elapsedMs/1000);runBossAbilities(combat);castTigerSkills(combat);syncRealtime(combat);if(combat.winner==='player')victory();else if(combat.winner==='enemy'||combat.winner==='draw')recover()}}
   }
  }

@@ -22,20 +22,23 @@ test('stage selection always resolves its bound monster and unknown maps fall ba
  assert.equal(pickZoneMonster('unknown',-.5),'e_raccoon');
 });
 
-test('victory waits exactly half a second then rolls a new local monster',()=>{
+test('a realtime victory waits half a second before the next local wave',()=>{
  const state=teleportDungeon(freshDungeon(),70,2000,1000,'yellow-emperor-mausoleum',0);
- const win=dungeonStep(state,hero,'normal',1001,undefined,.99,0,.999);
- assert.equal(win.state.status,'respawning');assert.equal(win.state.spawnAt,1501);
- const early=dungeonStep(win.state,hero,'tick',1500,undefined,.99,0,.999);
+ const party=[{uid:'hero',name:'測試主角',hp:hero.hp,maxHp:hero.maxHp,mp:hero.mp,maxMp:hero.maxMp,position:'前排',attack:1000000,defense:hero.defense,attackInterval:.6}];
+ const win=dungeonStep(state,hero,'tick',1050,undefined,.99,0,.999,0,party,0,[0,0,0],false,0);
+ assert.equal(win.state.status,'respawning');assert.equal(win.state.spawnAt,1550);assert.ok(win.reward);
+ const early=dungeonStep(win.state,hero,'tick',1549,undefined,.99,0,.999,0,party,0,[0,0,0],false,0);
  assert.equal(early.state.status,'respawning');assert.equal(early.state.key,'e_undersea_king');
- const next=dungeonStep(win.state,hero,'tick',1501,undefined,.99,0,.999);
- assert.equal(next.state.status,'fighting');assert.equal(next.state.key,'e_undersea_king');assert.equal(next.state.enemyHp,1200);
+ const weakParty=[{...party[0],attack:1}];
+ const next=dungeonStep(win.state,hero,'tick',1550,undefined,.99,0,.999,0,weakParty,0,[0,0,0],false,0);
+ assert.equal(next.state.status,'fighting');assert.equal(next.state.key,'e_undersea_king');assert.ok(next.state.enemyHp>0&&next.state.enemyHp<=1200);
 });
 
-test('damage events identify attacker, target, amount and spell styling',()=>{
- const state=dungeonStep(freshDungeon(),hero,'start',1000,'e_bandit').state;
- const hit=dungeonStep(state,hero,'skill',1001);
- assert.equal(hit.state.events.length,1);
- assert.deepEqual(hit.state.events[0],{id:1,attacker:'hero',target:'enemy',amount:hit.state.events[0].amount,skill:true});
- assert.ok(hit.state.events[0].amount>0);
+test('realtime damage events identify attacker, target, amount and attack type',()=>{
+ const party=[{uid:'hero',name:'測試主角',hp:hero.hp,maxHp:hero.maxHp,mp:hero.mp,maxMp:hero.maxMp,position:'前排',attack:1000000,defense:hero.defense,attackInterval:.6}];
+ const hit=dungeonStep(freshDungeon(),hero,'start',1000,'e_bandit',.99,0,0,0,party,0,[0,0,0],false,0);
+ const event=hit.state.events.find(entry=>entry.attacker==='hero');
+ assert.ok(event);
+ assert.deepEqual({id:event.id,attacker:event.attacker,target:event.target,skill:event.skill},{id:1,attacker:'hero',target:'enemy',skill:false});
+ assert.ok(event.amount>0);
 });

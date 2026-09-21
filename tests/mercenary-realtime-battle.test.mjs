@@ -85,8 +85,9 @@ test('dungeon magical strikes use monster magic defense and keep it in snapshots
   assert.ok(magical < physical);
   assert.equal(MercenaryRealtimeBattleSystem.fromSnapshot(battle.snapshot()).enemies[0].magicDef, 300);
 
-  const hero = { hp: 100, maxHp: 100, mp: 0, maxMp: 40, str: 1, dex: 1, mercenaryIntelligence: 0, attack: 1, defense: 0, staff: false };
-  const dungeon = dungeonStep(freshDungeon(), hero, 'start', 1000, 'e_sumeru_training_plague_god', .99, 0, 0, 0, [], 0, [1, 1, 1], false, 0);
+  const hero = { hp: 10000, maxHp: 10000, mp: 0, maxMp: 40, str: 1, dex: 1, mercenaryIntelligence: 0, attack: 1, defense: 10000, staff: false };
+  const party=[{uid:'hero',name:'測試主角',hp:hero.hp,maxHp:hero.maxHp,mp:hero.mp,maxMp:hero.maxMp,position:'前排',attack:1,defense:hero.defense,attackInterval:1.5}];
+  const dungeon = dungeonStep(freshDungeon(), hero, 'start', 1000, 'e_sumeru_training_plague_god', .99, 0, 0, 0, party, 0, [1, 1, 1], false, 0);
   assert.equal(dungeon.state.realtime.enemies[0].def, 220);
   assert.equal(dungeon.state.realtime.enemies[0].magicDef, 225);
 });
