@@ -50,6 +50,26 @@ test('floating NPC markers and sidebar buttons use clear metal states and touch 
   assert.match(styles, /\.classic-live-game \.isometric-status \{ min-width:154px/);
 });
 
+test('overlapping HUD regions can be collapsed and map NPC nameplates can be hidden', () => {
+  assert.match(ui, /data-objective-collapsed=\{!objectiveExpanded\}/);
+  assert.match(ui, /aria-expanded=\{objectiveExpanded\}/);
+  assert.match(ui, /objective-collapsed-label" title=\{mainObjective\.title\}>主線・\{mainObjective\.title\}/);
+  assert.match(ui, /aria-expanded=\{quickNavExpanded\}/);
+  assert.match(ui, /data-quicknav-collapsed=\{!quickNavExpanded\}/);
+  assert.match(ui, /id="mobile-game-nav" className="classic-live-quicknav"[^>]*hidden=\{!quickNavExpanded\}/);
+  assert.match(ui, /className="forced-inn" hidden=\{game\.hero\.status!==['"]客棧中['"] \|\| !innPanelExpanded\}/);
+  assert.match(ui, /className="forced-inn-reopen" aria-controls="inn-zone"/);
+  assert.match(ui, /目前所在・\{mapLocationLabel\}/);
+  assert.match(townMap, /data-npc-labels=\{npcLabelsVisible \? "shown" : "hidden"\}/);
+  assert.match(townMap, /data-objective-expanded=\{objectiveExpanded\}/);
+  assert.match(townMap, /aria-pressed=\{npcLabelsVisible\}/);
+  assert.match(styles, /isometric-world\[data-objective-expanded="true"\] \.village-npc-layer \{ inset:clamp\(112px,27%,132px\) 0 0; \}/);
+  assert.match(styles, /data-quicknav-collapsed="true"\] \.tab-panel \{ right:0; \}/);
+  assert.match(styles, /classic-live-quicknav\[hidden\]\s*\{\s*display:none!important;\s*\}/);
+  assert.match(styles, /forced-inn\[hidden\] \{ display:none!important; \}/);
+  assert.match(styles, /data-npc-labels="hidden"\] \.village-npc-pin>b/);
+});
+
 test('settings expose a persistent live music-volume control', () => {
   assert.match(ui, /GAME_UI_SETTINGS_KEY = "gersang-ui-settings-v1"/);
   assert.match(ui, /aria-label="遊戲音樂音量" type="range" min="0" max="100"/);

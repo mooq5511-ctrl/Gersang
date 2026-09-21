@@ -74,12 +74,18 @@ export function IsometricWorldMap({
   cityName,
   locationLabel,
   heroImage,
+  objectiveExpanded,
+  npcLabelsVisible,
+  onNpcLabelsVisibleChange,
   onEnter,
   onNpcTalk,
 }: {
   cityName: string;
   locationLabel: string;
   heroImage: string;
+  objectiveExpanded: boolean;
+  npcLabelsVisible: boolean;
+  onNpcLabelsVisibleChange: (visible: boolean) => void;
   onEnter: (destination: Destination) => void;
   onNpcTalk: (npcId: NpcId) => void;
 }) {
@@ -316,7 +322,7 @@ export function IsometricWorldMap({
   const navigate = (destination: Destination) => window.dispatchEvent(new CustomEvent("gersang:navigate-map", { detail: destination }));
 
   return (
-    <section className="isometric-world" aria-label={`${cityName}斜角城鎮地圖`}>
+    <section className="isometric-world" aria-label={`${cityName}斜角城鎮地圖`} data-objective-expanded={objectiveExpanded} data-npc-labels={npcLabelsVisible ? "shown" : "hidden"}>
       <div ref={hostRef} className="isometric-world-canvas" />
       <div className="village-npc-layer" aria-label="漢陽村 NPC">
         {VILLAGE_NPCS.map(npc => <button key={npc.id} type="button" className="village-npc-pin" style={{ left: `${npc.map.x}%`, top: `${npc.map.y}%` }} onClick={() => onNpcTalk(npc.id)} aria-label={`與${npc.role}${npc.name}交談`}>
@@ -324,6 +330,9 @@ export function IsometricWorldMap({
         </button>)}
       </div>
       <header className="isometric-world-heading"><small>目前所在</small><strong>{locationLabel}</strong><span>點擊地面移動</span></header>
+      <button type="button" className="map-label-toggle" aria-pressed={npcLabelsVisible} aria-label={npcLabelsVisible ? "隱藏 NPC 名牌" : "顯示 NPC 名牌"} onClick={() => onNpcLabelsVisibleChange(!npcLabelsVisible)}>
+        {npcLabelsVisible ? "隱藏 NPC 名牌" : "顯示 NPC 名牌"}
+      </button>
       <nav className="isometric-destinations" aria-label="快速前往據點">
         <button type="button" onClick={() => navigate("city")}><b>市集</b><span>商店與客棧</span></button>
         <button type="button" onClick={() => navigate("trade")}><b>港口</b><span>東海商路</span></button>

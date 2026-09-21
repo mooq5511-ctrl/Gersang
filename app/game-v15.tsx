@@ -18,6 +18,10 @@ import {
   BedDouble,
   BookOpen,
   Castle,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
   Coins,
   Crown,
   Gem,
@@ -142,6 +146,10 @@ export default function GameV15() {
   const [game, rawSetGame] = useState<GameState>(freshGame);
   const [activeTab, setActiveTab] = useState("map");
   const [quickDialog, setQuickDialog] = useState<"treasure" | "settings" | null>(null);
+  const [objectiveExpanded, setObjectiveExpanded] = useState(true);
+  const [quickNavExpanded, setQuickNavExpanded] = useState(true);
+  const [innPanelExpanded, setInnPanelExpanded] = useState(true);
+  const [npcLabelsVisible, setNpcLabelsVisible] = useState(true);
   const [uiSettings, setUiSettings] = useState<GameUiSettings>(DEFAULT_GAME_UI_SETTINGS);
   const [uiSettingsLoaded, setUiSettingsLoaded] = useState(false);
   const [squadDestination, setSquadDestination] = useState<{ key: number; window?: 'inventory' | 'territory' }>({ key: 0 });
@@ -179,6 +187,10 @@ export default function GameV15() {
     if (!uiSettingsLoaded) return;
     try { localStorage.setItem(GAME_UI_SETTINGS_KEY, JSON.stringify(uiSettings)); } catch { /* Keep current-session preferences if storage is unavailable. */ }
   }, [uiSettings, uiSettingsLoaded]);
+
+  useEffect(() => {
+    if (game.hero.status === "客棧中") setInnPanelExpanded(true);
+  }, [game.hero.status]);
 
   useEffect(() => {
     if (loaded.current) return;
@@ -726,7 +738,7 @@ export default function GameV15() {
   }
 
   return (
-    <main className="game-shell v15-shell classic-live-game" data-scene-fit={uiSettings.sceneFit}>
+    <main className="game-shell v15-shell classic-live-game" data-scene-fit={uiSettings.sceneFit} data-objective-collapsed={!objectiveExpanded} data-quicknav-collapsed={!quickNavExpanded}>
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
@@ -742,7 +754,7 @@ export default function GameV15() {
         </div>
       </header>
 
-      <nav className="classic-live-quicknav" aria-label="遊戲功能">
+      <nav id="mobile-game-nav" className="classic-live-quicknav" aria-label="遊戲功能" hidden={!quickNavExpanded}>
         <button type="button" className={activeTab === "raid" ? "active" : ""} aria-current={activeTab === "raid" ? "page" : undefined} onClick={() => setActiveTab("raid")}><span className="quick-nav-icon"><Crown aria-hidden="true" /></span><span className="quick-nav-label">雷霞祭壇</span></button>
         <button type="button" className={activeTab === "city" ? "active" : ""} aria-current={activeTab === "city" ? "page" : undefined} onClick={() => { setCityService("weapon"); setActiveTab("city"); }}><span className="quick-nav-icon"><ShoppingBag aria-hidden="true" /></span><span className="quick-nav-label">市集</span></button>
         <button type="button" className={activeTab === "trade" ? "active" : ""} aria-current={activeTab === "trade" ? "page" : undefined} onClick={() => setActiveTab("trade")}><span className="quick-nav-icon"><Ship aria-hidden="true" /></span><span className="quick-nav-label">港口</span></button>
@@ -754,6 +766,9 @@ export default function GameV15() {
         <button type="button" onClick={() => setQuickDialog("treasure")}><span className="quick-nav-icon"><Gem aria-hidden="true" /></span><span className="quick-nav-label">秘寶圖鑑</span></button>
         <button type="button" aria-pressed={quickDialog === "settings"} onClick={() => setQuickDialog("settings")}><span className="quick-nav-icon"><Settings aria-hidden="true" /></span><span className="quick-nav-label">設定</span></button>
       </nav>
+      <button type="button" className="hud-edge-toggle hud-edge-toggle-nav" aria-controls="mobile-game-nav" aria-expanded={quickNavExpanded} aria-label={quickNavExpanded ? "收起遊戲功能列" : "展開遊戲功能列"} title={quickNavExpanded ? "收起遊戲功能列" : "展開遊戲功能列"} onClick={() => setQuickNavExpanded(value => !value)}>
+        {quickNavExpanded ? <ChevronRight aria-hidden="true"/> : <ChevronLeft aria-hidden="true"/>}
+      </button>
 
       {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
       <SceneMusic scene={musicScene} volume={uiSettings.musicVolume / 100}/>
@@ -796,15 +811,22 @@ export default function GameV15() {
         </DialogContent>
       </Dialog>
 
-      <section className="main-objective" aria-label="目前主線目標">
-        <div><small>目前主線目標</small><strong>{mainObjective.title}</strong><span>{mainObjective.detail}</span></div>
-        <Button type="button" variant="outline" onClick={goToObjective}>前往</Button>
+      <section className={`main-objective${objectiveExpanded ? "" : " is-collapsed"}`} aria-label="目前主線目標">
+        {objectiveExpanded ? <>
+          <div><small>目前主線目標</small><strong>{mainObjective.title}</strong><span>{mainObjective.detail}</span><small className="objective-location">目前所在・{mapLocationLabel}</small></div>
+          <Button type="button" variant="outline" onClick={goToObjective}>前往</Button>
+        </> : <strong className="objective-collapsed-label" title={mainObjective.title}>主線・{mainObjective.title}</strong>}
+        <button type="button" className="objective-collapse-toggle" aria-expanded={objectiveExpanded} aria-label={objectiveExpanded ? "收起主線目標" : "展開主線目標"} title={objectiveExpanded ? "收起主線目標" : "展開主線目標"} onClick={() => setObjectiveExpanded(value => !value)}>
+          {objectiveExpanded ? <ChevronUp aria-hidden="true"/> : <ChevronDown aria-hidden="true"/>}
+        </button>
       </section>
 
-      <section id="inn-zone" className="forced-inn" hidden={game.hero.status!=='客棧中'} aria-live="polite">
+      <section id="inn-zone" className="forced-inn" hidden={game.hero.status!=='客棧中' || !innPanelExpanded} aria-live="polite">
+        <button type="button" className="forced-inn-collapse-toggle" aria-label="收起客棧療傷資訊" title="收起客棧療傷資訊" onClick={() => setInnPanelExpanded(false)}><ChevronUp aria-hidden="true"/></button>
         <BedDouble aria-hidden="true"/><div><small>漢陽客棧</small><h2>戰敗療傷中</h2><p>戰鬥已停止。每 2 秒自動恢復 10 點 HP，生命值全滿後會自動離開客棧。</p><Progress value={heroVital.hp/heroVital.maxHp*100} aria-label="客棧療傷進度"/></div>
         <Button type="button" onClick={()=>setGame(payGameInn)}>💰 付費快速治療<small>{quickHealCost.toLocaleString('zh-TW')} 兩</small></Button>
       </section>
+      {game.hero.status==='客棧中' && !innPanelExpanded && <button type="button" className="forced-inn-reopen" aria-controls="inn-zone" aria-expanded={false} onClick={() => setInnPanelExpanded(true)}>客棧療傷中・顯示資訊</button>}
 
       <footer className="classic-live-footer">
         <section className="classic-live-identity">
@@ -835,7 +857,7 @@ export default function GameV15() {
         </TabsList>
 
         <TabsContent value="map" className="tab-panel isometric-map-tab">
-          <IsometricWorldMap cityName={displayCityName} locationLabel={mapLocationLabel} heroImage={game.hero.image} onNpcTalk={openNpcDialogue} onEnter={(destination) => {
+          <IsometricWorldMap cityName={displayCityName} locationLabel={mapLocationLabel} heroImage={game.hero.image} objectiveExpanded={objectiveExpanded} npcLabelsVisible={npcLabelsVisible} onNpcLabelsVisibleChange={setNpcLabelsVisible} onNpcTalk={openNpcDialogue} onEnter={(destination) => {
             if (destination === "city") { setCityService("mercenary"); setActiveTab("city"); }
             else if (destination === "trade") setActiveTab("trade");
             else if (destination === "raid") setActiveTab("raid");
