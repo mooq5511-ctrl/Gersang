@@ -56,7 +56,7 @@ AUTHORITATIVE_PATHS:
 - Current monsters/drop metadata: `data/monsters/dungeon-monsters.ts` owns dungeon stats, legacy definitions, and ecology pools; `data/monsters/world-map-enemies.ts` owns 52 map cards with unique stable IDs and localized drops. Forty-four IDs link to dungeon combat definitions; eight Korean road-enemy IDs retain stage-derived road combat stats. The legacy name→DungeonKey lookup is derived from the linked cards. `app/monster-ecology.ts` and `app/monster-ids.ts` are compatibility re-exports; `app/v17-content.ts` composes the sources into runtime map records.
 - Current team stats: `app/vitals-engine.ts`; hero total attributes/power/weight: `app/hero-rules.ts`; roster specs: `app/mercenary-roster.ts`.
 - Current equipment: runtime `Equipment` type inside `game-v15.tsx`; slots/transactions=`equipment-slots.ts`; base shop items=`v15-data.ts`+`wearable-catalog.ts`+`data/items/official-equipment.ts`; gems=`data/items/official-gems.ts`; mythics=`mythic-forge.ts`; fixed rare dungeon drops=`divine-equipment.ts`; visuals=`gersang-visuals.ts`.
-- Current maps: tab battle-map cards=`reference-data.ts.battleMaps`; 4-region/12-stage route model=`gersang-world-map.ts`; dungeon zone compatibility layer=`dungeon-engine.ts.WORLD_ZONES`; isometric town=`isometric-world-map.tsx`.
+- Current maps: tab battle-map cards=`reference-data.ts.battleMaps`; 4-region/12-stage routes, cities, monsters and drop tables=`data/maps/gersang-world-map.ts`; `app/gersang-world-map.ts` re-exports the legacy import surface; dungeon zone compatibility layer=`dungeon-engine.ts.WORLD_ZONES`; isometric town=`isometric-world-map.tsx`.
 - CSS cascade order: `layout.tsx` imports `globals.css -> trade.css -> caravan-status.css -> hero-status.css -> inventory.css -> dungeon.css -> classic-fusion.css -> battle-impact.css -> ability-panel.css -> classic-map-interface.css -> readability.css`; later files override earlier.
 
 LEGACY_OR_DEAD_CANDIDATES (verify before removal): `classic-map-interface.tsx/css` exported but not imported; `battle-effects.ts` no live import; `reference-data.referenceCategories/referenceEntryCount` superseded by `GersangArchive`; `game-data.ts` partly migration/formation only; `resolveRoadEncounter`+`mercenary-battle.ts` remain trade-route encounter implementation although `trade-engine.encounterCount()` currently always `0`; standalone `public/*.html` are demos, not app entry.
@@ -226,7 +226,7 @@ UI naming drift: Site metadata title in `layout.tsx`/Sites metadata may still sa
 |`data/contracts/gameplay-contracts.ts`|Gameplay contract definitions and rewards.|
 |`data/mercenaries/awakening-profiles.ts`|Awakening stat/skill profiles.|
 |`app/v17-content.ts`|Composes monster data with runtime stats and re-exports legacy content entry points.|
-|`app/gersang-world-map.ts`|4 nation regions, city/stage/drop route data used by WORLD_ZONES and material price defaults.|
+|`data/maps/gersang-world-map.ts`|4 nation regions, city/stage/drop route data used by WORLD_ZONES and material price defaults; app path remains a compatibility re-export.|
 |`app/reference-data.ts`|Battle map selection metadata + obsolete archive categories.|
 |`app/isometric-world-map.tsx`|Phaser/A* isometric city navigation; callbacks switch tabs.|
 |`app/formation-position.ts`|Semantic row helpers; legacy target/dodge/front multiplier.|
