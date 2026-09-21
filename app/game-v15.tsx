@@ -78,6 +78,7 @@ import { allocateAttributeAction, cyclePositionAction, promoteMercenary, recruit
 import { applyAutoMedicineAction, buyMaterialAction, buyMedicineAction, consumeMedicineAction, depositWarehouseItemAction, equipInventoryItemAction, forgeThunderItemAction, forgeVillageWeaponAction, fuseAllInventoryEquipmentAction, openAncientCoinBoxAction, purchaseEquipmentAction, purchaseTierEquipmentAction, sellAllInventoryEquipmentAction, sellAllMaterialsAction, sellInventoryEquipmentAction, sellMaterialAction, socketGemAction, unequipInventoryItemAction, withdrawWarehouseItemAction } from "./game-inventory-actions";
 import { fusionItemKey, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
 import { getStarterWeaponObjective } from "./starter-equipment-objective";
+import { getFirstMercenaryObjective } from "./first-mercenary-objective";
 import { TIER_EQUIPMENT_DROP_REGIONS, tierEquipmentPrice, tierEquipmentShopCatalog, type TierEquipment } from "./tier-equipment";
 import { profileFromGame, readCharacterSave, restoreGame, saveCharacterProfile, writeCharacterSave, writeProfileIndex, writeSharedWarehouse } from "./game-profile-storage";
 import {
@@ -302,6 +303,13 @@ export default function GameV15() {
     }
     const starterWeaponObjective = getStarterWeaponObjective(game);
     if (starterWeaponObjective) return starterWeaponObjective;
+    const firstMercenaryObjective = getFirstMercenaryObjective({
+      level: game.hero.level,
+      mercenaryCount: game.mercs.length + game.restingMercs.length,
+      gold: game.gold,
+      recruitmentCost: Math.floor(6000 * currentCity.priceFactor),
+    });
+    if (firstMercenaryObjective) return firstMercenaryObjective;
     if (game.hero.level < 20) return { title: '壯大商隊，建立第一座駐地', detail: `主角 Lv.${game.hero.level} / Lv.20，商團領地即將開放。`, tab: 'battle' };
     if (game.territory.buildings.waystation < 1) return { title: '建立驛站，提升放置收益', detail: `資金 ${Math.floor(game.gold).toLocaleString('zh-TW')} / 1,200 兩；建成後放置收益 +2%。`, tab: 'squad', window: 'territory' as const };
     const equippedGreen = game.firstGreenEquipped || [game.hero, ...game.mercs, ...game.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== '普通'));
@@ -322,15 +330,17 @@ export default function GameV15() {
     return { title: '持續壯大商隊', detail: '提高等級、強化隊伍，朝下一個地圖與傳說裝備前進。', tab: 'battle' };
   })();
   function goToObjective() {
-    if (mainObjective.npcId) {
+    if ('npcId' in mainObjective && mainObjective.npcId) {
       setActiveTab('map');
       openNpcDialogue(mainObjective.npcId);
       return;
     }
-    if (mainObjective.mapId && mainObjective.monsterName) {
+    if ('mapId' in mainObjective && mainObjective.mapId && 'monsterName' in mainObjective && mainObjective.monsterName) {
+      const objectiveMapId = mainObjective.mapId;
+      const objectiveMonsterName = mainObjective.monsterName;
       setGame(previous => {
-        const moved = selectBattleMapAction(previous, mainObjective.mapId!, { notify: setNotice, enemyMax, addLog });
-        const target = sourceEnemies.find(enemy => enemy.mapId === mainObjective.mapId && enemy.name === mainObjective.monsterName);
+        const moved = selectBattleMapAction(previous, objectiveMapId, { notify: setNotice, enemyMax, addLog });
+        const target = sourceEnemies.find(enemy => enemy.mapId === objectiveMapId && enemy.name === objectiveMonsterName);
         const key = target?.dungeonId;
         if (!target || !key) return moved;
         return { ...moved, selectedMonster: target.name, enemyHp: target.hp || moved.enemyHp, dungeon: { ...freshDungeon(), key, lockedEnemyKey: key, enemyHp: DUNGEONS[key].hp }, logs: addLog(moved.logs, `主線目標已指向：${target.name}。`) };
@@ -338,7 +348,7 @@ export default function GameV15() {
       setActiveTab('battle');
       return;
     }
-    if (mainObjective.tab === 'city') setCityService('inn');
+    if (mainObjective.tab === 'city') setCityService('service' in mainObjective ? mainObjective.service : 'inn');
     if (mainObjective.tab === 'squad') setSquadDestination(previous => ({ key: previous.key + 1, window: mainObjective.window }));
     setActiveTab(mainObjective.tab);
   }
