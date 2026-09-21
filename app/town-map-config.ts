@@ -15,9 +15,9 @@ export interface TownHotspot {
 export const TOWN_GRID_SIZE = 20 as const;
 
 export const TOWN_MAP_BACKGROUND = {
-  src: "/assets/backgrounds/castle-ruins.jpg",
-  width: 392,
-  height: 220,
+  src: "/assets/backgrounds/castle-ruins-v2.png",
+  width: 1672,
+  height: 941,
 } as const;
 
 /** Add new NPCs/buildings here; coordinates stay stable across responsive sizes. */

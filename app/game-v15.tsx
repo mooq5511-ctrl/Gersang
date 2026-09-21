@@ -277,6 +277,7 @@ export default function GameV15() {
   const quickHealCost=Math.max(0,heroVital.maxHp-heroVital.hp)*2;
   const currentNation = nations.find((nation) => nation.id === currentCity.nation) || nations[0];
   const displayCityName = currentCity.id === "hanyang" ? STARTER_VILLAGE_NAME : currentCity.name;
+  const mapLocationLabel = currentCity.id === "hanyang" ? "新村村郊" : displayCityName;
   const trackedNpcQuests = activeNpcQuests(game);
   const firstCaravanBossReady = game.npcProgress.completedQuests.includes(FIRST_CARAVAN_QUEST_ID) && game.hero.level >= 20 && game.territory.buildings.waystation >= 1 && (game.firstGreenEquipped || [game.hero, ...game.mercs, ...game.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== '普通')));
   const cityArmors = officialEquipment.filter((item) => item.kind === "armor").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
@@ -791,7 +792,7 @@ export default function GameV15() {
         </TabsList>
 
         <TabsContent value="map" className="tab-panel isometric-map-tab">
-          <IsometricWorldMap cityName={displayCityName} heroImage={game.hero.image} onNpcTalk={openNpcDialogue} onEnter={(destination) => {
+          <IsometricWorldMap cityName={displayCityName} locationLabel={mapLocationLabel} heroImage={game.hero.image} onNpcTalk={openNpcDialogue} onEnter={(destination) => {
             if (destination === "city") { setCityService("mercenary"); setActiveTab("city"); }
             else if (destination === "trade") setActiveTab("trade");
             else if (destination === "raid") setActiveTab("raid");

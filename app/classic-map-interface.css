@@ -73,7 +73,7 @@
 .classic-live-game .battle-sky { min-height:330px; }
 
 .classic-live-game .isometric-map-tab { padding:0; overflow:hidden; background:#315f63; }
-.isometric-world { position:relative; width:100%; height:100%; min-height:420px; overflow:hidden; background-color:#315f63; background-image:url("/assets/backgrounds/castle-ruins.jpg"); background-size:cover; background-position:center; background-repeat:no-repeat; }
+.isometric-world { position:relative; width:100%; height:100%; min-height:420px; overflow:hidden; background-color:#315f63; background-image:url("/assets/backgrounds/castle-ruins-v2.png"); background-size:cover; background-position:center; background-repeat:no-repeat; }
 .isometric-world-canvas { position:absolute; inset:0; z-index:1; }
 .isometric-world-canvas,.isometric-world-canvas canvas { display:block; width:100%!important; height:100%!important; background:transparent!important; }
 .isometric-world-heading { position:absolute; top:12px; left:14px; z-index:5; display:grid; grid-template-columns:auto auto; align-items:baseline; gap:0 8px; min-width:150px; padding:8px 11px; border:1px solid #a88d55; background:#0b1715dc; box-shadow:0 4px 14px #0008; pointer-events:none; }
@@ -374,6 +374,8 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
 }
 .classic-live-game .tab-panel.isometric-map-tab { padding:0; }
 .classic-live-game .isometric-destinations { display:none; }
+.classic-live-game .isometric-world-heading { top:clamp(104px,17vh,122px);left:18px;z-index:53; }
+.classic-live-game .isometric-status { min-width:154px;padding:8px 15px;border:1px solid #c3a369;border-radius:7px;background:linear-gradient(180deg,#252a29ed,#111716f5);color:#f7e8c5;font-size:12px;font-weight:700;letter-spacing:.03em;box-shadow:inset 0 1px #fff2,0 5px 16px #000b; }
 .classic-live-game .classic-live-footer,.classic-live-game > footer:not(.classic-live-footer) { display:none!important; }
 .classic-live-game > .main-objective {
   position:absolute;
@@ -431,6 +433,7 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
   cursor:pointer;
   transition:transform .16s ease,filter .16s ease,background .16s ease;
 }
+.classic-live-game .classic-live-quicknav button { border:1px solid #746347;border-radius:7px;background:linear-gradient(145deg,#373328 0%,#1a1d1d 52%,#0d1011 100%);box-shadow:inset 0 1px #fff2,inset 0 -3px #0006,0 3px 7px #0008; }
 .quick-nav-icon {
   width:34px;
   height:34px;
@@ -443,6 +446,7 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
   box-shadow:inset 0 0 0 2px #1a1710,0 3px 6px #000b;
   transition:transform .16s ease,box-shadow .16s ease,color .16s ease;
 }
+.classic-live-game .quick-nav-icon { width:36px;height:36px;border:2px ridge #b49863;background:radial-gradient(circle at 32% 24%,#8a7655 0%,#51412c 38%,#28251d 68%,#111515 100%);box-shadow:inset 0 0 0 2px #191711,inset 0 2px #fff3,0 3px 6px #000b; }
 .quick-nav-icon svg { width:17px;height:17px; }
 .quick-nav-label {
   min-width:0;
@@ -457,6 +461,9 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+.classic-live-game .quick-nav-label { padding:5px 4px;border:0;border-left:1px solid #8d774e;border-radius:0;background:linear-gradient(90deg,#e4c37014,transparent);color:#f0e4ca;font-size:11px;font-weight:700;text-shadow:0 1px 2px #000; }
+.classic-live-game .classic-live-quicknav button:hover,.classic-live-game .classic-live-quicknav button:focus-visible { border-color:#dbbd75;background:linear-gradient(145deg,#55452c,#28241b 55%,#111515);box-shadow:inset 0 1px #fff4,inset 0 -3px #0006,0 0 12px #e7c36a33,0 4px 9px #000a; }
+.classic-live-game .classic-live-quicknav button.active,.classic-live-game .classic-live-quicknav button[aria-current="page"] { border-color:#e0bd68;background:linear-gradient(145deg,#574629,#2a271f 58%,#101515);box-shadow:inset 0 1px #fff4,inset 0 0 0 1px #c49d4c44,0 0 12px #d8ae4c44,0 4px 8px #000a; }
 .classic-live-quicknav button.active .quick-nav-icon,.classic-live-quicknav button[aria-pressed="true"] .quick-nav-icon { border-color:#f0ce71;color:#ffedb4;box-shadow:inset 0 0 0 2px #332616,0 0 11px #f1c66066; }
 .classic-live-quicknav button.active .quick-nav-label { border-color:#c7a455;color:#ffe6a0; }
 @media (hover:hover) {
@@ -485,6 +492,12 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
 .treasure-entry small { color:#968c75;font-size:9px; }
 .treasure-entry>b { color:#dfc274;font-size:10px;white-space:nowrap; }
 .classic-live-game > .scene-music-toggle { position:fixed!important; z-index:72; top:auto!important; right:auto!important; bottom:12px!important; left:12px!important; }
+.classic-live-game .village-npc-pin { min-width:76px;min-height:44px;gap:0;filter:drop-shadow(0 4px 4px #000c);transition:transform .16s ease,filter .16s ease; }
+.classic-live-game .village-npc-pin>span { display:grid;width:21px;height:21px;place-items:center;margin:0 auto -1px;border:1px solid #f2d080;border-radius:50%;background:radial-gradient(circle,#f8df94 0 18%,#9a6e2f 26%,#272116 73%);color:#fff1be;font-size:9px;line-height:1;text-shadow:0 1px 2px #000;box-shadow:inset 0 1px #fff6,0 0 10px #f4cf6c88; }
+.classic-live-game .village-npc-pin>b { padding:4px 8px 2px;border:1px solid #c4a15b;border-bottom:0;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#303332f5,#151a1af5);color:#fff0c6;font-size:11px;font-weight:700;text-shadow:0 1px 2px #000; }
+.classic-live-game .village-npc-pin>small { padding:2px 7px 4px;border:1px solid #867149;border-top:0;border-radius:0 0 5px 5px;background:linear-gradient(180deg,#141a19f5,#090d0df5);color:#c8c0ab;font-size:9px; }
+.classic-live-game .village-npc-pin:hover,.classic-live-game .village-npc-pin:focus-visible { transform:translate(-50%,calc(-50% - 3px));filter:drop-shadow(0 0 8px #edc96caa);outline:none; }
+.classic-live-game .village-npc-pin:hover>b,.classic-live-game .village-npc-pin:focus-visible>b { border-color:#f0d184;background:linear-gradient(180deg,#65502e,#292319);color:#fff8e2; }
 @media (max-width:639px) {
   .classic-live-game .topbar { height:88px;min-height:88px;padding:7px 7px 8px; }
   .classic-live-game .resource-strip { display:grid;grid-template-columns:minmax(41px,.8fr) minmax(41px,.8fr) minmax(75px,1.55fr) minmax(54px,1.05fr) minmax(44px,.82fr) 68px;gap:3px;width:100%; }
@@ -496,6 +509,7 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
   .classic-live-game .character-switch svg { width:15px; }
   .classic-live-game .tab-panel { inset:88px 76px 0 0;padding:95px 8px 12px; }
   .classic-live-game .tab-panel.isometric-map-tab { padding:0; }
+  .classic-live-game .isometric-world-heading { top:94px;left:9px;min-width:0;padding:6px 9px; }
   .classic-live-game > .main-objective { top:98px;left:9px;width:calc(100vw - 98px);min-height:75px;padding:10px 11px 9px 15px;gap:8px; }
   .classic-live-game > .main-objective::before,.classic-live-game > .main-objective::after { width:8px; }
   .classic-live-game > .main-objective::before { left:-7px; }
@@ -507,8 +521,10 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
   .classic-live-game > .classic-live-quicknav { inset:88px 0 0 auto;width:76px;grid-template-rows:repeat(10,minmax(49px,1fr));gap:1px;padding:5px 3px; }
   .classic-live-quicknav button { min-height:48px;grid-template-columns:1fr;grid-template-rows:32px 12px;justify-items:center;align-content:center;gap:1px;padding:2px 1px; }
   .quick-nav-icon { width:29px;height:29px;border-width:2px; }
+  .classic-live-game .quick-nav-icon { width:29px;height:29px; }
   .quick-nav-icon svg { width:15px;height:15px; }
   .quick-nav-label { width:100%;padding:1px 0;border:0;background:transparent;text-align:center;font-size:8px; }
+  .classic-live-game .quick-nav-label { padding:1px 0;border:0;background:transparent;font-size:8px;text-align:center; }
   .classic-live-game > .notice { top:91px;width:calc(100vw - 96px);max-width:calc(100vw - 96px);font-size:11px; }
   .classic-live-game .forced-inn { top:92px;left:8px;right:82px;grid-template-columns:auto minmax(0,1fr);gap:8px;padding:10px; }
   .classic-live-game .forced-inn>svg { width:28px;height:28px; }

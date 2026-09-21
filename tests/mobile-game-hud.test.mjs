@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const ui = readFileSync(new URL('../app/game-v15.tsx', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('../app/classic-map-interface.css', import.meta.url), 'utf8');
 const mapConfig = readFileSync(new URL('../app/town-map-config.ts', import.meta.url), 'utf8');
+const townMap = readFileSync(new URL('../app/isometric-world-map.tsx', import.meta.url), 'utf8');
 
 test('classic game HUD exposes the full resource strip and all ten requested features', () => {
   for (const label of ['切換角色', '雷霞祭壇', '市集', '港口', '城門', '世界地圖', '主角與隊伍', '裝備圖鑑', '冒險委託', '秘寶圖鑑', '設定']) {
@@ -27,7 +28,23 @@ test('mobile HUD preserves touch-sized controls and keeps music/map shortcuts ou
 });
 
 test('the user-provided castle ruins artwork is wired as a proportion-preserving town backdrop', () => {
-  assert.equal(existsSync(new URL('../public/assets/backgrounds/castle-ruins.jpg', import.meta.url)), true);
-  assert.match(mapConfig, /src:\s*"\/assets\/backgrounds\/castle-ruins\.jpg"/);
-  assert.match(styles, /background-image:url\("\/assets\/backgrounds\/castle-ruins\.jpg"\)/);
+  assert.equal(existsSync(new URL('../public/assets/backgrounds/castle-ruins-v2.png', import.meta.url)), true);
+  assert.match(mapConfig, /src:\s*"\/assets\/backgrounds\/castle-ruins-v2\.png"/);
+  assert.match(styles, /background-image:url\("\/assets\/backgrounds\/castle-ruins-v2\.png"\)/);
+});
+
+test('current-location sign sits below the objective and names the starter outskirts', () => {
+  assert.match(ui, /mapLocationLabel\s*=\s*currentCity\.id\s*===\s*"hanyang"\s*\?\s*"新村村郊"/);
+  assert.match(ui, /locationLabel=\{mapLocationLabel\}/);
+  assert.match(townMap, /<strong>\{locationLabel\}<\/strong>/);
+  assert.match(styles, /\.classic-live-game \.isometric-world-heading \{ top:clamp\(104px,17vh,122px\)/);
+  assert.match(styles, /\.classic-live-game \.isometric-world-heading \{ top:94px;left:9px/);
+});
+
+test('floating NPC markers and sidebar buttons use clear metal states and touch targets', () => {
+  assert.match(styles, /\.classic-live-game \.classic-live-quicknav button \{ border:1px solid #746347/);
+  assert.match(styles, /\.classic-live-game \.classic-live-quicknav button\.active/);
+  assert.match(styles, /\.classic-live-game \.village-npc-pin \{ min-width:76px;min-height:44px/);
+  assert.match(styles, /\.classic-live-game \.village-npc-pin:hover/);
+  assert.match(styles, /\.classic-live-game \.isometric-status \{ min-width:154px/);
 });

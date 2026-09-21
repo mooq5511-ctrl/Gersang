@@ -72,11 +72,13 @@ function findPath(start: Cell, goal: Cell) {
 
 export function IsometricWorldMap({
   cityName,
+  locationLabel,
   heroImage,
   onEnter,
   onNpcTalk,
 }: {
   cityName: string;
+  locationLabel: string;
   heroImage: string;
   onEnter: (destination: Destination) => void;
   onNpcTalk: (npcId: NpcId) => void;
@@ -321,7 +323,7 @@ export function IsometricWorldMap({
           <span>●</span><b>{npc.name}</b><small>{npc.role}</small>
         </button>)}
       </div>
-      <header className="isometric-world-heading"><small>目前所在</small><strong>{cityName}</strong><span>點擊地面移動</span></header>
+      <header className="isometric-world-heading"><small>目前所在</small><strong>{locationLabel}</strong><span>點擊地面移動</span></header>
       <nav className="isometric-destinations" aria-label="快速前往據點">
         <button type="button" onClick={() => navigate("city")}><b>市集</b><span>商店與客棧</span></button>
         <button type="button" onClick={() => navigate("trade")}><b>港口</b><span>東海商路</span></button>
