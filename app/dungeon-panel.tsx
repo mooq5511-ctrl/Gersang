@@ -19,10 +19,10 @@ export function WorldMapNavigation({state,level,power,travel}:{state:DungeonStat
     <strong>{locked?'鎖定 · ':selected?'目前 · ':''}{zone.name}</strong><span>{zoneRequirement(zone)}</span><small>{stage.type==='dungeon'?'迷宮':'掛機點'} · {stage.monster.name} HP {stage.monster.hp.toLocaleString()}</small><small>掉落：{stage.monster.drops.map(drop=>drop.item+' '+drop.rate+'%').join('、')}</small>
    </Button>;
   })}</div>
- </section>)}</div><p>{state.status==='recovering'?'漢陽客棧療傷中，HP 回滿後可再次傳送。':'點選已解鎖關卡立即傳送並開戰；原戰鬥中止，HP / MP 與技能冷卻保留。'}</p>
+ </section>)}</div><p>{state.status==='recovering'?'漢陽客棧療傷中，HP 回滿後可再次傳送。':'點選已解鎖關卡立即傳送並開戰；可在戰鬥區停止狩獵以保留當前狀態，之後再按「開始狩獵」繼續。'}</p>
  </nav>;
 }
-export function DungeonPanel({state,hero,party,dps=0,act,autoSkill,toggleAutoSkill,mapName,mapRegion,medicineQuickbar}:{state:DungeonState;mp:number;hero:CaravanMember;party:CaravanMember[];dps?:number;act:(action:'start'|'normal'|'skill'|'retreat',key?:DungeonKey)=>void;autoSkill:boolean;toggleAutoSkill:()=>void;mapName?:string;mapRegion?:string;medicineQuickbar?:ReactNode}){
+export function DungeonPanel({state,hero,party,dps=0,act,autoSkill,toggleAutoSkill,mapName,mapRegion,medicineQuickbar}:{state:DungeonState;mp:number;hero:CaravanMember;party:CaravanMember[];dps?:number;act:(action:'start'|'normal'|'skill'|'retreat'|'stop',key?:DungeonKey)=>void;autoSkill:boolean;toggleAutoSkill:()=>void;mapName?:string;mapRegion?:string;medicineQuickbar?:ReactNode}){
  const monster=DUNGEONS[state.key],boss=isBossMonster(monster.name),enemyCount=state.realtime?.enemies.length??state.enemyCount??0,zone=zoneFor(state.zone),active=state.status==='fighting'&&state.phase==='交戰';
  const enemyMaxHp=state.realtime?.enemies.reduce((sum,unit)=>sum+unit.maxHp,0)??monster.hp*enemyCount;
  const liveLogs=state.logs.filter(line=>/施放|造成|受到|攻擊|技能|暴擊/.test(line)).slice(0,4);
@@ -36,7 +36,7 @@ export function DungeonPanel({state,hero,party,dps=0,act,autoSkill,toggleAutoSki
  {medicineQuickbar}
  <output className={'dungeon-flash'+(state.logs[0]?.startsWith('🎁')?' dungeon-loot-flash':'')} key={state.serial+'-'+state.logs[0]}>{state.logs[0]||'選擇對手，開始自動戰鬥。'}</output>
  <div className="dungeon-auto-skill"><span><strong>滿 MP 自動技能</strong><small>每次普攻 +20 MP；達到 100 MP 後於下次個人攻擊時施放</small></span><button type="button" role="switch" aria-checked={autoSkill} className={autoSkill?'enabled':''} onClick={toggleAutoSkill}>{autoSkill?'開啟':'關閉'}</button></div>
- <div className="dungeon-actions realtime-actions"><span>每名角色依自己的攻速冷卻自動鎖敵，不再使用共用攻擊回合。</span><button disabled={!active&&state.status!=='respawning'} onClick={()=>act('retreat')}>{state.status==='recovering'?'客棧療傷中':'撤退至客棧'}</button></div>
+ <div className="dungeon-actions realtime-actions"><span>{state.status==='idle'?'狩獵停止時不會推進戰鬥；開始後會自動連續狩獵。':'每名角色依自己的攻速冷卻自動鎖敵；停止狩獵會保留目前血量。'}</span><button type="button" disabled={state.status==='recovering'} onClick={()=>act(state.status==='fighting'||state.status==='respawning'?'stop':'start',state.key)}>{state.status==='recovering'?'客棧療傷中':state.status==='idle'?'開始狩獵':'停止狩獵'}</button><button type="button" disabled={!active&&state.status!=='respawning'} onClick={()=>act('retreat')}>{state.status==='recovering'?'客棧療傷中':'撤退至客棧'}</button></div>
  <details className="dungeon-notes" open><summary>戰鬥規則</summary><p>前排輸出 +20%，後排受擊有 50% 閃避；全員倒下才會撤回客棧。</p>{state.key==='e_white_tiger_fierce_tiger'&&<><p><strong>狂虎・暴君風吼嘯：</strong>消耗 5,000 MP，冷卻 12 秒；造成自身攻擊力 320% 的風屬性物理傷害，擊退並吸取 15% 當前 MP，移速 -40% 持續 5 秒。</p><p><strong>白虎凶煞：</strong>常駐打擊／魔法抗性 +15%；生命低於 40% 時攻速／移速 +300%，近身攻擊 25% 機率附加 3 秒撕裂。</p></>}{state.key.startsWith('e_white_tiger_')&&<p>野獸的領地：攜帶超過 5 隻傭兵時，全體怪物 HP、MP、ATK、物防、魔防與技能傷害 ×2。</p>}</details>
  <details className="dungeon-journal"><summary>戰鬥日誌 · 最近 30 則</summary><ol className="dungeon-log">{state.logs.slice(0,30).map((line,i)=><li key={i} className={battleLogPresentation(line).className}><span className="classic-log-label">{battleLogPresentation(line).label}</span>{line}</li>)}</ol></details>
  </section>;

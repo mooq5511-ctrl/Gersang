@@ -46,6 +46,34 @@ test('retreat enters recovery and cannot be restarted before healing completes',
  assert.equal(restarted.reward,null);
 });
 
+test('stop hunting preserves party vitals and target, prevents respawn, and can be resumed',()=>{
+ const battle=start('e_raccoon',0,party(1)),beforeHp=battle.party[0].hp;
+ const stopped=dungeonStep(battle.state,hero,'stop',1100,undefined,.99,0,0,0,battle.party);
+ const idleTick=dungeonStep(stopped.state,hero,'tick',5000,undefined,.99,0,0,0,stopped.party);
+ const resumed=dungeonStep(stopped.state,hero,'start',5100,'e_raccoon',.99,0,0,0,stopped.party);
+ assert.equal(stopped.state.status,'idle');
+ assert.equal(stopped.state.key,'e_raccoon');
+ assert.equal(stopped.state.enemyCount,0);
+ assert.equal(stopped.state.realtime,undefined);
+ assert.equal(stopped.party[0].hp,beforeHp);
+ assert.equal(stopped.hp,beforeHp);
+ assert.equal(idleTick.state.status,'idle');
+ assert.equal(idleTick.state.realtime,undefined);
+ assert.equal(idleTick.state.enemyCount,0);
+ assert.equal(idleTick.xpEarned,0);
+ assert.equal(resumed.state.status,'fighting');
+});
+
+test('stop settles an already-won battle once and does not spawn another enemy',()=>{
+ const battle=start('e_raccoon',0,party(1));
+ const finished={...battle.state,realtime:{...battle.state.realtime,winner:'player'}};
+ const stopped=dungeonStep(finished,hero,'stop',1100,undefined,.99,0,0,0,battle.party);
+ assert.equal(stopped.state.status,'idle');
+ assert.equal(stopped.reward.xp,DUNGEONS.e_raccoon.xp);
+ assert.equal(stopped.state.spawnAt,0);
+ assert.equal(stopped.state.realtime,undefined);
+});
+
 test('dungeon transitions leave the saved input state unchanged',()=>{
  const battle=start('e_raccoon',0),before=structuredClone(battle.state),savedHero=structuredClone(hero);
  dungeonStep(battle.state,hero,'tick',2000);

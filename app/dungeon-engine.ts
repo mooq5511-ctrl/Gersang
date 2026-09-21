@@ -60,7 +60,7 @@ export function teleportDungeon(old:DungeonState,level:number,power:number,now:n
   pauseAt:dungeonBusy(old)?old.pauseAt:now,spawnAt:0,normalAt:Math.max(now,old.normalAt),
   logs:['已傳送至 '+zone.name+'！',...old.logs].slice(0,40)};
 }
-export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'start'|'normal'|'skill'|'retreat',now:number,key:DungeonKey=old.key,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0,party:DungeonPartyMember[]=[],passiveDamage=0,materialRolls:number[]=[1,1,1],autoSkill=false,encounterCountRoll=.999999,healInterval=2000):{state:DungeonState;hp:number;mp:number;party:DungeonPartyMember[];xpEarned:number;killsEarned:number;reward:null|{xp:number;gold:number;loot:string|null;materials:string[]}}{
+export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'start'|'normal'|'skill'|'retreat'|'stop',now:number,key:DungeonKey=old.key,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0,party:DungeonPartyMember[]=[],passiveDamage=0,materialRolls:number[]=[1,1,1],autoSkill=false,encounterCountRoll=.999999,healInterval=2000):{state:DungeonState;hp:number;mp:number;party:DungeonPartyMember[];xpEarned:number;killsEarned:number;reward:null|{xp:number;gold:number;loot:string|null;materials:string[]}}{
  const state={...old,logs:[...old.logs]};let hp=hero.hp,mp=hero.mp;
  const members=(party.length?party:[{uid:'hero',name:'主角',hp,maxHp:hero.maxHp,position:'前排' as const}]).map(member=>({...member}));
  const heroMember=()=>members.find(member=>member.uid==='hero');
@@ -114,6 +114,7 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   reward={xp:totalXp,gold:0,loot:rareIndex<uniqueLoot.length?uniqueLoot[rareIndex]:null,materials};
   log('成功擊敗 '+defeatedCount+' 隻'+e.name+'！獲得 '+totalXp+' 經驗。');if(materials.length)log('🎁 噴寶：獲得【'+materials.join('】、【')+'】！')};
  const settleRealtimeOutcome=()=>{if(state.status!=='fighting')return;const outcome=(state as unknown as {realtime?:RealtimeBattleSnapshot}).realtime?.winner;if(outcome==='player')victory();else if(outcome==='enemy'||outcome==='draw')recover()};
+ const stopHunting=()=>{state.status='idle';state.phase='接敵';state.distance=100;state.enemyCount=0;state.enemyHp=DUNGEONS[state.key].hp;state.realtime=undefined;state.realtimeCursor=0;state.events=[];state.spawnAt=0;state.stamp=now;state.pauseAt=now;state.normalAt=now;state.skillAt=now;log('已停止自動狩獵；隊伍目前血量與戰利品保留，可隨時重新開始。')};
  const runBossAbilities=(combat:MercenaryRealtimeBattleSystem)=>{const abilities=bossAbilitiesFor(state.key),boss=combat.enemies[0];if(!abilities||state.status!=='fighting'||!boss?.alive||combat.winner)return;
   type BurnState={stacks:number;until:number;next:number};type BossRuntime={cooldowns?:Record<string,number>;burns?:Record<string,BurnState>;eventCursor?:number};const bossWithState=boss as typeof boss&{state:{bossRuntime?:BossRuntime}};
   const runtime=bossWithState.state.bossRuntime||(bossWithState.state.bossRuntime={}),cooldowns=runtime.cooldowns||(runtime.cooldowns={}),burns=runtime.burns||(runtime.burns={}),time=combat.timeMs;
@@ -143,6 +144,10 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   state.enemyHp=enemy().hp;
   if(enemyCombatMultiplier()===2)log('⚡ 白虎林規則：出戰傭兵超過 5 名，敵方戰鬥能力提升為 2 倍！');
   if(state.status==='fighting'){beginRealtime();settleRealtimeOutcome()}
+ }else if(action==='stop'&&(state.status==='fighting'||state.status==='respawning')){
+  // 先確認停止瞬間是否已有終局快照：已完成的擊殺照常結算，但不再生成下一波。
+  if(state.status==='fighting')settleRealtimeOutcome();
+  if(state.status==='fighting'||state.status==='respawning')stopHunting();
  }else if(action==='retreat'&&(state.status==='fighting'||state.status==='respawning')){
   state.status='recovering';state.stamp=now;log('撤回漢陽療傷，恢復後再出發。');
  }else if(action==='normal'||action==='skill'){log('即時自動戰鬥中，每名角色會依自己的攻速與 MP 自動行動。')}

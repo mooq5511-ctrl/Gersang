@@ -46,7 +46,7 @@ type DungeonActionDependencies = {
   leaveInn: (state: GameState) => GameState;
 };
 
-export type DungeonAction = "tick" | "start" | "normal" | "skill" | "retreat";
+export type DungeonAction = "tick" | "start" | "normal" | "skill" | "retreat" | "stop";
 
 /** Runs a single deterministic dungeon transition, including victory rewards. */
 export function runDungeonAction(
