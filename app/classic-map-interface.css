@@ -310,9 +310,11 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
   margin: 0;
   overflow: hidden;
   border: 0;
-  background: linear-gradient(180deg,#15191030,#090b0870),url('/assets/backgrounds/castle-ruins.jpg') center/cover no-repeat;
+  background: linear-gradient(180deg,#15191030,#090b0870),url('/assets/backgrounds/castle-ruins-v2.png') center/cover no-repeat;
   box-shadow: none;
 }
+.classic-live-game[data-scene-fit="contain"] { background-size:100% 100%,contain; background-color:#090b08; }
+.classic-live-game[data-scene-fit="contain"] .isometric-world { background-size:contain; background-color:#090b08; }
 .classic-live-game::before { background:linear-gradient(180deg,#080b09aa 0%,transparent 18%,transparent 64%,#06090766 100%); }
 .classic-live-game .topbar {
   position:absolute;
@@ -483,6 +485,23 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
 .quick-setting-row small { color:#a9a18f;font-size:11px; }
 .quick-setting-row button { min-width:76px;min-height:42px;border:1px solid #726445;border-radius:999px;background:#252620;color:#d4c8ac; }
 .quick-setting-row button.enabled { border-color:#d2aa4f;background:#4b391c;color:#ffe59b; }
+.quick-setting-volume { display:grid;gap:10px; }
+.quick-setting-volume-heading { display:flex;align-items:center;justify-content:space-between;gap:12px; }
+.quick-setting-volume-heading>span { display:grid;gap:4px; }
+.quick-setting-volume-heading output { color:#f6d982;font-variant-numeric:tabular-nums;font-weight:800; }
+.quick-setting-volume input[type="range"] { width:100%;height:24px;margin:0;accent-color:#d8b45f;cursor:pointer; }
+.quick-setting-ratio { min-width:0;margin:12px 0 0;padding:12px;border:1px solid #b3976045;border-radius:8px;background:#080d0dbb; }
+.quick-setting-ratio legend { padding:0 6px;color:#f2e4c4;font-size:14px;font-weight:700; }
+.quick-setting-ratio>p { margin:0 0 9px;color:#bcb29b;font-size:11px;line-height:1.55; }
+.quick-setting-ratio-options { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px; }
+.quick-setting-ratio-options label { display:grid;grid-template-columns:16px minmax(0,1fr);align-content:center;align-items:start;gap:8px;min-width:0;min-height:58px;padding:9px;border:1px solid #65583f;border-radius:7px;background:#171b19;color:#e9dec4;cursor:pointer; }
+.quick-setting-ratio-options label>span { display:grid;gap:4px; }
+.quick-setting-ratio-options input { width:15px;height:15px;margin:1px 0 0;accent-color:#d5b35d; }
+.quick-setting-ratio-options label strong { color:#f2e4c4;font-size:12px; }
+.quick-setting-ratio-options label small { color:#aaa18d;font-size:10px;line-height:1.4; }
+.quick-setting-ratio-options label.selected { border-color:#d5b35d;background:linear-gradient(145deg,#3b321f,#171b19);box-shadow:inset 0 0 0 1px #d5b35d33,0 0 12px #e4c16a22; }
+.quick-setting-ratio-options label:has(input:focus-visible) { outline:2px solid #f4d982;outline-offset:2px; }
+.quick-setting-ratio-note { display:block;margin-top:9px;color:#938b79;font-size:10px;line-height:1.5; }
 .treasure-codex-list { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:12px; }
 .treasure-entry { min-width:0;display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:7px;padding:8px;border:1px solid #a8894a3d;border-radius:6px;background:#080d0dbb; }
 .treasure-entry-icon { width:28px;height:28px;display:grid;place-items:center;border:1px solid #a88850;border-radius:50%;background:#292317;color:#e3bd61; }

@@ -6,6 +6,7 @@ const ui = readFileSync(new URL('../app/game-v15.tsx', import.meta.url), 'utf8')
 const styles = readFileSync(new URL('../app/classic-map-interface.css', import.meta.url), 'utf8');
 const mapConfig = readFileSync(new URL('../app/town-map-config.ts', import.meta.url), 'utf8');
 const townMap = readFileSync(new URL('../app/isometric-world-map.tsx', import.meta.url), 'utf8');
+const music = readFileSync(new URL('../app/scene-music.tsx', import.meta.url), 'utf8');
 
 test('classic game HUD exposes the full resource strip and all ten requested features', () => {
   for (const label of ['切換角色', '雷霞祭壇', '市集', '港口', '城門', '世界地圖', '主角與隊伍', '裝備圖鑑', '冒險委託', '秘寶圖鑑', '設定']) {
@@ -27,7 +28,7 @@ test('mobile HUD preserves touch-sized controls and keeps music/map shortcuts ou
   assert.match(styles, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
 });
 
-test('the user-provided castle ruins artwork is wired as a proportion-preserving town backdrop', () => {
+test('the high-resolution castle ruins artwork is wired as a proportion-preserving town backdrop', () => {
   assert.equal(existsSync(new URL('../public/assets/backgrounds/castle-ruins-v2.png', import.meta.url)), true);
   assert.match(mapConfig, /src:\s*"\/assets\/backgrounds\/castle-ruins-v2\.png"/);
   assert.match(styles, /background-image:url\("\/assets\/backgrounds\/castle-ruins-v2\.png"\)/);
@@ -47,4 +48,22 @@ test('floating NPC markers and sidebar buttons use clear metal states and touch 
   assert.match(styles, /\.classic-live-game \.village-npc-pin \{ min-width:76px;min-height:44px/);
   assert.match(styles, /\.classic-live-game \.village-npc-pin:hover/);
   assert.match(styles, /\.classic-live-game \.isometric-status \{ min-width:154px/);
+});
+
+test('settings expose a persistent live music-volume control', () => {
+  assert.match(ui, /GAME_UI_SETTINGS_KEY = "gersang-ui-settings-v1"/);
+  assert.match(ui, /aria-label="遊戲音樂音量" type="range" min="0" max="100"/);
+  assert.match(ui, /SceneMusic scene=\{musicScene\} volume=\{uiSettings\.musicVolume \/ 100\}/);
+  assert.match(ui, /localStorage\.setItem\(GAME_UI_SETTINGS_KEY, JSON\.stringify\(uiSettings\)\)/);
+  assert.match(music, /audio\.volume=Math\.max\(0,Math\.min\(1,volumeRef\.current\)\)/);
+  assert.match(music, /audioRef\.current\.volume=Math\.max\(0,Math\.min\(1,volume\)\)/);
+});
+
+test('screen-fit settings default to responsive full-bleed and can preserve the complete scene', () => {
+  assert.match(ui, /sceneFit: "cover"/);
+  assert.match(ui, /<legend>畫面比例與場景顯示<\/legend>/);
+  assert.match(ui, /name="game-scene-fit" value="cover"/);
+  assert.match(ui, /name="game-scene-fit" value="contain"/);
+  assert.match(ui, /data-scene-fit=\{uiSettings\.sceneFit\}/);
+  assert.match(styles, /\.classic-live-game\[data-scene-fit="contain"\] \.isometric-world \{ background-size:contain/);
 });

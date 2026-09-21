@@ -116,7 +116,23 @@ const bossMonsterArt:Record<string,string> = {
 const slotLabels = EQUIPMENT_LABELS;
 const FIRST_CARAVAN_QUEST_ID = "npc-first-caravan-delivery";
 const FIRST_CARAVAN_TARGET = 3;
+const GAME_UI_SETTINGS_KEY = "gersang-ui-settings-v1";
+type SceneDisplayFit = "cover" | "contain";
+type GameUiSettings = { musicVolume: number; sceneFit: SceneDisplayFit };
+const DEFAULT_GAME_UI_SETTINGS: GameUiSettings = { musicVolume: 42, sceneFit: "cover" };
 const mapFeatureIcons: Record<string, string> = { field: "🌾", lake: "🌊", sea: "⚓", forest: "🌲", ice: "❄️", desert: "☀️", sumeru: "⛰️", shambhala: "🏯" };
+
+function readGameUiSettings(): GameUiSettings {
+  try {
+    const saved = JSON.parse(localStorage.getItem(GAME_UI_SETTINGS_KEY) || "null") as Partial<GameUiSettings> | null;
+    return {
+      musicVolume: typeof saved?.musicVolume === "number" && Number.isFinite(saved.musicVolume) ? Math.max(0, Math.min(100, Math.round(saved.musicVolume))) : DEFAULT_GAME_UI_SETTINGS.musicVolume,
+      sceneFit: saved?.sceneFit === "contain" ? "contain" : "cover",
+    };
+  } catch {
+    return DEFAULT_GAME_UI_SETTINGS;
+  }
+}
 
 function currentTimestamp() {
   return Date.now();
@@ -126,6 +142,8 @@ export default function GameV15() {
   const [game, rawSetGame] = useState<GameState>(freshGame);
   const [activeTab, setActiveTab] = useState("map");
   const [quickDialog, setQuickDialog] = useState<"treasure" | "settings" | null>(null);
+  const [uiSettings, setUiSettings] = useState<GameUiSettings>(DEFAULT_GAME_UI_SETTINGS);
+  const [uiSettingsLoaded, setUiSettingsLoaded] = useState(false);
   const [squadDestination, setSquadDestination] = useState<{ key: number; window?: 'inventory' | 'territory' }>({ key: 0 });
   // 所有存檔與取得路徑共用格位整理：保留已有位置與超額舊物，不截斷陣列。
   const setGame=useCallback((action:GameState|((previous:GameState)=>GameState))=>rawSetGame(previous=>{
@@ -151,6 +169,16 @@ export default function GameV15() {
   const [npcOpeningLine, setNpcOpeningLine] = useState("");
   const warehouseWritable = useRef(true);
   const loaded = useRef(false);
+
+  useEffect(() => {
+    setUiSettings(readGameUiSettings());
+    setUiSettingsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!uiSettingsLoaded) return;
+    try { localStorage.setItem(GAME_UI_SETTINGS_KEY, JSON.stringify(uiSettings)); } catch { /* Keep current-session preferences if storage is unavailable. */ }
+  }, [uiSettings, uiSettingsLoaded]);
 
   useEffect(() => {
     if (loaded.current) return;
@@ -698,7 +726,7 @@ export default function GameV15() {
   }
 
   return (
-    <main className="game-shell v15-shell classic-live-game">
+    <main className="game-shell v15-shell classic-live-game" data-scene-fit={uiSettings.sceneFit}>
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
@@ -728,12 +756,27 @@ export default function GameV15() {
       </nav>
 
       {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
-      <SceneMusic scene={musicScene}/>
+      <SceneMusic scene={musicScene} volume={uiSettings.musicVolume / 100}/>
       <Dialog open={quickDialog !== null} onOpenChange={open => { if (!open) setQuickDialog(null); }}>
         <DialogContent className="quick-menu-dialog">
           <DialogTitle>{quickDialog === "settings" ? "行旅設定" : "秘寶圖鑑"}</DialogTitle>
-          <DialogDescription>{quickDialog === "settings" ? "調整商隊自動技能；遊戲進度會自動保存在此瀏覽器。" : "查看已收集的材料與商隊珍藏。"}</DialogDescription>
-          {quickDialog === "settings" ? <div className="quick-setting-row"><span><strong>滿 MP 自動施放技能</strong><small>每名出戰角色集滿魔力後自動施放。</small></span><button type="button" role="switch" aria-checked={game.autoSkill} className={game.autoSkill ? "enabled" : ""} onClick={() => setGame(previous => ({ ...previous, autoSkill: !previous.autoSkill, logs: addLog(previous.logs, previous.autoSkill ? "已關閉技能自動施放。" : "已開啟技能自動施放。") }))}>{game.autoSkill ? "開啟" : "關閉"}</button></div> : <div className="treasure-codex-list"><article className="treasure-entry"><span className="treasure-entry-icon"><Coins aria-hidden="true" /></span><span><strong>新手兌換銅錢</strong><small>特殊貨幣</small></span><b>×{format(game.newbieCoins)}</b></article>{Object.keys(MATERIAL_PRICES).sort((a,b)=>a.localeCompare(b,"zh-TW")).map(name => <article className="treasure-entry" key={name}><span className="treasure-entry-icon"><Gem aria-hidden="true" /></span><span><strong>{name}</strong><small>{game.materials[name] ? "已收集" : "尚未取得"}</small></span><b>×{format(game.materials[name] || 0)}</b></article>)}</div>}
+          <DialogDescription>{quickDialog === "settings" ? "調整音樂、場景顯示與自動技能；偏好會保存在此瀏覽器。" : "查看已收集的材料與商隊珍藏。"}</DialogDescription>
+          {quickDialog === "settings" ? <>
+            <div className="quick-setting-row quick-setting-volume">
+              <div className="quick-setting-volume-heading"><span><strong>遊戲音樂音量</strong><small>調整場景與戰鬥音樂，不影響音效。</small></span><output htmlFor="game-music-volume">{uiSettings.musicVolume}%</output></div>
+              <input id="game-music-volume" aria-label="遊戲音樂音量" type="range" min="0" max="100" step="1" value={uiSettings.musicVolume} onChange={event => { const musicVolume = Number(event.currentTarget.value); setUiSettings(previous => ({ ...previous, musicVolume })); }}/>
+            </div>
+            <fieldset className="quick-setting-ratio">
+              <legend>畫面比例與場景顯示</legend>
+              <p>建議自動滿版，依目前螢幕重排介面；若投影仍有黑邊，需在投影設備調整解析度比例。</p>
+              <div className="quick-setting-ratio-options">
+                <label className={uiSettings.sceneFit === "cover" ? "selected" : ""}><input type="radio" name="game-scene-fit" value="cover" checked={uiSettings.sceneFit === "cover"} onChange={() => setUiSettings(previous => ({ ...previous, sceneFit: "cover" }))}/><span><strong>自動滿版・建議</strong><small>依螢幕填滿，場景邊緣可能裁切</small></span></label>
+                <label className={uiSettings.sceneFit === "contain" ? "selected" : ""}><input type="radio" name="game-scene-fit" value="contain" checked={uiSettings.sceneFit === "contain"} onChange={() => setUiSettings(previous => ({ ...previous, sceneFit: "contain" }))}/><span><strong>完整顯示</strong><small>保留整張場景，比例不同時可能留邊</small></span></label>
+              </div>
+              <small className="quick-setting-ratio-note">常見螢幕比例：電腦 16:9、手機直式 9:18／9:20。此選項不會變更裝置解析度。</small>
+            </fieldset>
+            <div className="quick-setting-row"><span><strong>滿 MP 自動施放技能</strong><small>每名出戰角色集滿魔力後自動施放。</small></span><button type="button" role="switch" aria-checked={game.autoSkill} className={game.autoSkill ? "enabled" : ""} onClick={() => setGame(previous => ({ ...previous, autoSkill: !previous.autoSkill, logs: addLog(previous.logs, previous.autoSkill ? "已關閉技能自動施放。" : "已開啟技能自動施放。") }))}>{game.autoSkill ? "開啟" : "關閉"}</button></div>
+          </> : <div className="treasure-codex-list"><article className="treasure-entry"><span className="treasure-entry-icon"><Coins aria-hidden="true" /></span><span><strong>新手兌換銅錢</strong><small>特殊貨幣</small></span><b>×{format(game.newbieCoins)}</b></article>{Object.keys(MATERIAL_PRICES).sort((a,b)=>a.localeCompare(b,"zh-TW")).map(name => <article className="treasure-entry" key={name}><span className="treasure-entry-icon"><Gem aria-hidden="true" /></span><span><strong>{name}</strong><small>{game.materials[name] ? "已收集" : "尚未取得"}</small></span><b>×{format(game.materials[name] || 0)}</b></article>)}</div>}
         </DialogContent>
       </Dialog>
       <Dialog open={returnReport !== null} onOpenChange={open => { if (!open) setReturnReport(null); }}>
