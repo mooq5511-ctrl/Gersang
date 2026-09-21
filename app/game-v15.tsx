@@ -26,6 +26,8 @@ import {
   PackageOpen,
   Pill,
   Play,
+  ScrollText,
+  Settings,
   Shield,
   Ship,
   ShoppingBag,
@@ -123,6 +125,7 @@ function currentTimestamp() {
 export default function GameV15() {
   const [game, rawSetGame] = useState<GameState>(freshGame);
   const [activeTab, setActiveTab] = useState("map");
+  const [quickDialog, setQuickDialog] = useState<"treasure" | "settings" | null>(null);
   const [squadDestination, setSquadDestination] = useState<{ key: number; window?: 'inventory' | 'territory' }>({ key: 0 });
   // 所有存檔與取得路徑共用格位整理：保留已有位置與超額舊物，不截斷陣列。
   const setGame=useCallback((action:GameState|((previous:GameState)=>GameState))=>rawSetGame(previous=>{
@@ -710,8 +713,28 @@ export default function GameV15() {
         </div>
       </header>
 
+      <nav className="classic-live-quicknav" aria-label="遊戲功能">
+        <button type="button" className={activeTab === "raid" ? "active" : ""} aria-current={activeTab === "raid" ? "page" : undefined} onClick={() => setActiveTab("raid")}><span className="quick-nav-icon"><Crown aria-hidden="true" /></span><span className="quick-nav-label">雷霞祭壇</span></button>
+        <button type="button" className={activeTab === "city" ? "active" : ""} aria-current={activeTab === "city" ? "page" : undefined} onClick={() => { setCityService("weapon"); setActiveTab("city"); }}><span className="quick-nav-icon"><ShoppingBag aria-hidden="true" /></span><span className="quick-nav-label">市集</span></button>
+        <button type="button" className={activeTab === "trade" ? "active" : ""} aria-current={activeTab === "trade" ? "page" : undefined} onClick={() => setActiveTab("trade")}><span className="quick-nav-icon"><Ship aria-hidden="true" /></span><span className="quick-nav-label">港口</span></button>
+        <button type="button" className={activeTab === "map" ? "active" : ""} aria-current={activeTab === "map" ? "page" : undefined} onClick={() => setActiveTab("map")}><span className="quick-nav-icon"><Castle aria-hidden="true" /></span><span className="quick-nav-label">城門</span></button>
+        <button type="button" className={activeTab === "battle" ? "active" : ""} aria-current={activeTab === "battle" ? "page" : undefined} onClick={() => setActiveTab("battle")}><span className="quick-nav-icon"><Map aria-hidden="true" /></span><span className="quick-nav-label">世界地圖</span></button>
+        <button type="button" className={activeTab === "squad" ? "active" : ""} aria-current={activeTab === "squad" ? "page" : undefined} onClick={() => setActiveTab("squad")}><span className="quick-nav-icon"><Users aria-hidden="true" /></span><span className="quick-nav-label">主角與隊伍</span></button>
+        <button type="button" className={activeTab === "archive" ? "active" : ""} aria-current={activeTab === "archive" ? "page" : undefined} onClick={() => setActiveTab("archive")}><span className="quick-nav-icon"><BookOpen aria-hidden="true" /></span><span className="quick-nav-label">裝備圖鑑</span></button>
+        <button type="button" className={activeTab === "contracts" ? "active" : ""} aria-current={activeTab === "contracts" ? "page" : undefined} onClick={() => setActiveTab("contracts")}><span className="quick-nav-icon"><ScrollText aria-hidden="true" /></span><span className="quick-nav-label">冒險委託</span></button>
+        <button type="button" onClick={() => setQuickDialog("treasure")}><span className="quick-nav-icon"><Gem aria-hidden="true" /></span><span className="quick-nav-label">秘寶圖鑑</span></button>
+        <button type="button" aria-pressed={quickDialog === "settings"} onClick={() => setQuickDialog("settings")}><span className="quick-nav-icon"><Settings aria-hidden="true" /></span><span className="quick-nav-label">設定</span></button>
+      </nav>
+
       {notice && <button className="notice" onClick={() => setNotice("")}><Sparkles />{notice}<span>點擊關閉</span></button>}
       <SceneMusic scene={musicScene}/>
+      <Dialog open={quickDialog !== null} onOpenChange={open => { if (!open) setQuickDialog(null); }}>
+        <DialogContent className="quick-menu-dialog">
+          <DialogTitle>{quickDialog === "settings" ? "行旅設定" : "秘寶圖鑑"}</DialogTitle>
+          <DialogDescription>{quickDialog === "settings" ? "調整商隊自動技能；遊戲進度會自動保存在此瀏覽器。" : "查看已收集的材料與商隊珍藏。"}</DialogDescription>
+          {quickDialog === "settings" ? <div className="quick-setting-row"><span><strong>滿 MP 自動施放技能</strong><small>每名出戰角色集滿魔力後自動施放。</small></span><button type="button" role="switch" aria-checked={game.autoSkill} className={game.autoSkill ? "enabled" : ""} onClick={() => setGame(previous => ({ ...previous, autoSkill: !previous.autoSkill, logs: addLog(previous.logs, previous.autoSkill ? "已關閉技能自動施放。" : "已開啟技能自動施放。") }))}>{game.autoSkill ? "開啟" : "關閉"}</button></div> : <div className="treasure-codex-list"><article className="treasure-entry"><span className="treasure-entry-icon"><Coins aria-hidden="true" /></span><span><strong>新手兌換銅錢</strong><small>特殊貨幣</small></span><b>×{format(game.newbieCoins)}</b></article>{Object.keys(MATERIAL_PRICES).sort((a,b)=>a.localeCompare(b,"zh-TW")).map(name => <article className="treasure-entry" key={name}><span className="treasure-entry-icon"><Gem aria-hidden="true" /></span><span><strong>{name}</strong><small>{game.materials[name] ? "已收集" : "尚未取得"}</small></span><b>×{format(game.materials[name] || 0)}</b></article>)}</div>}
+        </DialogContent>
+      </Dialog>
       <Dialog open={returnReport !== null} onOpenChange={open => { if (!open) setReturnReport(null); }}>
         <DialogContent className="caravan-return-report" showCloseButton={false}>
           <span className="return-report-seal" aria-hidden="true">商</span>
