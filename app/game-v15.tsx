@@ -77,6 +77,7 @@ import { dispatchTradeAction, upgradeCaravanAction } from "./game-trade-actions"
 import { allocateAttributeAction, cyclePositionAction, promoteMercenary, recruitGeneralAction, recruitMerchantAction, storeMercenaryAction, toggleActiveAction, withdrawMercenaryAction } from "./game-squad-actions";
 import { applyAutoMedicineAction, buyMaterialAction, buyMedicineAction, consumeMedicineAction, depositWarehouseItemAction, equipInventoryItemAction, forgeThunderItemAction, forgeVillageWeaponAction, fuseAllInventoryEquipmentAction, openAncientCoinBoxAction, purchaseEquipmentAction, purchaseTierEquipmentAction, sellAllInventoryEquipmentAction, sellAllMaterialsAction, sellInventoryEquipmentAction, sellMaterialAction, socketGemAction, unequipInventoryItemAction, withdrawWarehouseItemAction } from "./game-inventory-actions";
 import { fusionItemKey, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
+import { getStarterWeaponObjective } from "./starter-equipment-objective";
 import { TIER_EQUIPMENT_DROP_REGIONS, tierEquipmentPrice, tierEquipmentShopCatalog, type TierEquipment } from "./tier-equipment";
 import { profileFromGame, readCharacterSave, restoreGame, saveCharacterProfile, writeCharacterSave, writeProfileIndex, writeSharedWarehouse } from "./game-profile-storage";
 import {
@@ -299,6 +300,8 @@ export default function GameV15() {
       if (game.starterDeliveryKills < FIRST_CARAVAN_TARGET) return { title: '清出送貨驛路', detail: `擊敗新手村郊外的狸貓 ${Math.min(game.starterDeliveryKills, FIRST_CARAVAN_TARGET)} / ${FIRST_CARAVAN_TARGET}。只計算委託期間的指定怪物。`, tab: 'battle', mapId: 'starter-outskirts', monsterName: '狸貓' };
       return { title: '回漢陽交付第一份商隊委託', detail: '貨物已能安全送達港口；向金成浩回報，領取白裝短劍與啟程資金。', tab: 'map', npcId: 'kim-seongho' as NpcId };
     }
+    const starterWeaponObjective = getStarterWeaponObjective(game);
+    if (starterWeaponObjective) return starterWeaponObjective;
     if (game.hero.level < 20) return { title: '壯大商隊，建立第一座駐地', detail: `主角 Lv.${game.hero.level} / Lv.20，商團領地即將開放。`, tab: 'battle' };
     if (game.territory.buildings.waystation < 1) return { title: '建立驛站，提升放置收益', detail: `資金 ${Math.floor(game.gold).toLocaleString('zh-TW')} / 1,200 兩；建成後放置收益 +2%。`, tab: 'squad', window: 'territory' as const };
     const equippedGreen = game.firstGreenEquipped || [game.hero, ...game.mercs, ...game.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== '普通'));
