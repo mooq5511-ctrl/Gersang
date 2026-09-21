@@ -152,7 +152,7 @@ Critical constants/current semantics:
 
 ### 3.2 realtime boss/status implementation
 
-`data/skills/boss-abilities.ts` is the authoritative data source for realtime boss mechanics. `dungeonStep` applies them only through the active `MercenaryRealtimeBattleSystem`; do not re-enable legacy aggregate `hit/counter` paths or damage will be doubled. Boss effects, the 天照五件套恐懼、護盾、詛咒與最多三層灼燒 are snapshot-safe. `BattleArena` now converts active serialized effects into visible unit badges: shield, armor, fear, curse, burn stacks, poison and control. Future battle UI work should add cooldown/readiness display without deriving state from text logs.
+`data/skills/boss-abilities.ts` is the authoritative data source for realtime boss mechanics. `dungeonStep` applies them only through the active `MercenaryRealtimeBattleSystem`; do not re-enable legacy aggregate `hit/counter` paths or damage will be doubled. Boss effects, the 天照五件套恐懼、護盾、詛咒與最多三層灼燒 are snapshot-safe. `BattleArena` converts active serialized effects into visible unit badges: shield, armor, fear, curse, burn stacks, poison and control; player portraits also show their assigned front/middle/rear formation. Future battle UI work should add cooldown/readiness display without deriving state from text logs.
 
 ### 3.3 legacy road combat
 
