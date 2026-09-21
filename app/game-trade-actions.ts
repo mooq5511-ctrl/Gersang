@@ -66,11 +66,16 @@ export function resolveRoadEncounterAction(previous: GameState, deps: RoadEncoun
   const materials = { ...previous.materials };
   if (combat.spells.length) logs = deps.addLog(logs, combat.spells.join("；"));
   if (sourceTarget) {
-    const drops = sourceTarget.drops.filter((item) => item !== "古錢箱"), material = drops[Math.floor(Math.random() * drops.length)];
-    materials[material] = (materials[material] || 0) + 1;
+    const drops = sourceTarget.drops.filter((item) => item !== "古錢箱");
+    let dropMessage = sourceTarget.name + "沒有一般材料掉落；";
+    if (drops.length) {
+      const material = drops[Math.floor(Math.random() * drops.length)];
+      materials[material] = (materials[material] || 0) + 1;
+      dropMessage = (banditEncounter ? "山賊掉落「" : "52怪物掉落「") + material + "」；";
+    }
     if ('mapId' in sourceTarget && sourceTarget.mapId === "starter-outskirts") materials["古錢箱"] = (materials["古錢箱"] || 0) + 1;
     xpReward = sourceTarget.xp;
-    logs = deps.addLog(logs, (banditEncounter ? "山賊掉落「" : "52怪物掉落「") + material + "」；經驗資料 " + deps.format(sourceTarget.xp) + "。");
+    logs = deps.addLog(logs, dropMessage + "經驗資料 " + deps.format(sourceTarget.xp) + "。");
   }
   if (nextKills % 4 === 0 || isBoss) { const drop = deps.rollEquipment(previous.stage, isBoss), pickup = addInventoryItem(inventory, drop); inventory = pickup.inventory; logs = deps.addLog(logs, pickup.error ? "背包已滿，本次戰利品無法拾取。" : "獲得 " + drop.rarity + "裝備「" + drop.name + "」，附帶 " + drop.magic.length + " 條魔法屬性。"); }
   const members = 1 + active.length, shareXp = Math.floor(xpReward / Math.max(1, members));
