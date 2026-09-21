@@ -28,12 +28,12 @@ test('guild stats, gear and deployment choices are preserved',()=>{
   const next=retainGuildRoster(s);assert.equal(next.mercs[0],s.mercs[1]);assert.deepEqual(next.active,['guild']);
   assert.equal(next.mercs[0].hp,123);assert.equal(next.mercs[0].mp,12);
 });
-test('migration keeps at most five deployed mercenaries',()=>{
+test('migration keeps at most eleven deployed mercenaries',()=>{
   const s=state();
   s.mercs=Array.from({length:7},(_,index)=>member('guild-'+index,'merchant-spear'));
   s.active=s.mercs.map(unit=>unit.uid);
   const next=retainGuildRoster(s);
-  assert.equal(ACTIVE_MERCENARY_LIMIT,5);
+  assert.equal(ACTIVE_MERCENARY_LIMIT,11);
   assert.deepEqual(next.active,s.active.slice(0,ACTIVE_MERCENARY_LIMIT));
 });
 test('backup captures original slot once and never overwrites it',()=>{
@@ -51,12 +51,14 @@ test('failed backup aborts destructive migration',()=>{
 });
 test('game removes legacy recruitment and evolution entrypoints and migrates loaded saves',()=>{
   const source=readFileSync(new URL('../app/game-v15.tsx',import.meta.url),'utf8');
+  const storage=readFileSync(new URL('../app/game-profile-storage.ts',import.meta.url),'utf8');
+  const factory=readFileSync(new URL('../app/game-hero-factory.ts',import.meta.url),'utf8');
   assert.doesNotMatch(source,/value="fusion"|function promoteSelected|function specialFusion|function awakenSelected|function legendFusion|function recruit\(template|makeBaseUnit|currentGenerals|currentMercenaries|特約傭兵/);
   assert.match(source,/中央傭兵公會/);
-  assert.match(source,/return retainGuildRoster<Equipment, Unit, GameState>\(next\)/);
+  assert.match(storage,/return retainGuildRoster<Equipment, Unit, GameState>\(applyGersangVisuals\(next\)\)/);
   assert.match(source,/backupBeforeGuildMigration\(localStorage/);
-  assert.match(source,/const starters: Unit\[\] = \[\]/);
+  assert.match(factory,/const starters: Unit\[\] = \[\]/);
   const recruitment=readFileSync(new URL('../app/mercenary-recruitment.tsx',import.meta.url),'utf8');
-  assert.match(recruitment,/中央傭兵公會・16 種傭兵/);
+  assert.match(recruitment,/中央傭兵公會・\{merchantMercenaries\.length\} 種傭兵/);
   assert.doesNotMatch(recruitment,/特約|原有傭兵保留/);
 });

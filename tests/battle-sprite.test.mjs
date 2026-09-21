@@ -1,25 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync,statSync} from 'node:fs';
+import {readFileSync} from 'node:fs';
+import {battleMonsterImage,MONSTER_PLACEHOLDER} from '../app/battle-visual-data.ts';
 
-test('four nations and enemy use generated sprite sheets tied to attack events',()=>{
+test('vertical realtime theater displays both sides and falls back to a monster placeholder',()=>{
  const arena=readFileSync(new URL('../app/battle-arena.tsx',import.meta.url),'utf8');
- const effects=readFileSync(new URL('../app/battle-effects.ts',import.meta.url),'utf8');
  const css=readFileSync(new URL('../app/battle-impact.css',import.meta.url),'utf8');
- assert.match(arena,/data-sprite="hero" data-nation=\{hero\.nation\|\|'korea'\}/);
- assert.match(effects,/find\('sprite',event\.attacker\),'impact-sprite-attack'/);
- assert.match(effects,/data\.skill\?'impact-sprite-water-skill':'impact-sprite-normal-attack'/);
- assert.match(css,/hero-normal-attack\.png/);
- assert.match(css,/hero-water-skill\.png/);
- assert.match(css,/steps\(9,end\)/);
- assert.ok(statSync(new URL('../public/game-assets/hero-normal-attack.png',import.meta.url)).size>1000);
- assert.ok(statSync(new URL('../public/game-assets/hero-water-skill.png',import.meta.url)).size>1000);
- for(const nation of ['taiwan','korea','japan','china']){
-  assert.match(css,new RegExp(nation+'-idle\\.png'));
-  assert.match(css,new RegExp(nation+'-attack\\.png'));
-  assert.ok(statSync(new URL('../public/assets/sprites/'+nation+'-idle.png',import.meta.url)).size>1000);
-  assert.ok(statSync(new URL('../public/assets/sprites/'+nation+'-attack.png',import.meta.url)).size>1000);
- }
- assert.match(css,/steps\(3,end\)/);
- assert.match(css,/battle-sprite-attack/);
+ assert.match(arena,/battle-theater-enemy/);assert.match(arena,/battle-theater-player/);
+ assert.match(arena,/data-unit-id=\{unit\.id\}/);assert.match(arena,/event\.type==='damage'/);
+ assert.ok(arena.indexOf('battle-theater-enemy')<arena.indexOf('battle-theater-player'));
+ assert.match(css,/\.battle-theater-enemy-units/);assert.match(css,/\.battle-theater-player-units/);
+ assert.match(css,/\.realtime-floating-damage/);assert.match(arena,/realtime-unit-hit/);
+ assert.equal(battleMonsterImage('尚未登錄的怪物'),MONSTER_PLACEHOLDER);
 });

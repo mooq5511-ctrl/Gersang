@@ -6,27 +6,26 @@ const now = 1_000_000;
 const initialGold = 120000;
 const launch = () => dispatchTrade(freshTrade(), initialGold, 'hanji', 1, 4, now);
 
-test('each possible encounter count from zero through ten is supported', () => {
+test('caravan voyages complete without random road encounters', () => {
   for (let seed = 0; seed <= 10; seed++) {
     const launched = dispatchTrade({ ...freshTrade(), auto: false }, initialGold, 'hanji', 1, 4, now, seed);
     const paid = advanceTrade(launched.trade, launched.gold, now + 18000);
-    assert.equal(paid.encounters, seed);
+    assert.equal(paid.encounters, 0);
     assert.equal(paid.trips, 1);
     assert.equal(paid.trade.caravan, null);
   }
 });
-test('encounters trigger during transit, never twice after reload', () => {
+test('mid-voyage progress and reloads never spawn road encounters', () => {
   const launched = dispatchTrade(freshTrade(), initialGold, 'hanji', 1, 4, now, 10);
   const offsets = encounterTimes(launched.trade.caravan);
-  assert.equal(offsets.length, 10);
-  assert.ok(offsets.every((offset, index) => offset > 0 && offset < 18000 && (!index || offset > offsets[index - 1])));
-  const first = advanceTrade(launched.trade, launched.gold, now + offsets[0]);
-  assert.equal(first.encounters, 1);
+  assert.equal(offsets.length, 0);
+  const first = advanceTrade(launched.trade, launched.gold, now + 9000);
+  assert.equal(first.encounters, 0);
   assert.equal(first.trips, 0);
-  const reloaded = advanceTrade(restoreTrade(first.trade), first.gold, now + offsets[0]);
+  const reloaded = advanceTrade(restoreTrade(first.trade), first.gold, now + 9000);
   assert.equal(reloaded.encounters, 0);
   const remaining = advanceTrade({ ...reloaded.trade, auto: false }, reloaded.gold, now + 18000);
-  assert.equal(remaining.encounters, 9);
+  assert.equal(remaining.encounters, 0);
 });
 test('repeat voyages get a fresh schedule and offline totals stay bounded', () => {
   const launched = dispatchTrade(freshTrade(), initialGold, 'hanji', 1, 4, now, 10);

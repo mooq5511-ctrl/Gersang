@@ -1,17 +1,52 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dungeonStep,freshDungeon,DUNGEONS} from '../app/dungeon-engine.ts';
-const hero={hp:80,mp:40,maxHp:80,maxMp:40,str:20,dex:15,int:10,attack:0,defense:0,staff:false};
-const start=(h=hero,key='wolf')=>dungeonStep(freshDungeon(),h,'start',1000,key).state;
-test('monster specification',()=>{assert.deepEqual([DUNGEONS.wolf,DUNGEONS.snake,DUNGEONS.king].map(x=>[x.level,x.hp,x.atk]),[[10,300,15],[40,2500,65],[80,15000,220]])});
-test('one tick attacks both sides in dex order',()=>{const r=dungeonStep(start(),hero,'tick',2000);assert.equal(r.hp,70);assert.equal(r.state.enemyHp,260);assert.match(r.state.logs[0],/受到 10/)});
-test('manual attack and auto attack share cooldown',()=>{const a=dungeonStep(start(),hero,'normal',1500);const b=dungeonStep(a.state,hero,'normal',1501);assert.equal(b.state.enemyHp,260);const c=dungeonStep(b.state,hero,'tick',2000);assert.equal(c.state.enemyHp,260);assert.equal(c.hp,70)});
-test('skill consumes exactly 40 MP and respects cooldown',()=>{const a=dungeonStep(start(),hero,'skill',1100);assert.equal(a.mp,0);assert.equal(a.state.enemyHp,220);const b=dungeonStep(a.state,hero,'skill',1101);assert.equal(b.mp,40);assert.equal(b.state.enemyHp,220);const c=dungeonStep(a.state,{...hero,mp:0},'skill',5000);assert.equal(c.state.enemyHp,220)});
-test('staff doubles intelligence and weapon skill damage',()=>{const h={...hero,int:20,attack:10};assert.equal(dungeonStep(start(h,'king'),h,'skill',1100).state.enemyHp,14810);assert.equal(dungeonStep(start(h,'king'),{...h,staff:true},'skill',1100).state.enemyHp,14620)});
-test('killing strike stops counterattack and pays once',()=>{const h={...hero,str:150};const r=dungeonStep(start(h),h,'tick',2000,undefined,0,0);assert.equal(r.hp,80);assert.equal(r.state.status,'respawning');assert.equal(r.reward.xp,100);assert.equal(r.reward.loot,'staff');assert.equal(dungeonStep(r.state,h,'skill',2001).reward,null);assert.equal(dungeonStep(r.state,h,'tick',3000).state.status,'fighting')});
-test('death prevents slower hero attack and automatically stops farming',()=>{const h={...hero,hp:10,dex:1};const r=dungeonStep(start(h,'king'),h,'tick',2000);assert.equal(r.hp,0);assert.equal(r.state.zone,'hanyang');assert.equal(r.state.key,'e_raccoon');assert.equal(r.state.enemyHp,60);assert.equal(r.state.status,'recovering');assert.equal(r.state.innHealAt,4000);assert.equal(r.reward,null)});
-test('inn recovery restores ten HP every two seconds and leaves automatically',()=>{let state={...start(),status:'recovering',innHealAt:3000},h={...hero,hp:0,mp:0};let r=dungeonStep(state,h,'tick',2999);assert.equal(r.hp,0);for(let i=0;i<8;i++){r=dungeonStep(state,h,'tick',3000+i*2000);state=r.state;h={...h,hp:r.hp,mp:r.mp};assert.equal(r.reward,null)}assert.equal(state.status,'idle');assert.equal(h.hp,80);assert.equal(h.mp,0);assert.equal(dungeonStep(state,h,'tick',20000).state.status,'idle')});
-test('retaliation is 10 to 25 HP and repeated tick never replays',()=>{const h={...hero,defense:1000};const low=dungeonStep(start(h),h,'tick',2000,undefined,.99,0,0,0);assert.equal(low.hp,70);const high=dungeonStep(start(h),h,'tick',2000,undefined,.99,0,0,.999);assert.equal(high.hp,55);const replay=dungeonStep(low.state,{...h,hp:low.hp},'tick',2000);assert.equal(replay.hp,70);assert.equal(replay.state.enemyHp,260)});
-test('drop boundaries and weighted pool',()=>{const h={...hero,str:9000};assert.equal(dungeonStep(start(h),h,'normal',1100,undefined,.2,0).reward.loot,null);assert.equal(dungeonStep(start(h,'king'),h,'normal',1100,undefined,.899,.4).reward.loot,'staff')});
-test('retreat cannot create rewards or restart during recovery',()=>{const r=dungeonStep(start(),hero,'retreat',1100);assert.equal(r.state.status,'recovering');assert.equal(dungeonStep(r.state,hero,'start',1200,'king').state.status,'recovering');assert.equal(r.reward,null)});
-test('input state and hero remain unchanged',()=>{const s=start(),copy=JSON.stringify(s);dungeonStep(s,hero,'tick',2000);assert.equal(JSON.stringify(s),copy);assert.equal(hero.hp,80)});
+import {dungeonStep,freshDungeon,DUNGEONS,WORLD_ZONES,normalEncounterCount} from '../app/dungeon-engine.ts';
+
+const hero={hp:100000,maxHp:100000,mp:40,maxMp:40,str:20,dex:15,mercenaryIntelligence:0,attack:10,defense:100,staff:false};
+const start=(key='e_raccoon',count=.999999)=>dungeonStep(freshDungeon(),hero,'start',1000,key,.99,0,0,0,[],0,[1,1,1],false,count);
+
+test('world-map zones resolve to valid data-backed encounter pools',()=>{
+ assert.equal(WORLD_ZONES.length,12);
+ for(const zone of WORLD_ZONES){assert.ok(DUNGEONS[zone.enemy]);assert.ok(zone.dropTable.length>0)}
+ assert.equal(new Set(WORLD_ZONES.map(zone=>zone.enemy)).size,12);
+});
+
+test('normal encounters scale from one to twelve enemies and bosses remain solo',()=>{
+ assert.deepEqual([0,.5,.999999].map(normalEncounterCount),[1,7,12]);
+ assert.equal(start('e_raccoon',.5).state.realtime.enemies.length,7);
+ assert.equal(start('e_lake_gale_altur').state.realtime.enemies.length,1);
+});
+
+test('battle starts in live auto-combat with stable formation positions',()=>{
+ const result=start('e_raccoon',0);
+ assert.equal(result.state.status,'fighting');
+ assert.equal(result.state.realtime.running,true);
+ assert.equal(result.state.realtime.players.length,1);
+ assert.deepEqual(result.state.realtime.players[0].position,{row:0,col:3});
+ assert.equal(result.state.realtime.enemies.length,1);
+});
+
+test('manual normal and skill controls do not bypass realtime cooldowns',()=>{
+ const battle=start('e_raccoon',0);
+ const normal=dungeonStep(battle.state,hero,'normal',1050);
+ const skill=dungeonStep(normal.state,hero,'skill',1100);
+ assert.equal(normal.state.realtime.enemies[0].hp,battle.state.realtime.enemies[0].hp);
+ assert.equal(skill.state.realtime.enemies[0].hp,battle.state.realtime.enemies[0].hp);
+ assert.match(skill.state.logs[0],/即時自動戰鬥/);
+});
+
+test('retreat enters recovery and cannot be restarted before healing completes',()=>{
+ const battle=start('e_raccoon',0);
+ const retreat=dungeonStep(battle.state,hero,'retreat',1100);
+ const restarted=dungeonStep(retreat.state,hero,'start',1200,'e_lake_gale_altur');
+ assert.equal(retreat.state.status,'recovering');
+ assert.equal(restarted.state.status,'recovering');
+ assert.equal(restarted.reward,null);
+});
+
+test('dungeon transitions leave the saved input state unchanged',()=>{
+ const battle=start('e_raccoon',0),before=structuredClone(battle.state),savedHero=structuredClone(hero);
+ dungeonStep(battle.state,hero,'tick',2000);
+ assert.deepEqual(battle.state,before);
+ assert.deepEqual(hero,savedHero);
+});

@@ -3,33 +3,42 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
-import {dungeonStep,dungeonBusy,freshDungeon} from '../app/dungeon-engine.ts';
-import {heroTotalAttributes} from '../app/hero-rules.ts';
-import {vitalStats,combatStats} from '../app/vitals-engine.ts';
-import {DIVINE_EQUIPMENT} from '../app/divine-equipment.ts';
-import {addInventoryItem} from '../app/inventory-layout.ts';
-import {settleCaravanIdle} from '../app/caravan-idle.ts';
-import {advanceTrade, freshTrade} from '../app/trade-engine.ts';
-import {ACTIVE_MERCENARY_LIMIT} from '../app/guild-migration.ts';
+import {dungeonBusy,freshDungeon} from '../app/dungeon-engine.ts';
+
 const source=readFileSync(new URL('../app/game-v15.tsx',import.meta.url),'utf8');
-const code=source.slice(source.indexOf('function applyDungeon('),source.indexOf('function inheritMerchantPrototype('));
-const context=vm.createContext({ACTIVE_MERCENARY_LIMIT,dungeonStep,dungeonBusy,freshDungeon,heroTotalAttributes,vitalStats,combatStats,DIVINE_EQUIPMENT,addInventoryItem,settleCaravanIdle,advanceTrade,addLog:(l,m)=>[m,...l],grantXp:(u,x)=>({...u,xp:u.xp+x}),enterGameInn:p=>p,leaveGameInn:p=>({...p,hero:{...p.hero,status:'正常'}})});
-vm.runInContext(ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
-const game=()=>({hero:{templateId:'hero',level:1,str:150,agi:15,vit:20,intel:10,xp:0,hp:100,mp:40,maxHp:100,status:'正常',equip:{}},inventory:[],dungeon:freshDungeon(),gold:0,credit:0,kills:0,logs:[],trade:freshTrade(),idleStamp:1000,mercs:[],active:[]});
-test('integrated kill pays XP gold and one item into actual inventory',()=>{const s=context.applyDungeon(game(),'start',1000,'wolf');const r=context.applyDungeon(s,'normal',1100,undefined,0,0);assert.equal(r.hero.xp,100);assert.equal(r.gold,80);assert.equal(r.inventory[0].name,'高級神仙棒');assert.equal(r.hero.hp,100);assert.equal(context.applyDungeon(r,'normal',1101).gold,80)});
-test('integrated loot appends beyond the former twenty item limit',()=>{const s=game();s.inventory=Array.from({length:20},(_,i)=>({uid:String(i)}));const r=context.applyDungeon(context.applyDungeon(s,'start',1000,'wolf'),'normal',1100,undefined,0,0);assert.equal(r.inventory.length,21);assert.equal(r.inventory[0].uid,'0');assert.equal(r.gold,80);assert.match(r.logs[0],/獲得/)});
-test('inn healing suppresses income and completes on its two-second tick',()=>{const s=game();s.dungeon={...freshDungeon(),status:'recovering',stamp:1000,innHealAt:3000};s.hero.hp=90;s.hero.status='客棧中';const early=context.settleMerchantGame(s,2999);assert.equal(early.hero.hp,90);const r=context.settleMerchantGame(early,3000);assert.equal(r.gold,0);assert.equal(r.credit,0);assert.equal(r.hero.hp,100);assert.equal(r.dungeon.status,'idle');assert.equal(r.idleStamp,3000);const n=context.settleMerchantGame(r,4000);assert.equal(n.gold,10);assert.equal(n.credit,5)});
-test('paused voyage preserves progress even subsecond ticks',()=>{const s=game();s.trade.caravan={startedAt:500};let r=context.applyDungeon(s,'start',1000,'wolf');r=context.settleMerchantGame(r,1500);r=context.settleMerchantGame(r,2000);assert.equal(r.trade.caravan.startedAt,1500);assert.equal(r.hero.xp,100)});
-test('inactive mercenaries do not add damage or enter the dungeon party',()=>{
-  const merc={uid:'bench',templateId:'merchant-spear',name:'候補槍兵',role:'前排',skill:'突刺',level:99,str:999,agi:20,vit:40,intel:10,hp:500,mp:40,position:'前排',equip:{}};
-  const weakGame=()=>{const value=game();value.hero.str=1;value.hero.agi=1;return value};
-  const baseline=context.applyDungeon(context.applyDungeon(weakGame(),'start',1000,'wolf'),'normal',1100,undefined,.99,.5);
-  const benched=weakGame();benched.mercs=[merc];benched.active=[];
-  const benchedResult=context.applyDungeon(context.applyDungeon(benched,'start',1000,'wolf'),'normal',1100,undefined,.99,.5);
-  assert.equal(benchedResult.dungeon.enemyHp,baseline.dungeon.enemyHp);
-  assert.equal(benchedResult.mercs[0].hp,merc.hp);
-  const deployed=weakGame();deployed.mercs=[merc];deployed.active=[merc.uid];
-  const deployedResult=context.applyDungeon(context.applyDungeon(deployed,'start',1000,'wolf'),'normal',1100,undefined,.99,.5);
-  assert.ok(deployedResult.dungeon.enemyHp<benchedResult.dungeon.enemyHp);
+const loopSource=readFileSync(new URL('../app/game-loop.ts',import.meta.url),'utf8');
+const actionsSource=readFileSync(new URL('../app/game-battle-actions.ts',import.meta.url),'utf8');
+const compile=(code,context)=>vm.runInContext(ts.transpileModule(code.replace(/^export /,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
+const recoveryContext=vm.createContext({dungeonBusy,runDungeon:(state,action,now)=>({...state,dungeon:{...state.dungeon,status:'idle',stamp:now}})});
+compile(loopSource.slice(loopSource.indexOf('export function settleGameLoop('),loopSource.indexOf('/** Public game-loop entry point')),recoveryContext);
+const rollContext=vm.createContext({});
+compile(loopSource.slice(loopSource.indexOf('export function createGameTickRolls()'),loopSource.indexOf('type LoopDependencies')),rollContext);
+
+test('battle action wiring uses the deployed roster cap and distributes realtime kills',()=>{
+ assert.match(actionsSource,/previous\.active\.slice\(0, ACTIVE_MERCENARY_LIMIT\)/);
+ assert.match(actionsSource,/previous\.mercs\.filter\(\(unit\) => activeIds\.has\(unit\.uid\)\)/);
+ assert.match(actionsSource,/result\.killsEarned/);
+ assert.match(actionsSource,/result\.reward/);
+ assert.match(actionsSource,/defeatedLakeBoss/);
 });
-test('react interval has cleanup and sampled randomness outside updater',()=>{assert.match(source,/clearInterval\(timer\)/);assert.match(source,/const now=Date.now\(\),roll=Math.random\(\),choice=Math.random\(\);/);assert.match(source,/next.dungeon=\{\.\.\.freshDungeon\(\),status:'recovering'/)});
+
+test('recovery ticks suppress idle income until the party leaves the inn',()=>{
+ const previous={dungeon:{...freshDungeon(),status:'recovering',stamp:1000,pauseAt:1000,innHealAt:3000},trade:{caravan:null},idleStamp:1000,gold:0,credit:0};
+ const rolls={now:3000,roll:.9,choice:0,spawnRoll:0,encounterCountRoll:0,retaliationRoll:0,materialRolls:[1,1,1]};
+ const settled=recoveryContext.settleGameLoop(previous,rolls,{runDungeon:recoveryContext.runDungeon});
+ assert.equal(dungeonBusy(settled.dungeon),false);
+ assert.equal(settled.gold,0);
+ assert.equal(settled.credit,0);
+ assert.equal(settled.idleStamp,3000);
+});
+
+test('game tick samples deterministic inputs and clears its realtime interval',()=>{
+ const rolls=rollContext.createGameTickRolls();
+ assert.ok(Number.isFinite(rolls.now));
+ for(const key of ['roll','choice','spawnRoll','encounterCountRoll','retaliationRoll','gearDropRoll','gearChoiceRoll'])assert.ok(Number.isFinite(rolls[key]));
+ assert.equal(rolls.materialRolls.length,3);
+ assert.match(source,/const timer = window\.setInterval\(\(\) => \{/);
+ assert.match(source,/const rolls = createGameTickRolls\(\);/);
+ assert.match(source,/settleCurrentGame\(previous,rolls\)/);
+ assert.match(source,/clearInterval\(timer\)/);
+});

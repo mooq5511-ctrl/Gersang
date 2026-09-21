@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import {rarityPresentation,battleLogPresentation} from '../app/classic-presentation.ts';
 test('rarity styles preserve real game labels and handle older missing values',()=>{
  assert.equal(rarityPresentation('傳說').className,'rarity-mythic');
- assert.equal(rarityPresentation('傳說').label,'傳說');
- assert.equal(rarityPresentation('稀有').className,'rarity-rare');
+ assert.equal(rarityPresentation('傳說').label,'紫色・傳說');
+ assert.equal(rarityPresentation('稀有').className,'rarity-uncommon');
+ assert.equal(rarityPresentation('稀有').label,'綠色・稀有');
  assert.equal(rarityPresentation('史詩').className,'rarity-epic');
  assert.equal(rarityPresentation('優良').className,'rarity-uncommon');
  assert.equal(rarityPresentation().className,'rarity-common');
