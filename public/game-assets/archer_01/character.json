@@ -1,0 +1,25 @@
+{
+  "id": "archer_01",
+  "displayName": "弓兵",
+  "faction": "player",
+  "facing": "right",
+  "canvas": {
+    "width": 512,
+    "height": 512,
+    "transparent": true,
+    "anchor": {
+      "x": 256,
+      "y": 460
+    },
+    "anchorType": "feet_baseline"
+  },
+  "animations": {
+    "idle": "idle.png",
+    "attack_01": "attack_01.png",
+    "attack_02": "attack_02.png",
+    "hit": "hit.png",
+    "death": "death.png",
+    "skill": "skill.png"
+  },
+  "portrait": "portrait.png"
+}
