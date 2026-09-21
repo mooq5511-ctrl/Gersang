@@ -50,7 +50,7 @@ const gameplayContracts = legacyContracts.filter(contract => !['tier1','tier2','
 import { TradePanel } from "./trade-panel";
 import { IsometricWorldMap } from "./isometric-world-map";
 import { NpcDialoguePanel } from "./npc-dialogue-panel";
-import { awardNpcAffinity, completeNpcQuest, npcById, npcGreeting, recordNpcLine, startNpcQuest, type NpcId } from "./npc-dialogue";
+import { activeNpcQuests, awardNpcAffinity, completeNpcQuest, npcById, npcGreeting, recordNpcLine, startNpcQuest, type NpcId } from "./npc-dialogue";
 import { ThunderAltarRaid } from "./thunder-altar-raid";
 import { THUNDER_FORGE_ITEMS, mythicSetPieceCount, type MythicSet, type ThunderForgeId } from './mythic-forge';
 import { LEVEL_CAP } from "./level-progression";
@@ -272,6 +272,7 @@ export default function GameV15() {
   const quickHealCost=Math.max(0,heroVital.maxHp-heroVital.hp)*2;
   const currentNation = nations.find((nation) => nation.id === currentCity.nation) || nations[0];
   const displayCityName = currentCity.id === "hanyang" ? STARTER_VILLAGE_NAME : currentCity.name;
+  const trackedNpcQuests = activeNpcQuests(game);
   const firstCaravanBossReady = game.npcProgress.completedQuests.includes(FIRST_CARAVAN_QUEST_ID) && game.hero.level >= 20 && game.territory.buildings.waystation >= 1 && (game.firstGreenEquipped || [game.hero, ...game.mercs, ...game.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== '普通')));
   const cityArmors = officialEquipment.filter((item) => item.kind === "armor").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
   const cityWeapons = officialEquipment.filter((item) => item.kind === "weapon").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
@@ -926,6 +927,18 @@ export default function GameV15() {
                 <Button size="sm" disabled={!completed || claimed} onClick={() => claimContract(contract.id)}>{claimed ? "已領取" : completed ? "領取獎勵" : "進行中"}</Button>
               </article>;
             })}</div>
+          </section>
+          <section className="panel contract-board">
+            <div className="panel-title"><Users /><h2>漢陽村莊委託追蹤</h2><span>{trackedNpcQuests.length} 項進行中</span></div>
+            <p className="section-copy">完成條件後返回委託人回報；進度會隨冒險自動更新。</p>
+            {trackedNpcQuests.length ? <div className="contract-grid">{trackedNpcQuests.map(({npc,quest,progress})=>{const ready=progress>=quest.target;return <article className={ready?"complete":""} key={quest.id}>
+              <div><small>{npc.role}・{npc.name}</small><strong>{quest.name}</strong></div>
+              <p>{ready?"委託條件已達成，請回到委託人領取獎勵。":"依照委託要求持續冒險，達成後回報。"}</p>
+              <Progress value={Math.min(100,progress/quest.target*100)} />
+              <span>{Math.min(progress,quest.target)} / {quest.target}{ready?"・可回報":""}</span>
+              <em>獎勵 {format(quest.reward.gold)} 兩・好感 +{quest.reward.affinity}</em>
+              <Button size="sm" variant="outline" onClick={()=>{setActiveTab("map");openNpcDialogue(npc.id);}}>{ready?"返回回報":"前往委託人"}</Button>
+            </article>})}</div> : <p className="empty-state">目前沒有進行中的村莊委託；與漢陽 NPC 交談即可接受任務。</p>}
           </section>
           <section className="panel implemented-systems">
             <div className="panel-title"><Sparkles /><h2>已融入玩法的資料</h2><span>不再使用參考圖鑑</span></div>

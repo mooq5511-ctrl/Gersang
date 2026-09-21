@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   VILLAGE_NPCS,
+  activeNpcQuests,
   awardNpcAffinity,
   completeNpcQuest,
   freshNpcProgress,
@@ -68,4 +69,13 @@ test('NPC quests cannot be claimed early or paid twice', () => {
   assert.deepEqual(completed.npcProgress.completedQuests, [npc.quest.id]);
   assert.equal(npcQuestState(completed, npc), 'complete');
   assert.strictEqual(completeNpcQuest(completed, npc), completed);
+});
+
+test('accepted village quests expose live progress for the central quest tracker', () => {
+  const npc = npcById('kim-seongho');
+  let state = startNpcQuest(game(), npc);
+  state = { ...state, starterDeliveryKills: 2 };
+  assert.deepEqual(activeNpcQuests(state).map(({ quest, progress }) => [quest.id, progress]), [[npc.quest.id, 2]]);
+  state = { ...state, npcProgress: { ...state.npcProgress, activeQuests: [] } };
+  assert.deepEqual(activeNpcQuests(state), []);
 });

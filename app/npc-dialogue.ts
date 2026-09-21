@@ -21,6 +21,7 @@ export function normalizeNpcProgress(value: unknown): NpcProgress {
 export function npcById(id:string){return VILLAGE_NPCS.find(npc=>npc.id===id)}
 export function npcQuestState(state:GameState,npc:VillageNpc){const quest=npc.quest;if(!quest)return "none" as const;if(state.npcProgress.completedQuests.includes(quest.id))return "complete" as const;if(state.npcProgress.activeQuests.includes(quest.id))return "active" as const;return "before" as const}
 export function npcQuestProgress(state:GameState,quest:NpcQuest){return contractProgress(state,quest.metric)}
+export function activeNpcQuests(state:GameState){return VILLAGE_NPCS.flatMap(npc=>{const quest=npc.quest;return quest&&state.npcProgress.activeQuests.includes(quest.id)?[{npc,quest,progress:npcQuestProgress(state,quest)}]:[]})}
 export function npcGreeting(state:GameState,npc:VillageNpc){if(!state.npcProgress.met.includes(npc.id))return npc.first;const phase=npcQuestState(state,npc);return phase==="complete"?npc.afterQuest:phase==="active"?npc.inProgress:npc.beforeQuest}
 export function npcAffinityKey(npc:VillageNpc,option:NpcOption){return option.affinityKey||`${npc.id}:${option.label}`}
 export function hasNpcAffinityReward(progress:NpcProgress,npc:VillageNpc,option:NpcOption){return !!option.affinity&&(progress.affinityChoices||[]).includes(npcAffinityKey(npc,option))}
