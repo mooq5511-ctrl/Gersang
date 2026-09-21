@@ -1,5 +1,5 @@
-import { dungeonBusy } from "./dungeon-engine";
-import { EQUIPMENT_SLOTS } from "./equipment-slots";
+import { dungeonBusy } from "./dungeon-engine.ts";
+import { EQUIPMENT_SLOTS } from "./equipment-slots.ts";
 import type { GameState } from "./game-state";
 
 type Contract = { id: string; name: string; metric: string; target: number; reward: { gold: number } };

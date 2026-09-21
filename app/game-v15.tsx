@@ -50,7 +50,7 @@ const gameplayContracts = legacyContracts.filter(contract => !['tier1','tier2','
 import { TradePanel } from "./trade-panel";
 import { IsometricWorldMap } from "./isometric-world-map";
 import { NpcDialoguePanel } from "./npc-dialogue-panel";
-import { completeNpcQuest, npcById, npcGreeting, recordNpcLine, startNpcQuest, type NpcId } from "./npc-dialogue";
+import { awardNpcAffinity, completeNpcQuest, npcById, npcGreeting, recordNpcLine, startNpcQuest, type NpcId } from "./npc-dialogue";
 import { ThunderAltarRaid } from "./thunder-altar-raid";
 import { THUNDER_FORGE_ITEMS, mythicSetPieceCount, type MythicSet, type ThunderForgeId } from './mythic-forge';
 import { LEVEL_CAP } from "./level-progression";
@@ -629,7 +629,7 @@ export default function GameV15() {
   function handleNpcAction({ option, npc }: { option: { label: string; reply: string; affinity?: number; service?: CityService; openContracts?: boolean; quest?: "start" | "complete" }; npc: NonNullable<ReturnType<typeof npcById>> }) {
     setGame(previous => {
       let next = recordNpcLine(previous, npc.id, `${npc.name}：${option.reply}`);
-      if (option.affinity) next = { ...next, npcProgress: { ...next.npcProgress, affinity: { ...next.npcProgress.affinity, [npc.id]: Math.min(100, (next.npcProgress.affinity[npc.id] || 0) + option.affinity) } } };
+      next = awardNpcAffinity(next, npc, option);
       if (option.quest === "start") {
         next = startNpcQuest(next, npc);
         if (next !== previous) next = { ...next, logs: addLog(next.logs, `接受村莊委託「${npc.quest?.name || ""}」。`) };

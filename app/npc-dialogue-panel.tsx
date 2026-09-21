@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { BookOpen, Heart, LockKeyhole, Store, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DEFAULT_NPC_PORTRAIT, npcGreeting, npcPortraitSprite, npcQuestProgress, npcQuestState, type NpcOption, type VillageNpc } from "./npc-dialogue";
+import { DEFAULT_NPC_PORTRAIT, hasNpcAffinityReward, npcGreeting, npcPortraitSprite, npcQuestProgress, npcQuestState, type NpcOption, type VillageNpc } from "./npc-dialogue";
 import type { GameState } from "./game-state";
 
 type DialogueAction = { option: NpcOption; npc: VillageNpc };
@@ -63,7 +63,7 @@ export function NpcDialoguePanel({
             {phase === "active" && progress >= quest.target && <Button size="sm" onClick={() => choose({ label: "回報任務", reply: "做得好，這是約定的謝禮。", quest: "complete" })}>回報任務</Button>}
           </section>}
           <div className="npc-dialogue-options">
-            {visibleOptions.map(option => <Button key={option.label} variant="outline" onClick={() => choose(option)}>{option.service && <Store />}{option.openContracts && <BookOpen />}{option.label}</Button>)}
+            {visibleOptions.map(option => { const affinityClaimed=hasNpcAffinityReward(game.npcProgress,npc,option);return <Button key={option.label} variant="outline" disabled={affinityClaimed} onClick={() => choose(option)}>{option.service && <Store />}{option.openContracts && <BookOpen />}{option.label}{affinityClaimed?"（已聊過）":""}</Button>; })}
             {npc.hidden && (npc.hidden.requirement(game)
               ? <Button variant="outline" className="npc-hidden-option" onClick={() => choose({ label: npc.hidden!.label, reply: npc.hidden!.reply, hidden: true })}><LockKeyhole />{npc.hidden.label}</Button>
               : <span className="npc-hidden-locked"><LockKeyhole />隱藏對話：提升好感或推進旅程後開放</span>)}
