@@ -50,7 +50,7 @@ const gameplayContracts = legacyContracts.filter(contract => !['tier1','tier2','
 import { TradePanel } from "./trade-panel";
 import { IsometricWorldMap } from "./isometric-world-map";
 import { NpcDialoguePanel } from "./npc-dialogue-panel";
-import { activeNpcQuests, awardNpcAffinity, completeNpcQuest, npcById, npcGreeting, recordNpcLine, startNpcQuest, type NpcId } from "./npc-dialogue";
+import { activeNpcQuests, awardNpcAffinity, completeNpcQuest, npcById, npcGreeting, recordNpcLine, startNpcQuest, type NpcId, type NpcOption } from "./npc-dialogue";
 import { ThunderAltarRaid } from "./thunder-altar-raid";
 import { THUNDER_FORGE_ITEMS, mythicSetPieceCount, type MythicSet, type ThunderForgeId } from './mythic-forge';
 import { LEVEL_CAP } from "./level-progression";
@@ -627,7 +627,7 @@ export default function GameV15() {
     setGame(previous => forgeThunderItemAction(previous, id, uid, gersangItemArt, addLog, setNotice));
   }
 
-  function handleNpcAction({ option, npc }: { option: { label: string; reply: string; affinity?: number; service?: CityService; openContracts?: boolean; quest?: "start" | "complete" }; npc: NonNullable<ReturnType<typeof npcById>> }) {
+  function handleNpcAction({ option, npc }: { option: NpcOption; npc: NonNullable<ReturnType<typeof npcById>> }) {
     setGame(previous => {
       let next = recordNpcLine(previous, npc.id, `${npc.name}：${option.reply}`);
       next = awardNpcAffinity(next, npc, option);
