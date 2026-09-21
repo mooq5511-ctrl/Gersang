@@ -8,7 +8,7 @@ const rosterUnit = (id, overrides={}) => {
   const base={ templateId:'merchant-'+id,level:1,str:s.ratings[1],agi:s.ratings[3],vit:s.ratings[0],intel:s.mp?20:10,equip:{} };
   return { ...base,...vitalStats(base),...combatStats(base),uid:id,name:s.name,skill:s.active,cost:s.mp,...overrides };
 };
-const foe = (overrides={}) => ({ name:'山賊',hp:100000,attack:10,defense:0,physical:0,magic:0,speed:1,ranged:true,...overrides });
+const foe = (overrides={}) => ({ name:'山賊',hp:100000,attack:10,defense:0,physicalResistance:0,magicResistance:0,speed:1,ranged:true,...overrides });
 const run=(units, enemies=[foe()],random=()=>0.5,terrain='mountain')=>resolveMercenaryBattle(units,enemies,terrain,random);
 const skillEvents=(r,name)=>r.events.filter(e=>e.skill===name);
 test('all nineteen designs have stable IDs and level-one stats',()=>{

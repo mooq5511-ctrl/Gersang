@@ -62,8 +62,8 @@ export class MercenaryRealtimeBattleSystem extends RealtimeBattleSystem {
     return amount;
   }
 
-  defense(unit) {
-    let amount = unit.def * (1 - Math.max(this.effect(unit, 'spearArmor'), this.effect(unit, 'sanadaArmor'), this.effect(unit, 'bossCurseDefense'), this.effect(unit, 'amaterasuFearDefense')));
+  defense(unit, baseDefense = unit.def) {
+    let amount = baseDefense * (1 - Math.max(this.effect(unit, 'spearArmor'), this.effect(unit, 'sanadaArmor'), this.effect(unit, 'bossCurseDefense'), this.effect(unit, 'amaterasuFearDefense')));
     amount *= 1 + this.effect(unit, 'bossShield');
     if (unit.spec?.id === 'shield' && unit.hp > unit.maxHp * 0.5) amount *= 1.2;
     if (unit.spec?.id === 'sanada' && unit.hp < unit.maxHp * 0.45) amount *= 1.15;
@@ -203,7 +203,7 @@ export class MercenaryRealtimeBattleSystem extends RealtimeBattleSystem {
     if (!magic && actor.spec?.id === 'cannon') raw *= 1.15;
     let pierce = id === 'gunner' ? 0.3 : 0;
     if (id === 'swordmaster' && actor.state.stacks >= 3) { raw *= 1.35; pierce = 0.15; actor.state.stacks = 0; }
-    let damage = mitigatedDamage(raw, this.defense(target) * (1 - pierce));
+    let damage = mitigatedDamage(raw, this.defense(target, magic ? target.magicDef : target.def) * (1 - pierce));
     if (target.side === 'player') {
       const resistance = magic ? target.magicResist : target.physicalResist;
       damage *= resistanceMultiplier(resistance);

@@ -80,7 +80,7 @@ export function damageAfterDefense(attack: number, defense: number, resistance =
 export type Fighter = { uid: string; name: string; skill: string; hp: number; mp: number; attack: number; intelligence: number; defense: number; cost: number; speed?: number; position?:BattlePosition; physicalResist?: number; magicResist?: number };
 
 /** Each living fighter acts once per round. A spell is charged before its damage is applied. */
-export function resolveVitalBattle(party: Fighter[], enemy: { hp: number; attack: number; defense: number; physical: number; magic: number; speed?: number; bandit?: boolean; terrain?: string; magicAttack?: boolean }, random = Math.random) {
+export function resolveVitalBattle(party: Fighter[], enemy: { hp: number; attack: number; defense: number; physicalResistance: number; magicResistance: number; speed?: number; bandit?: boolean; terrain?: string; magicAttack?: boolean }, random = Math.random) {
   const fighters = party.map((fighter) => ({ ...fighter }));
   let enemyHp = enemy.hp;
   let rounds = 0;
@@ -129,7 +129,7 @@ export function resolveVitalBattle(party: Fighter[], enemy: { hp: number; attack
       }
       if (unit.hp <= 0 || enemyHp <= 0) continue;
       const cast = !!unit.skill && unit.cost > 0 && unit.mp >= unit.cost;
-      const resistance = Math.min(85, Math.max(0, cast ? enemy.magic : enemy.physical));
+      const resistance = cast ? enemy.magicResistance : enemy.physicalResistance;
       let damage = unit.attack;
       if (cast) {
         unit.mp -= unit.cost;

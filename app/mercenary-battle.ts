@@ -3,7 +3,7 @@ import { damageAfterDefense, type Fighter } from './vitals-engine.ts';
 import {positionRank,rearDodge} from './formation-position.ts';
 
 export type TacticalFighter = Fighter & { templateId?: string; maxHp?: number; maxMp?: number; accuracy?: number };
-export type TacticalEnemy = { name: string; hp: number; attack: number; defense: number; physical: number; magic: number; speed?: number; boss?: boolean; bandit?: boolean; kind?: 'beast' | 'cavalry' | 'human'; ranged?: boolean; magicAttack?: boolean; poison?: boolean; back?: boolean };
+export type TacticalEnemy = { name: string; hp: number; attack: number; defense: number; physicalResistance: number; magicResistance: number; speed?: number; boss?: boolean; bandit?: boolean; kind?: 'beast' | 'cavalry' | 'human'; ranged?: boolean; magicAttack?: boolean; poison?: boolean; back?: boolean };
 export type BattleEvent = { round: number; actor: string; skill: string; target?: string; amount?: number };
 type Status = { value: number; until: number };
 
@@ -57,7 +57,7 @@ export function resolveMercenaryBattle(party: TacticalFighter[], enemies: Tactic
     if (target.unit.hp > 0 && target.spec?.id === 'blade') { target.stacks = Math.min(5, target.stacks + 1); log(target, '越戰越勇', target, target.stacks); }
     if (!magic && !counter && target.unit.hp > 0 && target.spec?.id === 'monk' && target.counterRound !== rounds && random() < 0.2 && source.unit.hp > 0) {
       target.counterRound = rounds;
-      const retaliation = damageAfterDefense(attack(target) * 0.6, defense(source), source.foe?.physical ?? 0);
+      const retaliation = damageAfterDefense(attack(target) * 0.6, defense(source), source.foe?.physicalResistance ?? 0);
       log(target, '金鐘護體', source, retaliation); applyDamage(target, source, retaliation, false, true);
     }
     return actual;
@@ -80,7 +80,7 @@ export function resolveMercenaryBattle(party: TacticalFighter[], enemies: Tactic
     if (source.spec?.id === 'archer' && target.foe?.kind === 'beast') { raw *= 1.2; log(source, '獵虎眼', target); }
     if (!magic && source.spec?.id === 'samurai' && source.unit.hp > source.maxHp * 0.7) raw *= 1.15;
     if (!magic && source.spec?.id === 'cannon' && !source.moved) raw *= 1.15;
-    const resistance = target.side ? (magic ? target.foe?.magic : target.foe?.physical) : (magic ? target.unit.magicResist : target.unit.physicalResist);
+    const resistance = target.side ? (magic ? target.foe?.magicResistance : target.foe?.physicalResistance) : (magic ? target.unit.magicResist : target.unit.physicalResist);
     let damage = damageAfterDefense(raw, defense(target) * (1 - pierce), resistance ?? 0);
     if (!magic && basic && !source.foe?.ranged && target.spec?.id === 'spear') damage *= 0.9;
     if (!magic && target.spec?.id === 'elephant') damage *= 0.88;

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { combatStats, enemyCombatStats, damageAfterDefense, vitalStats, normalizeVitals, recoverVitals, resolveVitalBattle, spellCost } from '../app/vitals-engine.ts';
 const unit = { level: 1, vit: 10, intel: 10, equip: {} };
 const fighter = { uid: 'hero', name: '主角', skill: '法術', hp: 500, mp: 24, attack: 100, intelligence: 10, defense: 0, cost: 12 };
-const enemy = { hp: 100000, attack: 1, defense: 0, physical: 0, magic: 0 };
+const enemy = { hp: 100000, attack: 1, defense: 0, physicalResistance: 0, magicResistance: 0 };
 test('equipment, attributes and promotion increase combat stats', () => {
   const base = { ...unit, str: 20, agi: 10 };
   const stats = combatStats(base);

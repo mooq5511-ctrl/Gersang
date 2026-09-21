@@ -6,7 +6,7 @@
 import { mitigatedDamage } from './combat-damage.js';
 
 export class Unit {
-  constructor({ id, side, hp, maxHp, atk, def, physicalResist = 0, magicResist = 0, attackInterval = 1.5, cooldown = 0, mp = 0, skillPower = 0, position }) {
+  constructor({ id, side, hp, maxHp, atk, def, magicDef = def, physicalResist = 0, magicResist = 0, attackInterval = 1.5, cooldown = 0, mp = 0, skillPower = 0, position }) {
     if (!id) throw new Error('Unit.id is required.');
     if (side !== 'player' && side !== 'enemy') throw new Error('Unit.side must be player or enemy.');
     if (!position || !Number.isInteger(position.row) || !Number.isInteger(position.col) || position.row < 0 || position.row > 2 || position.col < 0 || position.col > 3) {
@@ -19,6 +19,7 @@ export class Unit {
     this.hp = Math.max(0, Math.min(this.maxHp, Number(hp) || 0));
     this.atk = Math.max(0, Number(atk) || 0);
     this.def = Math.max(0, Number(def) || 0);
+    this.magicDef = Math.max(0, Number(magicDef) || 0);
     this.physicalResist = Number(physicalResist) || 0;
     this.magicResist = Number(magicResist) || 0;
     this.attackInterval = Math.max(0.05, Number(attackInterval) || 1.5);
@@ -187,7 +188,7 @@ export class RealtimeBattleSystem {
   snapshot() {
     const copy = unit => ({
       id: unit.id, side: unit.side, hp: unit.hp, maxHp: unit.maxHp,
-      atk: unit.atk, def: unit.def, physicalResist: unit.physicalResist, magicResist: unit.magicResist, attackInterval: unit.attackInterval,
+      atk: unit.atk, def: unit.def, magicDef: unit.magicDef, physicalResist: unit.physicalResist, magicResist: unit.magicResist, attackInterval: unit.attackInterval,
       cooldown: unit.cooldown, mp: unit.mp, position: { ...unit.position },
       skillPower: unit.skillPower,
     });

@@ -77,6 +77,20 @@ test('world-map realtime applies matching equipment resistance and preserves it 
   assert.equal(saved.players[0].magicResist, 55);
 });
 
+test('dungeon magical strikes use monster magic defense and keep it in snapshots', () => {
+  const battle = new MercenaryRealtimeBattleSystem([player('shaman')], [enemy('foe', { def: 100, magicDef: 300 })], { autoSkill: false, seed: 17 });
+  const attacker = battle.players[0], target = battle.enemies[0];
+  const physical = battle.planHit(attacker, target, 1, false, false, false, '', false).damage;
+  const magical = battle.planHit(attacker, target, 1, true, false, false, '', false).damage;
+  assert.ok(magical < physical);
+  assert.equal(MercenaryRealtimeBattleSystem.fromSnapshot(battle.snapshot()).enemies[0].magicDef, 300);
+
+  const hero = { hp: 100, maxHp: 100, mp: 0, maxMp: 40, str: 1, dex: 1, mercenaryIntelligence: 0, attack: 1, defense: 0, staff: false };
+  const dungeon = dungeonStep(freshDungeon(), hero, 'start', 1000, 'e_sumeru_training_plague_god', .99, 0, 0, 0, [], 0, [1, 1, 1], false, 0);
+  assert.equal(dungeon.state.realtime.enemies[0].def, 220);
+  assert.equal(dungeon.state.realtime.enemies[0].magicDef, 225);
+});
+
 test('world-map debuffs, sword energy and priest MP recovery take effect', () => {
   const shaman = new MercenaryRealtimeBattleSystem([player('shaman')], [enemy('foe', { atk: 100 })]); shaman.startBattle(); assert.equal(shaman.attack(shaman.enemies[0]), 80);
   const spear = new MercenaryRealtimeBattleSystem([player('spear')], [enemy('foe', { def: 100 })]); spear.startBattle(); assert.equal(spear.defense(spear.enemies[0]), 85);
