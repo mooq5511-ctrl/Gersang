@@ -42,6 +42,7 @@ next-env.d.ts
 .openai/
 # Site deployment
 .site-publish/
+.site-release-source/
 
 # This local soundtrack is packaged in deployment builds, but exceeds the
 # source-repository object limit used by the hosting service.
