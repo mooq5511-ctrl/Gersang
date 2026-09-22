@@ -1,0 +1,61 @@
+name: Bootstrap Gersang project management
+
+on:
+  workflow_dispatch:
+    inputs:
+      add_to_project:
+        description: Add newly created issues to the existing GitHub Project Backlog
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create labels, milestones, and issues
+        id: seed
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const seed = require('./.github/project-seed.json');
+            const { owner, repo } = context.repo;
+            const existingLabels = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 });
+            const labelNames = new Set(existingLabels.map(x => x.name));
+            for (const [name, color] of seed.labels) {
+              if (!labelNames.has(name)) await github.rest.issues.createLabel({ owner, repo, name, color });
+            }
+            const milestones = await github.paginate(github.rest.issues.listMilestones, { owner, repo, state: 'all', per_page: 100 });
+            const milestoneByTitle = new Map(milestones.map(x => [x.title, x.number]));
+            for (const title of seed.milestones) {
+              if (!milestoneByTitle.has(title)) {
+                const created = await github.rest.issues.createMilestone({ owner, repo, title, description: `Gersang ${title} 工作項目。詳見 docs/ROADMAP.md。` });
+                milestoneByTitle.set(title, created.data.number);
+              }
+            }
+            const allIssues = await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'all', per_page: 100 });
+            const existingTitles = new Set(allIssues.filter(x => !x.pull_request).map(x => x.title));
+            const milestoneTitle = { v0.4: seed.milestones[0], v0.5: seed.milestones[1], v0.6: seed.milestones[2], beta: seed.milestones[3], release: seed.milestones[4] };
+            const urls = [];
+            for (const [phase, title, area, priority, files] of seed.issues) {
+              if (existingTitles.has(title)) continue;
+              const body = `## 目標\n\n完成「${title}」，讓既有《Gersang》核心循環更完整且可驗證。\n\n## 範圍\n\n- 相關程式與資料：\`${files}\`\n- 對應版本：${milestoneTitle[phase]}\n- 不另行設計新系統；以現有 docs/ 與程式結構為準。\n\n## 驗收條件\n\n- [ ] 玩家能在遊戲中使用或觀察到此項功能／改善。\n- [ ] 規則、資料與 UI 的結果符合既有系統文件。\n- [ ] 已標註存檔影響；若新增欄位，舊存檔有安全預設值。\n- [ ] 補齊受影響的自動測試或手動驗收步驟。\n\n## 完成定義\n\nPR 已連結本 Issue，驗收完成後移入 Project 的 Testing，再關閉。`;
+              const result = await github.rest.issues.create({ owner, repo, title, body, labels: ["🎮 gameplay", area, priority], milestone: milestoneByTitle.get(milestoneTitle[phase]) });
+              urls.push(result.data.html_url);
+            }
+            core.setOutput('issue_urls', urls.join('\n'));
+            core.notice(`Created ${urls.length} new issue(s).`);
+      - name: Add new issues to Project Backlog
+        if: ${{ inputs.add_to_project && steps.seed.outputs.issue_urls != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_URLS: ${{ steps.seed.outputs.issue_urls }}
+        run: |
+          while IFS= read -r url; do
+            gh project item-add 2 --owner mooq5511-ctrl --url "$url" || echo "Could not add $url to Project; add it manually from the project board."
+          done <<< "$ISSUE_URLS"

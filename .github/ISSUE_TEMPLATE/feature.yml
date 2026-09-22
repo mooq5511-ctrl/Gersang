@@ -1,0 +1,22 @@
+name: 功能工作項目
+description: 建立可驗收的遊戲功能工作
+title: "[Feature]: "
+labels: ["🎮 gameplay"]
+body:
+  - type: textarea
+    id: goal
+    attributes: { label: 目標與玩家價值 }
+    validations: { required: true }
+  - type: textarea
+    id: scope
+    attributes: { label: 範圍、資料與 UI }
+    validations: { required: true }
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 驗收條件
+      placeholder: "- [ ] ..."
+    validations: { required: true }
+  - type: textarea
+    id: save
+    attributes: { label: 存檔相容性與測試 }

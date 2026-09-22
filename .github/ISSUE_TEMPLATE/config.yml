@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 開發文件
+    url: https://github.com/mooq5511-ctrl/Gersang/tree/main/docs
+    about: 請先確認對應系統文件與既有待辦。
