@@ -33,7 +33,7 @@ export function selectBattleMapAction(state: GameState, mapId: string, deps: Bat
     ...state,
     battleMap: map.id,
     selectedMonster: undefined,
-    dungeon: key ? { ...freshDungeon(), key, enemyHp: DUNGEONS[key].hp } : { ...(state.dungeon || freshDungeon()), lockedEnemyKey: undefined },
+    dungeon: key ? { ...freshDungeon(), autoHunt: state.dungeon?.autoHunt === true, key, enemyHp: DUNGEONS[key].hp } : { ...(state.dungeon || freshDungeon()), lockedEnemyKey: undefined },
     enemyHp: deps.enemyMax(state.stage, map.hpMultiplier),
     logs: deps.addLog(state.logs, "商團遠征轉移至「" + map.name + "」。"),
   };
@@ -46,7 +46,7 @@ type DungeonActionDependencies = {
   leaveInn: (state: GameState) => GameState;
 };
 
-export type DungeonAction = "tick" | "start" | "normal" | "skill" | "retreat" | "stop";
+export type DungeonAction = "tick" | "start" | "normal" | "skill" | "retreat" | "stop" | "toggle-auto-hunt";
 
 /** Runs a single deterministic dungeon transition, including victory rewards. */
 export function runDungeonAction(

@@ -23,7 +23,7 @@ test('stage selection always resolves its bound monster and unknown maps fall ba
 });
 
 test('a realtime victory waits half a second before the next local wave',()=>{
- const state=teleportDungeon(freshDungeon(),70,2000,1000,'yellow-emperor-mausoleum',0);
+ const state=teleportDungeon({...freshDungeon(),autoHunt:true},70,2000,1000,'yellow-emperor-mausoleum',0);
  const party=[{uid:'hero',name:'測試主角',hp:hero.hp,maxHp:hero.maxHp,mp:hero.mp,maxMp:hero.maxMp,position:'前排',attack:1000000,defense:hero.defense,attackInterval:.6}];
  const win=dungeonStep(state,hero,'tick',1050,undefined,.99,0,.999,0,party,0,[0,0,0],false,0);
  assert.equal(win.state.status,'respawning');assert.equal(win.state.spawnAt,1550);assert.ok(win.reward);

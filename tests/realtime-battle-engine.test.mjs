@@ -38,7 +38,7 @@ test('normal encounter size is one through twelve, while bosses stay solo', () =
 test('next normal wave samples a new encounter size', () => {
   const hero = { hp: 1e8, maxHp: 1e8, mp: 0, maxMp: 0, str: 1, dex: 1,
     mercenaryIntelligence: 0, attack: 1e9, defense: 0, staff: false };
-  const first = dungeonStep(freshDungeon(), hero, 'start', 1000, 'e_starter_raccoon',
+  const first = dungeonStep({ ...freshDungeon(), autoHunt: true }, hero, 'start', 1000, 'e_starter_raccoon',
     .99, 0, 0, 0, testParty(12, 1e9), 0, [1, 1, 1], false, 0).state;
   assert.equal(first.enemyCount, 1);
   const settled = dungeonStep(first, hero, 'tick', 1050, undefined, .99, 0, 0, 0, testParty(12, 1e9));
@@ -52,7 +52,7 @@ test('next normal wave samples a new encounter size', () => {
 test('normal monster experience scales with defeated count and pays once', () => {
   const hero = { hp: 1e8, maxHp: 1e8, mp: 0, maxMp: 0, str: 1, dex: 1,
     mercenaryIntelligence: 0, attack: 1e9, defense: 0, staff: false };
-  const started = dungeonStep(freshDungeon(), hero, 'start', 1000, 'e_lake_red_thief',
+  const started = dungeonStep({ ...freshDungeon(), autoHunt: true }, hero, 'start', 1000, 'e_lake_red_thief',
     .99, 0, 0, 0, testParty(12, 1e9), 0, [1, 1, 1], false, .2);
   assert.equal(started.state.enemyCount, 3);
   const settled = dungeonStep(started.state, hero, 'tick', 10000, undefined, .99, 0, 0, 0, testParty(12, 1e9));
@@ -128,7 +128,7 @@ test('dungeon awards one reward for a completed realtime boss battle', () => {
   const started = dungeonStep(freshDungeon(), hero, 'start', 1000, 'e_lake_gale_altur');
   assert.equal(started.state.realtime.winner, 'player');
   assert.equal(started.reward.xp, 250000);
-  assert.equal(started.state.status, 'respawning');
+  assert.equal(started.state.status, 'idle');
   assert.equal(started.state.serial, freshDungeon().serial + 1);
   const repeated = dungeonStep(started.state, hero, 'tick', 1050);
   assert.equal(repeated.reward, null);
