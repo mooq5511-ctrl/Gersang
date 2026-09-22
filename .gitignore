@@ -40,3 +40,8 @@ next-env.d.ts
 /work/
 
 .openai/
+# Site deployment
+.site-publish/
+
+# VS Code workspace settings
+.vscode/
