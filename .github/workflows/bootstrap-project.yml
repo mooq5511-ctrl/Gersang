@@ -40,7 +40,7 @@ jobs:
             }
             const allIssues = await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'all', per_page: 100 });
             const existingTitles = new Set(allIssues.filter(x => !x.pull_request).map(x => x.title));
-            const milestoneTitle = { v0.4: seed.milestones[0], v0.5: seed.milestones[1], v0.6: seed.milestones[2], beta: seed.milestones[3], release: seed.milestones[4] };
+            const milestoneTitle = { "v0.4": seed.milestones[0], "v0.5": seed.milestones[1], "v0.6": seed.milestones[2], beta: seed.milestones[3], release: seed.milestones[4] };
             const urls = [];
             for (const [phase, title, area, priority, files] of seed.issues) {
               if (existingTitles.has(title)) continue;
