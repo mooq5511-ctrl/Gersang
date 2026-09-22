@@ -9,6 +9,7 @@
     "dev": "vinext dev",
     "preview:dev": "vite --config vite.preview.config.ts",
     "build": "vinext build",
+    "release:prepare": "node scripts/prepare-site-release.mjs",
     "start": "wrangler dev --config dist/server/wrangler.json",
     "lint": "oxlint",
     "format": "oxfmt"
