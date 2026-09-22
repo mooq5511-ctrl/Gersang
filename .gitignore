@@ -43,5 +43,9 @@ next-env.d.ts
 # Site deployment
 .site-publish/
 
+# This local soundtrack is packaged in deployment builds, but exceeds the
+# source-repository object limit used by the hosting service.
+/public/assets/music/boss-battle.mp3
+
 # VS Code workspace settings
 .vscode/
