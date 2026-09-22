@@ -83,6 +83,7 @@ test('auto hunt OFF settles this battle and keeps rewards without spawning anoth
  assert.equal(settled.state.status,'idle');
  assert.equal(settled.state.spawnAt,0);
  assert.equal(settled.reward.xp,DUNGEONS.e_raccoon.xp);
+ assert.equal(settled.reward.gold,DUNGEONS.e_raccoon.gold);
  assert.match(settled.state.logs[0],/本場戰鬥結束/);
 });
 
@@ -96,6 +97,7 @@ test('auto hunt ON waits for the existing wave to finish before starting the nex
  assert.equal(won.state.status,'respawning');
  assert.equal(won.state.spawnAt,1600);
  assert.ok(won.reward);
+ assert.equal(won.reward.gold,DUNGEONS.e_raccoon.gold);
  assert.equal(next.state.status,'fighting');
  assert.equal(next.state.autoHunt,true);
  assert.ok(next.state.realtime);
