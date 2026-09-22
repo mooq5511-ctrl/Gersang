@@ -9,6 +9,7 @@ import { compatibleSlots, equipFromInventory, unequipToInventory, type Equipment
 import { medicineCatalog } from "./game-config";
 import { officialGems } from "./v17-content";
 import { normalizeVitals, recoverVitals, vitalStats } from "./vitals-engine";
+import { AutoPotionManager, type AutoPotionSettings } from "./auto-potion-manager";
 import type { Equipment, GameState, Hero, MagicAffix, Unit } from "./game-state";
 import { makeTierEquipment, tierEquipmentPrice, tierEquipmentShopCatalog } from "./tier-equipment";
 
@@ -162,6 +163,27 @@ export function applyAutoMedicineAction(state: GameState, now: number, addLog: L
     if (after !== next) next = { ...after, autoMedicineAt: { ...after.autoMedicineAt, mana: now } };
   }
   return next;
+}
+
+/** Keeps Auto Potion policy separate from both the battle UI and Auto Hunt. */
+export function configureAutoPotionAction(state: GameState, patch: Partial<AutoPotionSettings>, addLog: Log): GameState {
+  const result = AutoPotionManager.configure(state.autoPotion, patch, state.medicines, medicineCatalog);
+  return result.shortage
+    ? { ...state, autoPotion: result.settings, logs: addLog(state.logs, "補血藥不足，Auto Potion 已停止。") }
+    : { ...state, autoPotion: result.settings };
+}
+
+/** Applies one eligible healing item during an active battle, then lets React persist the new state. */
+export function applyAutoPotionAction(state: GameState, addLog: Log, grantXp: GrantXp): GameState {
+  if (state.dungeon?.status !== "fighting") return state;
+  const stats = vitalStats(state.hero);
+  const action = AutoPotionManager.nextAction(state.autoPotion, state.medicines, stats.hp, stats.maxHp, medicineCatalog);
+  if (action.type === "none") return state;
+  if (action.type === "shortage") return { ...state, autoPotion: action.settings, logs: addLog(state.logs, "補血藥不足，Auto Potion 已停止。") };
+  const consumed = consumeMedicineAction(state, action.medicineId, true, addLog, grantXp);
+  return (consumed.medicines[action.medicineId] || 0) > 0
+    ? consumed
+    : { ...consumed, autoPotion: { ...consumed.autoPotion, enabled: false }, logs: addLog(consumed.logs, "補血藥不足，Auto Potion 已停止。") };
 }
 
 export function socketGemAction(state: GameState, targetUid: string, slot: EquipmentSlot, gemId: string, grade: number, requestedAmount: number, addLog: Log, notify: (message: string) => void): GameState {
