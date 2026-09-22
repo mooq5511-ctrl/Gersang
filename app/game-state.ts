@@ -8,6 +8,7 @@ import type { ExchangePurchases } from "./village-exchange";
 import type { GuildTerritory } from "./guild-territory";
 import type { NpcProgress } from "./npc-dialogue";
 import type { AutoPotionSettings } from "./auto-potion-manager";
+import type { BattleLogEntry } from "./battle-log-manager";
 
 /** Persistent save keys. These names are compatibility contracts with existing players. */
 export const PROFILE_INDEX = "bt52_v19_character_profiles";
@@ -143,6 +144,8 @@ export type GameState = {
   autoMedicineAt: { healing: number; mana: number };
   /** Battle-only automatic HP restoration; saved with the character profile. */
   autoPotion: AutoPotionSettings;
+  /** Persisted newest-first battle and reward history, capped by BattleLogManager. */
+  battleLogs: BattleLogEntry[];
   claimedContracts: string[];
   /** Village NPC dialogue, affinity, and quest state; persisted with the character. */
   npcProgress: NpcProgress;

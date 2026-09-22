@@ -13,6 +13,7 @@ import { grantTerritoryXp } from "./game-progression";
 import { makeTierEquipmentDrop, pickTierEquipmentDrop } from "./tier-equipment";
 import { hasFullAmaterasuSet } from "./equipment-set-effects";
 import { sharedBattleExperience } from "./dungeon-kill-xp";
+import { BattleLogManager, type BattleLogCategory } from "./battle-log-manager";
 
 type BattleActionDependencies = {
   notify: (message: string) => void;
@@ -57,6 +58,7 @@ export function runDungeonAction(
   rolls: { roll?: number; choice?: number; spawnRoll?: number; encounterCountRoll?: number; retaliationRoll?: number; materialRolls?: number[]; fusionCoreRoll?: number; gearDropRoll?: number; gearChoiceRoll?: number },
   deps: DungeonActionDependencies,
 ): GameState {
+  const addBattleLog = (state: GameState, message: string, category: BattleLogCategory = "battle") => ({ ...state, battleLogs: BattleLogManager.addLog(state.battleLogs, message, category, now) });
   if (action === "start" && key === "e_starter_pirate_king") {
     const firstDeliveryComplete = previous.npcProgress.completedQuests.includes("npc-first-caravan-delivery");
     const firstGreenEquipped = previous.firstGreenEquipped || [previous.hero, ...previous.mercs, ...previous.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== "普通"));
@@ -77,6 +79,9 @@ export function runDungeonAction(
   const result = dungeonStep(previous.dungeon || freshDungeon(), { ...vital, str: total.str, dex: total.agi, mercenaryIntelligence, attack, defense: combatStats(previous.hero).defense, staff: previous.hero.equip.weapon?.name === DIVINE_EQUIPMENT.staff.name, amaterasuGaze: amaterasuSet }, action, now, key, roll, choice, spawnRoll, retaliationRoll, party, passiveDamage, materialRolls, previous.autoSkill, rolls.encounterCountRoll, territoryHealInterval(previous.territory));
   const remaining = new globalThis.Map(result.party.map((unit) => [unit.uid, unit]));
   let next: GameState = { ...previous, dungeon: result.state, hero: { ...previous.hero, hp: remaining.get("hero")?.hp ?? result.hp, mp: remaining.get("hero")?.mp ?? result.mp }, mercs: previous.mercs.map((unit) => { const fighter = remaining.get(unit.uid); return fighter ? { ...unit, hp: fighter.hp, mp: fighter.mp ?? unit.mp } : unit; }) };
+  if (result.state.status === "fighting" && previous.dungeon?.status !== "fighting") next = addBattleLog(next, `戰鬥開始：${DUNGEONS[result.state.key].name}。`);
+  if (result.state.status === "recovering" && previous.dungeon?.status !== "recovering") next = addBattleLog(next, "玩家死亡，商隊返回客棧療傷。", "warning");
+  if (previous.dungeon && previous.dungeon.autoHunt !== result.state.autoHunt) next = addBattleLog(next, result.state.autoHunt ? "Auto Hunt 啟動。" : "Auto Hunt 停止。", "auto-hunt");
   const battleMembers = 1 + deployedMercs.length;
   const shareXp = sharedBattleExperience(result.xpEarned, battleMembers);
   if (result.killsEarned) {
@@ -84,6 +89,8 @@ export function runDungeonAction(
     const deliveryKills = isFirstDeliveryTarget ? next.starterDeliveryKills + result.killsEarned : next.starterDeliveryKills;
     const perMemberXp = shareXp * (1 + territoryBonus(next.territory, "xp"));
     next = { ...next, hero: grantTerritoryXp(next, next.hero, shareXp), mercs: next.mercs.map((unit) => activeIds.has(unit.uid) ? grantTerritoryXp(next, unit, shareXp) : unit), kills: next.kills + result.killsEarned, starterDeliveryKills: deliveryKills, logs: deps.addLog(next.logs, `擊敗 ${result.killsEarned} 隻怪物，獲得 ${result.xpEarned} 經驗；${battleMembers} 名出戰角色均分，每人 ${Number(perMemberXp.toFixed(2)).toLocaleString("zh-TW")} 經驗（含領地加成）。`) };
+    next = addBattleLog(next, `擊敗怪物 ×${result.killsEarned}。`);
+    next = addBattleLog(next, `EXP +${result.xpEarned.toLocaleString("zh-TW")}。`, "reward");
   }
   if (result.state.status === "recovering" && previous.hero.status !== "客棧中") next = deps.enterInn(next, now, result.state.logs[0], result.state);
   else if (result.state.status === "idle" && previous.hero.status === "客棧中") next = deps.leaveInn(next);
@@ -97,6 +104,7 @@ export function runDungeonAction(
   const droppedMaterials = [...reward.materials, ...(selectedDrop ? [selectedDrop] : []), ...ancientCoinBox];
   const defeatedNewbieBoss = result.state.key === "e_starter_pirate_king", defeatedLakeBoss = result.state.key === "e_lake_gale_altur", defeatedGoldenStarfish = result.state.key === "e_japan_sea_golden_starfish";
   next = { ...next, gold: next.gold + reward.gold, newbieBossDefeated: next.newbieBossDefeated || defeatedNewbieBoss, lakeBossDefeated: next.lakeBossDefeated || defeatedLakeBoss, goldenStarfishDefeated: next.goldenStarfishDefeated || defeatedGoldenStarfish, newbieCoins: next.newbieCoins + (specialCoinDrop ? 1 : 0), logs: deps.addLog(next.logs, `成功擊敗副本怪物，本場共擊敗 ${result.state.creditedKills || 1} 隻，累計獲得 ${reward.xp} 經驗。`) };
+  next = addBattleLog(next, `Gold +${reward.gold.toLocaleString("zh-TW")}。`, "reward");
   const fusionCoreDrop = (rolls.fusionCoreRoll ?? roll) < 0.05 ? 1 : 0;
   if (fusionCoreDrop) {
     next = awardFusionCores(next, fusionCoreDrop);
@@ -110,6 +118,7 @@ export function runDungeonAction(
     const materials = { ...next.materials };
     for (const material of droppedMaterials) materials[material] = (materials[material] || 0) + 1;
     next = { ...next, materials, logs: deps.addLog(next.logs, `噴寶：獲得【${droppedMaterials.join("】、【")}】！`) };
+    next = addBattleLog(next, `掉落物品：${droppedMaterials.join("、")}。`, "reward");
   }
   const tierSpec = pickTierEquipmentDrop(sourceEnemy?.mapId, next.hero.level, !!sourceEnemy?.boss, rolls.gearDropRoll ?? 1, rolls.gearChoiceRoll ?? 0);
   if (tierSpec) {
@@ -117,10 +126,12 @@ export function runDungeonAction(
     const pickup = addInventoryItem(next.inventory, tierDrop);
     const message = pickup.error ? `背包已滿，無法拾取「${tierDrop.name}」。` : `怪物掉落：獲得「${tierDrop.name}」（Lv.${tierSpec.requiredLevel}）。`;
     next = { ...next, inventory: pickup.inventory, logs: deps.addLog(next.logs, message), dungeon: { ...next.dungeon!, logs: [message, ...next.dungeon!.logs].slice(0, 40) } };
+    if (!pickup.error) next = addBattleLog(next, `掉落物品：${tierDrop.name}。`, "reward");
   }
   const spec = reward.loot ? DIVINE_EQUIPMENT[reward.loot as keyof typeof DIVINE_EQUIPMENT] : null;
   if (!spec) return next;
   const drop: Equipment = { uid: `dungeon-${now}-${result.state.serial}`, name: spec.name, slot: spec.slot, bonus: { ...spec.bonus }, def: spec.def, atk: 0, hp: 0, image: "", enhance: 0, rarity: "傳說", magic: [], requiredLevel: 1, source: "幽冥副本掉落" };
   const pickup = addInventoryItem(next.inventory, drop), message = pickup.error ? "背包已滿，本次掉落無法拾取。" : `獲得「${drop.name}」！`;
-  return { ...next, inventory: pickup.inventory, logs: deps.addLog(next.logs, message), dungeon: { ...next.dungeon!, logs: [message, ...next.dungeon!.logs].slice(0, 40) } };
+  next = { ...next, inventory: pickup.inventory, logs: deps.addLog(next.logs, message), dungeon: { ...next.dungeon!, logs: [message, ...next.dungeon!.logs].slice(0, 40) } };
+  return pickup.error ? next : addBattleLog(next, `掉落物品：${drop.name}。`, "reward");
 }
