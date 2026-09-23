@@ -145,6 +145,7 @@
 .merchant-material-actions input { width: 46px; border: 1px solid #806445; background: #17120e; color: #f3e5cb; padding: 3px; font: inherit; }
 .merchant-material-header-actions{display:flex;align-items:center;gap:6px}.merchant-material-header-actions button{white-space:nowrap}
 .merchant-material-search{display:flex;align-items:center;gap:8px;margin:0 4px 8px;color:#d8c49b;font-size:12px}.merchant-material-search input{min-width:0;flex:1;border:1px solid #806445;border-radius:4px;background:#17120e;color:#fff0cf;padding:6px 8px;outline:none}.merchant-material-search input:focus{border-color:#e6bc61;box-shadow:0 0 0 2px #d89b5833}.merchant-material-search input::placeholder{color:#9d8864}
+.merchant-equipment-tools{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px;margin:0 0 8px;color:#d8c49b;font-size:12px}.merchant-equipment-tools label{display:grid;gap:4px}.merchant-equipment-tools input,.merchant-equipment-tools select{min-width:0;border:1px solid #806445;border-radius:4px;background:#17120e;color:#fff0cf;padding:6px 8px;outline:none}.merchant-equipment-tools input:focus,.merchant-equipment-tools select:focus{border-color:#e6bc61;box-shadow:0 0 0 2px #d89b5833}.merchant-equipment-tools input::placeholder{color:#9d8864}
 .merchant-material-icon {
   display: grid;
   place-items: center;

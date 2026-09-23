@@ -297,6 +297,11 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
   .chat-tabs { display: none; }
 }
 
+/* 使用者選擇的固定畫面比例；自動尺寸沿用原本響應式規則。 */
+.classic-live-game[data-scene-mode="mobile-916"] { width:min(100vw,calc(100vh * 9 / 16)); height:min(100vh,calc(100vw * 16 / 9)); min-height:0; aspect-ratio:9 / 16; }
+.classic-live-game[data-scene-mode="pc-169"] { width:min(100vw,calc(100vh * 16 / 9)); height:min(100vh,calc(100vw * 9 / 16)); min-height:0; aspect-ratio:16 / 9; }
+.classic-live-game[data-scene-mode="fullscreen"] { width:100vw; height:100dvh; min-height:0; border:0; box-shadow:none; }
+
 /* Responsive mobile HUD inspired by the supplied castle-ruins reference. */
 .classic-live-game {
   display: block;
@@ -612,7 +617,7 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
 }
 .classic-live-game .objective-location { display:block;color:#765f34;font-size:10px;letter-spacing:.02em; }
 .classic-live-game .objective-collapse-toggle {
-  display:none;
+  display:grid;
   width:34px;
   min-width:34px;
   min-height:36px;
@@ -681,7 +686,26 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
     background:linear-gradient(180deg,#f2e8cbf5,#d9c79eef);
   }
   .classic-live-game > .main-objective.is-collapsed .objective-collapse-toggle { display:grid; }
-  .classic-live-game[data-quicknav-collapsed="true"] .tab-panel { right:0; }
+.classic-live-game[data-quicknav-collapsed="true"] .tab-panel { right:0; }
+.classic-live-game[data-scene-mode="mobile-916"] {
+  width:min(100vw,calc(100vh * 9 / 16));
+  height:min(100vh,calc(100vw * 16 / 9));
+  min-height:0;
+  aspect-ratio:9 / 16;
+}
+.classic-live-game[data-scene-mode="pc-169"] {
+  width:min(100vw,calc(100vh * 16 / 9));
+  height:min(100vh,calc(100vw * 9 / 16));
+  min-height:0;
+  aspect-ratio:16 / 9;
+}
+.classic-live-game[data-scene-mode="fullscreen"] {
+  width:100vw;
+  height:100dvh;
+  min-height:0;
+  border:0;
+  box-shadow:none;
+}
   .classic-live-game[data-quicknav-collapsed="true"] > .main-objective { width:min(380px,calc(100vw - 24px)); }
   .classic-live-game[data-quicknav-collapsed="true"] > .main-objective.is-collapsed { width:min(240px,calc(100vw - 24px)); }
   .classic-live-game > .hud-edge-toggle-nav {

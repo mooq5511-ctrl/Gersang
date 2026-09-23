@@ -1,4 +1,4 @@
-import type { Equipment, GameState } from "./game-state";
+import type { Equipment, EnhancementBonus, GameState } from "./game-state";
 
 export const TERRITORY_ENTRY_ID = "guild-territory";
 export const TERRITORY_UNLOCK_LEVEL = 20;
@@ -17,7 +17,7 @@ export const BUILDINGS = {
   lounge: { name: "休息室", icon: "🛏️", maxLevel: BUILDING_LEVEL_CAP, baseCost: 1500, description: "戰敗客棧療傷：Lv.1–10 每級 +3%，Lv.100 共 +160%" },
   training: { name: "訓練場", icon: "⚔️", maxLevel: BUILDING_LEVEL_CAP, baseCost: 1800, description: "角色與傭兵經驗：Lv.1–10 每級 +2%，Lv.100 共 +120%" },
   warehouse: { name: "倉庫", icon: "📦", maxLevel: BUILDING_LEVEL_CAP, baseCost: 2500, description: "三角色共用倉庫：Lv.1–10 每級 +10 格，Lv.100 共 +1,000 格" },
-  smithy: { name: "鐵匠鋪", icon: "🔨", maxLevel: BUILDING_LEVEL_CAP, baseCost: 5000, description: "裝備強化成功率：Lv.1–10 每級 +1.5 個百分點，Lv.100 共 +35 個百分點", unlockLevel: 50 },
+  smithy: { name: "鐵匠鋪", icon: "🔨", maxLevel: BUILDING_LEVEL_CAP, baseCost: 5000, description: "Lv.20 開放裝備強化；Lv.1–10 每級成功率 +1.5 個百分點，Lv.100 共 +35 個百分點", unlockLevel: 20 },
 } as const;
 
 export type BuildingId = keyof typeof BUILDINGS;
@@ -118,22 +118,62 @@ export function enhancementChance(territory: GuildTerritory, item: Equipment): n
   return Math.min(1, Math.max(0.1, 1 - item.enhance * 0.08 + territoryBonus(territory, "smithy")));
 }
 
+/** 強化屬性採用每級 ×115%，避免高階仍停留在線性成長。 */
+export function enhancementMultiplier(level: number): number {
+  return 1.15 ** Math.max(0, Math.floor(level));
+}
+
+const ENHANCEMENT_MILESTONE_TABLE = {
+  5: [
+    { id: "attackPercent", name: "烈武契印", stat: "attackPercent", min: 3, max: 10, text: "攻擊力" },
+    { id: "defensePercent", name: "玄鎧契印", stat: "defensePercent", min: 3, max: 10, text: "防禦力" },
+    { id: "xpPercent", name: "求知契印", stat: "xpPercent", min: 3, max: 10, text: "經驗值" },
+  ],
+  10: [
+    { id: "attackPercent", name: "烈武契印", stat: "attackPercent", min: 11, max: 20, text: "攻擊力" },
+    { id: "defensePercent", name: "玄鎧契印", stat: "defensePercent", min: 11, max: 20, text: "防禦力" },
+    { id: "xpPercent", name: "求知契印", stat: "xpPercent", min: 11, max: 20, text: "經驗值" },
+  ],
+  15: [
+    { id: "attackPercent", name: "烈武契印", stat: "attackPercent", min: 21, max: 50, text: "攻擊力" },
+    { id: "defensePercent", name: "玄鎧契印", stat: "defensePercent", min: 21, max: 50, text: "防禦力" },
+    { id: "xpPercent", name: "求知契印", stat: "xpPercent", min: 21, max: 50, text: "經驗值" },
+  ],
+} as const;
+
+export function enhancementMilestoneOptions(level: 5 | 10 | 15) {
+  return ENHANCEMENT_MILESTONE_TABLE[level].map((entry) => ({ ...entry, chance: 1 / ENHANCEMENT_MILESTONE_TABLE[level].length }));
+}
+
+/** 在里程碑等級隨機抽取一條全域百分比屬性。 */
+export function rollEnhancementMilestoneBonus(level: 5 | 10 | 15, random = Math.random): EnhancementBonus {
+  const options = ENHANCEMENT_MILESTONE_TABLE[level];
+  const bonus = options[Math.floor(random() * options.length)];
+  const value = bonus.min + Math.floor(random() * (bonus.max - bonus.min + 1));
+  return { id: bonus.id, name: bonus.name, stat: bonus.stat, value, text: `${bonus.text} +${value}%` };
+}
+
 export function enhancementCost(item: Equipment): number {
   return 1000 * (item.enhance + 1) ** 2;
 }
 
-export function enhanceEquipment(state: GameState, itemUid: string, roll: number): { game: GameState; error?: string } {
+export function enhanceEquipment(state: GameState, itemUid: string, roll: number, random = Math.random): { game: GameState; error?: string } {
   const territory = state.territory || freshTerritory();
   if (territory.buildings.smithy < 1) return { game: state, error: "請先建造鐵匠鋪。" };
   const item = state.inventory.find((entry) => entry.uid === itemUid);
   if (!item) return { game: state, error: "找不到這件背包裝備。" };
-  if (item.enhance >= 10) return { game: state, error: "裝備已達強化上限 +10。" };
+  if (item.enhance >= 15) return { game: state, error: "裝備已達強化上限 +15。" };
   const cost = enhancementCost(item);
   if (state.gold < cost) return { game: state, error: `強化需要 ${cost.toLocaleString()} 兩。` };
-  const success = roll < enhancementChance(territory, item);
+  const pityReady = (item.luckyValue || 0) >= 100;
+  const success = pityReady || roll < enhancementChance(territory, item);
+  const nextLevel = item.enhance + 1;
+  const milestoneBonus = success && [5, 10, 15].includes(nextLevel) ? rollEnhancementMilestoneBonus(nextLevel as 5 | 10 | 15, random) : undefined;
+  const uniqueBonuses = Array.from(new Map((item.enhanceBonuses || []).map((bonus) => [bonus.id, bonus])).values());
+  const nextBonuses = milestoneBonus ? [...uniqueBonuses.filter((bonus) => bonus.id !== milestoneBonus.id), milestoneBonus] : uniqueBonuses;
   return { game: {
     ...state, gold: state.gold - cost,
-    inventory: success ? state.inventory.map((entry) => entry.uid === itemUid ? { ...entry, enhance: entry.enhance + 1 } : entry) : state.inventory,
-    logs: [`鐵匠鋪：${item.name}強化${success ? `成功，達到 +${item.enhance + 1}` : "失敗，裝備未受損"}；消耗 ${cost.toLocaleString()} 兩。`, ...state.logs].slice(0, 40),
+    inventory: state.inventory.map((entry) => entry.uid === itemUid ? success ? { ...entry, enhance: nextLevel, luckyValue: 0, enhanceBonuses: nextBonuses } : { ...entry, luckyValue: Math.min(100, (entry.luckyValue || 0) + 10) } : entry),
+    logs: [`鐵匠鋪：${item.name}強化${success ? `成功，達到 +${nextLevel}${pityReady ? "（幸運保底）" : ""}${milestoneBonus ? `，獲得${milestoneBonus.name}` : ""}` : `失敗，裝備未受損，幸運值 +10（${Math.min(100, (item.luckyValue || 0) + 10)}/100）`}；消耗 ${cost.toLocaleString()} 兩。`, ...state.logs].slice(0, 40),
   } };
 }

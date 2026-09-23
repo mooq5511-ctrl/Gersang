@@ -17,6 +17,7 @@ const BOSSES = [
   { name: "守護弓手・泰貞", title: "雷弦守護者", time: 240, hp: 8_000_000, skill: "蓄力貫穿箭：以護盾承傷，或使用控場打斷蓄力。", enrage: "萬箭雷鳴" },
   { name: "鹿亞", title: "雷翼獸王", time: 240, hp: 11_000_000, skill: "召喚雷雲與全場雷暴：需要持續治療，最後 30 秒必須全力爆發。", enrage: "末日神罰" },
 ] as const;
+const RECOMMENDED_POWER = [100_000, 160_000, 220_000] as const;
 
 const gain = (materials: Record<string, number>, rewards: Record<string, number>) => Object.entries(rewards).reduce((next, [name, amount]) => ({ ...next, [name]: (next[name] || 0) + amount }), { ...materials });
 
@@ -34,6 +35,8 @@ export function ThunderAltarRaid({ credit, power, materials, azureSetPieces, chi
   const [burstCooldown, setBurstCooldown] = useState(0);
   const [message, setMessage] = useState("祭壇封印尚未解除。");
   const raidPower = Math.max(1_000, power);
+  const recommendedPower = RECOMMENDED_POWER[2];
+  const readiness = raidPower >= recommendedPower ? "ready" : raidPower >= RECOMMENDED_POWER[1] ? "caution" : "danger";
   const setBonus=(pieces:number,bonus:[number,number,number])=>pieces>=5?bonus[2]:pieces>=3?bonus[1]:pieces>=2?bonus[0]:0;
   const dps = Math.max(50, Math.floor(raidPower * .25 * (1+setBonus(azureSetPieces,[.1,.2,.35])+setBonus(chiyouSetPieces,[.12,.25,.4])+setBonus(amaterasuSetPieces,[.15,.3,.45]))));
 
@@ -74,6 +77,7 @@ export function ThunderAltarRaid({ credit, power, materials, azureSetPieces, chi
 
   const start = () => {
     if (credit < ENTRY_COST) { onNotice("信用值不足，需要 50,000 信用值才能進入雷霆祭壇。"); return; }
+    if (raidPower < recommendedPower) onNotice(`目前隊伍戰力 ${raidPower.toLocaleString()}，低於三階段穩定通關建議 ${recommendedPower.toLocaleString()}；仍可挑戰，但失敗風險較高。`);
     onEnter(); setStatus("fighting"); setPhase(0); setMaxHp(BOSSES[0].hp); setHp(BOSSES[0].hp); setSeconds(240); setPhaseSeconds(BOSSES[0].time); setIntegrity(100); setBurstCooldown(0); setMessage("雷霆祭壇開啟：喵兒以殘影包圍隊伍。 ");
   };
   const burst = () => {
@@ -84,8 +88,8 @@ export function ThunderAltarRaid({ credit, power, materials, azureSetPieces, chi
 
   const boss = BOSSES[phase];
   return <section className="thunder-raid" aria-label="神仙谷雷霆祭壇">
-    <header className="raid-header"><div><small>神仙谷・特殊高難度副本</small><h2><Bolt />雷霆祭壇</h2><p>連戰三位雷屬性首領，每位首領各限時 240 秒。入場消耗 50,000 信用值，失敗退回 25,000 信用值並保留參與獎勵。</p></div><div className="raid-entry"><strong>{credit.toLocaleString()}</strong><span>持有信用值</span><Button disabled={status === "fighting" || credit < ENTRY_COST} onClick={start}><Crown />進入祭壇・50,000</Button></div></header>
-    <div className="raid-phases">{BOSSES.map((item, index) => <article key={item.name} className={index === phase ? "active" : index < phase || status === "cleared" ? "done" : ""}><b>Phase {index + 1}</b><strong>{item.name}</strong><small>HP {item.hp.toLocaleString()}</small><small>{index === 0 ? "命中／範圍" : index === 1 ? "護盾／控場" : "治療／爆發"}</small></article>)}</div>
+    <header className="raid-header"><div><small>神仙谷・特殊高難度副本</small><h2><Bolt />雷霆祭壇</h2><p>連戰三位雷屬性首領，每位首領各限時 240 秒。入場消耗 50,000 信用值，失敗退回 25,000 信用值並保留參與獎勵。</p><div className={`raid-power-advice ${readiness}`}><strong>穩定通關建議戰力・{recommendedPower.toLocaleString()}</strong><span>目前隊伍 {raidPower.toLocaleString()}・{readiness === "ready" ? "適合挑戰" : readiness === "caution" ? "可挑戰但第三階段有風險" : "目前不建議挑戰"}</span><small>門檻：P1 {RECOMMENDED_POWER[0].toLocaleString()}／P2 {RECOMMENDED_POWER[1].toLocaleString()}／P3 {RECOMMENDED_POWER[2].toLocaleString()}</small></div></div><div className="raid-entry"><strong>{credit.toLocaleString()}</strong><span>持有信用值</span><Button disabled={status === "fighting" || credit < ENTRY_COST} onClick={start}><Crown />進入祭壇・50,000</Button></div></header>
+    <div className="raid-phases">{BOSSES.map((item, index) => <article key={item.name} className={index === phase ? "active" : index < phase || status === "cleared" ? "done" : ""}><b>Phase {index + 1}</b><strong>{item.name}</strong><small>HP {item.hp.toLocaleString()}</small><small>建議戰力 {RECOMMENDED_POWER[index].toLocaleString()}</small><small>{index === 0 ? "命中／範圍" : index === 1 ? "護盾／控場" : "治療／爆發"}</small></article>)}</div>
     <section className="raid-arena">
       <div className={`raid-boss boss-phase-${phase}`}><div className="raid-boss-art" role="img" aria-label={`${boss.name} 首領圖像`} /><small>{boss.title}・雷屬性</small><h3>{boss.name}</h3><p>{boss.skill}</p><em>狂暴：{boss.enrage}・階段剩餘 {phaseSeconds} 秒</em></div>
       <div className="raid-console">

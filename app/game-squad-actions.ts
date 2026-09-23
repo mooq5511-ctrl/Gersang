@@ -68,6 +68,9 @@ export function recruitMerchantAction(
   createUnit: (spec: MercenarySpec, index: number) => Unit,
   addLog: Log,
 ): GameState {
+  if (spec.recruitable === false) {
+    return { ...state, logs: addLog(state.logs, `「${spec.name}」目前暫未開放招募。`) };
+  }
   if (state.gold < cost || state.mercs.length >= ACTIVE_MERCENARY_LIMIT) {
     return { ...state, logs: addLog(state.logs, state.mercs.length >= ACTIVE_MERCENARY_LIMIT ? "商隊傭兵名冊已滿：最多可僱用 11 名傭兵，連同主角共 12 名。" : "僱用資金不足。") };
   }

@@ -29,14 +29,14 @@ export function gersangUnitArt(templateId: string | undefined, name: string, fal
 }
 
 const itemArt: Record<string, string> = {
-  weapon: "/game-assets/item-weapon-0.png",
-  armor: "/game-assets/item-armor-0.png",
-  helm: "/game-assets/item-helm-0.png",
-  boots: "/game-assets/item-boots-0.png",
-  gloves: "/game-assets/item-gloves-0.png",
-  ring: "/game-assets/item-ring-0.png",
-  amulet: "/game-assets/item-amulet-0.png",
-  accessory: "/game-assets/item-accessory-0.png",
+  weapon: "/game-assets/item-weapon-medieval.png",
+  armor: "/game-assets/item-armor-medieval.png",
+  helm: "/game-assets/item-helm-medieval.png",
+  boots: "/game-assets/item-boots-medieval.png",
+  gloves: "/game-assets/item-gloves-medieval.png",
+  ring: "/game-assets/item-ring-medieval.png",
+  amulet: "/game-assets/item-amulet-medieval.png",
+  accessory: "/game-assets/item-accessory-medieval.png",
 };
 
 export function gersangItemArt(slot: string | undefined) {

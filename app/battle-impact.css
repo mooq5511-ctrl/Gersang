@@ -71,3 +71,121 @@
 .battle-theater-enemy-units:not(.battle-theater-boss) .realtime-unit{height:122px}.battle-theater-enemy-units:not(.battle-theater-boss) .realtime-unit>strong{top:80px}.battle-theater-enemy-units:not(.battle-theater-boss) .realtime-unit>small{top:95px}.realtime-battle-theater .realtime-unit-boss{flex:0 0 190px}
 .realtime-battle-theater .realtime-unit-attacking{animation:realtime-theater-lunge .26s ease-in-out}@keyframes realtime-theater-lunge{0%,100%{transform:translateY(0)}48%{transform:translateY(calc(var(--attack-direction)*20px))}}
 @media(max-width:940px){.realtime-battle-stage.realtime-battle-theater{height:var(--battle-design-height,700px)}.battle-theater-player-units{padding:0 8px}.battle-theater-player-units .realtime-unit{flex-basis:68px}}
+
+/* 即時扣血、延遲尾條與傷害飄字。 */
+.realtime-hp{position:relative;isolation:isolate;overflow:hidden;background:#260605}
+.realtime-hp>i{position:absolute;inset:0 auto 0 0;display:block;height:100%}
+/* 底層殘影：保留受擊前血量，短暫延遲後平滑縮減。 */
+.realtime-hp-tail{z-index:1;background:linear-gradient(90deg,#6e160d 0%,#bc4820 52%,#ed9a31 100%);box-shadow:inset 0 1px 1px #ffd18455;transition:width 360ms cubic-bezier(.22,.8,.25,1)}
+/* 上層實際血量：命中瞬間立刻扣除。 */
+.realtime-hp-now{z-index:2;background:linear-gradient(180deg,#ff8170 0%,#e63227 38%,#980b0b 100%);box-shadow:inset 0 1px 1px #ffd5c499,inset 0 -1px 2px #4b0000aa,0 0 5px #f4372488;transition:none}
+/* 傷害飄字共同樣式。 */
+.realtime-floating-damage{position:absolute;z-index:12;top:-22px;left:50%;pointer-events:none;white-space:nowrap;font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:.03em;animation:realtime-damage-float 820ms cubic-bezier(.2,.75,.3,1) forwards}
+/* 怪物受擊：金黃色傷害數字。 */
+.realtime-floating-damage.enemy-damage{color:#ffe26d;text-shadow:0 2px 0 #6b2300,0 4px 5px #180500dd,0 0 8px #ff7a1f,0 0 16px #ff3d00aa}
+/* 玩家受擊：鮮紅色傷害數字。 */
+.realtime-floating-damage.player-damage{color:#ff7062;text-shadow:0 2px 0 #680000,0 4px 6px #160000dd,0 0 8px #f01c13,0 0 16px #9c0000cc}
+@keyframes realtime-damage-float{0%{opacity:0;transform:translate(-50%,10px) scale(.72)}16%{opacity:1;transform:translate(-50%,-5px) scale(1.18)}42%{opacity:1;transform:translate(-50%,-26px) scale(1.04)}100%{opacity:0;transform:translate(-50%,-66px) scale(.9)}}
+@media(prefers-reduced-motion:reduce){.realtime-hp-tail{transition-duration:1ms}.realtime-floating-damage{animation-duration:260ms}}
+/* 即時扣血、延遲尾條與傷害飄字。 */
+.realtime-hp {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #260605;
+}
+
+.realtime-hp > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: block;
+  height: 100%;
+}
+
+/* 底層殘影：保留受擊前血量，短暫延遲後平滑縮減。 */
+.realtime-hp-tail {
+  z-index: 1;
+  background:
+    linear-gradient(90deg, #6e160d 0%, #bc4820 52%, #ed9a31 100%);
+  box-shadow: inset 0 1px 1px #ffd18455;
+  transition: width 360ms cubic-bezier(.22, .8, .25, 1);
+}
+
+/* 上層實際血量：命中瞬間立刻扣除。 */
+.realtime-hp-now {
+  z-index: 2;
+  background:
+    linear-gradient(180deg, #ff8170 0%, #e63227 38%, #980b0b 100%);
+  box-shadow:
+    inset 0 1px 1px #ffd5c499,
+    inset 0 -1px 2px #4b0000aa,
+    0 0 5px #f4372488;
+  transition: none;
+}
+
+/* 傷害飄字共同樣式。 */
+.realtime-floating-damage {
+  position: absolute;
+  z-index: 12;
+  top: -22px;
+  left: 50%;
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 22px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .03em;
+  animation: realtime-damage-float 820ms cubic-bezier(.2, .75, .3, 1) forwards;
+}
+
+/* 怪物受擊：金黃色傷害數字。 */
+.realtime-floating-damage.enemy-damage {
+  color: #ffe26d;
+  text-shadow:
+    0 2px 0 #6b2300,
+    0 4px 5px #180500dd,
+    0 0 8px #ff7a1f,
+    0 0 16px #ff3d00aa;
+}
+
+/* 玩家受擊：鮮紅色傷害數字。 */
+.realtime-floating-damage.player-damage {
+  color: #ff7062;
+  text-shadow:
+    0 2px 0 #680000,
+    0 4px 6px #160000dd,
+    0 0 8px #f01c13,
+    0 0 16px #9c0000cc;
+}
+
+@keyframes realtime-damage-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(.72);
+  }
+
+  16% {
+    opacity: 1;
+    transform: translate(-50%, -5px) scale(1.18);
+  }
+
+  42% {
+    opacity: 1;
+    transform: translate(-50%, -26px) scale(1.04);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -66px) scale(.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .realtime-hp-tail {
+    transition-duration: 1ms;
+  }
+
+  .realtime-floating-damage {
+    animation-duration: 260ms;
+  }
+}

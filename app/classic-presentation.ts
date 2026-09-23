@@ -9,6 +9,13 @@ export function rarityPresentation(rarity?:string){
   default:return {className:'rarity-common',label:'白色・普通'};
  }
 }
+/** 將強化等級轉成顯示徽章所需的樣式；僅做顯示，不修改裝備資料。 */
+export function enhancementPresentation(level?:number){
+ const safeLevel=Math.max(0,Math.floor(level||0));
+ if(safeLevel<=0)return {className:'',label:''};
+ const className=safeLevel>=10?'enhance-level-10':safeLevel>=9?'enhance-level-9':safeLevel>=7?'enhance-level-7':safeLevel>=4?'enhance-level-4':'enhance-level-1';
+ return {className,label:`+${safeLevel}`};
+}
 /** 舊存檔日誌仍是純文字；分類時先判斷失敗，避免把「掉落無法拾取」誤標成獎勵。 */
 export function battleLogPresentation(line:string){
  if(/全滅|無法拾取|背包已滿/.test(line))return {className:'log-lose',label:'警示'};

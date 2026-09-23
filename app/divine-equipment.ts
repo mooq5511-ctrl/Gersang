@@ -15,13 +15,15 @@ export function toggleDivineEquipment<E extends Gear,U extends {level:number;equ
   const available=inventory.some(entry=>entry.uid===item.uid)?inventory:[...inventory,item];
   return equipFromInventory(hero,available,item.uid,slot);
 }
-export type TooltipGear={rarity?:string;name?:string;source?:string;atk?:number;def?:number;hp?:number;enhance?:number;requiredLevel?:number;skill?:string;bonus?:{str?:number;agi?:number;vit?:number;intel?:number};resist?:{physical:number;magic:number};magic?:{name?:string;text?:string;stat:string;value:number}[]};
+export type TooltipGear={rarity?:string;name?:string;source?:string;atk?:number;def?:number;hp?:number;enhance?:number;luckyValue?:number;enhanceBonuses?:{name?:string;text?:string;stat:string;value:number}[];requiredLevel?:number;skill?:string;bonus?:{str?:number;agi?:number;vit?:number;intel?:number};resist?:{physical:number;magic:number};magic?:{name?:string;text?:string;stat:string;value:number}[]};
 /** 所有欄位皆列出，包含非神裝的既有裝備加成與附魔。 */
 export function equipmentDetailLines(item:TooltipGear){
   const lines:string[]=[];
   for(const [key,label] of [['str','力量'],['agi','敏捷'],['vit','體質'],['intel','智力']] as const) if(item.bonus?.[key])lines.push(label+' +'+item.bonus[key]);
   for(const [key,label] of [['atk','攻擊力'],['def','防禦力'],['hp','生命值']] as const)if(item[key])lines.push(label+' +'+item[key]);
   if(item.enhance)lines.push('強化 +'+item.enhance);
+  if(item.luckyValue)lines.push('幸運值 '+item.luckyValue+'/100');
+  for(const bonus of item.enhanceBonuses||[])lines.push((bonus.name||bonus.stat)+'：'+(bonus.text||'+'+bonus.value+'%'));
   if(item.requiredLevel)lines.push('需求等級 '+item.requiredLevel);
   if(item.resist?.physical)lines.push('物理抗性 +'+item.resist.physical);
   if(item.resist?.magic)lines.push('魔法抗性 +'+item.resist.magic);

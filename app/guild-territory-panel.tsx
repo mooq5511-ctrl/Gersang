@@ -1,9 +1,12 @@
+/* eslint-disable next/no-img-element */
 import { useState } from "react";
 import type { Equipment } from "./game-state";
+import { equipmentDetailLines } from "./divine-equipment";
+import { rarityPresentation } from "./classic-presentation";
 import { EQUIPMENT_FUSION_RECIPES, FUSION_RARITY_LABEL, fusionItemKey, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
 import {
   BUILDINGS, BUILDING_IDS, TERRITORY_UNLOCK_LEVEL, buildingCost, enhancementChance,
-  enhancementCost, territoryBonus, territoryHealInterval, warehouseLimit,
+  enhancementCost, enhancementMilestoneOptions, enhancementMultiplier, territoryBonus, territoryHealInterval, warehouseLimit,
   type BuildingId, type GuildTerritory,
 } from "./guild-territory";
 
@@ -14,14 +17,19 @@ type Props = {
   inventory: Equipment[];
   upgrade: (id: BuildingId) => void;
   enhance: (itemUid: string) => void;
+  enhanceFeedback: { uid: string; name: string; success: boolean; level: number } | null;
   fuseAll: (rarity: FusionSourceRarity) => void;
 };
 
-export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, upgrade, enhance, fuseAll }: Props) {
+export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, upgrade, enhance, enhanceFeedback, fuseAll }: Props) {
   const [selectedItem, setSelectedItem] = useState("");
   const [fusionRarity, setFusionRarity] = useState<FusionSourceRarity>("普通");
   const [fusionItems, setFusionItems] = useState<string[]>([]);
   const item = inventory.find((entry) => entry.uid === selectedItem);
+  const itemEnhancementMultiplier = item ? enhancementMultiplier(item.enhance) : 1;
+  const itemEnhancementBonuses = item ? Array.from(new Map((item.enhanceBonuses || []).map((bonus) => [bonus.id, bonus])).values()) : [];
+  const nextMilestone = item ? ([5, 10, 15] as const).find((level) => level > item.enhance) : undefined;
+  const itemEnhanceFeedback = item && enhanceFeedback?.uid === item.uid ? enhanceFeedback : null;
   const open = heroLevel >= TERRITORY_UNLOCK_LEVEL;
   const smithyOpen = territory.buildings.smithy > 0;
   const recipe = EQUIPMENT_FUSION_RECIPES.find((entry) => entry.sourceRarity === fusionRarity)!;
@@ -75,12 +83,19 @@ export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, upg
     </div>
     <section className="territory-smithy" aria-label="鐵匠鋪裝備強化">
       <h3>鐵匠鋪・裝備強化</h3>
-      <p>僅可強化背包裝備，最高 +10。成功後裝備能力提高；失敗只消耗金錢，不損壞裝備。旗幟與鐵匠鋪成功率加成相加，上限 100%。</p>
+      <p>僅可強化背包裝備，最高 +15。成功後裝備能力提高；失敗只消耗金錢，不損壞裝備。旗幟與鐵匠鋪成功率加成相加，上限 100%。</p>
       {smithyOpen ? <div className="territory-smithy-controls">
         <label>選擇裝備<select value={selectedItem} onChange={(event) => setSelectedItem(event.target.value)}><option value="">請選擇背包裝備</option>{inventory.map((entry) => <option value={entry.uid} key={entry.uid}>{entry.name} +{entry.enhance}</option>)}</select></label>
         {item && <span>成功率 {Math.round(enhancementChance(territory, item) * 1000) / 10}%・花費 {enhancementCost(item).toLocaleString()} 兩</span>}
-        <button type="button" disabled={!item || item.enhance >= 10 || gold < enhancementCost(item)} onClick={() => item && enhance(item.uid)}>強化裝備</button>
-      </div> : <p>主角 Lv.50 後建造鐵匠鋪即可使用。</p>}
+        <button type="button" className={itemEnhanceFeedback ? "enhance-button-pulse" : ""} disabled={!item || item.enhance >= 15 || gold < enhancementCost(item)} onClick={() => item && enhance(item.uid)}>強化裝備</button>
+        {itemEnhanceFeedback && <output className={'enhance-feedback '+(itemEnhanceFeedback.success ? 'success' : 'failure')} aria-live="polite">{itemEnhanceFeedback.success ? `強化成功・+${itemEnhanceFeedback.level}` : '強化失敗・裝備未受損'}</output>}
+        {item && <article className={'smithy-item-preview '+rarityPresentation(item.rarity).className} aria-label="目前選取裝備詳細資訊">
+          <div className="smithy-item-preview-heading"><span className="smithy-item-preview-icon">{item.image ? <img src={item.image} alt="" /> : item.slot.slice(0, 1)}</span><div><strong>{item.name} <b>+{item.enhance}</b></strong><small>{rarityPresentation(item.rarity).label}・需求 Lv.{item.requiredLevel || 1}・{item.slot}</small></div></div>
+          <div className="smithy-item-preview-stats"><span>攻擊 <b>{Math.floor(item.atk * itemEnhancementMultiplier).toLocaleString()}</b></span><span>防禦 <b>{Math.floor(item.def * itemEnhancementMultiplier).toLocaleString()}</b></span><span>生命 <b>{Math.floor(item.hp * itemEnhancementMultiplier).toLocaleString()}</b></span><span>幸運值 <b>{item.luckyValue || 0}/100</b></span></div>
+          <div className="smithy-item-preview-lines">{equipmentDetailLines({ ...item, enhanceBonuses: itemEnhancementBonuses }).filter((line) => !line.startsWith('強化 +')).slice(0, 6).map((line) => <em key={line}>{line}</em>)}</div>
+          {nextMilestone && <div className="smithy-milestone-guide"><strong>下一里程碑：+{nextMilestone}</strong><small>每種契印機率 33.3%，數值範圍如下：</small>{enhancementMilestoneOptions(nextMilestone).map((option) => <span key={option.id}><b>{option.name}</b>・{option.text} +{option.min}%～{option.max}%・{(option.chance * 100).toFixed(1)}%</span>)}</div>}
+        </article>}
+      </div> : <p>主角 Lv.20 後建造鐵匠鋪即可使用。</p>}
     </section>
     <section className="territory-smithy equipment-fusion" aria-label="裝備合成工坊">
       <h3>商團工坊・裝備合成</h3>

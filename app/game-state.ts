@@ -26,6 +26,7 @@ export type MagicAffix = {
   stat: string;
   value: number;
 };
+export type EnhancementBonus = { id: "attackPercent" | "defensePercent" | "xpPercent" | "critRate" | "damageReduction" | "allStats"; name: string; text: string; stat: "attackPercent" | "defensePercent" | "xpPercent" | "critRate" | "damageReduction" | "allStats"; value: number };
 
 export type Equipment = {
   bagSlot?: number;
@@ -37,6 +38,10 @@ export type Equipment = {
   hp: number;
   image: string;
   enhance: number;
+  /** 強化失敗累積的保底值；達 100 時下次必定成功。 */
+  luckyValue?: number;
+  /** +5、+10、+15 里程碑取得的全域百分比屬性。 */
+  enhanceBonuses?: EnhancementBonus[];
   rarity: "普通" | "稀有" | "史詩" | "傳說" | "金色";
   magic: MagicAffix[];
   requiredLevel?: number;

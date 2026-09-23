@@ -4,7 +4,7 @@ import { resistanceMultiplier } from './combat-damage.js';
 export type VitalUnit = {
   templateId?: string; physicalResist?: number; magicResist?: number;
   level: number; vit: number; intel: number; str?: number; agi?: number; tier?: number; hp?: number; mp?: number; maxHp?:number; flatAttackBonus?:number;
-  equip: Record<string, { hp?: number; atk?: number; def?: number; enhance?: number; bonus?: { str?: number; agi?: number; vit?: number; intel?: number }; resist?: { physical?: number; magic?: number }; magic?: { stat: string; value: number }[] } | null>;
+  equip: Record<string, { hp?: number; atk?: number; def?: number; enhance?: number; enhanceBonuses?: { stat: string; value: number }[]; bonus?: { str?: number; agi?: number; vit?: number; intel?: number }; resist?: { physical?: number; magic?: number }; magic?: { stat: string; value: number }[] } | null>;
 };
 export function vitalStats(unit: VitalUnit) {
   const spec = mercenarySpec(unit.templateId);
@@ -12,6 +12,7 @@ export function vitalStats(unit: VitalUnit) {
   let intelligence = unit.intel;
   let equipmentHp = 0;
   let hpPercent = 0;
+  let allStatsPercent = 0;
   let defense = 0;
   let physicalResist = Number(unit.physicalResist) || 0;
   let magicResist = Number(unit.magicResist) || 0;
@@ -23,8 +24,11 @@ export function vitalStats(unit: VitalUnit) {
     defense += item.def || 0;
     physicalResist += item.resist?.physical || 0;
     magicResist += item.resist?.magic || 0;
+    for (const bonus of item.enhanceBonuses || []) if (bonus.stat === "allStats") allStatsPercent += bonus.value;
     for (const affix of item.magic || []) if (affix.stat === "hp") hpPercent += affix.value;
   }
+  vitality *= 1 + allStatsPercent / 100;
+  intelligence *= 1 + allStatsPercent / 100;
   // 主角基礎上限存於 maxHp：初始 100、每次升級 +20；體質與裝備再動態加成。
   const heroHp=(unit.maxHp??100)+Math.max(0,vitality-20)*4+equipmentHp;
   const mercenaryHp = spec ? (spec.baseHp ?? spec.ratings[0] * 20 + (unit.level - 1) * 12) + Math.max(0, vitality - spec.ratings[0]) * 8 + equipmentHp : 100 + vitality * 8 + unit.level * 12 + equipmentHp;
@@ -47,7 +51,7 @@ export const spellCost = (unit: VitalUnit) => mercenarySpec(unit.templateId)?.mp
 export function combatStats(unit: VitalUnit) {
   const spec = mercenarySpec(unit.templateId);
   const flat = { str: unit.str || 0, agi: unit.agi || 0, vit: unit.vit };
-  const percent = { str: 0, agi: 0, vit: 0, atk: 0, def: 0 };
+  const percent = { str: 0, agi: 0, vit: 0, intel: 0, atk: 0, def: 0 };
   let equipmentAttack = 0;
   let equipmentDefense = 0;
   for (const item of Object.values(unit.equip)) {
@@ -55,10 +59,15 @@ export function combatStats(unit: VitalUnit) {
     flat.str += item.bonus?.str || 0;
     flat.agi += item.bonus?.agi || 0;
     flat.vit += item.bonus?.vit || 0;
-    const enhancement = 1 + Math.max(0, item.enhance || 0) * 0.12;
+    const enhancement = 1.15 ** Math.max(0, Math.floor(item.enhance || 0));
     equipmentAttack += (item.atk || 0) * enhancement;
     equipmentDefense += (item.def || 0) * enhancement;
     for (const affix of item.magic || []) if (Object.hasOwn(percent, affix.stat)) percent[affix.stat as keyof typeof percent] += affix.value;
+    for (const bonus of item.enhanceBonuses || []) {
+      if (bonus.stat === "allStats") { percent.str += bonus.value; percent.agi += bonus.value; percent.vit += bonus.value; percent.intel += bonus.value; }
+      if (bonus.stat === "attackPercent") percent.atk += bonus.value;
+      if (bonus.stat === "defensePercent") percent.def += bonus.value;
+    }
   }
   const tier = 1 + (unit.tier || 0) * 0.35;
   const permanentAttack = Math.max(0, unit.flatAttackBonus || 0);

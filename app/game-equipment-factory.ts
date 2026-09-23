@@ -1,6 +1,6 @@
-import { cuteEquipmentArt } from "./gersang-visuals";
+import { gersangItemArt } from "./gersang-visuals";
 import { wearableCatalog } from "./wearable-catalog";
-import { equipmentBases, magicAffixes } from "./v15-data";
+import { magicAffixes } from "./v15-data";
 import type { OfficialEquipment } from "./v17-content";
 import { SHOP_QUALITY } from "./game-config";
 import type { Equipment, MagicAffix } from "./game-state";
@@ -35,11 +35,11 @@ export function rollEquipment(stage: number, guaranteed = false, slot?: Equipmen
   const catalog = slot ? wearableCatalog.filter((entry) => entry.slot === slot) : wearableCatalog;
   const base = catalog[Math.floor(Math.random() * catalog.length)] || wearableCatalog[0], magicCount = guaranteed ? Math.min(3, 1 + Math.floor(stage / 20)) : Math.min(3, Math.max(1, Math.floor(stage / 15))), magic = [...magicAffixes].sort(() => Math.random() - .5).slice(0, magicCount);
   const rarity: Equipment["rarity"] = magicCount >= 3 ? "傳說" : magicCount === 2 ? "史詩" : stage >= 10 ? "稀有" : "普通";
-  return { uid: makeUid(base.id), name: (rarity === "普通" ? "" : rarity + "・") + base.name, slot: base.slot, atk: base.atk + stage * 2, def: base.def + Math.floor(stage * 1.4), hp: base.hp + stage * 6, image: base.image, enhance: 0, rarity, magic: magic.map((affix) => ({ ...affix })), bonus: { str: 0, agi: 0, intel: 0, vit: 0 }, resist: { physical: 0, magic: 0 } };
+  return { uid: makeUid(base.id), name: (rarity === "普通" ? "" : rarity + "・") + base.name, slot: base.slot, atk: base.atk + stage * 2, def: base.def + Math.floor(stage * 1.4), hp: base.hp + stage * 6, image: gersangItemArt(base.slot), enhance: 0, luckyValue: 0, enhanceBonuses: [], rarity, magic: magic.map((affix) => ({ ...affix })), bonus: { str: 0, agi: 0, intel: 0, vit: 0 }, resist: { physical: 0, magic: 0 } };
 }
 
 export function makeOfficialEquipment(record: OfficialEquipment, rarity = rollShopQuality()): Equipment {
-  const base = equipmentBases.find((item) => item.slot === record.kind) || equipmentBases[0], multiplier = SHOP_QUALITY[rarity].multiplier;
+  const multiplier = SHOP_QUALITY[rarity].multiplier;
   const magic = [...magicAffixes].sort(() => Math.random() - .5).slice(0, record.level >= 130 ? 3 : record.level >= 50 ? 2 : 1);
-  return { uid: makeUid(record.id), name: rarity + "・" + record.name, slot: record.kind, atk: scale(record.atk, multiplier), def: scale(record.def, multiplier), hp: 0, image: cuteEquipmentArt(record.name, base.image), enhance: 0, rarity, magic: scaleMagic(magic.map((affix) => ({ ...affix })), multiplier), requiredLevel: record.level, source: "四國城市商店・" + rarity + "品質 x" + multiplier, skill: record.skill, bonus: { str: scale(record.str, multiplier), agi: scale(record.agi, multiplier), intel: scale(record.intel, multiplier), vit: scale(record.vit, multiplier) }, resist: { physical: scale(record.physical, multiplier), magic: scale(record.magic, multiplier) } };
+  return { uid: makeUid(record.id), name: rarity + "・" + record.name, slot: record.kind, atk: scale(record.atk, multiplier), def: scale(record.def, multiplier), hp: 0, image: gersangItemArt(record.kind), enhance: 0, rarity, magic: scaleMagic(magic.map((affix) => ({ ...affix })), multiplier), requiredLevel: record.level, source: "四國城市商店・" + rarity + "品質 x" + multiplier, skill: record.skill, bonus: { str: scale(record.str, multiplier), agi: scale(record.agi, multiplier), intel: scale(record.intel, multiplier), vit: scale(record.vit, multiplier) }, resist: { physical: scale(record.physical, multiplier), magic: scale(record.magic, multiplier) } };
 }

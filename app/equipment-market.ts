@@ -14,7 +14,7 @@ export function equipmentSellPrice(item:SellableEquipment){
   const resist=Object.values(item.resist||{}).reduce((sum,value)=>sum+Math.max(0,Number(value)||0),0);
   const base=40+Math.max(0,item.atk||0)*18+Math.max(0,item.def||0)*14+Math.max(0,item.hp||0)*1.5+
     magic*22+bonus*30+resist*18+Math.max(1,item.requiredLevel||1)*12;
-  const enhanced=base*(1+Math.max(0,item.enhance||0)*.18);
+  const enhanced=base*(1.15 ** Math.max(0,Math.floor(item.enhance||0)));
   return Math.max(10,Math.floor(enhanced*(RARITY_MULTIPLIER[item.rarity||'普通']||1)));
 }
 

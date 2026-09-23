@@ -12,7 +12,7 @@ import { territoryBonus, territoryHealInterval } from "./guild-territory";
 import { grantTerritoryXp } from "./game-progression";
 import { makeTierEquipmentDrop, pickTierEquipmentDrop } from "./tier-equipment";
 import { hasFullAmaterasuSet } from "./equipment-set-effects";
-import { sharedBattleExperience } from "./dungeon-kill-xp";
+import { battleExperienceMultiplier, equipmentExperienceMultiplier, sharedBattleExperience } from "./dungeon-kill-xp";
 
 type BattleActionDependencies = {
   notify: (message: string) => void;
@@ -78,12 +78,17 @@ export function runDungeonAction(
   const remaining = new globalThis.Map(result.party.map((unit) => [unit.uid, unit]));
   let next: GameState = { ...previous, dungeon: result.state, hero: { ...previous.hero, hp: remaining.get("hero")?.hp ?? result.hp, mp: remaining.get("hero")?.mp ?? result.mp }, mercs: previous.mercs.map((unit) => { const fighter = remaining.get(unit.uid); return fighter ? { ...unit, hp: fighter.hp, mp: fighter.mp ?? unit.mp } : unit; }) };
   const battleMembers = 1 + deployedMercs.length;
-  const shareXp = sharedBattleExperience(result.xpEarned, battleMembers);
+  const xpMultiplier = battleExperienceMultiplier(previous.hero.level, deployedMercs.length) * equipmentExperienceMultiplier(fighters);
+  const shareXp = sharedBattleExperience(result.xpEarned * xpMultiplier, battleMembers);
   if (result.killsEarned) {
     const isFirstDeliveryTarget = previous.npcProgress.activeQuests.includes("npc-first-caravan-delivery") && result.state.key === "e_starter_raccoon";
     const deliveryKills = isFirstDeliveryTarget ? next.starterDeliveryKills + result.killsEarned : next.starterDeliveryKills;
     const perMemberXp = shareXp * (1 + territoryBonus(next.territory, "xp"));
-    next = { ...next, hero: grantTerritoryXp(next, next.hero, shareXp), mercs: next.mercs.map((unit) => activeIds.has(unit.uid) ? grantTerritoryXp(next, unit, shareXp) : unit), kills: next.kills + result.killsEarned, starterDeliveryKills: deliveryKills, logs: deps.addLog(next.logs, `擊敗 ${result.killsEarned} 隻怪物，獲得 ${result.xpEarned} 經驗；${battleMembers} 名出戰角色均分，每人 ${Number(perMemberXp.toFixed(2)).toLocaleString("zh-TW")} 經驗（含領地加成）。`) };
+    const newbieLabel = previous.hero.level < 20 ? "、Lv.20 前新手 ×2" : "";
+    const mercenaryLabel = deployedMercs.length ? `、上陣傭兵 +${Math.min(50, deployedMercs.length * 10)}%` : "";
+    const equipmentXpPercent = Math.round((equipmentExperienceMultiplier(fighters) - 1) * 100);
+    const equipmentLabel = equipmentXpPercent ? `、求知契印 +${equipmentXpPercent}%` : "";
+    next = { ...next, hero: grantTerritoryXp(next, next.hero, shareXp), mercs: next.mercs.map((unit) => activeIds.has(unit.uid) ? grantTerritoryXp(next, unit, shareXp) : unit), kills: next.kills + result.killsEarned, starterDeliveryKills: deliveryKills, logs: deps.addLog(next.logs, `擊敗 ${result.killsEarned} 隻怪物，獲得 ${result.xpEarned} 基礎經驗；${battleMembers} 名出戰角色均分，每人 ${Number(perMemberXp.toFixed(2)).toLocaleString("zh-TW")} 經驗（含領地加成${newbieLabel}${mercenaryLabel}${equipmentLabel}）。`) };
   }
   if (result.state.status === "recovering" && previous.hero.status !== "客棧中") next = deps.enterInn(next, now, result.state.logs[0], result.state);
   else if (result.state.status === "idle" && previous.hero.status === "客棧中") next = deps.leaveInn(next);

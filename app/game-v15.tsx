@@ -123,9 +123,9 @@ const slotLabels = EQUIPMENT_LABELS;
 const FIRST_CARAVAN_QUEST_ID = "npc-first-caravan-delivery";
 const FIRST_CARAVAN_TARGET = 3;
 const GAME_UI_SETTINGS_KEY = "gersang-ui-settings-v1";
-type SceneDisplayFit = "cover" | "contain";
-type GameUiSettings = { musicVolume: number; sceneFit: SceneDisplayFit };
-const DEFAULT_GAME_UI_SETTINGS: GameUiSettings = { musicVolume: 42, sceneFit: "cover" };
+type SceneDisplayMode = "auto" | "mobile-916" | "pc-169" | "fullscreen";
+type GameUiSettings = { musicVolume: number; sceneMode: SceneDisplayMode };
+const DEFAULT_GAME_UI_SETTINGS: GameUiSettings = { musicVolume: 42, sceneMode: "auto" };
 const mapFeatureIcons: Record<string, string> = { field: "🌾", lake: "🌊", sea: "⚓", forest: "🌲", ice: "❄️", desert: "☀️", sumeru: "⛰️", shambhala: "🏯" };
 const DEFAULT_BATTLE_PANEL_VISIBILITY = { partyVitals: true, mapNavigation: true, monsterSelection: true, battlefield: true, battleLogs: true };
 type BattlePanelVisibility = typeof DEFAULT_BATTLE_PANEL_VISIBILITY;
@@ -140,9 +140,12 @@ const BATTLE_PANEL_LABELS: Array<[keyof BattlePanelVisibility, string]> = [
 function readGameUiSettings(): GameUiSettings {
   try {
     const saved = JSON.parse(localStorage.getItem(GAME_UI_SETTINGS_KEY) || "null") as Partial<GameUiSettings> | null;
+    const sceneMode = saved?.sceneMode;
     return {
       musicVolume: typeof saved?.musicVolume === "number" && Number.isFinite(saved.musicVolume) ? Math.max(0, Math.min(100, Math.round(saved.musicVolume))) : DEFAULT_GAME_UI_SETTINGS.musicVolume,
-      sceneFit: saved?.sceneFit === "contain" ? "contain" : "cover",
+      sceneMode: sceneMode === "mobile-916" || sceneMode === "pc-169" || sceneMode === "fullscreen"
+        ? sceneMode
+        : "auto",
     };
   } catch {
     return DEFAULT_GAME_UI_SETTINGS;
@@ -180,6 +183,8 @@ export default function GameV15() {
   const [notice, setNotice] = useState("");
   const [returnReport, setReturnReport] = useState<{ minutes: number; gold: number; credit: number } | null>(null);
   const [selectedUid, setSelectedUid] = useState("hero");
+  const [equipmentPulseUid, setEquipmentPulseUid] = useState<string | null>(null);
+  const [enhanceFeedback, setEnhanceFeedback] = useState<{ uid: string; name: string; success: boolean; level: number } | null>(null);
   const [cityService, setCityService] = useState<CityService>("mercenary");
   const [medicineAmounts, setMedicineAmounts] = useState<Record<string, number>>({});
   const [gemSlot, setGemSlot] = useState<EquipmentSlot>('armor');
@@ -189,6 +194,30 @@ export default function GameV15() {
   const [npcOpeningLine, setNpcOpeningLine] = useState("");
   const warehouseWritable = useRef(true);
   const loaded = useRef(false);
+
+  const setSceneMode = useCallback(async (sceneMode: SceneDisplayMode) => {
+    if (sceneMode === "fullscreen") {
+      try {
+        if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      } catch {
+        setNotice("瀏覽器未允許全螢幕，已保留目前畫面模式。");
+        return;
+      }
+    } else if (document.fullscreenElement) {
+      await document.exitFullscreen().catch(() => undefined);
+    }
+    setUiSettings(previous => ({ ...previous, sceneMode }));
+  }, []);
+
+  useEffect(() => {
+    const syncFullscreen = () => {
+      if (!document.fullscreenElement && uiSettings.sceneMode === "fullscreen") {
+        setUiSettings(previous => ({ ...previous, sceneMode: "auto" }));
+      }
+    };
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, [uiSettings.sceneMode]);
 
   useEffect(() => {
     setUiSettings(readGameUiSettings());
@@ -487,6 +516,8 @@ export default function GameV15() {
       const defenseGain = afterCombat.defense - beforeCombat.defense;
       const changes = [attackGain && `攻擊 ${attackGain > 0 ? '+' : ''}${format(attackGain)}`, defenseGain && `防禦 ${defenseGain > 0 ? '+' : ''}${format(defenseGain)}`, powerGain && `戰力 ${powerGain > 0 ? '+' : ''}${format(powerGain)}`].filter(Boolean);
       if (changes.length) setNotice(`裝備生效：${changes.join('・')}`);
+      setEquipmentPulseUid(targetUid);
+      window.setTimeout(() => setEquipmentPulseUid(current => current === targetUid ? null : current), 900);
     }
     setGame(previous => equipInventoryItemAction(previous, itemUid, requestedSlot, targetUid, addLog));
   }
@@ -590,7 +621,16 @@ export default function GameV15() {
 
   function enhanceTerritoryEquipment(itemUid: string) {
     const roll = Math.random();
-    setGame(previous => { const result = enhanceEquipment(previous, itemUid, roll); if (result.error) setNotice(result.error); return result.game; });
+    const result = enhanceEquipment(game, itemUid, roll);
+    if (result.error) { setNotice(result.error); return; }
+    const before = game.inventory.find(item => item.uid === itemUid);
+    const after = result.game.inventory.find(item => item.uid === itemUid);
+    if (before && after) {
+      const success = after.enhance > before.enhance;
+      setEnhanceFeedback({ uid: itemUid, name: before.name, success, level: after.enhance });
+      window.setTimeout(() => setEnhanceFeedback(current => current?.uid === itemUid ? null : current), 1300);
+    }
+    setGame(result.game);
   }
   function fuseAllTerritoryEquipment(sourceRarity: FusionSourceRarity) {
     setGame(previous => {
@@ -750,7 +790,7 @@ export default function GameV15() {
   }
 
   return (
-    <main className="game-shell v15-shell classic-live-game" data-scene-fit={uiSettings.sceneFit} data-objective-collapsed={!objectiveExpanded} data-quicknav-collapsed={!quickNavExpanded}>
+    <main className="game-shell v15-shell classic-live-game" data-scene-mode={uiSettings.sceneMode} data-objective-collapsed={!objectiveExpanded} data-quicknav-collapsed={!quickNavExpanded}>
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
@@ -794,13 +834,15 @@ export default function GameV15() {
               <input id="game-music-volume" aria-label="遊戲音樂音量" type="range" min="0" max="100" step="1" value={uiSettings.musicVolume} onChange={event => { const musicVolume = Number(event.currentTarget.value); setUiSettings(previous => ({ ...previous, musicVolume })); }}/>
             </div>
             <fieldset className="quick-setting-ratio">
-              <legend>畫面比例與場景顯示</legend>
-              <p>建議自動滿版，依目前螢幕重排介面；若投影仍有黑邊，需在投影設備調整解析度比例。</p>
+              <legend>畫面尺寸</legend>
+              <p>選擇遊戲舞台比例；不會修改裝置本身的解析度。</p>
               <div className="quick-setting-ratio-options">
-                <label className={uiSettings.sceneFit === "cover" ? "selected" : ""}><input type="radio" name="game-scene-fit" value="cover" checked={uiSettings.sceneFit === "cover"} onChange={() => setUiSettings(previous => ({ ...previous, sceneFit: "cover" }))}/><span><strong>自動滿版・建議</strong><small>依螢幕填滿，場景邊緣可能裁切</small></span></label>
-                <label className={uiSettings.sceneFit === "contain" ? "selected" : ""}><input type="radio" name="game-scene-fit" value="contain" checked={uiSettings.sceneFit === "contain"} onChange={() => setUiSettings(previous => ({ ...previous, sceneFit: "contain" }))}/><span><strong>完整顯示</strong><small>保留整張場景，比例不同時可能留邊</small></span></label>
+                <label className={uiSettings.sceneMode === "auto" ? "selected" : ""}><input type="radio" name="game-scene-mode" checked={uiSettings.sceneMode === "auto"} onChange={() => setSceneMode("auto")}/><span><strong>自動尺寸</strong><small>依目前視窗自動調整</small></span></label>
+                <label className={uiSettings.sceneMode === "mobile-916" ? "selected" : ""}><input type="radio" name="game-scene-mode" checked={uiSettings.sceneMode === "mobile-916"} onChange={() => setSceneMode("mobile-916")}/><span><strong>📱 手機 9:16</strong><small>直式舞台，可能保留上下留邊</small></span></label>
+                <label className={uiSettings.sceneMode === "pc-169" ? "selected" : ""}><input type="radio" name="game-scene-mode" checked={uiSettings.sceneMode === "pc-169"} onChange={() => setSceneMode("pc-169")}/><span><strong>🖥️ PC 16:9</strong><small>桌面與投影橫式舞台</small></span></label>
+                <label className={uiSettings.sceneMode === "fullscreen" ? "selected" : ""}><input type="radio" name="game-scene-mode" checked={uiSettings.sceneMode === "fullscreen"} onChange={() => setSceneMode("fullscreen")}/><span><strong>⛶ 全螢幕</strong><small>使用瀏覽器全螢幕 API</small></span></label>
               </div>
-              <small className="quick-setting-ratio-note">常見螢幕比例：電腦 16:9、手機直式 9:18／9:20。此選項不會變更裝置解析度。</small>
+              <small className="quick-setting-ratio-note">全螢幕必須由使用者點擊啟動；按 Esc 可離開。</small>
             </fieldset>
             <div className="quick-setting-row"><span><strong>滿 MP 自動施放技能</strong><small>每名出戰角色集滿魔力後自動施放。</small></span><button type="button" role="switch" aria-checked={game.autoSkill} className={game.autoSkill ? "enabled" : ""} onClick={() => setGame(previous => ({ ...previous, autoSkill: !previous.autoSkill, logs: addLog(previous.logs, previous.autoSkill ? "已關閉技能自動施放。" : "已開啟技能自動施放。") }))}>{game.autoSkill ? "開啟" : "關閉"}</button></div>
           </> : <div className="treasure-codex-list"><article className="treasure-entry"><span className="treasure-entry-icon"><Coins aria-hidden="true" /></span><span><strong>新手兌換銅錢</strong><small>特殊貨幣</small></span><b>×{format(game.newbieCoins)}</b></article>{Object.keys(MATERIAL_PRICES).sort((a,b)=>a.localeCompare(b,"zh-TW")).map(name => <article className="treasure-entry" key={name}><span className="treasure-entry-icon"><Gem aria-hidden="true" /></span><span><strong>{name}</strong><small>{game.materials[name] ? "已收集" : "尚未取得"}</small></span><b>×{format(game.materials[name] || 0)}</b></article>)}</div>}
@@ -955,7 +997,7 @@ export default function GameV15() {
 
 
         <TabsContent value="squad" className="tab-panel">
-          <CaravanStatus key={squadDestination.key} initialWindow={squadDestination.window} territory={game.territory} upgradeBuilding={upgradeTerritoryBuilding} enhanceEquipment={enhanceTerritoryEquipment} fuseAllEquipment={fuseAllTerritoryEquipment} busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} restingMercs={game.restingMercs} active={game.active} toggleActive={toggleActive} storeMercenary={storeMercenary} withdrawRestingMercenary={withdrawRestingMercenary} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet}
+          <CaravanStatus key={squadDestination.key} initialWindow={squadDestination.window} territory={game.territory} upgradeBuilding={upgradeTerritoryBuilding} enhanceEquipment={enhanceTerritoryEquipment} enhanceFeedback={enhanceFeedback} equipmentPulseUid={equipmentPulseUid} fuseAllEquipment={fuseAllTerritoryEquipment} busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} restingMercs={game.restingMercs} active={game.active} toggleActive={toggleActive} storeMercenary={storeMercenary} withdrawRestingMercenary={withdrawRestingMercenary} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet}
             navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now(),spawnRoll=Math.random();setGame(previous=>{
               const old=previous.dungeon||freshDungeon();
               const deployed=[previous.hero,...previous.mercs.filter(unit=>previous.active.slice(0,ACTIVE_MERCENARY_LIMIT).includes(unit.uid))];
@@ -965,7 +1007,7 @@ export default function GameV15() {
             });}}/>}
             battle={null}
             inventory={game.inventory} materials={game.materials} materialPrices={MATERIAL_PRICES}
-            equipSelected={(itemUid,targetUid)=>equipItem(itemUid,undefined,targetUid)} sellInventory={sellInventoryEquipment} sellAllInventory={sellEveryInventoryEquipment} sellMaterial={sellLoot} sellAllMaterials={sellEveryLoot} openAncientCoinBox={openAncientCoinBox} unequipHero={slot=>unequipItem(slot,'hero')} bagMessage={game.logs[0]||''}
+            equipSelected={(itemUid,targetUid)=>equipItem(itemUid,undefined,targetUid)} sellInventory={sellInventoryEquipment} sellAllInventory={sellEveryInventoryEquipment} sellMaterial={sellLoot} sellAllMaterials={sellEveryLoot} openAncientCoinBox={openAncientCoinBox} unequipHero={slot=>unequipItem(slot,'hero')} unequipEquipment={unequipItem} bagMessage={game.logs[0]||''}
 
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
             maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}

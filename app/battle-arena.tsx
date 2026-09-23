@@ -29,15 +29,19 @@ export function battleUnitStatuses(unit:RealtimeBattleUnitState,timeMs:number):U
 }
 function playEventLog(root:HTMLElement,event:RealtimeBattleEventState){
  if(event.type==='attack')restartAnimation(findUnit(root,event.actorId),'realtime-unit-attacking');
- if(event.type==='damage'){const target=findUnit(root,event.targetId);restartAnimation(target,'realtime-unit-hit');if(target){const text=document.createElement('b');text.className='realtime-floating-damage';text.textContent='-'+Math.max(0,event.damage||0).toLocaleString();target.appendChild(text);const remove=()=>text.remove();text.addEventListener('animationend',remove,{once:true});setTimeout(remove,1000)}}
+ if(event.type==='damage')restartAnimation(findUnit(root,event.targetId),'realtime-unit-hit');
  if(event.type==='death')findUnit(root,event.targetId)?.classList.add('realtime-unit-dead');
 }
 
 function UnitSprite({unit,name,level,image,timeMs,boss=false,tiger=false,theater=false,formationPosition}:{unit:RealtimeBattleUnitState;name:string;level:number;image:string;timeMs:number;boss?:boolean;tiger?:boolean;theater?:boolean;formationPosition?:CaravanMember['position']}){
  const resolvedImage=tiger?battleMonsterImage('狂虎')+'?v=20260910':image,crop=BATTLE_MONSTER_CROP[name];
  const point=theater?null:gridToPixel(unit.side,unit.position.row,unit.position.col),hp=Math.max(0,unit.hp),hpRate=Math.max(0,Math.min(100,hp/unit.maxHp*100)),statuses=battleUnitStatuses(unit,timeMs),formationClass=formationPosition==='前排'?'front':formationPosition==='中排'?'middle':formationPosition==='後排'?'rear':'';
+ const [tailHpRate,setTailHpRate]=useState(hpRate),[damagePopups,setDamagePopups]=useState<{id:number;amount:number}[]>([]),previousHp=useRef(hp),previousHpRate=useRef(hpRate),tailTimer=useRef<ReturnType<typeof setTimeout>|null>(null),popupId=useRef(0);
+ useEffect(()=>{const damage=previousHp.current-hp;if(damage>0)setDamagePopups(previous=>[...previous.slice(-5),{id:++popupId.current,amount:damage}]);previousHp.current=hp},[hp]);
+ useEffect(()=>{if(tailTimer.current)clearTimeout(tailTimer.current);if(hpRate>=previousHpRate.current)setTailHpRate(hpRate);else tailTimer.current=setTimeout(()=>setTailHpRate(hpRate),380);previousHpRate.current=hpRate;return()=>{if(tailTimer.current)clearTimeout(tailTimer.current)}},[hpRate]);
  return <article className={'realtime-unit '+unit.side+(boss?' realtime-unit-boss':'')+(theater?' realtime-unit-theater':'')+(hp<=0?' realtime-unit-dead':'')} data-unit-id={unit.id} style={point?{left:point.x,top:point.y}:undefined} aria-label={`${boss?'首領 ':''}${name}${formationPosition?`，${formationPosition}`:''}，生命 ${hp} / ${unit.maxHp}`}>
-  <div className="realtime-unit-bars"><span className="realtime-hp"><i style={{width:hpRate+'%'}}/></span><span className="realtime-mp"><i style={{width:Math.max(0,Math.min(100,unit.mp))+'%'}}/></span></div>
+  <div className="realtime-unit-bars"><span className="realtime-hp"><i className="realtime-hp-tail" style={{width:tailHpRate+'%'}}/><i className="realtime-hp-now" style={{width:hpRate+'%'}}/></span><span className="realtime-mp"><i style={{width:Math.max(0,Math.min(100,unit.mp))+'%'}}/></span></div>
+  {damagePopups.map(popup=><b key={popup.id} className={'realtime-floating-damage '+(unit.side==='enemy'?'enemy-damage':'player-damage')} onAnimationEnd={()=>setDamagePopups(previous=>previous.filter(item=>item.id!==popup.id))}>-{popup.amount.toLocaleString()}</b>)}
   <span className="realtime-portrait" style={{backgroundImage:`url(${resolvedImage})`,backgroundSize:crop?.size||'contain',backgroundRepeat:'no-repeat',backgroundPosition:crop?.position||'center'}}>{!crop&&<img key={resolvedImage} src={resolvedImage} alt={tiger?'狂虎':''} onError={event=>{event.currentTarget.style.display='none'}}/>}</span>
   {formationPosition&&<em className={'realtime-formation-position '+formationClass} title={`隊伍編制：${formationPosition}`}>{formationPosition[0]}</em>}
   {statuses.length>0&&<span className="realtime-statuses" aria-label={statuses.map(status=>status.title).join('，')}>{statuses.map(status=><i key={status.kind} className={'realtime-status '+status.kind} title={status.title}>{status.kind==='shield'?<Shield size={10}/>:status.kind==='fear'?<Frown size={10}/>:status.kind==='burn'?<Flame size={10}/>:<Skull size={10}/>}<b>{status.label}</b></i>)}</span>}
