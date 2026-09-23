@@ -13,6 +13,8 @@ import { freshGame, heroPortrait, isNationId, makeHero } from "./game-hero-facto
 import { normalizeNpcProgress } from "./npc-dialogue";
 import { worldCities } from "./v15-data";
 import { restoreTerritory } from "./guild-territory";
+import { AutoPotionManager } from "./auto-potion-manager";
+import { BattleLogManager } from "./battle-log-manager";
 import type { Hero, Unit } from "./game-state";
 
 export function writeProfileIndex(storage: Storage, profiles: Array<CharacterProfile | null>) {
@@ -100,6 +102,8 @@ export function restoreGame(raw: unknown): GameState {
     autoSkill: parsed.autoSkill !== false,
     autoMedicine: { healing: Math.min(99, Math.max(0, Math.floor(Number(parsed.autoMedicine?.healing) || 0))), mana: Math.min(99, Math.max(0, Math.floor(Number(parsed.autoMedicine?.mana) || 0))) },
     autoMedicineAt: { healing: 0, mana: 0 },
+    autoPotion: AutoPotionManager.normalize(parsed.autoPotion),
+    battleLogs: BattleLogManager.getLogs(Array.isArray(parsed.battleLogs) ? parsed.battleLogs : []),
     claimedContracts: Array.isArray(parsed.claimedContracts) ? parsed.claimedContracts : [],
     npcProgress: normalizeNpcProgress(parsed.npcProgress),
     lastSeen: Number(parsed.lastSeen) || Date.now(),

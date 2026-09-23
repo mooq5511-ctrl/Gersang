@@ -8,6 +8,7 @@ import {mitigatedDamage} from './combat-damage.js';
 import {newlyDefeatedExperience} from './dungeon-kill-xp.ts';
 import {mercenarySpec} from './mercenary-roster.ts';
 import {bossAbilitiesFor} from '../data/skills/boss-abilities.ts';
+import {AutoHuntManager} from './auto-hunt-manager.ts';
 export const DUNGEONS = {
  ...ECOLOGY_MONSTERS,
  ...LEGACY_DUNGEON_MONSTERS,
@@ -102,19 +103,19 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   const enemyUnits=Array.from({length:enemyCount},(_,index)=>({id:`enemy-${index+1}`,side:'enemy',hp:e.hp,maxHp:e.hp,atk:e.atk,def:Math.max(0,physicalDefense),magicDef:Math.max(0,magicDefense),attackInterval:Math.max(.6,2.2-e.dex/100),cooldown:0,mp:index===0?Math.min(100,e.mp):0,boss,kind:/騎/.test(e.name)?'cavalry':/虎|狼|熊|鹿|獸|龜|蛇|狐|馬/.test(e.name)?'beast':'human',poisonAttack:/毒|蛇|蠍/.test(e.name),magicAttack:/術|巫|法/.test(e.name),ranged:/弓|砲|槍|法|術|巫/.test(e.name),position:boss?{row:1,col:1}:{row:Math.floor(index/4),col:index%4}}));
   const combat=new MercenaryRealtimeBattleSystem(playerUnits,enemyUnits,{autoSkill,terrain:state.key.startsWith('e_white_tiger_')?'forest':state.zone,seed:(now+state.serial+1)>>>0});combat.startBattle();state.realtimeCursor=0;syncRealtime(combat);log(`即時戰鬥開始：${playerUnits.length} 名商隊成員對抗 ${boss?'首領 ':''}${enemyCount} 隻${e.name}。`);
  };
- const recover=()=>{syncHero();const inn=goToInn({hp,maxHp:hero.maxHp,status:'正常'},now,healInterval),returnKey=state.lockedEnemyKey||'e_raccoon';state.status='recovering';state.autoHunt=false;state.phase='接敵';state.distance=100;state.zone='hanyang';state.key=returnKey;state.enemyHp=DUNGEONS[returnKey].hp;state.realtime=undefined;state.realtimeCursor=0;state.spawnAt=0;state.innHealAt=inn.nextHealAt;state.spawnSerial=(state.spawnSerial||0)+1;log('商隊全員倒下，已撤回漢陽客棧。');log('自動狩獵已關閉。');log('戰鬥失敗，已自動返回漢陽客棧療傷。')};
+ const recover=()=>{syncHero();const inn=goToInn({hp,maxHp:hero.maxHp,status:'正常'},now,healInterval),returnKey=state.lockedEnemyKey||'e_raccoon';state.status='recovering';Object.assign(state,AutoHuntManager.afterDefeat());state.phase='接敵';state.distance=100;state.zone='hanyang';state.key=returnKey;state.enemyHp=DUNGEONS[returnKey].hp;state.realtime=undefined;state.realtimeCursor=0;state.innHealAt=inn.nextHealAt;state.spawnSerial=(state.spawnSerial||0)+1;log('商隊全員倒下，已撤回漢陽客棧。');log('自動狩獵已關閉。');log('戰鬥失敗，已自動返回漢陽客棧療傷。')};
  // 先切換狀態再產生獎勵，快速連點或同回合後攻都不會重複結算。
- const victory=()=>{const continueHunting=state.autoHunt===true;state.status=continueHunting?'respawning':'idle';state.spawnAt=continueHunting?now+500:0;state.serial++;const e=enemy(),zone=zoneFor(state.zone);
+ const victory=()=>{const transition=AutoHuntManager.afterVictory(state,now),continueHunting=transition.autoHunt;state.status=transition.status;state.spawnAt=transition.spawnAt;state.serial++;const e=enemy(),zone=zoneFor(state.zone);
   // 每個品項使用獨立亂數；同一隻怪物可以同時噴出多項素材。
   const materials=(zone.enemy===state.key?zone.dropTable:[]).filter((drop,index)=>(materialRolls[index]??1)*100<=drop.rate).map(drop=>drop.item);
   // 神裝採固定個別機率：怪物掉落池內的每一件裝備均為 0.01%，且單次最多掉一件。
   const uniqueLoot=[...new Set(e.loot)],rareRate=.0001,rareIndex=Math.floor(roll/rareRate);
   const defeatedCount=isBossMonster(e.name)?1:(state.realtime?.enemies.length??state.enemyCount??1);
   const totalXp=e.xp*defeatedCount;
-  reward={xp:totalXp,gold:0,loot:rareIndex<uniqueLoot.length?uniqueLoot[rareIndex]:null,materials};
+  reward={xp:totalXp,gold:e.gold*defeatedCount,loot:rareIndex<uniqueLoot.length?uniqueLoot[rareIndex]:null,materials};
   log('成功擊敗 '+defeatedCount+' 隻'+e.name+'！獲得 '+totalXp+' 經驗。');if(materials.length)log('🎁 噴寶：獲得【'+materials.join('】、【')+'】！');if(!continueHunting)log('本場戰鬥結束；自動狩獵關閉，等待下一次開始狩獵。')};
  const settleRealtimeOutcome=()=>{if(state.status!=='fighting')return;const outcome=(state as unknown as {realtime?:RealtimeBattleSnapshot}).realtime?.winner;if(outcome==='player')victory();else if(outcome==='enemy'||outcome==='draw')recover()};
- const stopHunting=()=>{state.autoHunt=false;state.status='idle';state.phase='接敵';state.distance=100;state.enemyCount=0;state.enemyHp=DUNGEONS[state.key].hp;state.realtime=undefined;state.realtimeCursor=0;state.events=[];state.spawnAt=0;state.stamp=now;state.pauseAt=now;state.normalAt=now;state.skillAt=now;log('已停止本次狩獵；自動狩獵已關閉，隊伍目前血量與戰利品保留。')};
+ const stopHunting=()=>{Object.assign(state,AutoHuntManager.afterStop());state.status='idle';state.phase='接敵';state.distance=100;state.enemyCount=0;state.enemyHp=DUNGEONS[state.key].hp;state.realtime=undefined;state.realtimeCursor=0;state.events=[];state.stamp=now;state.pauseAt=now;state.normalAt=now;state.skillAt=now;log('已停止本次狩獵；自動狩獵已關閉，隊伍目前血量與戰利品保留。')};
  const runBossAbilities=(combat:MercenaryRealtimeBattleSystem)=>{const abilities=bossAbilitiesFor(state.key),boss=combat.enemies[0];if(!abilities||state.status!=='fighting'||!boss?.alive||combat.winner)return;
   type BurnState={stacks:number;until:number;next:number};type BossRuntime={cooldowns?:Record<string,number>;burns?:Record<string,BurnState>;eventCursor?:number};const bossWithState=boss as typeof boss&{state:{bossRuntime?:BossRuntime}};
   const runtime=bossWithState.state.bossRuntime||(bossWithState.state.bossRuntime={}),cooldowns=runtime.cooldowns||(runtime.cooldowns={}),burns=runtime.burns||(runtime.burns={}),time=combat.timeMs;
@@ -124,7 +125,7 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   if(abilities.shield&&due('shield',abilities.shield.initialDelayMs,abilities.shield.cooldownMs)){combat.setTimedEffect(boss,'bossShield',abilities.shield.defenseBonus,abilities.shield.durationMs);cast(abilities.shield.name);combat.log('status',{actorId:boss.id,skillName:`${abilities.shield.name}・防禦 +${Math.round(abilities.shield.defenseBonus*100)}%`})}
   if(abilities.trueDamage&&due('trueDamage',abilities.trueDamage.initialDelayMs,abilities.trueDamage.cooldownMs)){cast(abilities.trueDamage.name);for(const target of combat.living('player'))damage(target,abilities.trueDamage.damage,abilities.trueDamage.name)}
   if(abilities.regeneration&&due('regeneration',abilities.regeneration.initialDelayMs,abilities.regeneration.cooldownMs)){const amount=boss.atk*abilities.regeneration.attackMultiplier+boss.maxHp*abilities.regeneration.maxHpPerSecond*(abilities.regeneration.durationMs/1000);cast(abilities.regeneration.name,boss.id);combat.heal(boss,boss,amount,abilities.regeneration.name)}
-  if(abilities.flame){const firstEvent=runtime.eventCursor||0;for(const entry of combat.events.filter(item=>item.id>firstEvent&&item.type==='attack'&&item.actorId===boss.id)){if(combat.roll()>=abilities.flame.procChance)continue;cast(abilities.flame.name);for(const target of combat.living('player')){damage(target,boss.atk*abilities.flame.attackMultiplier,abilities.flame.name);const burn=burns[target.id]||{stacks:0,until:0,next:time+1000};burn.stacks=Math.min(abilities.flame.maxStacks,burn.stacks+1);burn.until=Math.max(burn.until,time+abilities.flame.burnDurationMs);burns[target.id]=burn;combat.setTimedEffect(target,'bossBurn',burn.stacks,Math.max(0,burn.until-time));combat.log('status',{actorId:boss.id,targetId:target.id,skillName:`灼燒・${burn.stacks} 層`})}}runtime.eventCursor=combat.eventId;for(const [targetId,burn] of Object.entries(burns)){const target=combat.players.find(unit=>unit.id===targetId),targetWithState=target as typeof target&{state?:{effects?:Record<string,unknown>}};if(!target?.alive||time>=burn.until){if(targetWithState?.state?.effects)delete targetWithState.state.effects.bossBurn;delete burns[targetId];continue}while(time>=burn.next){damage(target,boss.atk*abilities.flame.burnAttackRatio*burn.stacks,'灼燒');burn.next+=1000}}}
+  if(abilities.flame){const firstEvent=runtime.eventCursor||0;for(const _entry of combat.events.filter(item=>item.id>firstEvent&&item.type==='attack'&&item.actorId===boss.id)){if(combat.roll()>=abilities.flame.procChance)continue;cast(abilities.flame.name);for(const target of combat.living('player')){damage(target,boss.atk*abilities.flame.attackMultiplier,abilities.flame.name);const burn=burns[target.id]||{stacks:0,until:0,next:time+1000};burn.stacks=Math.min(abilities.flame.maxStacks,burn.stacks+1);burn.until=Math.max(burn.until,time+abilities.flame.burnDurationMs);burns[target.id]=burn;combat.setTimedEffect(target,'bossBurn',burn.stacks,Math.max(0,burn.until-time));combat.log('status',{actorId:boss.id,targetId:target.id,skillName:`灼燒・${burn.stacks} 層`})}}runtime.eventCursor=combat.eventId;for(const [targetId,burn] of Object.entries(burns)){const target=combat.players.find(unit=>unit.id===targetId),targetWithState=target as typeof target&{state?:{effects?:Record<string,unknown>}};if(!target?.alive||time>=burn.until){if(targetWithState?.state?.effects)delete targetWithState.state.effects.bossBurn;delete burns[targetId];continue}while(time>=burn.next){damage(target,boss.atk*abilities.flame.burnAttackRatio*burn.stacks,'灼燒');burn.next+=1000}}}
   if(abilities.curse&&due('curse',abilities.curse.initialDelayMs,abilities.curse.cooldownMs)){const target=[...combat.living('player')].sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.id.localeCompare(b.id))[0];if(target){cast(abilities.curse.name,target.id);combat.setTimedEffect(target,'bossCurseAttack',abilities.curse.attackReduction,abilities.curse.durationMs);combat.setTimedEffect(target,'bossCurseDefense',abilities.curse.defenseReduction,abilities.curse.durationMs);combat.setTimedEffect(target,'bossCurseVulnerability',abilities.curse.damageTakenIncrease,abilities.curse.durationMs);combat.log('status',{actorId:boss.id,targetId:target.id,skillName:`${abilities.curse.name}・攻擊 -${Math.round(abilities.curse.attackReduction*100)}%／防禦 -${Math.round(abilities.curse.defenseReduction*100)}%`})}}
   combat.finishIfNeeded();
  };
@@ -139,14 +140,14 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   for(const [uid,bleed] of Object.entries(state.tigerBleeds)){const target=combat.players.find(unit=>unit.id===uid);if(!target||!target.alive||now>=bleed.until){delete state.tigerBleeds[uid];continue}if(now>=bleed.next){const damage=Math.max(1,Math.floor(e.atk*.15));target.hp=Math.max(0,target.hp-damage);bleed.next=now+1000;event('enemy',damage);}}
  };
  if(action==='toggle-auto-hunt'){
-  state.autoHunt=!state.autoHunt;
+  state.autoHunt=AutoHuntManager.toggle(state);
   if(!state.autoHunt&&state.status==='respawning')stopHunting();
   else log(state.autoHunt?'自動狩獵已開啟；勝利後將自動尋找下一批怪物。':'自動狩獵已關閉；本場戰鬥結束後將停止。');
  }else if(action==='start'&&state.status==='idle'){
   // 白虎林在超過 5 名傭兵出戰時，敵方能力值由 enemy() 統一套用 2 倍倍率。
   state.key=key;state.enemyHp=DUNGEONS[key].hp;state.stamp=now;state.pauseAt=now;state.normalAt=now;state.skillAt=now;state.enemyShieldAt=now+60000;state.enemyShatterAt=now+30000;state.enemyShieldUntil=0;state.tigerMp=key==='e_white_tiger_fierce_tiger'?enemy().mp:0;state.tigerHowlAt=now+3000;state.tigerRageActive=false;state.tigerSlowUntil=0;state.tigerBleeds={};state.phase='交戰';state.distance=0;state.damageCursor=0;state.status=!allDown()?'fighting':'recovering';log('部隊向前推進，遭遇敵方【'+DUNGEONS[key].name+'大軍】！');
   state.enemyHp=enemy().hp;
-  if(state.status==='recovering')state.autoHunt=false;
+  if(state.status==='recovering')Object.assign(state,AutoHuntManager.afterDefeat());
   if(enemyCombatMultiplier()===2)log('⚡ 白虎林規則：出戰傭兵超過 5 名，敵方戰鬥能力提升為 2 倍！');
   if(state.status==='fighting'){beginRealtime();settleRealtimeOutcome()}
  }else if(action==='stop'&&(state.status==='fighting'||state.status==='respawning')){
@@ -156,7 +157,7 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
  }else if(action==='retreat'&&(state.status==='fighting'||state.status==='respawning')){
   state.status='recovering';state.stamp=now;log('撤回漢陽療傷，恢復後再出發。');
  }else if(action==='normal'||action==='skill'){log('即時自動戰鬥中，每名角色會依自己的攻速與 MP 自動行動。')}
- else if(action==='tick'&&((state.status==='respawning'&&now>=state.spawnAt)||(state.status==='recovering'&&now>=(state.innHealAt||state.stamp+2000))||now-state.stamp>=50)){
+ else if(action==='tick'&&(AutoHuntManager.shouldStartNextEncounter(state,now)||(state.status==='recovering'&&now>=(state.innHealAt||state.stamp+2000))||now-state.stamp>=50)){
   // 50ms 遊戲時脈；實際攻擊時間由每名角色自己的 attackInterval 決定。
   const elapsedMs=Math.max(0,now-state.stamp);state.stamp=now;
   if(state.status==='recovering'){

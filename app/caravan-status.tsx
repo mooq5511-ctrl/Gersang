@@ -31,7 +31,7 @@ type Props = {
   trade:()=>void; trainHero:()=>void;
   promote:(uid:string,targetTier?:JobTier)=>void; promotionItems:Readonly<Record<PromotionItemId,number>>;
 
-  inventory:Equipment[];materials:Record<string,number>;materialPrices:Record<string,number>;
+  inventory:Equipment[];materials:Record<string,number>;materialPrices:Record<string,number>;medicines:Record<string,number>;
   equipSelected:(uid:string,targetUid:string)=>void;sellInventory:(uid:string)=>void;sellAllInventory:()=>void;sellMaterial:(name:string)=>void;sellAllMaterials:()=>void;openAncientCoinBox:(amount:number)=>void;
   unequipHero:(slot:EquipmentSlot)=>void;unequipEquipment:(slot:EquipmentSlot,targetUid:string)=>void;bagMessage:string;
 };
