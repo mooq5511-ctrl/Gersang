@@ -7,10 +7,11 @@ import { LEVEL_CAP } from "./level-progression";
 import { normalizeBattlePosition } from "./formation-position";
 import { gersangUnitArt } from "./gersang-visuals";
 import { exchangeAttackBonus } from "./village-exchange";
-import { normalizeVitals } from "./vitals-engine";
+import { normalizeVitals, vitalStats } from "./vitals-engine";
 import { applyGersangVisuals, sanitizeEquip } from "./game-save-normalizers";
 import { freshGame, heroPortrait, isNationId, makeHero } from "./game-hero-factory";
 import { normalizeNpcProgress } from "./npc-dialogue";
+import { normalizeHanyangPrologueFlags, normalizeHanyangPrologueStep, type HanyangPrologueStep } from "./hanyang-prologue";
 import { worldCities } from "./v15-data";
 import { restoreTerritory } from "./guild-territory";
 import { AutoPotionManager } from "./auto-potion-manager";
@@ -44,6 +45,16 @@ export function profileFromGame(slot: number, game: GameState): CharacterProfile
 
 export function readCharacterSave(storage: Storage, slot: number) {
   return storage.getItem(profileSaveKey(slot));
+}
+
+function restoreHanyangStep(parsed: Partial<GameState> & { onboardingStep?: string }): HanyangPrologueStep {
+  if (parsed.hanyangPrologueStep !== undefined) return normalizeHanyangPrologueStep(parsed.hanyangPrologueStep);
+  // Existing saves already completed the old onboarding; never send those players
+  // back to the beginning of the story. The two interrupted old gates map to the
+  // corresponding story beats and remain recoverable from actual game state.
+  if (parsed.onboardingStep === "mercenary-trial") return "bandit-trial";
+  if (parsed.onboardingStep === "hire-first-merc") return "guild";
+  return "completed";
 }
 
 function normalizeStoredMercenary(unit: Unit, index: number): Unit {
@@ -106,6 +117,8 @@ export function restoreGame(raw: unknown): GameState {
     autoPotion: AutoPotionManager.normalize(parsed.autoPotion),
     autoPotionAt: 0,
     onboardingStep: parsed.onboardingStep === "welcome" || parsed.onboardingStep === "find-village-chief" || parsed.onboardingStep === "travel-to-outskirts" || parsed.onboardingStep === "first-battle" || parsed.onboardingStep === "return-village-chief" || parsed.onboardingStep === "mercenary-trial" || parsed.onboardingStep === "hire-first-merc" || parsed.onboardingStep === "completed" ? parsed.onboardingStep : "completed",
+    hanyangPrologueStep: restoreHanyangStep(parsed),
+    hanyangPrologueFlags: normalizeHanyangPrologueFlags((parsed as Partial<GameState>).hanyangPrologueFlags),
     battleLogs: BattleLogManager.getLogs(Array.isArray(parsed.battleLogs) ? parsed.battleLogs : []),
     claimedContracts: Array.isArray(parsed.claimedContracts) ? parsed.claimedContracts : [],
     npcProgress: normalizeNpcProgress(parsed.npcProgress),
@@ -113,7 +126,7 @@ export function restoreGame(raw: unknown): GameState {
   });
   if (dungeonBusy(parsed.dungeon)) {
     const now = Date.now(), pause = Math.max(0, now - (Number(parsed.lastSeen) || now)), healInterval = territoryHealInterval(next.territory), savedDungeon = parsed.dungeon as { autoHunt?: boolean; resumeAutoHuntAfterRecovery?: boolean; key?: string; lockedEnemyKey?: string };
-    const maxHp = Math.max(1, next.hero.maxHp), hpBefore = Math.max(0, Math.min(maxHp, next.hero.hp)), healSteps = Math.min(Math.ceil(Math.max(0, maxHp - hpBefore) / 10), Math.floor(pause / healInterval)), healedHp = Math.min(maxHp, hpBefore + healSteps * 10), healElapsed = healSteps * healInterval, recovered = healedHp >= maxHp, remainingPause = Math.max(0, pause - healElapsed), resumeAutoHunt = savedDungeon.autoHunt === true || savedDungeon.resumeAutoHuntAfterRecovery === true;
+    const maxHp = Math.max(1, next.hero.maxHp ?? vitalStats(next.hero).maxHp), hpBefore = Math.max(0, Math.min(maxHp, next.hero.hp ?? maxHp)), healSteps = Math.min(Math.ceil(Math.max(0, maxHp - hpBefore) / 10), Math.floor(pause / healInterval)), healedHp = Math.min(maxHp, hpBefore + healSteps * 10), healElapsed = healSteps * healInterval, recovered = healedHp >= maxHp, remainingPause = Math.max(0, pause - healElapsed), resumeAutoHunt = savedDungeon.autoHunt === true || savedDungeon.resumeAutoHuntAfterRecovery === true;
     const baseDungeon = freshDungeon(), savedKey = savedDungeon.key && savedDungeon.key in DUNGEONS ? savedDungeon.key as keyof typeof DUNGEONS : baseDungeon.key;
     next.dungeon = { ...baseDungeon, key: savedKey, lockedEnemyKey: savedDungeon.lockedEnemyKey as typeof baseDungeon.lockedEnemyKey, autoHunt: resumeAutoHunt, status: recovered ? (resumeAutoHunt ? "respawning" : "idle") : "recovering", stamp: now, spawnAt: recovered && resumeAutoHunt ? now + 500 : 0, innHealAt: recovered ? 0 : now + healInterval, logs: [recovered && resumeAutoHunt ? "離線療傷完成，自動狩獵已恢復。" : "返回漢陽客棧療傷；療傷完成前不結算掛機收益。"] };
     next.hero = { ...next.hero, hp: healedHp, status: recovered ? "正常" : "客棧中" };

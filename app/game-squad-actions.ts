@@ -5,6 +5,7 @@ import type { MercenarySpec } from "./mercenary-roster";
 import type { GameState, Unit } from "./game-state";
 import { calculateLevelBasedBonus, canPromoteMercenary, MERCENARY_PROMOTION_TREES, type JobTier, type PromotionItemId } from "./mercenary-promotions";
 import { normalizeVitals } from "./vitals-engine";
+import { syncHanyangPrologue } from "./hanyang-prologue";
 
 type Log = (logs: string[], message: string) => string[];
 type Attribute = "str" | "agi" | "intel" | "vit";
@@ -78,7 +79,7 @@ export function recruitMerchantAction(
     return { ...state, logs: addLog(state.logs, state.mercs.length >= ACTIVE_MERCENARY_LIMIT ? "商隊傭兵名冊已滿：最多可僱用 11 名傭兵，連同主角共 12 名。" : "僱用資金不足。") };
   }
   const unit = createUnit(spec, index);
-  return { ...state, gold: state.gold - cost, mercs: [...state.mercs, unit], active: [...state.active, unit.uid].slice(0, ACTIVE_MERCENARY_LIMIT), logs: addLog(state.logs, `招募 ${spec.name}，已加入護商隊。`) };
+  return syncHanyangPrologue({ ...state, gold: state.gold - cost, mercs: [...state.mercs, unit], active: [...state.active, unit.uid].slice(0, ACTIVE_MERCENARY_LIMIT), logs: addLog(state.logs, `招募 ${spec.name}，已加入護商隊。`) }, cost);
 }
 
 /** Recruits a data-defined general into the same roster and formation system as ordinary mercenaries. */
@@ -116,7 +117,7 @@ export function allocateAttributeAction(state: GameState, selectedUid: string, s
 export function toggleActiveAction(state: GameState, unitUid: string, notify: (message: string) => void): GameState {
   if (state.active.includes(unitUid)) return { ...state, active: state.active.filter((id) => id !== unitUid) };
   if (state.active.length >= ACTIVE_MERCENARY_LIMIT) { notify("出戰傭兵最多 " + ACTIVE_MERCENARY_LIMIT + " 人，主角不佔欄位。"); return state; }
-  return { ...state, active: [...state.active, unitUid] };
+  return syncHanyangPrologue({ ...state, active: [...state.active, unitUid] }, 6000);
 }
 
 export function storeMercenaryAction(state: GameState, unitUid: string, addLog: Log): GameState {

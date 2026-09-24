@@ -12,6 +12,7 @@ import { normalizeVitals, recoverVitals, vitalStats } from "./vitals-engine";
 import { AutoPotionManager, type AutoPotionSettings } from "./auto-potion-manager";
 import { BattleLogManager } from "./battle-log-manager";
 import type { Equipment, GameState, Hero, MagicAffix, Unit } from "./game-state";
+import { markHanyangLootSold } from "./hanyang-prologue";
 import { makeTierEquipment, tierEquipmentPrice, tierEquipmentShopCatalog } from "./tier-equipment";
 
 type Log = (logs: string[], message: string) => string[];
@@ -47,13 +48,13 @@ export function fuseAllInventoryEquipmentAction(state: GameState, sourceRarity: 
 
 export function sellMaterialAction(state: GameState, itemName: string, addLog: Log, format: Format): GameState {
   const result = sellMaterial(state.materials, state.gold, itemName);
-  return result.error ? { ...state, logs: addLog(state.logs, result.error) } : { ...state, materials: result.materials, gold: result.gold, logs: addLog(state.logs, `交易所售出「${itemName}」×1，獲得 ${format(result.earned)} 兩。`) };
+  return result.error ? { ...state, logs: addLog(state.logs, result.error) } : markHanyangLootSold({ ...state, materials: result.materials, gold: result.gold, logs: addLog(state.logs, `交易所售出「${itemName}」×1，獲得 ${format(result.earned)} 兩。`) });
 }
 
 export function sellAllMaterialsAction(state: GameState, addLog: Log, format: Format): GameState {
   const result = sellAllMaterials(state.materials, state.gold);
   if (!result.count) return { ...state, logs: addLog(state.logs, "目前沒有可變賣的怪物素材。") };
-  return { ...state, materials: result.materials, gold: result.gold, logs: addLog(state.logs, `交易所完成全部變賣，獲得 ${format(result.earned)} 兩。`) };
+  return markHanyangLootSold({ ...state, materials: result.materials, gold: result.gold, logs: addLog(state.logs, `交易所完成全部變賣，獲得 ${format(result.earned)} 兩。`) });
 }
 
 export function buyMaterialAction(state: GameState, itemName: string, addLog: Log, format: Format): GameState {

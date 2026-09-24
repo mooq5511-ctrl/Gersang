@@ -9,6 +9,7 @@ import type { GuildTerritory } from "./guild-territory";
 import type { NpcProgress } from "./npc-dialogue";
 import type { AutoPotionSettings } from "./auto-potion-manager";
 import type { BattleLogEntry } from "./battle-log-manager";
+import type { HanyangPrologueFlags, HanyangPrologueStep } from "./hanyang-prologue";
 
 /** Persistent save keys. These names are compatibility contracts with existing players. */
 export const PROFILE_INDEX = "bt52_v19_character_profiles";
@@ -154,6 +155,9 @@ export type GameState = {
   autoPotionAt: number;
   /** 新手引導進度，避免新角色建立後沒有明確下一步。 */
   onboardingStep: OnboardingStep;
+  /** Story wrapper for the existing onboarding systems; safe to omit in old saves. */
+  hanyangPrologueStep: HanyangPrologueStep;
+  hanyangPrologueFlags: HanyangPrologueFlags;
   /** Persisted newest-first battle and reward history, capped by BattleLogManager. */
   battleLogs: BattleLogEntry[];
   claimedContracts: string[];
