@@ -189,3 +189,7 @@
     animation-duration: 260ms;
   }
 }
+.realtime-floating-heal {
+  color: #7dff9a;
+  text-shadow: 0 2px 0 #07521f, 0 4px 6px #001b08dd, 0 0 8px #23ff64, 0 0 16px #0a9b3dcc;
+}

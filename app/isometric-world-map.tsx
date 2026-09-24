@@ -79,6 +79,7 @@ export function IsometricWorldMap({
   onNpcLabelsVisibleChange,
   onEnter,
   onNpcTalk,
+  tutorialLocked = false,
 }: {
   cityName: string;
   locationLabel: string;
@@ -88,12 +89,15 @@ export function IsometricWorldMap({
   onNpcLabelsVisibleChange: (visible: boolean) => void;
   onEnter: (destination: Destination) => void;
   onNpcTalk: (npcId: NpcId) => void;
+  tutorialLocked?: boolean;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<{ destroy: (removeCanvas: boolean) => void } | null>(null);
   const enterRef = useRef(onEnter);
   const [status, setStatus] = useState("點擊地面移動");
+  const tutorialLockedRef = useRef(tutorialLocked);
   enterRef.current = onEnter;
+  tutorialLockedRef.current = tutorialLocked;
 
   useEffect(() => {
     let cancelled = false;
@@ -258,6 +262,7 @@ export function IsometricWorldMap({
         }
 
         private moveTo(destination: Cell) {
+          if (tutorialLockedRef.current) { setStatus("請先前往村長處"); return; }
           if (destination.col < 0 || destination.row < 0 || destination.col >= COLS || destination.row >= ROWS || blocked.has(cellKey(destination))) {
             this.targetDestination = undefined; setStatus("該處無法通行"); return;
           }
@@ -325,19 +330,19 @@ export function IsometricWorldMap({
     <section className="isometric-world" aria-label={`${cityName}斜角城鎮地圖`} data-objective-expanded={objectiveExpanded} data-npc-labels={npcLabelsVisible ? "shown" : "hidden"}>
       <div ref={hostRef} className="isometric-world-canvas" />
       <div className="village-npc-layer" aria-label="漢陽村 NPC">
-        {VILLAGE_NPCS.map(npc => <button key={npc.id} type="button" className="village-npc-pin" style={{ left: `${npc.map.x}%`, top: `${npc.map.y}%` }} onClick={() => onNpcTalk(npc.id)} aria-label={`與${npc.role}${npc.name}交談`}>
+        {VILLAGE_NPCS.filter(npc => !tutorialLocked || npc.id === "kim-seongho").map(npc => <button key={npc.id} type="button" className={'village-npc-pin'+(tutorialLocked && npc.id === "kim-seongho" ? ' tutorial-target' : '')} style={{ left: `${npc.map.x}%`, top: `${npc.map.y}%` }} onClick={() => onNpcTalk(npc.id)} aria-label={`與${npc.role}${npc.name}交談`}>
           <span>●</span><b>{npc.name}</b><small>{npc.role}</small>
         </button>)}
       </div>
       <header className="isometric-world-heading"><small>目前所在</small><strong>{locationLabel}</strong><span>點擊地面移動</span></header>
-      <button type="button" className="map-label-toggle" aria-pressed={npcLabelsVisible} aria-label={npcLabelsVisible ? "隱藏 NPC 名牌" : "顯示 NPC 名牌"} onClick={() => onNpcLabelsVisibleChange(!npcLabelsVisible)}>
+      <button type="button" className="map-label-toggle" disabled={tutorialLocked} aria-pressed={npcLabelsVisible} aria-label={npcLabelsVisible ? "隱藏 NPC 名牌" : "顯示 NPC 名牌"} onClick={() => onNpcLabelsVisibleChange(!npcLabelsVisible)}>
         {npcLabelsVisible ? "隱藏 NPC 名牌" : "顯示 NPC 名牌"}
       </button>
-      <nav className="isometric-destinations" aria-label="快速前往據點">
-        <button type="button" onClick={() => navigate("city")}><b>市集</b><span>商店與客棧</span></button>
-        <button type="button" onClick={() => navigate("trade")}><b>港口</b><span>東海商路</span></button>
-        <button type="button" onClick={() => navigate("battle")}><b>城門</b><span>野外與副本</span></button>
-        <button type="button" onClick={() => navigate("raid")}><b>雷霆祭壇</b><span>神仙谷首領戰</span></button>
+      <nav className="isometric-destinations" aria-label="快速前往據點" aria-disabled={tutorialLocked}>
+        <button type="button" disabled={tutorialLocked} onClick={() => navigate("city")}><b>市集</b><span>商店與客棧</span></button>
+        <button type="button" disabled={tutorialLocked} onClick={() => navigate("trade")}><b>港口</b><span>東海商路</span></button>
+        <button type="button" disabled={tutorialLocked} onClick={() => navigate("battle")}><b>城門</b><span>野外與副本</span></button>
+        <button type="button" disabled={tutorialLocked} onClick={() => navigate("raid")}><b>雷霆祭壇</b><span>神仙谷首領戰</span></button>
       </nav>
       <output className="isometric-status" aria-live="polite">{status}</output>
     </section>

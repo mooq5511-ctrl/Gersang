@@ -8,7 +8,7 @@ import {mitigatedDamage} from './combat-damage.js';
 import {newlyDefeatedExperience} from './dungeon-kill-xp.ts';
 import {mercenarySpec} from './mercenary-roster.ts';
 import {bossAbilitiesFor} from '../data/skills/boss-abilities.ts';
-import {AutoHuntManager} from './auto-hunt-manager.ts';
+import {AUTO_HUNT_RESPAWN_DELAY_MS,AutoHuntManager} from './auto-hunt-manager.ts';
 export const DUNGEONS = {
  ...ECOLOGY_MONSTERS,
  ...LEGACY_DUNGEON_MONSTERS,
@@ -103,7 +103,7 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   const enemyUnits=Array.from({length:enemyCount},(_,index)=>({id:`enemy-${index+1}`,side:'enemy',hp:e.hp,maxHp:e.hp,atk:e.atk,def:Math.max(0,physicalDefense),magicDef:Math.max(0,magicDefense),attackInterval:Math.max(.6,2.2-e.dex/100),cooldown:0,mp:index===0?Math.min(100,e.mp):0,boss,kind:/騎/.test(e.name)?'cavalry':/虎|狼|熊|鹿|獸|龜|蛇|狐|馬/.test(e.name)?'beast':'human',poisonAttack:/毒|蛇|蠍/.test(e.name),magicAttack:/術|巫|法/.test(e.name),ranged:/弓|砲|槍|法|術|巫/.test(e.name),position:boss?{row:1,col:1}:{row:Math.floor(index/4),col:index%4}}));
   const combat=new MercenaryRealtimeBattleSystem(playerUnits,enemyUnits,{autoSkill,terrain:state.key.startsWith('e_white_tiger_')?'forest':state.zone,seed:(now+state.serial+1)>>>0});combat.startBattle();state.realtimeCursor=0;syncRealtime(combat);log(`即時戰鬥開始：${playerUnits.length} 名商隊成員對抗 ${boss?'首領 ':''}${enemyCount} 隻${e.name}。`);
  };
- const recover=()=>{syncHero();const inn=goToInn({hp,maxHp:hero.maxHp,status:'正常'},now,healInterval),returnKey=state.lockedEnemyKey||'e_raccoon';state.status='recovering';Object.assign(state,AutoHuntManager.afterDefeat());state.phase='接敵';state.distance=100;state.zone='hanyang';state.key=returnKey;state.enemyHp=DUNGEONS[returnKey].hp;state.realtime=undefined;state.realtimeCursor=0;state.innHealAt=inn.nextHealAt;state.spawnSerial=(state.spawnSerial||0)+1;log('商隊全員倒下，已撤回漢陽客棧。');log('自動狩獵已關閉。');log('戰鬥失敗，已自動返回漢陽客棧療傷。')};
+ const recover=()=>{const resumeAutoHunt=state.autoHunt===true;syncHero();const inn=goToInn({hp,maxHp:hero.maxHp,status:'正常'},now,healInterval),returnKey=state.lockedEnemyKey||'e_raccoon';state.status='recovering';Object.assign(state,AutoHuntManager.afterDefeat());(state as DungeonState & {resumeAutoHuntAfterRecovery?:boolean}).resumeAutoHuntAfterRecovery=resumeAutoHunt;state.phase='接敵';state.distance=100;state.zone='hanyang';state.key=returnKey;state.enemyHp=DUNGEONS[returnKey].hp;state.realtime=undefined;state.realtimeCursor=0;state.innHealAt=inn.nextHealAt;state.spawnSerial=(state.spawnSerial||0)+1;log('商隊全員倒下，已撤回漢陽客棧。');log('自動狩獵已關閉。');log('戰鬥失敗，已自動返回漢陽客棧療傷。')};
  // 先切換狀態再產生獎勵，快速連點或同回合後攻都不會重複結算。
  const victory=()=>{const transition=AutoHuntManager.afterVictory(state,now),continueHunting=transition.autoHunt;state.status=transition.status;state.spawnAt=transition.spawnAt;state.serial++;const e=enemy(),zone=zoneFor(state.zone);
   // 每個品項使用獨立亂數；同一隻怪物可以同時噴出多項素材。
@@ -162,14 +162,14 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   const elapsedMs=Math.max(0,now-state.stamp);state.stamp=now;
   if(state.status==='recovering'){
    const inn=recoverAtInn({hp,maxHp:hero.maxHp,status:'客棧中'},state.innHealAt||now,now,healInterval);hp=inn.player.hp;const recoveringHero=heroMember();if(recoveringHero)recoveringHero.hp=hp;state.innHealAt=inn.nextHealAt;
-   if(inn.player.status==='正常'){state.status='idle';log('生命值已全滿，離開客棧，商隊可再次出發。')}
+   if(inn.player.status==='正常'){const resumeAutoHunt=(state as DungeonState & {resumeAutoHuntAfterRecovery?:boolean}).resumeAutoHuntAfterRecovery===true;(state as DungeonState & {resumeAutoHuntAfterRecovery?:boolean}).resumeAutoHuntAfterRecovery=false;state.autoHunt=resumeAutoHunt;state.status=resumeAutoHunt?'respawning':'idle';state.spawnAt=resumeAutoHunt?now+AUTO_HUNT_RESPAWN_DELAY_MS:0;log(resumeAutoHunt?'生命值已全滿，離開客棧並恢復自動狩獵。':'生命值已全滿，離開客棧，商隊可再次出發。')}
  }else if(state.status==='respawning'&&now>=state.spawnAt){
    state.key=state.lockedEnemyKey||pickZoneMonster(state.zone,spawnRoll);state.events=[];state.spawnSerial=(state.spawnSerial||0)+1;state.enemyHp=enemy().hp;state.enemyShieldAt=state.key==='e_lake_gale_altur'?now+60000:0;state.enemyShatterAt=state.key==='e_lake_gale_altur'?now+30000:0;state.enemyShieldUntil=0;state.tigerMp=state.key==='e_white_tiger_fierce_tiger'?enemy().mp:0;state.tigerHowlAt=now+3000;state.tigerRageActive=false;state.tigerSlowUntil=0;state.tigerBleeds={};state.status='fighting';state.phase='交戰';state.distance=0;state.normalAt=Math.max(now,state.normalAt);beginRealtime();log(isBossMonster(enemy().name)?'首領重新出現，商隊立即重新鎖敵。':`下一支 ${state.enemyCount} 隻怪物部隊出現，商隊立即重新鎖敵。`);settleRealtimeOutcome();
   }else if(state.status==='fighting'){
    if(allDown())recover();
    else {if(!state.realtime){beginRealtime();settleRealtimeOutcome()}else{
     // 舊存檔的即時戰鬥沒有傭兵 ID；從仍在隊伍中的角色補回，不重開戰局。
-   const restored={...state.realtime,terrain:state.realtime.terrain|| (state.key.startsWith('e_white_tiger_')?'forest':state.zone),players:state.realtime.players.map(unit=>{const member=members.find(item=>item.uid===unit.id),spec=mercenarySpec(member?.templateId);return{...unit,templateId:unit.templateId||member?.templateId,maxMp:unit.maxMp??member?.maxMp,accuracy:unit.accuracy??member?.accuracy,ranged:unit.ranged??spec?.ranged}})};
+   const restored={...state.realtime,terrain:state.realtime.terrain|| (state.key.startsWith('e_white_tiger_')?'forest':state.zone),players:state.realtime.players.map(unit=>{const member=members.find(item=>item.uid===unit.id),spec=mercenarySpec(member?.templateId);return{...unit,templateId:unit.templateId||member?.templateId,hp:member?.hp??unit.hp,mp:member?.mp??unit.mp,maxMp:unit.maxMp??member?.maxMp,accuracy:unit.accuracy??member?.accuracy,ranged:unit.ranged??spec?.ranged}})};
     const combat=MercenaryRealtimeBattleSystem.fromSnapshot(restored);combat.autoSkill=autoSkill;combat.update(elapsedMs/1000);runBossAbilities(combat);castTigerSkills(combat);syncRealtime(combat);if(combat.winner==='player')victory();else if(combat.winner==='enemy'||combat.winner==='draw')recover()}}
   }
  }

@@ -1,8 +1,15 @@
-/* A shared type scale that favours readable Traditional Chinese game text. */
+/* 全站共用字體：正文清楚易讀，標題保留一點古風質感。 */
+:root {
+  --font-ui: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+  --font-display: "Noto Serif TC", "Microsoft JhengHei", "PMingLiU", serif;
+}
+
 body {
   font-size: 16px;
   line-height: 1.5;
-  font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  font-family: var(--font-ui);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 button, input, select, textarea {
@@ -17,10 +24,18 @@ button, input, select, textarea {
   text-rendering: optimizeLegibility;
 }
 
+/* 只有標題使用襯線字，避免整個介面都變得細碎難讀。 */
+:is(h1, h2, h3, h4, .panel-title h2, .city-banner h2,
+  .character-select-heading h1, .main-objective strong,
+  .ability-window-title span, .onboarding-battle-guide strong) {
+  font-family: var(--font-display);
+  letter-spacing: .025em;
+}
+
 /* Keep panels consistent: the previous mixed serif fonts blurred dense Chinese labels. */
 .classic-live-game :is(.merchant-bag, .caravan-status, .dungeon-panel, .ability-panel,
   .trade-panel, .guild-panel, .panel, .floating-window) {
-  font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif !important;
+  font-family: var(--font-ui) !important;
 }
 
 /* Helper text is enlarged, while headings retain their designed hierarchy. */

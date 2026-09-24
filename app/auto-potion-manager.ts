@@ -3,6 +3,7 @@ export type AutoPotionThreshold = typeof AUTO_POTION_THRESHOLDS[number];
 export type AutoPotionSettings = { enabled: boolean; medicineId: string | null; threshold: AutoPotionThreshold };
 export type HealingPotion = { id: string; name: string; effect: string; hpRestore: number; quantity: number };
 export type HealingPotionSource = { id: string; name: string; effect: string; hpRestore?: number };
+export type HealingPotionTarget = { hp: number; maxHp: number };
 
 const defaultSettings = (): AutoPotionSettings => ({ enabled: false, medicineId: null, threshold: 30 });
 const isThreshold = (value: number): value is AutoPotionThreshold => AUTO_POTION_THRESHOLDS.includes(value as AutoPotionThreshold);
@@ -41,9 +42,10 @@ export const AutoPotionManager = Object.freeze({
     return { settings: next, shortage: false };
   },
 
-  nextAction(settings: Partial<AutoPotionSettings> | undefined, medicines: Record<string, number>, hp: number, maxHp: number, catalog: readonly HealingPotionSource[]) {
+  nextAction(settings: Partial<AutoPotionSettings> | undefined, medicines: Record<string, number>, targets: HealingPotionTarget[], catalog: readonly HealingPotionSource[]) {
     const normalized = normalize(settings);
-    if (!normalized.enabled || hp > Math.max(1, maxHp) * normalized.threshold / 100) return { type: "none" as const };
+    const needsHealing = targets.some(target => target.hp <= Math.max(1, target.maxHp) * normalized.threshold / 100);
+    if (!normalized.enabled || !needsHealing) return { type: "none" as const };
     const potion = available(medicines, catalog).find((entry) => entry.id === normalized.medicineId);
     return potion ? { type: "use" as const, medicineId: potion.id } : { type: "shortage" as const, settings: { ...normalized, enabled: false } };
   },

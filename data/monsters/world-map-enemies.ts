@@ -18,6 +18,7 @@ export type SourceEnemyDefinition = {
 
 export const sourceEnemyDefinitions: SourceEnemyDefinition[] = [
   { name: "狸貓", id: "e_starter_raccoon", mapId: "starter-outskirts", physicalResistance: 0, magicResistance: 0, drops: ["[隨便的]咒術秘訣", "藍色精氣石", "舊斧頭", "下級精髓", "古錢箱"] },
+  { name: "黑巾山賊", id: "e_starter_black_bandit", mapId: "starter-outskirts", physicalResistance: 0, magicResistance: 0, drops: [], skill: "攔路突襲" },
   { name: "倭寇", id: "e_starter_wako", mapId: "starter-outskirts", physicalResistance: 0, magicResistance: 0, drops: ["舊木劍", "舊六面木棒", "舊金剛爪刀", "下級精髓", "古錢箱"] },
   { name: "鐵炮倭寇", id: "e_starter_gunner", mapId: "starter-outskirts", physicalResistance: 0, magicResistance: 0, drops: ["[訓練用]咒術秘訣", "舊摩呼羅迦佛珠", "藍色精氣石", "下級精髓", "古錢箱"] },
   { name: "山賊", id: "e_starter_bandit", mapId: "starter-outskirts", physicalResistance: 0, magicResistance: 0, drops: ["下級精髓", "桂皮", "[訓練用]咒術秘訣", "舊短弓", "古錢箱"] },

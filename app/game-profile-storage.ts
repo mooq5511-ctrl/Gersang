@@ -1,6 +1,6 @@
 import { profileSaveKey, serializeGameForStorage, type CharacterProfile, type Equipment, type GameState, SHARED_WAREHOUSE_SAVE } from "./game-state";
 import { restoreTrade } from "./trade-engine";
-import { dungeonBusy, freshDungeon } from "./dungeon-engine";
+import { DUNGEONS, dungeonBusy, freshDungeon } from "./dungeon-engine";
 import { migrateSevenSlotSave, normalizeStoredItem } from "./equipment-slots";
 import { retainGuildRoster } from "./guild-migration";
 import { LEVEL_CAP } from "./level-progression";
@@ -15,6 +15,7 @@ import { worldCities } from "./v15-data";
 import { restoreTerritory } from "./guild-territory";
 import { AutoPotionManager } from "./auto-potion-manager";
 import { BattleLogManager } from "./battle-log-manager";
+import { territoryHealInterval } from "./guild-territory";
 import type { Hero, Unit } from "./game-state";
 
 export function writeProfileIndex(storage: Storage, profiles: Array<CharacterProfile | null>) {
@@ -103,16 +104,20 @@ export function restoreGame(raw: unknown): GameState {
     autoMedicine: { healing: Math.min(99, Math.max(0, Math.floor(Number(parsed.autoMedicine?.healing) || 0))), mana: Math.min(99, Math.max(0, Math.floor(Number(parsed.autoMedicine?.mana) || 0))) },
     autoMedicineAt: { healing: 0, mana: 0 },
     autoPotion: AutoPotionManager.normalize(parsed.autoPotion),
+    autoPotionAt: 0,
+    onboardingStep: parsed.onboardingStep === "welcome" || parsed.onboardingStep === "find-village-chief" || parsed.onboardingStep === "travel-to-outskirts" || parsed.onboardingStep === "first-battle" || parsed.onboardingStep === "return-village-chief" || parsed.onboardingStep === "mercenary-trial" || parsed.onboardingStep === "hire-first-merc" || parsed.onboardingStep === "completed" ? parsed.onboardingStep : "completed",
     battleLogs: BattleLogManager.getLogs(Array.isArray(parsed.battleLogs) ? parsed.battleLogs : []),
     claimedContracts: Array.isArray(parsed.claimedContracts) ? parsed.claimedContracts : [],
     npcProgress: normalizeNpcProgress(parsed.npcProgress),
     lastSeen: Number(parsed.lastSeen) || Date.now(),
   });
   if (dungeonBusy(parsed.dungeon)) {
-    const pause = Math.max(0, Date.now() - (Number(parsed.lastSeen) || Date.now()));
-    next.dungeon = { ...freshDungeon(), status: "recovering", stamp: Date.now(), innHealAt: Date.now() + 2000, logs: ["返回漢陽客棧療傷，離線期間不結算副本獎勵。"] };
-    next.hero = { ...next.hero, status: "客棧中" };
-    next.idleStamp = Date.now();
+    const now = Date.now(), pause = Math.max(0, now - (Number(parsed.lastSeen) || now)), healInterval = territoryHealInterval(next.territory), savedDungeon = parsed.dungeon as { autoHunt?: boolean; resumeAutoHuntAfterRecovery?: boolean; key?: string; lockedEnemyKey?: string };
+    const maxHp = Math.max(1, next.hero.maxHp), hpBefore = Math.max(0, Math.min(maxHp, next.hero.hp)), healSteps = Math.min(Math.ceil(Math.max(0, maxHp - hpBefore) / 10), Math.floor(pause / healInterval)), healedHp = Math.min(maxHp, hpBefore + healSteps * 10), healElapsed = healSteps * healInterval, recovered = healedHp >= maxHp, remainingPause = Math.max(0, pause - healElapsed), resumeAutoHunt = savedDungeon.autoHunt === true || savedDungeon.resumeAutoHuntAfterRecovery === true;
+    const baseDungeon = freshDungeon(), savedKey = savedDungeon.key && savedDungeon.key in DUNGEONS ? savedDungeon.key as keyof typeof DUNGEONS : baseDungeon.key;
+    next.dungeon = { ...baseDungeon, key: savedKey, lockedEnemyKey: savedDungeon.lockedEnemyKey as typeof baseDungeon.lockedEnemyKey, autoHunt: resumeAutoHunt, status: recovered ? (resumeAutoHunt ? "respawning" : "idle") : "recovering", stamp: now, spawnAt: recovered && resumeAutoHunt ? now + 500 : 0, innHealAt: recovered ? 0 : now + healInterval, logs: [recovered && resumeAutoHunt ? "離線療傷完成，自動狩獵已恢復。" : "返回漢陽客棧療傷；療傷完成前不結算掛機收益。"] };
+    next.hero = { ...next.hero, hp: healedHp, status: recovered ? "正常" : "客棧中" };
+    next.idleStamp = recovered ? now - remainingPause : now;
     if (next.trade.caravan) next.trade = { ...next.trade, caravan: { ...next.trade.caravan, startedAt: next.trade.caravan.startedAt + pause } };
   } else {
     next.dungeon = freshDungeon();

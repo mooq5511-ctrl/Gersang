@@ -1,6 +1,7 @@
 /** 副本怪物數值與地圖怪物池。舊 ID 保留，讓既有存檔可安全載入。 */
 export const ECOLOGY_MONSTERS={
  e_starter_raccoon:{name:'狸貓',level:1,hp:16,mp:0,atk:6,dex:10,xp:7,gold:7,drop:.06,loot:['boots']},
+ e_starter_black_bandit:{name:'黑巾山賊',level:5,hp:520,mp:0,atk:58,dex:24,xp:0,gold:0,drop:0,loot:[]},
  e_starter_wako:{name:'倭寇',level:1,hp:16,mp:0,atk:10,dex:12,xp:9,gold:7,drop:.06,loot:['boots']},
  e_starter_gunner:{name:'鐵炮倭寇',level:1,hp:20,mp:0,atk:10,dex:12,xp:10,gold:10,drop:.07,loot:['boots']},
  e_starter_bandit:{name:'山賊',level:1,hp:20,mp:0,atk:8,dex:11,xp:8,gold:8,drop:.06,loot:['boots']},

@@ -7,7 +7,7 @@ import { EQUIPMENT_FUSION_RECIPES, FUSION_RARITY_LABEL, fusionItemKey, isFusionI
 import {
   BUILDINGS, BUILDING_IDS, TERRITORY_UNLOCK_LEVEL, buildingCost, enhancementChance,
   enhancementCost, enhancementMilestoneOptions, enhancementMultiplier, territoryBonus, territoryHealInterval, warehouseLimit,
-  type BuildingId, type GuildTerritory,
+  type BuildingId, type GuildTerritory, RESTAURANT_RECIPES,
 } from "./guild-territory";
 
 type Props = {
@@ -15,13 +15,15 @@ type Props = {
   heroLevel: number;
   gold: number;
   inventory: Equipment[];
+  materials: Record<string, number>;
   upgrade: (id: BuildingId) => void;
   enhance: (itemUid: string) => void;
   enhanceFeedback: { uid: string; name: string; success: boolean; level: number } | null;
   fuseAll: (rarity: FusionSourceRarity) => void;
+  craftRestaurantFood: (recipeId: string) => void;
 };
 
-export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, upgrade, enhance, enhanceFeedback, fuseAll }: Props) {
+export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, materials, upgrade, enhance, enhanceFeedback, fuseAll, craftRestaurantFood }: Props) {
   const [selectedItem, setSelectedItem] = useState("");
   const [fusionRarity, setFusionRarity] = useState<FusionSourceRarity>("普通");
   const [fusionItems, setFusionItems] = useState<string[]>([]);
@@ -32,6 +34,7 @@ export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, upg
   const itemEnhanceFeedback = item && enhanceFeedback?.uid === item.uid ? enhanceFeedback : null;
   const open = heroLevel >= TERRITORY_UNLOCK_LEVEL;
   const smithyOpen = territory.buildings.smithy > 0;
+  const restaurantOpen = territory.buildings.restaurant > 0;
   const recipe = EQUIPMENT_FUSION_RECIPES.find((entry) => entry.sourceRarity === fusionRarity)!;
   const fusionCandidates = inventory.filter((entry) => isFusionIngredient(entry, fusionRarity));
   const selectedFusionItems = fusionItems.filter((uid) => fusionCandidates.some((entry) => entry.uid === uid));
@@ -68,7 +71,7 @@ export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, upg
     <div className="territory-building-grid">
       {BUILDING_IDS.map((id) => {
         const building = BUILDINGS[id];
-        const level = territory.buildings[id];
+        const level = territory.buildings[id] ?? 0;
         const cost = buildingCost(id, level);
         const required = "unlockLevel" in building ? building.unlockLevel : TERRITORY_UNLOCK_LEVEL;
         const unlocked = open && heroLevel >= required;
@@ -81,6 +84,14 @@ export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, upg
         </article>;
       })}
     </div>
+    <section className="territory-restaurant" aria-label="餐廳料理製作">
+      <h3>餐廳・材料料理</h3>
+      <p>消耗怪物掉落材料製作食物；料理會放入藥品欄，可在戰鬥或背包使用。</p>
+      {restaurantOpen ? <div className="restaurant-recipe-grid">{RESTAURANT_RECIPES.map((entry) => {
+        const available = Object.entries(entry.ingredients).every(([material, amount]) => (materials[material] || 0) >= amount);
+        return <article key={entry.id}><div><strong>{entry.name} ×{entry.amount}</strong><small>{entry.effect}</small><em>{Object.entries(entry.ingredients).map(([material, amount]) => `${material} ×${amount}（持有 ${materials[material] || 0}）`).join('・')}</em></div><button type="button" disabled={!available} onClick={() => craftRestaurantFood(entry.id)}>{available ? '製作料理' : '材料不足'}</button></article>;
+      })}</div> : <p>先建造餐廳即可解鎖料理。</p>}
+    </section>
     <section className="territory-smithy" aria-label="鐵匠鋪裝備強化">
       <h3>鐵匠鋪・裝備強化</h3>
       <p>僅可強化背包裝備，最高 +15。成功後裝備能力提高；失敗只消耗金錢，不損壞裝備。旗幟與鐵匠鋪成功率加成相加，上限 100%。</p>

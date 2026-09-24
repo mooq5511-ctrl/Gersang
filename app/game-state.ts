@@ -108,6 +108,7 @@ export type CharacterProfile = {
   updatedAt: number;
   gender?: "male" | "female";
 };
+export type OnboardingStep = "welcome" | "find-village-chief" | "travel-to-outskirts" | "first-battle" | "return-village-chief" | "mercenary-trial" | "hire-first-merc" | "completed";
 
 export type CityService = "mercenary" | "weapon" | "armor" | "warehouse" | "inn" | "pharmacy" | "exchange";
 
@@ -149,6 +150,10 @@ export type GameState = {
   autoMedicineAt: { healing: number; mana: number };
   /** Battle-only automatic HP restoration; saved with the character profile. */
   autoPotion: AutoPotionSettings;
+  /** 上次 Auto Potion 使用時間，避免戰鬥 tick 連續消耗藥品。 */
+  autoPotionAt: number;
+  /** 新手引導進度，避免新角色建立後沒有明確下一步。 */
+  onboardingStep: OnboardingStep;
   /** Persisted newest-first battle and reward history, capped by BattleLogManager. */
   battleLogs: BattleLogEntry[];
   claimedContracts: string[];

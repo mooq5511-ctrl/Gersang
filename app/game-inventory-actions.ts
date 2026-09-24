@@ -175,15 +175,16 @@ export function configureAutoPotionAction(state: GameState, patch: Partial<AutoP
 }
 
 /** Applies one eligible healing item during an active battle, then lets React persist the new state. */
-export function applyAutoPotionAction(state: GameState, addLog: Log, grantXp: GrantXp): GameState {
+export function applyAutoPotionAction(state: GameState, now: number, addLog: Log, grantXp: GrantXp): GameState {
   if (state.dungeon?.status !== "fighting") return state;
-  const stats = vitalStats(state.hero);
-  const action = AutoPotionManager.nextAction(state.autoPotion, state.medicines, stats.hp, stats.maxHp, medicineCatalog);
+  if (now - state.autoPotionAt < 1000) return state;
+  const targets = [state.hero, ...state.mercs.filter(unit => state.active.includes(unit.uid))].map(unit => vitalStats(unit));
+  const action = AutoPotionManager.nextAction(state.autoPotion, state.medicines, targets, medicineCatalog);
   if (action.type === "none") return state;
   if (action.type === "shortage") return { ...state, autoPotion: action.settings, battleLogs: BattleLogManager.addLog(state.battleLogs, "補血藥不足，Auto Potion 已停止。", "warning"), logs: addLog(state.logs, "補血藥不足，Auto Potion 已停止。") };
   const consumed = consumeMedicineAction(state, action.medicineId, true, addLog, grantXp);
   const medicine = medicineCatalog.find((entry) => entry.id === action.medicineId);
-  const withBattleLog = { ...consumed, battleLogs: BattleLogManager.addLog(consumed.battleLogs, `Auto Potion 使用「${medicine?.name || action.medicineId}」。`, "auto-potion") };
+  const withBattleLog = { ...consumed, autoPotionAt: now, battleLogs: BattleLogManager.addLog(consumed.battleLogs, `Auto Potion 使用「${medicine?.name || action.medicineId}」。`, "auto-potion") };
   return (withBattleLog.medicines[action.medicineId] || 0) > 0
     ? withBattleLog
     : { ...withBattleLog, autoPotion: { ...withBattleLog.autoPotion, enabled: false }, battleLogs: BattleLogManager.addLog(withBattleLog.battleLogs, "補血藥不足，Auto Potion 已停止。", "warning"), logs: addLog(withBattleLog.logs, "補血藥不足，Auto Potion 已停止。") };

@@ -18,6 +18,7 @@ export const BUILDINGS = {
   training: { name: "訓練場", icon: "⚔️", maxLevel: BUILDING_LEVEL_CAP, baseCost: 1800, description: "角色與傭兵經驗：Lv.1–10 每級 +2%，Lv.100 共 +120%" },
   warehouse: { name: "倉庫", icon: "📦", maxLevel: BUILDING_LEVEL_CAP, baseCost: 2500, description: "三角色共用倉庫：Lv.1–10 每級 +10 格，Lv.100 共 +1,000 格" },
   smithy: { name: "鐵匠鋪", icon: "🔨", maxLevel: BUILDING_LEVEL_CAP, baseCost: 5000, description: "Lv.20 開放裝備強化；Lv.1–10 每級成功率 +1.5 個百分點，Lv.100 共 +35 個百分點", unlockLevel: 20 },
+  restaurant: { name: "餐廳", icon: "🍲", maxLevel: BUILDING_LEVEL_CAP, baseCost: 2200, description: "使用怪物材料製作食物；Lv.1 開放 3 種食譜，升級後可解鎖更多料理" },
 } as const;
 
 export type BuildingId = keyof typeof BUILDINGS;
@@ -25,7 +26,25 @@ export type GuildTerritory = { buildings: Record<BuildingId, number> };
 export const BUILDING_IDS = Object.keys(BUILDINGS) as BuildingId[];
 
 export function freshTerritory(): GuildTerritory {
-  return { buildings: { flag: 0, waystation: 0, lounge: 0, training: 0, warehouse: 0, smithy: 0 } };
+  return { buildings: { flag: 0, waystation: 0, lounge: 0, training: 0, warehouse: 0, smithy: 0, restaurant: 0 } };
+}
+
+export const RESTAURANT_RECIPES = [
+  { id: "seafood-porridge", name: "海鮮粥", ingredients: { 海鮮: 3, 銀松草: 1 }, outputId: "restaurant-seafood-porridge", outputName: "海鮮粥", amount: 2, effect: "恢復 15% 最大 HP" },
+  { id: "herbal-stew", name: "山珍燉湯", ingredients: { 桂皮: 2, 熟地黃: 1 }, outputId: "restaurant-herbal-stew", outputName: "山珍燉湯", amount: 1, effect: "恢復 20% 最大 HP" },
+  { id: "bezoar-feast", name: "牛黃藥膳", ingredients: { 牛黃: 2, 熟地黃: 2 }, outputId: "restaurant-bezoar-feast", outputName: "牛黃藥膳", amount: 1, effect: "恢復 25% 最大 HP" },
+] as const;
+
+export function craftRestaurantFood(state: GameState, recipeId: string): { game: GameState; error?: string } {
+  if ((state.territory?.buildings.restaurant || 0) < 1) return { game: state, error: "請先建造餐廳。" };
+  const recipe = RESTAURANT_RECIPES.find((entry) => entry.id === recipeId);
+  if (!recipe) return { game: state, error: "找不到這道料理。" };
+  for (const [material, required] of Object.entries(recipe.ingredients)) {
+    if ((state.materials[material] || 0) < required) return { game: state, error: `材料不足：${material} 需要 ${required} 個。` };
+  }
+  const materials = { ...state.materials };
+  for (const [material, required] of Object.entries(recipe.ingredients)) materials[material] = (materials[material] || 0) - required;
+  return { game: { ...state, materials, medicines: { ...state.medicines, [recipe.outputId]: (state.medicines[recipe.outputId] || 0) + recipe.amount }, logs: [`餐廳：製作${recipe.outputName} ×${recipe.amount}。`, ...state.logs].slice(0, 40) } };
 }
 
 export function restoreTerritory(raw: unknown): GuildTerritory {
@@ -64,6 +83,7 @@ export function buildingEffect(id: BuildingId, level: number): number {
     training: [0.2, 1.2],
     warehouse: [100, 1000],
     smithy: [0.15, 0.35],
+    restaurant: [0, 0.8],
   };
   return curvedValue(level, ...targets[id]);
 }
@@ -98,7 +118,7 @@ export function territoryHealInterval(territory: GuildTerritory | undefined): nu
 export function upgradeBuilding(state: GameState, id: BuildingId): { game: GameState; error?: string } {
   const building = BUILDINGS[id];
   const territory = state.territory || freshTerritory();
-  const level = territory.buildings[id];
+  const level = territory.buildings[id] ?? 0;
   if (state.hero.level < TERRITORY_UNLOCK_LEVEL) return { game: state, error: `商團領地在主角 Lv.${TERRITORY_UNLOCK_LEVEL} 開放。` };
   if ("unlockLevel" in building && state.hero.level < building.unlockLevel) return { game: state, error: `${building.name}需要主角 Lv.${building.unlockLevel}。` };
   if (level >= building.maxLevel) return { game: state, error: `${building.name}已達最高等級。` };

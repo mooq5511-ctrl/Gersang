@@ -68,6 +68,9 @@ export function recruitMerchantAction(
   createUnit: (spec: MercenarySpec, index: number) => Unit,
   addLog: Log,
 ): GameState {
+  if (state.creditLevel < 2) {
+    return { ...state, logs: addLog(state.logs, "商團等級不足：普通傭兵雇傭功能將於商團 Lv.2 開放。") };
+  }
   if (spec.recruitable === false) {
     return { ...state, logs: addLog(state.logs, `「${spec.name}」目前暫未開放招募。`) };
   }
