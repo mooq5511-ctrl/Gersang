@@ -52,6 +52,9 @@ function restoreHanyangStep(parsed: Partial<GameState> & { onboardingStep?: stri
   // Existing saves already completed the old onboarding; never send those players
   // back to the beginning of the story. The two interrupted old gates map to the
   // corresponding story beats and remain recoverable from actual game state.
+  if (parsed.onboardingStep === "welcome" || parsed.onboardingStep === "find-village-chief") return "arrival";
+  if (parsed.onboardingStep === "travel-to-outskirts" || parsed.onboardingStep === "first-battle") return "outskirts";
+  if (parsed.onboardingStep === "return-village-chief") return "first-sale";
   if (parsed.onboardingStep === "mercenary-trial") return "bandit-trial";
   if (parsed.onboardingStep === "hire-first-merc") return "guild";
   return "completed";
@@ -116,7 +119,7 @@ export function restoreGame(raw: unknown): GameState {
     autoMedicineAt: { healing: 0, mana: 0 },
     autoPotion: AutoPotionManager.normalize(parsed.autoPotion),
     autoPotionAt: 0,
-    onboardingStep: parsed.onboardingStep === "welcome" || parsed.onboardingStep === "find-village-chief" || parsed.onboardingStep === "travel-to-outskirts" || parsed.onboardingStep === "first-battle" || parsed.onboardingStep === "return-village-chief" || parsed.onboardingStep === "mercenary-trial" || parsed.onboardingStep === "hire-first-merc" || parsed.onboardingStep === "completed" ? parsed.onboardingStep : "completed",
+    onboardingStep: "completed",
     hanyangPrologueStep: restoreHanyangStep(parsed),
     hanyangPrologueFlags: normalizeHanyangPrologueFlags((parsed as Partial<GameState>).hanyangPrologueFlags),
     battleLogs: BattleLogManager.getLogs(Array.isArray(parsed.battleLogs) ? parsed.battleLogs : []),

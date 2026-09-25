@@ -327,7 +327,7 @@ export default function GameV15() {
       setNotice("請輸入角色名稱。");
       return;
     }
-    const next = { ...freshGame(name, characterGender), onboardingStep: "welcome" as const, hanyangPrologueStep: "arrival" as const };
+    const next = { ...freshGame(name, characterGender), onboardingStep: "completed" as const, hanyangPrologueStep: "arrival" as const };
     const nextProfiles = [...profiles];
     nextProfiles[creatorSlot] = profileFromGame(creatorSlot, next);
     localStorage.setItem(profileSaveKey(creatorSlot), JSON.stringify(next));
@@ -433,8 +433,6 @@ export default function GameV15() {
       if (game.starterDeliveryKills < FIRST_CARAVAN_TARGET) return { title: '清出送貨驛路', detail: `擊敗新手村郊外的狸貓 ${Math.min(game.starterDeliveryKills, FIRST_CARAVAN_TARGET)} / ${FIRST_CARAVAN_TARGET}。只計算委託期間的指定怪物。`, tab: 'battle', mapId: 'starter-outskirts', monsterName: '狸貓' };
       return { title: '回漢陽交付第一份商隊委託', detail: '貨物已能安全送達港口；向金成浩回報，領取白裝短劍與啟程資金。', tab: 'map', npcId: 'kim-seongho' as NpcId };
     }
-    if (game.onboardingStep === "mercenary-trial") return { title: '面對商路的殘酷考驗', detail: '前往新手村郊外，調查藥材車後方的黑巾山賊。', tab: 'battle', mapId: 'starter-outskirts', monsterName: '黑巾山賊' };
-    if (game.onboardingStep === "hire-first-merc") return { title: '前往傭兵公會招募幫手', detail: '剛才的戰鬥證明一個人守不住商路；招募第一名普通傭兵。', tab: 'city', service: 'mercenary' as const };
     const starterWeaponObjective = getStarterWeaponObjective(game);
     if (starterWeaponObjective) return starterWeaponObjective;
     const firstMercenaryObjective = getFirstMercenaryObjective({
@@ -520,29 +518,11 @@ export default function GameV15() {
       const rolls = createGameTickRolls();
       setGame(previous => {
         const settled = applyAutoPotionAction(settleCurrentGame(previous, rolls), Date.now(), addLog, grantXp);
-        if (previous.onboardingStep === "mercenary-trial" && settled.dungeon?.status === "recovering") {
-          return { ...settled, hero: previous.hero, mercs: previous.mercs, gold: previous.gold, inventory: previous.inventory, medicines: previous.medicines, onboardingStep: "hire-first-merc", dungeon: { ...settled.dungeon, status: "idle", autoHunt: false, realtime: undefined, realtimeCursor: 0 }, logs: addLog(settled.logs, "黑巾山賊搶走了貨物；小嚮導米米提醒你前往傭兵公會招募幫手。") };
-        }
         return settled;
       });
     }, 50);
     return () => window.clearInterval(timer);
   }, [ready, activeSlot, setGame]);
-
-  useEffect(() => {
-    if (game.onboardingStep === "return-village-chief") {
-      setActiveTab("map");
-      setNotice("驛路已清出來了！村長應該等急了，請回到漢陽找金成浩交付委託。");
-    } else if (game.onboardingStep === "mercenary-trial") {
-      setActiveTab("battle");
-      setNotice("不好！黑巾山賊突然攔下藥材車，搶走了貨物！這是商團必須接受的第一場考驗，請立即迎戰。");
-      setGame(previous => ({ ...previous, selectedMonster: "黑巾山賊", dungeon: { ...freshDungeon(), key: "e_starter_black_bandit", lockedEnemyKey: "e_starter_black_bandit", enemyHp: DUNGEONS.e_starter_black_bandit.hp } }));
-    } else if (game.onboardingStep === "hire-first-merc") {
-      setActiveTab("city");
-      setCityService("mercenary");
-      setNotice("黑巾山賊太強了！請前往傭兵公會招募第一名普通傭兵。");
-    }
-  }, [game.onboardingStep]);
 
   useEffect(() => {
     if ((game.hanyangPrologueStep === "outskirts" || game.hanyangPrologueStep === "first-sale") && game.starterDeliveryKills < FIRST_CARAVAN_TARGET) {
@@ -586,9 +566,6 @@ export default function GameV15() {
     const cost = hanyangRecruitmentCost(game, Math.floor(6000 * currentCity.priceFactor));
     setGame(previous => {
       const next = recruitMerchantAction(previous, spec, index, cost, (entry, portraitIndex) => normalizeVitals<Unit>({ uid: uid('merchant-'+entry.id), templateId: 'merchant-'+entry.id, nation: 'legacy', tier: 1, jobClass: entry.name, special: entry.id==='mazu', name: entry.name, role: entry.role, skill: entry.active, image: mercenaryPortrait(entry.id,portraitIndex), level: 1, xp: 0, points: 0, str: entry.ratings[1], agi: entry.ratings[3], vit: entry.ratings[0], intel: entry.intel ?? (entry.mp ? 20 : 10), position:normalizeBattlePosition(undefined,entry.name,entry.role), equip: emptyEquipment() }), addLog);
-      if (previous.onboardingStep === "hire-first-merc" && next.mercs.length > previous.mercs.length) {
-        return { ...next, onboardingStep: "completed", logs: addLog(next.logs, "第一名傭兵已加入商團；現在可以配置隊形並重新挑戰黑巾山賊。") };
-      }
       return next;
     });
   }
@@ -852,7 +829,6 @@ export default function GameV15() {
       next = awardNpcAffinity(next, npc, option);
       if (option.quest === "start") {
         next = startNpcQuest(next, npc);
-        if (npc.id === "kim-seongho" && next !== previous) next = { ...next, onboardingStep: "travel-to-outskirts" };
         if (next !== previous) next = { ...next, logs: addLog(next.logs, `接受村莊委託「${npc.quest?.name || ""}」。`) };
       }
       if (option.quest === "complete") {
