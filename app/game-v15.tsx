@@ -790,7 +790,8 @@ export default function GameV15() {
       if (result.error || !result.reward) { setNotice(result.error || "無法領取這份委託。"); return previous; }
       const withCreditXp = grantCreditXp(result.state, result.reward.rewardCreditXp);
       const materials = Object.entries(result.reward.rewardMaterials || {}).map(([name, amount]) => `${name} ×${amount}`).join("、");
-      return { ...withCreditXp, logs: addLog(withCreditXp.logs, `市政廳委託「${result.reward.name}」完成，獲得 ${format(result.reward.rewardGold)} 兩、信用經驗 ${result.reward.rewardCreditXp}${materials ? `、${materials}` : ""}。`) };
+      const equipment = result.equipment ? `、獲得「${result.equipment.name}」` : "";
+      return { ...withCreditXp, logs: addLog(withCreditXp.logs, `市政廳委託「${result.reward.name}」完成，獲得 ${format(result.reward.rewardGold)} 兩、信用經驗 ${result.reward.rewardCreditXp}${materials ? `、${materials}` : ""}${equipment}。`) };
     });
   }
 

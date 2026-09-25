@@ -1,5 +1,5 @@
-export { monsterDungeonKeys } from "./monster-ids";
-import { gersangHeroArt } from "./gersang-visuals";
+export { monsterDungeonKeys } from "./monster-ids.ts";
+import { gersangHeroArt } from "./gersang-visuals.ts";
 import type { Equipment } from "./game-state";
 import type { NationId } from "./v15-data";
 

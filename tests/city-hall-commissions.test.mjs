@@ -70,6 +70,20 @@ test('commission cannot be claimed before its target and rewards once after comp
   assert.equal(claimCityHallCommission(complete.state, 'hall-clear-raccoon').error, '找不到這份進行中的市政廳委託。');
 });
 
+test('purple and gold commissions guarantee their matching equipment quality', () => {
+  const purpleAccepted = acceptCityHallCommission(state({ hero: { level: 20, equip: {} }, cityHall: { ...freshCityHallState(), availableIds: ['hall-equip-caravan', 'hall-clear-raccoon', 'hall-gather-herbs', 'hall-gather-cooking', 'hall-scout-route'] } }), 'hall-equip-caravan').state;
+  const purple = claimCityHallCommission({ ...purpleAccepted, cityHall: { ...purpleAccepted.cityHall, lifetime: { materials: 0, equipment: 100 }, active: [{ id: 'hall-equip-caravan', startValue: 0 }] } }, 'hall-equip-caravan');
+  assert.equal(purple.error, undefined);
+  assert.equal(purple.equipment.rarity, '傳說');
+  assert.equal(purple.state.inventory.length, 1);
+
+  const goldAccepted = acceptCityHallCommission(state({ hero: { level: 20, equip: {} }, cityHall: { ...freshCityHallState(), availableIds: ['hall-prepare-supplies', 'hall-clear-raccoon', 'hall-gather-herbs', 'hall-gather-cooking', 'hall-scout-route'] } }), 'hall-prepare-supplies').state;
+  const gold = claimCityHallCommission({ ...goldAccepted, cityHall: { ...goldAccepted.cityHall, lifetime: { materials: 5_000, equipment: 0 }, active: [{ id: 'hall-prepare-supplies', startValue: 0 }] } }, 'hall-prepare-supplies');
+  assert.equal(gold.error, undefined);
+  assert.equal(gold.equipment.rarity, '金色');
+  assert.equal(gold.state.inventory.length, 1);
+});
+
 test('refresh uses a ticket and preserves active commissions', () => {
   const accepted = acceptCityHallCommission(state({ cityHall: { ...freshCityHallState(), refreshTickets: 1 } }), 'hall-clear-raccoon').state;
   const refreshed = refreshCityHallCommissions(accepted);

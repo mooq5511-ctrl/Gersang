@@ -1,4 +1,4 @@
-import {cuteEquipmentArt} from './gersang-visuals';
+import {cuteEquipmentArt} from './gersang-visuals.ts';
 
 export type NationId = "korea" | "china" | "japan" | "taiwan";
 

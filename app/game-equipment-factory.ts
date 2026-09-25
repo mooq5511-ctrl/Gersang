@@ -1,8 +1,8 @@
-import { gersangItemArt } from "./gersang-visuals";
-import { wearableCatalog } from "./wearable-catalog";
-import { magicAffixes } from "./v15-data";
+import { gersangItemArt } from "./gersang-visuals.ts";
+import { wearableCatalog } from "./wearable-catalog.ts";
+import { magicAffixes } from "./v15-data.ts";
 import type { OfficialEquipment } from "./v17-content";
-import { SHOP_QUALITY } from "./game-config";
+import { SHOP_QUALITY } from "./game-config.ts";
 import type { Equipment, MagicAffix } from "./game-state";
 
 export function makeUid(prefix: string) {

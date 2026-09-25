@@ -15,7 +15,8 @@ import type { GameState } from "./game-state";
 
 function rewardText(commission: NonNullable<ReturnType<typeof cityHallCommission>>) {
   const materials = Object.entries(commission.rewardMaterials || {}).map(([name, amount]) => `${name} ×${amount}`);
-  return [`${commission.rewardGold.toLocaleString("zh-TW")} 兩`, `信用經驗 ${commission.rewardCreditXp}`, ...materials].join("・");
+  const equipment = commission.rewardEquipmentRarity === "傳說" ? "隨機部位・紫色品階裝備 ×1" : commission.rewardEquipmentRarity === "金色" ? "隨機部位・金色品階裝備 ×1" : "";
+  return [`${commission.rewardGold.toLocaleString("zh-TW")} 兩`, `信用經驗 ${commission.rewardCreditXp}`, equipment, ...materials].filter(Boolean).join("・");
 }
 
 export function CityHall({
