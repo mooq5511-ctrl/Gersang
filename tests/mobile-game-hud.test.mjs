@@ -20,8 +20,17 @@ test('classic game HUD exposes the full resource strip and all ten requested fea
   assert.ok(ui.includes('ACTIVE_MERCENARY_LIMIT'));
 });
 
+test('quick navigation is grouped by player intent with stable onboarding keys', () => {
+  for (const group of ['探索', '角色', '城鎮', '系統']) assert.ok(ui.includes(`quick-nav-group-label">${group}`));
+  for (const key of ['battle', 'map', 'trade', 'squad', 'archive', 'treasure', 'contracts', 'hall', 'city', 'raid', 'settings']) {
+    assert.match(ui, new RegExp(`data-nav-key="${key}"`));
+  }
+  assert.match(styles, /data-onboarding-locked="map"\][\s\S]*data-nav-key="map"/);
+  assert.match(styles, /\.quick-nav-group-label::before/);
+});
+
 test('mobile HUD preserves touch-sized controls and keeps music/map shortcuts out of the HUD', () => {
-  assert.match(styles, /@media\s*\(max-width:\s*639px\)[\s\S]*?classic-live-game\s*>\s*\.classic-live-quicknav[\s\S]*?width:76px/);
+  assert.match(styles, /@media\s*\(max-width:\s*639px\)[\s\S]*?classic-live-game\s*>\s*\.classic-live-quicknav[\s\S]*?width:88px/);
   assert.match(styles, /\.classic-live-quicknav button \{[^}]*min-height:48px/);
   assert.match(styles, /\.classic-live-game \.isometric-destinations \{ display:none; \}/);
   assert.match(styles, /\.classic-live-game\s*>\s*\.scene-music-toggle\s*\{\s*position:fixed!important/);
