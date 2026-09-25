@@ -7,6 +7,7 @@ export type HanyangPrologueStep =
   | "first-battle"
   | "first-sale"
   | "journey-fund"
+  | "medicine"
   | "guild"
   | "formation"
   | "caravan-crisis"
@@ -15,6 +16,9 @@ export type HanyangPrologueStep =
   | "completed";
 
 export type HanyangPrologueFlags = {
+  starterSupplyGranted: boolean;
+  equipmentEquipped: boolean;
+  medicinePurchased: boolean;
   lootSold: boolean;
   journeyFundClaimed: boolean;
   firstMercenaryContract: boolean;
@@ -28,6 +32,7 @@ export const HANYANG_PROLOGUE_STEPS: ReadonlyArray<{ step: HanyangPrologueStep; 
   { step: "outskirts", title: "城外走走", detail: "先到城外看看，別讓第一次出門就空手而回。" },
   { step: "first-sale", title: "第一場買賣", detail: "把剛取得的戰利品帶回漢陽，換成真正能用的銀兩。" },
   { step: "journey-fund", title: "啟程之資", detail: "老商人會依傭兵公會的實際價格補足一筆不重複的啟程資金。" },
+  { step: "medicine", title: "備妥補給", detail: "前往藥店實際購買 1 瓶金創藥，學會在商路上準備補給。" },
   { step: "guild", title: "人多好辦事", detail: "去傭兵公會，從公會推薦的人選中挑一名夥伴。" },
   { step: "formation", title: "並肩而行", detail: "確認第一名傭兵已加入出戰隊伍。" },
   { step: "caravan-crisis", title: "商路告急", detail: "黑巾山賊開始影響漢陽商路，前往事件區域調查。" },
@@ -44,12 +49,12 @@ export const HANYANG_PROLOGUE_DIALOGUE = {
 } as const;
 
 export function freshHanyangPrologueFlags(): HanyangPrologueFlags {
-  return { lootSold: false, journeyFundClaimed: false, firstMercenaryContract: false, firstMercenaryDeployed: false, caravanRestored: false, completionRewardClaimed: false };
+  return { starterSupplyGranted: false, equipmentEquipped: false, medicinePurchased: false, lootSold: false, journeyFundClaimed: false, firstMercenaryContract: false, firstMercenaryDeployed: false, caravanRestored: false, completionRewardClaimed: false };
 }
 
 export function normalizeHanyangPrologueFlags(value: unknown): HanyangPrologueFlags {
   const source = value && typeof value === "object" ? value as Partial<HanyangPrologueFlags> : {};
-  return { lootSold: source.lootSold === true, journeyFundClaimed: source.journeyFundClaimed === true, firstMercenaryContract: source.firstMercenaryContract === true, firstMercenaryDeployed: source.firstMercenaryDeployed === true, caravanRestored: source.caravanRestored === true, completionRewardClaimed: source.completionRewardClaimed === true };
+  return { starterSupplyGranted: source.starterSupplyGranted === true, equipmentEquipped: source.equipmentEquipped === true, medicinePurchased: source.medicinePurchased === true, lootSold: source.lootSold === true, journeyFundClaimed: source.journeyFundClaimed === true, firstMercenaryContract: source.firstMercenaryContract === true, firstMercenaryDeployed: source.firstMercenaryDeployed === true, caravanRestored: source.caravanRestored === true, completionRewardClaimed: source.completionRewardClaimed === true };
 }
 
 export function normalizeHanyangPrologueStep(value: unknown): HanyangPrologueStep {
@@ -81,14 +86,29 @@ export function hanyangRecruitmentCost(state: Pick<GameState, "gold" | "hanyangP
 export function markHanyangLootSold(state: GameState): GameState {
   if (state.hanyangPrologueFlags.lootSold) return state;
   if (state.hanyangPrologueStep !== "first-sale") return state;
-  return { ...state, hanyangPrologueStep: "journey-fund", hanyangPrologueFlags: { ...state.hanyangPrologueFlags, lootSold: true } };
+  return { ...state, hanyangPrologueStep: state.hanyangPrologueFlags.equipmentEquipped ? "journey-fund" : "first-sale", hanyangPrologueFlags: { ...state.hanyangPrologueFlags, lootSold: true } };
+}
+
+export function markHanyangEquipmentEquipped(state: GameState): GameState {
+  if (state.hanyangPrologueStep !== "first-sale" || state.hanyangPrologueFlags.equipmentEquipped) return state;
+  return { ...state, hanyangPrologueStep: state.hanyangPrologueFlags.lootSold ? "journey-fund" : "first-sale", hanyangPrologueFlags: { ...state.hanyangPrologueFlags, equipmentEquipped: true } };
+}
+
+export function markHanyangMedicinePurchased(state: GameState, medicineId: string): GameState {
+  if (medicineId !== "healing" || state.hanyangPrologueStep !== "medicine" || state.hanyangPrologueFlags.medicinePurchased) return state;
+  return { ...state, hanyangPrologueStep: "guild", hanyangPrologueFlags: { ...state.hanyangPrologueFlags, medicinePurchased: true } };
+}
+
+export function grantHanyangStarterSupplies(state: GameState): GameState {
+  if (state.hanyangPrologueFlags.starterSupplyGranted) return state;
+  return { ...state, materials: { ...state.materials, "肉類": Math.max(2, state.materials["肉類"] || 0) }, medicines: { ...state.medicines, healing: Math.max(2, state.medicines.healing || 0) }, hanyangPrologueFlags: { ...state.hanyangPrologueFlags, starterSupplyGranted: true }, logs: [...state.logs, "新手補給：獲得肉類 ×2、金創藥 ×2。"] };
 }
 
 export function claimHanyangJourneyFund(state: GameState, guildPrice: number): GameState {
   const flags = state.hanyangPrologueFlags;
   if (flags.journeyFundClaimed || !flags.lootSold || state.hanyangPrologueStep !== "journey-fund") return state;
   const grant = hanyangJourneyFund(guildPrice, state.gold);
-  return { ...state, gold: state.gold + grant, hanyangPrologueStep: "guild", hanyangPrologueFlags: { ...flags, journeyFundClaimed: true }, logs: [...state.logs, `老商人補助啟程資金 ${grant.toLocaleString("zh-TW")} 兩；這筆資金只能領取一次。`] };
+  return { ...state, gold: state.gold + grant, hanyangPrologueStep: "medicine", hanyangPrologueFlags: { ...flags, journeyFundClaimed: true }, logs: [...state.logs, `老商人補助啟程資金 ${grant.toLocaleString("zh-TW")} 兩；這筆資金只能領取一次。`] };
 }
 
 export function syncHanyangPrologue(state: GameState, guildPrice: number): GameState {

@@ -6,7 +6,7 @@ const state = (overrides = {}) => ({ gold: 0, logs: [], hanyangPrologueStep: 'fi
 
 test('journey fund targets 125% of the current guild price and never grants twice', () => {
   assert.equal(hanyangJourneyFund(6000, 1000), 6500);
-  const first = claimHanyangJourneyFund(markHanyangLootSold(state({ gold: 1000 })), 6000);
+  const first = claimHanyangJourneyFund(markHanyangLootSold(state({ gold: 1000, hanyangPrologueFlags: { ...freshHanyangPrologueFlags(), equipmentEquipped: true } })), 6000);
   assert.equal(first.gold, 7500);
   assert.equal(first.hanyangPrologueFlags.journeyFundClaimed, true);
   assert.strictEqual(claimHanyangJourneyFund(first, 6000), first);
@@ -15,7 +15,7 @@ test('journey fund targets 125% of the current guild price and never grants twic
 test('selling the wrong item or reloading cannot fabricate the flag', () => {
   const original = state({ hanyangPrologueStep: 'guild' });
   assert.strictEqual(markHanyangLootSold(original), original);
-  assert.deepEqual(normalizeHanyangPrologueFlags({ journeyFundClaimed: true, lootSold: 'yes' }), { lootSold: false, journeyFundClaimed: true, firstMercenaryContract: false, firstMercenaryDeployed: false, caravanRestored: false, completionRewardClaimed: false });
+  assert.deepEqual(normalizeHanyangPrologueFlags({ journeyFundClaimed: true, lootSold: 'yes' }), { starterSupplyGranted: false, equipmentEquipped: false, medicinePurchased: false, lootSold: false, journeyFundClaimed: true, firstMercenaryContract: false, firstMercenaryDeployed: false, caravanRestored: false, completionRewardClaimed: false });
 });
 
 test('recruitment keeps the formation teaching step for one explicit confirmation', () => {

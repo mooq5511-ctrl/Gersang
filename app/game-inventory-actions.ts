@@ -12,7 +12,7 @@ import { normalizeVitals, recoverVitals, vitalStats } from "./vitals-engine";
 import { AutoPotionManager, type AutoPotionSettings } from "./auto-potion-manager";
 import { BattleLogManager } from "./battle-log-manager";
 import type { Equipment, GameState, Hero, MagicAffix, Unit } from "./game-state";
-import { markHanyangLootSold } from "./hanyang-prologue";
+import { markHanyangEquipmentEquipped, markHanyangLootSold, markHanyangMedicinePurchased } from "./hanyang-prologue";
 import { makeTierEquipment, tierEquipmentPrice, tierEquipmentShopCatalog } from "./tier-equipment";
 
 type Log = (logs: string[], message: string) => string[];
@@ -117,9 +117,10 @@ export function equipInventoryItemAction(state: GameState, itemUid: string, requ
   if (result.error) return { ...state, logs: addLog(state.logs, result.error) };
   const unit = normalizeVitals(result.unit);
   const logs = addLog(state.logs, "已穿戴裝備，原部位裝備已交換回背包。");
-  return targetUid === "hero"
+  const equipped = targetUid === "hero"
     ? { ...state, firstGreenEquipped: state.firstGreenEquipped || Object.values(unit.equip).some(item => item && item.rarity !== '普通'), logs, inventory: result.inventory, hero: unit as Hero }
     : { ...state, firstGreenEquipped: state.firstGreenEquipped || Object.values(unit.equip).some(item => item && item.rarity !== '普通'), logs, inventory: result.inventory, mercs: state.mercs.map((old) => old.uid === targetUid ? unit : old) };
+  return markHanyangEquipmentEquipped(equipped);
 }
 
 export function unequipInventoryItemAction(state: GameState, slot: EquipmentSlot, targetUid: string, addLog: Log): GameState {
@@ -142,7 +143,7 @@ export function buyMedicineAction(state: GameState, medicineId: string, requeste
   const price = Math.floor(medicine.price * priceFactor), amount = Math.max(1, Math.floor(requestedAmount) || 1), purchased = Math.min(amount, Math.floor(state.gold / price));
   if (purchased <= 0) { notify(`購買「${medicine.name}」的資金不足。`); return state; }
   if (purchased < amount) notify(`金幣不足，僅購入「${medicine.name}」×${purchased}。`);
-  return { ...state, gold: state.gold - price * purchased, medicines: { ...state.medicines, [medicine.id]: (state.medicines[medicine.id] || 0) + purchased }, logs: addLog(state.logs, `在${cityName}藥店購入「${medicine.name}」×${purchased}。`) };
+  return markHanyangMedicinePurchased({ ...state, gold: state.gold - price * purchased, medicines: { ...state.medicines, [medicine.id]: (state.medicines[medicine.id] || 0) + purchased }, logs: addLog(state.logs, `在${cityName}藥店購入「${medicine.name}」×${purchased}。`) }, medicine.id);
 }
 
 export function consumeMedicineAction(state: GameState, medicineId: string, automatic: boolean, addLog: Log, grantXp: GrantXp): GameState {
