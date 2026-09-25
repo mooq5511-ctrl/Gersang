@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { claimHanyangJourneyFund, freshHanyangPrologueFlags, hanyangJourneyFund, markHanyangLootSold, normalizeHanyangPrologueFlags, syncHanyangPrologue } from '../app/hanyang-prologue.ts';
+import { isBossMonster } from '../app/dungeon-engine.ts';
+import { sourceEnemies } from '../app/v17-content.ts';
 
 const state = (overrides = {}) => ({ gold: 0, logs: [], hanyangPrologueStep: 'first-sale', hanyangPrologueFlags: freshHanyangPrologueFlags(), medicines: {}, mercs: [], restingMercs: [], active: [], ...overrides });
 
@@ -26,4 +28,14 @@ test('recruitment keeps the formation teaching step for one explicit confirmatio
   const deployed = syncHanyangPrologue({ ...formation, active: [unit.uid] }, 6000);
   assert.equal(deployed.hanyangPrologueStep, 'caravan-crisis');
   assert.equal(deployed.hanyangPrologueFlags.firstMercenaryDeployed, true);
+});
+
+test('black bandit is an elite encounter, while pirate king remains the Hanyang boss', () => {
+  const blackBandit = sourceEnemies.find((enemy) => enemy.id === 'e_starter_black_bandit');
+  const pirateKing = sourceEnemies.find((enemy) => enemy.name === '海賊王');
+  assert.equal(blackBandit?.elite, true);
+  assert.equal(blackBandit?.boss, undefined);
+  assert.equal(isBossMonster('黑巾山賊'), false);
+  assert.equal(pirateKing?.boss, true);
+  assert.equal(isBossMonster('海賊王'), true);
 });

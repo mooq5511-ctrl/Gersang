@@ -33,9 +33,9 @@ const prerequisites: Record<CompendiumMapId, string | null> = {
   sumeru: "世界地圖達到第 40 關",
 };
 
-function monsterKind(name: string, boss: boolean): MonsterKind {
+function monsterKind(name: string, boss: boolean, elite = false): MonsterKind {
   if (boss) return "首領";
-  if (/\(強\)|詭異|頭目|金剛|神獸|強力|神漢|邪靈/.test(name) || name === "海星") return "菁英";
+  if (elite || /\(強\)|詭異|頭目|金剛|神獸|強力|神漢|邪靈/.test(name) || name === "海星") return "菁英";
   return "一般";
 }
 
@@ -52,7 +52,7 @@ export const monsterCompendiumJson = JSON.stringify(
         name: enemy.name,
         mapId: enemy.mapId,
         region: map?.name ?? enemy.mapId,
-        kind: monsterKind(enemy.name, boss),
+        kind: monsterKind(enemy.name, boss, enemy.elite),
         hp: enemy.hp ?? 0,
         mp: enemy.mp ?? 0,
         atk: enemy.attack ?? 0,

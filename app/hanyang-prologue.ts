@@ -36,7 +36,7 @@ export const HANYANG_PROLOGUE_STEPS: ReadonlyArray<{ step: HanyangPrologueStep; 
   { step: "guild", title: "人多好辦事", detail: "去傭兵公會，從公會推薦的人選中挑一名夥伴。" },
   { step: "formation", title: "並肩而行", detail: "確認第一名傭兵已加入出戰隊伍。" },
   { step: "caravan-crisis", title: "商路告急", detail: "黑巾山賊開始影響漢陽商路，前往事件區域調查。" },
-  { step: "bandit-trial", title: "黑巾山賊", detail: "沿用既有黑巾山賊傭兵試煉，和第一名夥伴並肩作戰。" },
+  { step: "bandit-trial", title: "精英黑巾山賊", detail: "黑巾山賊是商路上的精英小怪，不是新手村首領；和第一名夥伴並肩作戰將他擊退。" },
   { step: "return", title: "路才剛開始", detail: "返回漢陽，看看商路恢復後的變化。" },
   { step: "completed", title: "初入漢陽", detail: "序章完成；漢陽之外的世界現在由你自由探索。" },
 ];
