@@ -44,6 +44,12 @@ test('commission cards expose a clear objective, location and action hint', () =
   assert.match(commission.actionHint, /前往世界地圖/);
 });
 
+test('purple combat commission uses the adjusted long-term target', () => {
+  const commission = cityHallCommission('hall-drive-bandits');
+  assert.equal(commission.target, 3_000);
+  assert.match(commission.actionHint, /3,000/);
+});
+
 test('long-term material progress remains after materials are consumed', () => {
   const available = { ...freshCityHallState(), availableIds: ['hall-prepare-supplies', 'hall-clear-raccoon', 'hall-gather-herbs', 'hall-gather-cooking', 'hall-scout-route'] };
   const accepted = acceptCityHallCommission(state({ cityHall: available }), 'hall-prepare-supplies').state;
