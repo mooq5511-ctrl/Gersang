@@ -7,9 +7,11 @@ import {
   claimCityHallCommission,
   cityHallActiveLimit,
   cityHallCommission,
+  cityHallCommissionProgress,
   freshCityHallState,
   normalizeCityHallState,
   refreshCityHallCommissions,
+  syncCityHallLifetime,
 } from '../app/city-hall-commissions.ts';
 
 const state = (overrides = {}) => ({
@@ -38,6 +40,15 @@ test('commission cards expose a clear objective, location and action hint', () =
   assert.equal(commission.objectiveLabel, '完成戰鬥');
   assert.equal(commission.locationLabel, '新手村郊外');
   assert.match(commission.actionHint, /前往世界地圖/);
+});
+
+test('long-term material progress remains after materials are consumed', () => {
+  const available = { ...freshCityHallState(), availableIds: ['hall-prepare-supplies', 'hall-clear-raccoon', 'hall-gather-herbs', 'hall-gather-cooking', 'hall-scout-route'] };
+  const accepted = acceptCityHallCommission(state({ cityHall: available }), 'hall-prepare-supplies').state;
+  const collected = syncCityHallLifetime(accepted, { ...accepted, materials: { '下級精髓': 5_000 } });
+  const consumed = { ...collected, materials: {} };
+  assert.equal(consumed.cityHall.lifetime.materials, 5_000);
+  assert.equal(cityHallCommissionProgress(consumed, consumed.cityHall.active[0]), 5_000);
 });
 
 test('accepted commission leaves the board and starts progress from acceptance', () => {

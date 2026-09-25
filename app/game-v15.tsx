@@ -91,7 +91,7 @@ import { BattleLogManager } from "./battle-log-manager";
 import { fusionItemKey, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
 import { getStarterWeaponObjective } from "./starter-equipment-objective";
 import { getFirstMercenaryObjective } from "./first-mercenary-objective";
-import { abandonCityHallCommission, acceptCityHallCommission as acceptCityHallCommissionAction, buyCityHallRefreshTicket, claimCityHallCommission as claimCityHallCommissionAction, CITY_HALL_REFRESH_TICKET_PRICE, refreshCityHallCommissions } from "./city-hall-commissions";
+import { abandonCityHallCommission, acceptCityHallCommission as acceptCityHallCommissionAction, buyCityHallRefreshTicket, claimCityHallCommission as claimCityHallCommissionAction, CITY_HALL_REFRESH_TICKET_PRICE, refreshCityHallCommissions, syncCityHallLifetime } from "./city-hall-commissions";
 import { HANYANG_PROLOGUE_DIALOGUE, HANYANG_PROLOGUE_STEPS, claimHanyangJourneyFund, completeHanyangPrologue, grantHanyangStarterSupplies, hanyangRecruitmentCost, markHanyangCaravanDelivered, markHanyangMysteryNpcSeen, markHanyangReturnReported, recommendedMercenaryIds } from "./hanyang-prologue";
 import { TIER_EQUIPMENT_DROP_REGIONS, tierEquipmentPrice, tierEquipmentShopCatalog, type TierEquipment } from "./tier-equipment";
 import { profileFromGame, readCharacterSave, restoreGame, saveCharacterProfile, writeCharacterSave, writeProfileIndex, writeSharedWarehouse } from "./game-profile-storage";
@@ -179,7 +179,8 @@ export default function GameV15() {
   // 所有存檔與取得路徑共用格位整理：保留已有位置與超額舊物，不截斷陣列。
   const setGame=useCallback((action:GameState|((previous:GameState)=>GameState))=>rawSetGame(previous=>{
     const next=typeof action==='function'?action(previous):action;
-    return next===previous?previous:applyGersangVisuals({...next,inventory:positionInventory(next.inventory)});
+    const synced = next === previous ? previous : syncCityHallLifetime(previous, next);
+    return synced===previous?previous:applyGersangVisuals({...synced,inventory:positionInventory(synced.inventory)});
   }),[]);
   const [ready, setReady] = useState(false);
   const [loginEntered, setLoginEntered] = useState(false);
