@@ -115,7 +115,7 @@ export function allocateAttributeAction(state: GameState, selectedUid: string, s
 }
 
 export function toggleActiveAction(state: GameState, unitUid: string, notify: (message: string) => void): GameState {
-  if (state.active.includes(unitUid)) return { ...state, active: state.active.filter((id) => id !== unitUid) };
+  if (state.active.includes(unitUid)) return syncHanyangPrologue({ ...state, active: state.active.filter((id) => id !== unitUid) }, 6000);
   if (state.active.length >= ACTIVE_MERCENARY_LIMIT) { notify("出戰傭兵最多 " + ACTIVE_MERCENARY_LIMIT + " 人，主角不佔欄位。"); return state; }
   return syncHanyangPrologue({ ...state, active: [...state.active, unitUid] }, 6000);
 }

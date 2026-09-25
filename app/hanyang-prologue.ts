@@ -97,7 +97,8 @@ export function syncHanyangPrologue(state: GameState, guildPrice: number): GameS
   const activeMerc = state.mercs.some((unit) => state.active.includes(unit.uid));
   if (next.hanyangPrologueStep === "arrival") next = { ...next, hanyangPrologueStep: "outskirts" };
   if (count > 0 && !next.hanyangPrologueFlags.firstMercenaryContract) next = { ...next, hanyangPrologueStep: "formation", hanyangPrologueFlags: { ...next.hanyangPrologueFlags, firstMercenaryContract: true } };
-  if (next.hanyangPrologueStep === "formation" && next.hanyangPrologueFlags.firstMercenaryContract && next.hanyangPrologueFlags.firstMercenaryDeployed === false && activeMerc) next = { ...next, hanyangPrologueStep: "caravan-crisis", hanyangPrologueFlags: { ...next.hanyangPrologueFlags, firstMercenaryDeployed: true } };
+  // 招募時傭兵會自動加入出戰名單，但仍要讓玩家看見一次「隊形」教學；只有下一次重新同步時才進入商路危機。
+  if (state.hanyangPrologueStep === "formation" && next.hanyangPrologueStep === "formation" && next.hanyangPrologueFlags.firstMercenaryContract && next.hanyangPrologueFlags.firstMercenaryDeployed === false && activeMerc) next = { ...next, hanyangPrologueStep: "caravan-crisis", hanyangPrologueFlags: { ...next.hanyangPrologueFlags, firstMercenaryDeployed: true } };
   if (next.hanyangPrologueStep === "journey-fund" && next.hanyangPrologueFlags.lootSold && !next.hanyangPrologueFlags.journeyFundClaimed) next = claimHanyangJourneyFund(next, guildPrice);
   return next;
 }

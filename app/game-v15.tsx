@@ -327,7 +327,7 @@ export default function GameV15() {
       setNotice("請輸入角色名稱。");
       return;
     }
-    const next = freshGame(name, characterGender);
+    const next = { ...freshGame(name, characterGender), onboardingStep: "welcome" as const, hanyangPrologueStep: "arrival" as const };
     const nextProfiles = [...profiles];
     nextProfiles[creatorSlot] = profileFromGame(creatorSlot, next);
     localStorage.setItem(profileSaveKey(creatorSlot), JSON.stringify(next));
@@ -394,6 +394,7 @@ export default function GameV15() {
   const tutorialTrialLocked = game.onboardingStep === "mercenary-trial";
   const tutorialCityLocked = game.onboardingStep === "hire-first-merc";
   const hanyangStep = HANYANG_PROLOGUE_STEPS.find(({ step }) => step === game.hanyangPrologueStep) || HANYANG_PROLOGUE_STEPS[0];
+  const hanyangLockedTab = game.hanyangPrologueStep === "arrival" || game.hanyangPrologueStep === "journey-fund" || game.hanyangPrologueStep === "caravan-crisis" || game.hanyangPrologueStep === "return" ? "map" : game.hanyangPrologueStep === "outskirts" || game.hanyangPrologueStep === "bandit-trial" ? "battle" : game.hanyangPrologueStep === "first-sale" || game.hanyangPrologueStep === "formation" ? "squad" : game.hanyangPrologueStep === "guild" ? "city" : undefined;
   const trackedNpcQuests = activeNpcQuests(game);
   const firstCaravanBossReady = game.npcProgress.completedQuests.includes(FIRST_CARAVAN_QUEST_ID) && game.hero.level >= 20 && game.territory.buildings.waystation >= 1 && (game.firstGreenEquipped || [game.hero, ...game.mercs, ...game.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== '普通')));
   const cityArmors = officialEquipment.filter((item) => item.kind === "armor").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
@@ -414,10 +415,10 @@ export default function GameV15() {
   };
   const mainObjective = (() => {
     if (game.hanyangPrologueStep !== "completed") {
-      if (game.hanyangPrologueStep === "arrival") return { title: hanyangStep.title, detail: HANYANG_PROLOGUE_DIALOGUE.merchant.join(" "), tab: "map" as const };
+      if (game.hanyangPrologueStep === "arrival") return { title: "村長的緊急委託", detail: "小嚮導米米說村長正在找你；先前往村長處接下第一份商隊委託。", tab: "map" as const, npcId: "kim-seongho" as NpcId };
       if (game.hanyangPrologueStep === "outskirts") return { title: hanyangStep.title, detail: hanyangStep.detail, tab: "battle" as const, mapId: "starter-outskirts", monsterName: "狸貓" };
       if (game.hanyangPrologueStep === "first-sale") return { title: hanyangStep.title, detail: HANYANG_PROLOGUE_DIALOGUE.sale.join(" "), tab: "squad" as const, window: "inventory" as const };
-      if (game.hanyangPrologueStep === "journey-fund") return { title: hanyangStep.title, detail: "回到老商人身邊，領取一次性的啟程資金。", tab: "map" as const };
+      if (game.hanyangPrologueStep === "journey-fund") return { title: hanyangStep.title, detail: "回到老商人身邊，先聽完交易說明，再領取一次性的啟程資金。", tab: "map" as const, npcId: "wang-deokchang" as NpcId };
       if (game.hanyangPrologueStep === "guild") return { title: hanyangStep.title, detail: HANYANG_PROLOGUE_DIALOGUE.guild.join(" "), tab: "city" as const, service: "mercenary" as const };
       if (game.hanyangPrologueStep === "formation") return { title: hanyangStep.title, detail: "打開隊伍介面，確認第一名傭兵已處於出戰狀態。", tab: "squad" as const };
       if (game.hanyangPrologueStep === "caravan-crisis") return { title: hanyangStep.title, detail: "北邊商路出事了；先向老商人了解發生什麼事。", tab: "map" as const };
@@ -464,13 +465,8 @@ export default function GameV15() {
   })();
   function goToObjective() {
     if (game.hanyangPrologueStep === "arrival") {
-      setNpcOpeningLine(HANYANG_PROLOGUE_DIALOGUE.merchant.join(" "));
-      setActiveNpcId("wang-deokchang");
-      setActiveTab("map");
-      return;
-    }
-    if (game.hanyangPrologueStep === "journey-fund") {
-      setGame(previous => claimHanyangJourneyFund(previous, Math.floor(6000 * currentCity.priceFactor)));
+      setNpcOpeningLine("村長金成浩神色凝重地望向你：終於等到你了，村外驛路出事了，現在只有你能幫忙！");
+      setActiveNpcId("kim-seongho");
       setActiveTab("map");
       return;
     }
@@ -547,6 +543,14 @@ export default function GameV15() {
       setNotice("黑巾山賊太強了！請前往傭兵公會招募第一名普通傭兵。");
     }
   }, [game.onboardingStep]);
+
+  useEffect(() => {
+    if ((game.hanyangPrologueStep === "outskirts" || game.hanyangPrologueStep === "first-sale") && game.starterDeliveryKills < FIRST_CARAVAN_TARGET) {
+      if (game.hanyangPrologueStep !== "outskirts") setGame(previous => ({ ...previous, hanyangPrologueStep: "outskirts" }));
+    } else if ((game.hanyangPrologueStep === "outskirts" || game.hanyangPrologueStep === "first-battle") && game.starterDeliveryKills >= FIRST_CARAVAN_TARGET) {
+      setGame(previous => ({ ...previous, hanyangPrologueStep: "first-sale" }));
+    }
+  }, [game.hanyangPrologueStep, game.starterDeliveryKills]);
 
   const sendCaravan = useCallback((routeId: string) => {
     const now = Date.now();
@@ -841,8 +845,8 @@ export default function GameV15() {
   function handleNpcAction({ option, npc }: { option: NpcOption; npc: NonNullable<ReturnType<typeof npcById>> }) {
     setGame(previous => {
       let next = recordNpcLine(previous, npc.id, `${npc.name}：${option.reply}`);
-      if (next.hanyangPrologueStep === "arrival") next = { ...next, hanyangPrologueStep: "outskirts", logs: addLog(next.logs, `老商人：${HANYANG_PROLOGUE_DIALOGUE.merchant.join(" ")}`) };
-      if (next.hanyangPrologueStep === "journey-fund") next = claimHanyangJourneyFund(next, Math.floor(6000 * currentCity.priceFactor));
+      if (next.hanyangPrologueStep === "arrival" && npc.id === "kim-seongho") next = { ...next, hanyangPrologueStep: "outskirts", logs: addLog(next.logs, "村長：村外驛路就交給你了，先去處理狸貓。") };
+      if (next.hanyangPrologueStep === "journey-fund" && npc.id === "wang-deokchang") next = claimHanyangJourneyFund(next, Math.floor(6000 * currentCity.priceFactor));
       if (next.hanyangPrologueStep === "caravan-crisis") next = { ...next, hanyangPrologueStep: "bandit-trial" };
       if (next.hanyangPrologueStep === "return") next = completeHanyangPrologue(next);
       next = awardNpcAffinity(next, npc, option);
@@ -863,7 +867,7 @@ export default function GameV15() {
             rewardLog += pickup.error ? '背包已滿，白裝短劍暫無法收下。' : '獲得白裝「商路短劍」。';
           }
           next = { ...next, logs: addLog(next.logs, rewardLog) };
-          if (npc.quest?.id === FIRST_CARAVAN_QUEST_ID) next = { ...next, creditLevel: Math.max(2, next.creditLevel), onboardingStep: "mercenary-trial", logs: addLog(next.logs, "商團升至 Lv.2，普通傭兵雇傭資格已記入名冊。") };
+          if (npc.quest?.id === FIRST_CARAVAN_QUEST_ID) next = { ...next, creditLevel: Math.max(2, next.creditLevel), onboardingStep: "completed", hanyangPrologueStep: "first-sale", logs: addLog(next.logs, "商團升至 Lv.2，普通傭兵雇傭資格已記入名冊；接下來把狸貓戰利品帶去出售。") };
         }
       }
       return next;
@@ -932,7 +936,7 @@ export default function GameV15() {
   const treasureMedicineEntries = medicineCatalog.filter(medicine => !treasureTerm || medicine.name.includes(treasureTerm) || medicine.effect.includes(treasureTerm));
 
   return (
-    <main className="game-shell v15-shell classic-live-game" data-scene-mode={uiSettings.sceneMode} data-objective-collapsed={!objectiveExpanded} data-quicknav-collapsed={!quickNavExpanded} data-onboarding-locked={tutorialMapLocked ? "map" : tutorialBattleLocked || tutorialTrialLocked ? "battle" : tutorialCityLocked ? "city" : undefined}>
+    <main className="game-shell v15-shell classic-live-game" data-scene-mode={uiSettings.sceneMode} data-objective-collapsed={!objectiveExpanded} data-quicknav-collapsed={!quickNavExpanded} data-onboarding-locked={tutorialMapLocked ? "map" : tutorialBattleLocked || tutorialTrialLocked ? "battle" : tutorialCityLocked ? "city" : hanyangLockedTab}>
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
@@ -1040,7 +1044,7 @@ export default function GameV15() {
         </section>
       </footer>
 
-      <Tabs value={activeTab} onValueChange={(value) => { if (tutorialMapLocked && value !== "map") return; if ((tutorialBattleLocked || tutorialTrialLocked) && value !== "battle") return; if (tutorialCityLocked && value !== "city") return; setActiveTab(value); }} className="game-tabs">
+      <Tabs value={activeTab} onValueChange={(value) => { if (tutorialMapLocked && value !== "map") return; if ((tutorialBattleLocked || tutorialTrialLocked) && value !== "battle") return; if (tutorialCityLocked && value !== "city") return; if (hanyangLockedTab && value !== hanyangLockedTab) return; setActiveTab(value); }} className="game-tabs">
         <TabsList className="nav-list v15-nav">
           <TabsTrigger value="map"><Map />斜角城鎮</TabsTrigger>
           <TabsTrigger value="trade"><Ship />東海商路</TabsTrigger>
@@ -1052,7 +1056,9 @@ export default function GameV15() {
           <TabsTrigger value="archive"><BookOpen />裝備圖鑑</TabsTrigger>
         </TabsList>
 
-        {activeTab !== "map" && (tutorialTrialLocked || tutorialCityLocked) && <aside className="village-onboarding-buddy" aria-live="polite"><span className="village-onboarding-avatar" aria-hidden="true">🧭</span><div><strong>小嚮導・米米</strong><p>{tutorialTrialLocked ? "不好！黑巾山賊正在搶奪貨物，任務已自動接受，請立即迎戰！" : "一個人守不住商路，請立刻前往傭兵公會招募普通傭兵。"}</p><small>{tutorialTrialLocked ? "前往新手村郊外・黑巾山賊" : "傭兵公會已開放・招募第一名普通傭兵"}</small></div></aside>}
+        {activeTab !== "map" && game.hanyangPrologueStep === "completed" && (tutorialTrialLocked || tutorialCityLocked) && <aside className="village-onboarding-buddy" aria-live="polite"><span className="village-onboarding-avatar" aria-hidden="true">🧭</span><div><strong>小嚮導・米米</strong><p>{tutorialTrialLocked ? "不好！黑巾山賊正在搶奪貨物，任務已自動接受，請立即迎戰！" : "一個人守不住商路，請立刻前往傭兵公會招募普通傭兵。"}</p><small>{tutorialTrialLocked ? "前往新手村郊外・黑巾山賊" : "傭兵公會已開放・招募第一名普通傭兵"}</small></div></aside>}
+
+        {game.hanyangPrologueStep !== "completed" && <aside className="village-onboarding-buddy hanyang-prologue-buddy" aria-live="polite"><span className="village-onboarding-avatar" aria-hidden="true">🧭</span><div><strong>小嚮導・米米</strong><p>{game.hanyangPrologueStep === "arrival" ? "村長正在村口等你，先去聽聽他的緊急委託。" : game.hanyangPrologueStep === "outskirts" ? "先到新手村郊外擊敗狸貓，取得第一批可以出售的戰利品。" : game.hanyangPrologueStep === "first-sale" ? "狸貓戰利品帶回來了，打開背包把材料賣掉，換成真正能用的銀兩。" : game.hanyangPrologueStep === "journey-fund" ? "老商人準備了一筆啟程資金，回漢陽找他領取。" : game.hanyangPrologueStep === "guild" ? "一個人守不住商路，前往傭兵公會招募一名夥伴。" : game.hanyangPrologueStep === "formation" ? "傭兵已加入商團，打開隊伍介面確認他在出戰名單中。" : game.hanyangPrologueStep === "caravan-crisis" ? "北邊商路出事了，先找老商人了解貨物被搶的經過。" : game.hanyangPrologueStep === "bandit-trial" ? "黑巾山賊就在新手村郊外，和第一名夥伴一起把他們擊退。" : "商路已恢復，回到漢陽看看老商人怎麼說。"}</p><small>序章引導・{hanyangStep.title}</small></div></aside>}
 
         <TabsContent value="map" className="tab-panel isometric-map-tab">
           <IsometricWorldMap cityName={displayCityName} locationLabel={mapLocationLabel} heroImage={game.hero.image} objectiveExpanded={objectiveExpanded} npcLabelsVisible={npcLabelsVisible} onNpcLabelsVisibleChange={setNpcLabelsVisible} onNpcTalk={openNpcDialogue} tutorialLocked={tutorialMapLocked} onEnter={(destination) => {
@@ -1062,7 +1068,7 @@ export default function GameV15() {
             else if (destination === "battle") setActiveTab("battle");
             else setActiveTab("squad");
           }} />
-          {(tutorialMapLocked || tutorialTrialLocked || tutorialCityLocked) && <aside className="village-onboarding-buddy" aria-live="polite"><span className="village-onboarding-avatar" aria-hidden="true">🧭</span><div><strong>小嚮導・米米</strong><p>{game.onboardingStep === "return-village-chief" ? "驛路已清出來了，村長應該等急了，快回去向他報告！" : game.onboardingStep === "mercenary-trial" ? "不好！黑巾山賊正在搶奪貨物，這是村長強制交給你的緊急任務，請立即迎戰！" : game.onboardingStep === "hire-first-merc" ? "一個人守不住商路，請立刻前往傭兵公會招募普通傭兵。" : "村長似乎有急事找你，請先移動至村長處。"}</p><small>{game.onboardingStep === "return-village-chief" ? "點擊村長，交付第一份商隊委託" : game.onboardingStep === "mercenary-trial" ? "任務已自動接受・前往新手村郊外" : game.onboardingStep === "hire-first-merc" ? "傭兵公會已開放・招募第一名普通傭兵" : "目前只有村長可以互動"}</small></div></aside>}
+          {game.hanyangPrologueStep === "completed" && (tutorialMapLocked || tutorialTrialLocked || tutorialCityLocked) && <aside className="village-onboarding-buddy" aria-live="polite"><span className="village-onboarding-avatar" aria-hidden="true">🧭</span><div><strong>小嚮導・米米</strong><p>{game.onboardingStep === "return-village-chief" ? "驛路已清出來了，村長應該等急了，快回去向他報告！" : game.onboardingStep === "mercenary-trial" ? "不好！黑巾山賊正在搶奪貨物，這是村長強制交給你的緊急任務，請立即迎戰！" : game.onboardingStep === "hire-first-merc" ? "一個人守不住商路，請立刻前往傭兵公會招募普通傭兵。" : "村長似乎有急事找你，請先移動至村長處。"}</p><small>{game.onboardingStep === "return-village-chief" ? "點擊村長，交付第一份商隊委託" : game.onboardingStep === "mercenary-trial" ? "任務已自動接受・前往新手村郊外" : game.onboardingStep === "hire-first-merc" ? "傭兵公會已開放・招募第一名普通傭兵" : "目前只有村長可以互動"}</small></div></aside>}
           {activeNpcId && npcById(activeNpcId) && <NpcDialoguePanel npc={npcById(activeNpcId)!} game={game} initialLine={npcOpeningLine} onAction={handleNpcAction} onClose={() => setActiveNpcId(null)} />}
         </TabsContent>
 
