@@ -389,10 +389,10 @@ export default function GameV15() {
   const currentNation = nations.find((nation) => nation.id === currentCity.nation) || nations[0];
   const displayCityName = currentCity.id === "hanyang" ? STARTER_VILLAGE_NAME : currentCity.name;
   const mapLocationLabel = currentCity.id === "hanyang" ? "新村村郊" : displayCityName;
-  const tutorialMapLocked = game.onboardingStep === "welcome" || game.onboardingStep === "find-village-chief" || game.onboardingStep === "return-village-chief";
-  const tutorialBattleLocked = game.onboardingStep === "travel-to-outskirts" || game.onboardingStep === "first-battle";
-  const tutorialTrialLocked = game.onboardingStep === "mercenary-trial";
-  const tutorialCityLocked = game.onboardingStep === "hire-first-merc";
+  const tutorialMapLocked = game.hanyangPrologueStep === "arrival" || game.hanyangPrologueStep === "journey-fund" || game.hanyangPrologueStep === "caravan-crisis" || game.hanyangPrologueStep === "return";
+  const tutorialBattleLocked = game.hanyangPrologueStep === "outskirts";
+  const tutorialTrialLocked = false;
+  const tutorialCityLocked = game.hanyangPrologueStep === "guild";
   const hanyangStep = HANYANG_PROLOGUE_STEPS.find(({ step }) => step === game.hanyangPrologueStep) || HANYANG_PROLOGUE_STEPS[0];
   const hanyangLockedTab = game.hanyangPrologueStep === "arrival" || game.hanyangPrologueStep === "journey-fund" || game.hanyangPrologueStep === "caravan-crisis" || game.hanyangPrologueStep === "return" ? "map" : game.hanyangPrologueStep === "outskirts" || game.hanyangPrologueStep === "bandit-trial" ? "battle" : game.hanyangPrologueStep === "first-sale" || game.hanyangPrologueStep === "formation" ? "squad" : game.hanyangPrologueStep === "guild" ? "city" : undefined;
   const trackedNpcQuests = activeNpcQuests(game);
