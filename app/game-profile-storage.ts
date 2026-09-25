@@ -11,6 +11,7 @@ import { normalizeVitals, vitalStats } from "./vitals-engine";
 import { applyGersangVisuals, sanitizeEquip } from "./game-save-normalizers";
 import { freshGame, heroPortrait, isNationId, makeHero } from "./game-hero-factory";
 import { normalizeNpcProgress } from "./npc-dialogue";
+import { normalizeCityHallState } from "./city-hall-commissions";
 import { normalizeHanyangPrologueFlags, normalizeHanyangPrologueStep, type HanyangPrologueStep } from "./hanyang-prologue";
 import { worldCities } from "./v15-data";
 import { restoreTerritory } from "./guild-territory";
@@ -124,6 +125,7 @@ export function restoreGame(raw: unknown): GameState {
     hanyangPrologueFlags: normalizeHanyangPrologueFlags((parsed as Partial<GameState>).hanyangPrologueFlags),
     battleLogs: BattleLogManager.getLogs(Array.isArray(parsed.battleLogs) ? parsed.battleLogs : []),
     claimedContracts: Array.isArray(parsed.claimedContracts) ? parsed.claimedContracts : [],
+    cityHall: normalizeCityHallState((parsed as Partial<GameState>).cityHall),
     npcProgress: normalizeNpcProgress(parsed.npcProgress),
     lastSeen: Number(parsed.lastSeen) || Date.now(),
   });

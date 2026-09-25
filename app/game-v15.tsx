@@ -16,6 +16,7 @@ import { GeneralRecruitment } from './general-recruitment';
 import { cuteEquipmentArt, gersangBuildingArt, gersangItemArt } from './gersang-visuals';
 import {
   BedDouble,
+  Building2,
   BookOpen,
   Castle,
   ChevronDown,
@@ -58,6 +59,7 @@ const gameplayContracts = legacyContracts.filter(contract => !['tier1','tier2','
 import { TradePanel } from "./trade-panel";
 import { IsometricWorldMap } from "./isometric-world-map";
 import { NpcDialoguePanel } from "./npc-dialogue-panel";
+import { CityHall } from "./city-hall";
 import { activeNpcQuests, awardNpcAffinity, completeNpcQuest, npcById, npcGreeting, recordNpcLine, startNpcQuest, type NpcId, type NpcOption } from "./npc-dialogue";
 import { ThunderAltarRaid } from "./thunder-altar-raid";
 import { THUNDER_FORGE_ITEMS, mythicSetPieceCount, type MythicSet, type ThunderForgeId } from './mythic-forge';
@@ -89,6 +91,7 @@ import { BattleLogManager } from "./battle-log-manager";
 import { fusionItemKey, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
 import { getStarterWeaponObjective } from "./starter-equipment-objective";
 import { getFirstMercenaryObjective } from "./first-mercenary-objective";
+import { abandonCityHallCommission, acceptCityHallCommission as acceptCityHallCommissionAction, buyCityHallRefreshTicket, claimCityHallCommission as claimCityHallCommissionAction, CITY_HALL_REFRESH_TICKET_PRICE, refreshCityHallCommissions } from "./city-hall-commissions";
 import { HANYANG_PROLOGUE_DIALOGUE, HANYANG_PROLOGUE_STEPS, claimHanyangJourneyFund, completeHanyangPrologue, grantHanyangStarterSupplies, hanyangRecruitmentCost, markHanyangCaravanDelivered, markHanyangMysteryNpcSeen, markHanyangReturnReported, recommendedMercenaryIds } from "./hanyang-prologue";
 import { TIER_EQUIPMENT_DROP_REGIONS, tierEquipmentPrice, tierEquipmentShopCatalog, type TierEquipment } from "./tier-equipment";
 import { profileFromGame, readCharacterSave, restoreGame, saveCharacterProfile, writeCharacterSave, writeProfileIndex, writeSharedWarehouse } from "./game-profile-storage";
@@ -772,6 +775,48 @@ export default function GameV15() {
     setGame(previous => claimContractAction(previous, gameplayContracts, contractId, addLog, setNotice));
   }
 
+  function acceptCityHallCommission(commissionId: string) {
+    setGame(previous => {
+      const result = acceptCityHallCommissionAction(previous, commissionId);
+      if (result.error) { setNotice(result.error); return previous; }
+      return { ...result.state, logs: addLog(result.state.logs, "已接取市政廳委託，目標進度從現在開始計算。") };
+    });
+  }
+
+  function claimCityHallCommission(commissionId: string) {
+    setGame(previous => {
+      const result = claimCityHallCommissionAction(previous, commissionId);
+      if (result.error || !result.reward) { setNotice(result.error || "無法領取這份委託。"); return previous; }
+      const withCreditXp = grantCreditXp(result.state, result.reward.rewardCreditXp);
+      const materials = Object.entries(result.reward.rewardMaterials || {}).map(([name, amount]) => `${name} ×${amount}`).join("、");
+      return { ...withCreditXp, logs: addLog(withCreditXp.logs, `市政廳委託「${result.reward.name}」完成，獲得 ${format(result.reward.rewardGold)} 兩、信用經驗 ${result.reward.rewardCreditXp}${materials ? `、${materials}` : ""}。`) };
+    });
+  }
+
+  function refreshCityHall() {
+    setGame(previous => {
+      const result = refreshCityHallCommissions(previous);
+      if (result.error) { setNotice(result.error); return previous; }
+      return { ...result.state, logs: addLog(result.state.logs, "市政廳公告欄已使用刷新券，換上新的委託。") };
+    });
+  }
+
+  function abandonCityHall(commissionId: string) {
+    setGame(previous => {
+      const result = abandonCityHallCommission(previous, commissionId);
+      if (result.error) { setNotice(result.error); return previous; }
+      return { ...result.state, logs: addLog(result.state.logs, "已放棄市政廳委託，委託欄位已釋出。") };
+    });
+  }
+
+  function buyCityHallTicket() {
+    setGame(previous => {
+      const result = buyCityHallRefreshTicket(previous);
+      if (result.error) { setNotice(result.error); return previous; }
+      return { ...result.state, logs: addLog(result.state.logs, `購買委託刷新券 ×1，支付 ${format(CITY_HALL_REFRESH_TICKET_PRICE)} 兩。`) };
+    });
+  }
+
   if (!ready) return <div className="game-loading">正在整理四國角色欄位…</div>;
 
   if (!loginEntered) {
@@ -959,6 +1004,7 @@ export default function GameV15() {
         <button type="button" className={activeTab === "squad" ? "active" : ""} aria-current={activeTab === "squad" ? "page" : undefined} onClick={() => setActiveTab("squad")}><span className="quick-nav-icon"><Users aria-hidden="true" /></span><span className="quick-nav-label">主角與隊伍</span></button>
         <button type="button" className={activeTab === "archive" ? "active" : ""} aria-current={activeTab === "archive" ? "page" : undefined} onClick={() => setActiveTab("archive")}><span className="quick-nav-icon"><BookOpen aria-hidden="true" /></span><span className="quick-nav-label">裝備圖鑑</span></button>
         <button type="button" className={activeTab === "contracts" ? "active" : ""} aria-current={activeTab === "contracts" ? "page" : undefined} onClick={() => setActiveTab("contracts")}><span className="quick-nav-icon"><ScrollText aria-hidden="true" /></span><span className="quick-nav-label">冒險委託</span></button>
+        <button type="button" className={activeTab === "hall" ? "active" : ""} aria-current={activeTab === "hall" ? "page" : undefined} onClick={() => setActiveTab("hall")}><span className="quick-nav-icon"><Building2 aria-hidden="true" /></span><span className="quick-nav-label">市政廳</span></button>
         <button type="button" onClick={() => setQuickDialog("treasure")}><span className="quick-nav-icon"><Gem aria-hidden="true" /></span><span className="quick-nav-label">秘寶圖鑑</span></button>
         <button type="button" aria-pressed={quickDialog === "settings"} onClick={() => setQuickDialog("settings")}><span className="quick-nav-icon"><Settings aria-hidden="true" /></span><span className="quick-nav-label">設定</span></button>
       </nav>
@@ -1051,6 +1097,7 @@ export default function GameV15() {
           <TabsTrigger value="squad"><Users />主角與隊伍</TabsTrigger>
           <TabsTrigger value="city"><Castle />四國城市</TabsTrigger>
           <TabsTrigger value="contracts"><BookOpen />冒險委託</TabsTrigger>
+          <TabsTrigger value="hall"><Building2 />市政廳</TabsTrigger>
           <TabsTrigger value="archive"><BookOpen />裝備圖鑑</TabsTrigger>
         </TabsList>
 
@@ -1063,6 +1110,7 @@ export default function GameV15() {
             if (destination === "city") { setCityService("mercenary"); setActiveTab("city"); }
             else if (destination === "trade") setActiveTab("trade");
             else if (destination === "raid") setActiveTab("raid");
+            else if (destination === "hall") setActiveTab("hall");
             else if (destination === "battle") setActiveTab("battle");
             else setActiveTab("squad");
           }} />
@@ -1269,6 +1317,10 @@ export default function GameV15() {
               <article><Gem /><strong>匠人與寶石</strong><p>五種寶石可實際鑲嵌並提升角色能力。</p></article>
             </div>
           </section>
+        </TabsContent>
+
+        <TabsContent value="hall" className="tab-panel">
+          <CityHall game={game} onAccept={acceptCityHallCommission} onClaim={claimCityHallCommission} onAbandon={abandonCityHall} onRefresh={refreshCityHall} onBuyTicket={buyCityHallTicket} />
         </TabsContent>
 
         <TabsContent value="archive" className="tab-panel">

@@ -10,7 +10,7 @@ const TILE_W = 72;
 const TILE_H = 36;
 
 type Cell = { col: number; row: number };
-type Destination = "city" | "trade" | "battle" | "raid";
+type Destination = "city" | "trade" | "battle" | "raid" | "hall";
 
 const blocked = new Set([
   "1,1", "1,2", "2,1", "2,2",
@@ -25,6 +25,7 @@ const destinations: Record<Destination, Cell & { label: string }> = {
   trade: { col: 7, row: 3, label: "港口" },
   battle: { col: 7, row: 9, label: "城門" },
   raid: { col: 3, row: 7, label: "雷霆祭壇" },
+  hall: { col: 9, row: 4, label: "市政廳" },
 };
 
 const cellKey = (cell: Cell) => `${cell.col},${cell.row}`;
@@ -347,6 +348,7 @@ export function IsometricWorldMap({
         <button type="button" disabled={tutorialLocked} onClick={() => navigate("trade")}><b>港口</b><span>東海商路</span></button>
         <button type="button" disabled={tutorialLocked} onClick={() => navigate("battle")}><b>城門</b><span>野外與副本</span></button>
         <button type="button" disabled={tutorialLocked} onClick={() => navigate("raid")}><b>雷霆祭壇</b><span>神仙谷首領戰</span></button>
+        <button type="button" disabled={tutorialLocked} onClick={() => navigate("hall")}><b>市政廳</b><span>村莊委託公告欄</span></button>
       </nav>
       <output className="isometric-status" aria-live="polite">{status}</output>
     </section>

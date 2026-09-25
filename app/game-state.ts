@@ -10,6 +10,7 @@ import type { NpcProgress } from "./npc-dialogue";
 import type { AutoPotionSettings } from "./auto-potion-manager";
 import type { BattleLogEntry } from "./battle-log-manager";
 import type { HanyangPrologueFlags, HanyangPrologueStep } from "./hanyang-prologue";
+import type { CityHallState } from "./city-hall-commissions";
 
 /** Persistent save keys. These names are compatibility contracts with existing players. */
 export const PROFILE_INDEX = "bt52_v19_character_profiles";
@@ -161,6 +162,8 @@ export type GameState = {
   /** Persisted newest-first battle and reward history, capped by BattleLogManager. */
   battleLogs: BattleLogEntry[];
   claimedContracts: string[];
+  /** 村莊市政廳委託公告、進行中任務與刷新券。 */
+  cityHall: CityHallState;
   /** Village NPC dialogue, affinity, and quest state; persisted with the character. */
   npcProgress: NpcProgress;
   lastEncounter: string;
