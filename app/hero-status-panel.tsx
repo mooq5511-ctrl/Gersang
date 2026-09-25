@@ -10,10 +10,10 @@ import {LEVEL_CAP} from './level-progression';
 import {Tooltip,TooltipContent,TooltipProvider,TooltipTrigger} from '@/components/ui/tooltip';
 
 /** 無獨立計時器或第二份角色資料：所有操作交回遊戲主狀態，再即時重算畫面。 */
-export function HeroStatusPanel({busy=false,compact=false,hero,gold,credit,creditXp,creditLevel,weight,xpNeed,allocate,trade,train,select,unequip}:{
-  busy?:boolean;compact?:boolean;hero:CaravanMember;gold:number;credit:number;weight:number;xpNeed:(level:number)=>number;
+export function HeroStatusPanel({compact=false,hero,gold,credit,creditXp,creditLevel,weight,xpNeed,allocate,select,unequip}:{
+  compact?:boolean;hero:CaravanMember;gold:number;credit:number;weight:number;xpNeed:(level:number)=>number;
   creditXp:number;creditLevel:number;
-  allocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void;trade:()=>void;train:()=>void;select:()=>void;
+  allocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void;select:()=>void;
 
   unequip:(slot:EquipmentSlot)=>void;
 }) {
@@ -40,6 +40,5 @@ export function HeroStatusPanel({busy=false,compact=false,hero,gold,credit,credi
       <label className="hp-meter hp-exp">EXP<span>{hero.level>=LEVEL_CAP?'已達 Lv.300':`${hero.xp.toLocaleString()} / ${xpNeed(hero.level).toLocaleString()}`}</span>{hero.level<LEVEL_CAP&&<progress max={xpNeed(hero.level)} value={hero.xp}/>}</label>
       <label className="hp-meter hp-exp">信用 Lv. {creditLevel}<span>{creditLevel>=LEVEL_CAP?'已達 Lv.300':`${creditXp.toLocaleString()} / ${xpNeed(creditLevel).toLocaleString()}`}</span>{creditLevel<LEVEL_CAP&&<progress className="jade" max={xpNeed(creditLevel)} value={creditXp}/>}<small>與主角相同成長曲線・滿級累積 2,000,000,000 EXP</small></label>
     </section>}
-    <footer className="hp-actions"><button disabled={busy} onClick={trade} title="獲得 100 兩與 1 信用">模擬經商（賺錢／加信用）</button><button disabled={busy} onClick={train} title="主角獲得 10 經驗">模擬打怪（+10 經驗）</button><small>掛機每秒 +10 兩 · +5 信用（療傷期間暫停）</small></footer>
   </aside>;
 }

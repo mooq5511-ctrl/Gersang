@@ -646,13 +646,6 @@ export default function GameV15() {
   }
 
 
-  function simulateHeroLoot() {
-    if(dungeonBusy(game.dungeon)){setNotice('副本或療傷期間暫停此操作，請先完成療傷。');return;}
-    setGame(previous=>{
-      return {...previous,hero:grantTerritoryXp(previous, previous.hero, 10),logs:addLog(previous.logs,'模擬打怪：主角獲得 10 經驗（含領地加成）。')};
-    });
-  }
-
   function sellEveryInventoryEquipment(){
     setGame(previous => sellAllInventoryEquipmentAction(previous, addLog, format));
   }
@@ -1214,12 +1207,9 @@ export default function GameV15() {
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
             maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
             cyclePosition={cycleUnitPosition}
-            trade={()=>setGame(previous=>dungeonBusy(previous.dungeon)?previous:grantCreditXp({...previous,gold:previous.gold+100,credit:previous.credit+1,logs:addLog(previous.logs,'模擬經商：獲得 100 兩與 1 信用經驗。')},1))}
-            trainHero={simulateHeroLoot}
             promote={(uid,targetTier)=>setGame(previous=>promoteMercenary(previous,uid,targetTier))}
             promotionItems={{fusionCores:game.fusionCores,soulStones:game.soulStones,awakeningStones:game.awakeningStones}}
             hire={()=>{ const index=Math.floor(Math.random()*merchantMercenaries.length); recruitMerchant(merchantMercenaries[index],index); }}
-            train={()=>setGame(previous=>dungeonBusy(previous.dungeon)?previous:({...previous,hero:grantTerritoryXp(previous, previous.hero,100),mercs:previous.mercs.map(unit=>grantTerritoryXp(previous,unit,100)),logs:addLog(previous.logs,'模擬打怪：主角與所有已僱用傭兵各獲得 100 經驗（含領地加成）。')}))}
             allocate={addStat} />
         </TabsContent>
 

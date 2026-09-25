@@ -31,12 +31,12 @@ test('migration retains weapon, maps accessory and is idempotent',()=>{
   const next=migrateSevenSlotSave(old);assert.equal(next.hero.equip.weapon.uid,'w');assert.equal(next.hero.equip.amulet.uid,'a');
   assert.deepEqual(migrateSevenSlotSave(next),next);
 });
-test('integration keeps eleven mercenary roster seats and trains hired units',()=>{
+test('integration keeps eleven mercenary roster seats and leaves progression to real systems',()=>{
   const game=readFileSync(new URL('../app/game-v15.tsx',import.meta.url),'utf8');
   const squad=readFileSync(new URL('../app/game-squad-actions.ts',import.meta.url),'utf8');
   const progression=readFileSync(new URL('../app/game-progression.ts',import.meta.url),'utf8');
   const loop=readFileSync(new URL('../app/game-loop.ts',import.meta.url),'utf8');
   assert.match(squad,/state\.mercs\.length >= ACTIVE_MERCENARY_LIMIT/);assert.match(progression,/unit\.uid === "hero" \? 5 : 3/);
-  assert.match(game,/mercs:previous\.mercs\.map\(unit=>grantTerritoryXp\(previous,unit,100\)\)/);
+  assert.doesNotMatch(game,/模擬經商|模擬打怪|trainHero/);
   assert.match(loop,/settleCaravanIdle\(previous\.idleStamp, now/);
 });
