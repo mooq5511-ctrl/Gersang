@@ -8,6 +8,8 @@ import {
   cityHallActiveLimit,
   cityHallCommission,
   cityHallCommissionProgress,
+  cityHallEffectiveReward,
+  cityHallRewardMultiplier,
   freshCityHallState,
   normalizeCityHallState,
   refreshCityHallCommissions,
@@ -82,6 +84,23 @@ test('purple and gold commissions guarantee their matching equipment quality', (
   assert.equal(gold.error, undefined);
   assert.equal(gold.equipment.rarity, '金色');
   assert.equal(gold.state.inventory.length, 1);
+});
+
+test('purple and gold commissions apply their reward multipliers to all ordinary rewards', () => {
+  assert.equal(cityHallRewardMultiplier('紫色'), 15);
+  assert.equal(cityHallRewardMultiplier('金色'), 50);
+  assert.equal(cityHallRewardMultiplier('藍色'), 1);
+
+  const purple = cityHallEffectiveReward(cityHallCommission('hall-drive-bandits'));
+  assert.equal(purple.rewardGold, 22_500);
+  assert.equal(purple.rewardCreditXp, 1_500);
+  assert.equal(purple.rewardMaterials['下級精髓'], 15);
+
+  const gold = cityHallEffectiveReward(cityHallCommission('hall-prepare-supplies'));
+  assert.equal(gold.rewardGold, 120_000);
+  assert.equal(gold.rewardCreditXp, 8_500);
+  assert.equal(gold.rewardMaterials['肉類'], 200);
+  assert.equal(gold.rewardMaterials['下級精髓'], 50);
 });
 
 test('refresh uses a ticket and preserves active commissions', () => {

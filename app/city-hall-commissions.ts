@@ -40,6 +40,12 @@ export type CityHallCommission = {
 export const CITY_HALL_REFRESH_TICKET_PRICE = 2_000;
 export const CITY_HALL_BOARD_SIZE = 5;
 
+export function cityHallRewardMultiplier(quality: CityHallCommissionQuality) {
+  if (quality === "金色") return 50;
+  if (quality === "紫色") return 15;
+  return 1;
+}
+
 export const CITY_HALL_COMMISSIONS: readonly CityHallCommission[] = [
   { id: "hall-clear-raccoon", category: "戰鬥", term: "short", quality: "白色", name: "清剿村外狸貓", description: "協助守衛清理村外驛路的狸貓。", metric: "kills", target: 5, objectiveLabel: "完成戰鬥", locationLabel: "新手村郊外", actionHint: "前往世界地圖的戰鬥區域，完成 5 場戰鬥。", rewardGold: 900, rewardCreditXp: 70, rewardMaterials: { "肉類": 2 } },
   { id: "hall-drive-bandits", category: "戰鬥", term: "long", quality: "紫色", name: "驅離山賊斥候", description: "長期清剿商路上的山賊勢力，讓巡商能安全通行。", metric: "kills", target: 10_000, objectiveLabel: "累計擊敗怪物", locationLabel: "北方商路", actionHint: "持續進行戰鬥，累計擊敗 10,000 隻怪物。", rewardGold: 1_500, rewardCreditXp: 100, rewardMaterials: { "下級精髓": 1 }, rewardEquipmentRarity: "傳說" },
@@ -53,6 +59,15 @@ export const CITY_HALL_COMMISSIONS: readonly CityHallCommission[] = [
 
 const commissionById = (id: string) => CITY_HALL_COMMISSIONS.find((commission) => commission.id === id);
 const commissionIds = () => CITY_HALL_COMMISSIONS.map((commission) => commission.id);
+
+export function cityHallEffectiveReward(commission: CityHallCommission): CityHallCommission {
+  const multiplier = cityHallRewardMultiplier(commission.quality);
+  if (multiplier === 1) return commission;
+  const rewardMaterials = commission.rewardMaterials
+    ? Object.fromEntries(Object.entries(commission.rewardMaterials).map(([name, amount]) => [name, amount * multiplier]))
+    : undefined;
+  return { ...commission, rewardGold: commission.rewardGold * multiplier, rewardCreditXp: commission.rewardCreditXp * multiplier, rewardMaterials };
+}
 
 export function cityHallActiveLimit(creditLevel: number) {
   if (creditLevel >= 8) return 6;
@@ -163,12 +178,13 @@ export function claimCityHallCommission(state: GameState, commissionId: string):
   const commission = commissionById(commissionId);
   if (!active || !commission) return { state, error: "找不到這份進行中的市政廳委託。" };
   if (cityHallCommissionProgress(state, active) < commission.target) return { state, error: "委託條件尚未完成。" };
+  const reward = cityHallEffectiveReward(commission);
   const nextHall = fillBoard({ ...hall, active: hall.active.filter((entry) => entry.id !== commissionId), completedIds: [...hall.completedIds, commissionId], refreshCount: hall.refreshCount + 1 }, hall.refreshCount + 1);
   const materials = { ...state.materials };
-  for (const [name, amount] of Object.entries(commission.rewardMaterials || {})) materials[name] = (materials[name] || 0) + amount;
+  for (const [name, amount] of Object.entries(reward.rewardMaterials || {})) materials[name] = (materials[name] || 0) + amount;
   const equipment = commission.rewardEquipmentRarity ? makeCityHallEquipmentReward(state, commission.rewardEquipmentRarity) : undefined;
   const inventory = equipment ? addInventoryItem(state.inventory, equipment).inventory : state.inventory;
-  return { state: { ...state, gold: state.gold + commission.rewardGold, materials, inventory, cityHall: nextHall }, reward: commission, equipment };
+  return { state: { ...state, gold: state.gold + reward.rewardGold, materials, inventory, cityHall: nextHall }, reward, equipment };
 }
 
 export function abandonCityHallCommission(state: GameState, commissionId: string): { state: GameState; error?: string } {
