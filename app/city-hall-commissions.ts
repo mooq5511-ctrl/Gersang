@@ -17,6 +17,9 @@ export type CityHallCommission = {
   description: string;
   metric: CityHallCommissionMetric;
   target: number;
+  objectiveLabel: string;
+  locationLabel: string;
+  actionHint: string;
   rewardGold: number;
   rewardCreditXp: number;
   rewardMaterials?: Record<string, number>;
@@ -26,14 +29,14 @@ export const CITY_HALL_REFRESH_TICKET_PRICE = 2_000;
 export const CITY_HALL_BOARD_SIZE = 5;
 
 export const CITY_HALL_COMMISSIONS: readonly CityHallCommission[] = [
-  { id: "hall-clear-raccoon", category: "戰鬥", name: "清剿村外狸貓", description: "協助守衛清理村外驛路的狸貓。", metric: "kills", target: 5, rewardGold: 900, rewardCreditXp: 70, rewardMaterials: { "肉類": 2 } },
-  { id: "hall-drive-bandits", category: "戰鬥", name: "驅離山賊斥候", description: "擊退在商路附近窺伺的山賊。", metric: "kills", target: 3, rewardGold: 1_500, rewardCreditXp: 100, rewardMaterials: { "下級精髓": 1 } },
-  { id: "hall-gather-herbs", category: "採集", name: "補充村莊藥材", description: "替藥師收集怪物掉落的材料。", metric: "materials", target: 8, rewardGold: 1_100, rewardCreditXp: 80, rewardMaterials: { "甘草": 2 } },
-  { id: "hall-gather-cooking", category: "採集", name: "準備餐廳食材", description: "收集足夠材料，讓村莊餐廳備妥今日食材。", metric: "materials", target: 12, rewardGold: 1_600, rewardCreditXp: 110, rewardMaterials: { "肉類": 3 } },
-  { id: "hall-scout-route", category: "探索", name: "探查外圍商路", description: "推進世界地圖進度，確認商路是否安全。", metric: "stage", target: 2, rewardGold: 1_800, rewardCreditXp: 130 },
-  { id: "hall-recruit-helper", category: "招募", name: "招募商路幫手", description: "招募一名傭兵，擴充村莊商隊的人手。", metric: "mercs", target: 1, rewardGold: 2_000, rewardCreditXp: 150 },
-  { id: "hall-equip-caravan", category: "裝備", name: "整備商隊裝備", description: "持有足夠裝備，準備下一趟遠行。", metric: "equipment", target: 2, rewardGold: 1_300, rewardCreditXp: 90 },
-  { id: "hall-prepare-supplies", category: "採集", name: "準備出發補給", description: "收集材料，交給市政廳統一分配給巡商。", metric: "materials", target: 20, rewardGold: 2_400, rewardCreditXp: 170, rewardMaterials: { "肉類": 4, "下級精髓": 1 } },
+  { id: "hall-clear-raccoon", category: "戰鬥", name: "清剿村外狸貓", description: "協助守衛清理村外驛路的狸貓。", metric: "kills", target: 5, objectiveLabel: "完成戰鬥", locationLabel: "新手村郊外", actionHint: "前往世界地圖的戰鬥區域，完成 5 場戰鬥。", rewardGold: 900, rewardCreditXp: 70, rewardMaterials: { "肉類": 2 } },
+  { id: "hall-drive-bandits", category: "戰鬥", name: "驅離山賊斥候", description: "擊退在商路附近窺伺的山賊。", metric: "kills", target: 3, objectiveLabel: "完成戰鬥", locationLabel: "北方商路", actionHint: "前往戰鬥區域，完成 3 場戰鬥即可回報。", rewardGold: 1_500, rewardCreditXp: 100, rewardMaterials: { "下級精髓": 1 } },
+  { id: "hall-gather-herbs", category: "採集", name: "補充村莊藥材", description: "替藥師收集怪物掉落的材料。", metric: "materials", target: 8, objectiveLabel: "取得材料", locationLabel: "野外戰鬥區", actionHint: "擊敗怪物取得材料，累積 8 件後回到市政廳。", rewardGold: 1_100, rewardCreditXp: 80, rewardMaterials: { "甘草": 2 } },
+  { id: "hall-gather-cooking", category: "採集", name: "準備餐廳食材", description: "收集足夠材料，讓村莊餐廳備妥今日食材。", metric: "materials", target: 12, objectiveLabel: "取得材料", locationLabel: "野外戰鬥區", actionHint: "擊敗怪物取得材料，累積 12 件後交給市政廳。", rewardGold: 1_600, rewardCreditXp: 110, rewardMaterials: { "肉類": 3 } },
+  { id: "hall-scout-route", category: "探索", name: "探查外圍商路", description: "推進世界地圖進度，確認商路是否安全。", metric: "stage", target: 2, objectiveLabel: "推進地圖進度", locationLabel: "世界地圖", actionHint: "前往世界地圖並完成探索，直到進度達到第 2 區。", rewardGold: 1_800, rewardCreditXp: 130 },
+  { id: "hall-recruit-helper", category: "招募", name: "招募商路幫手", description: "招募一名傭兵，擴充村莊商隊的人手。", metric: "mercs", target: 1, objectiveLabel: "招募傭兵", locationLabel: "傭兵公會", actionHint: "前往城市的傭兵公會，招募 1 名傭兵。", rewardGold: 2_000, rewardCreditXp: 150 },
+  { id: "hall-equip-caravan", category: "裝備", name: "整備商隊裝備", description: "持有足夠裝備，準備下一趟遠行。", metric: "equipment", target: 2, objectiveLabel: "取得裝備", locationLabel: "背包／裝備欄", actionHint: "取得或保留 2 件裝備，接著回到市政廳領取報酬。", rewardGold: 1_300, rewardCreditXp: 90 },
+  { id: "hall-prepare-supplies", category: "採集", name: "準備出發補給", description: "收集材料，交給市政廳統一分配給巡商。", metric: "materials", target: 20, objectiveLabel: "取得材料", locationLabel: "野外戰鬥區", actionHint: "擊敗怪物取得材料，累積 20 件後回報。", rewardGold: 2_400, rewardCreditXp: 170, rewardMaterials: { "肉類": 4, "下級精髓": 1 } },
 ];
 
 const commissionById = (id: string) => CITY_HALL_COMMISSIONS.find((commission) => commission.id === id);

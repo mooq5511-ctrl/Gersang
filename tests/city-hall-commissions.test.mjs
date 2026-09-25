@@ -6,6 +6,7 @@ import {
   buyCityHallRefreshTicket,
   claimCityHallCommission,
   cityHallActiveLimit,
+  cityHallCommission,
   freshCityHallState,
   normalizeCityHallState,
   refreshCityHallCommissions,
@@ -30,6 +31,13 @@ test('city hall active commission limit follows guild level', () => {
   assert.equal(cityHallActiveLimit(3), 4);
   assert.equal(cityHallActiveLimit(5), 5);
   assert.equal(cityHallActiveLimit(8), 6);
+});
+
+test('commission cards expose a clear objective, location and action hint', () => {
+  const commission = cityHallCommission('hall-clear-raccoon');
+  assert.equal(commission.objectiveLabel, '完成戰鬥');
+  assert.equal(commission.locationLabel, '新手村郊外');
+  assert.match(commission.actionHint, /前往世界地圖/);
 });
 
 test('accepted commission leaves the board and starts progress from acceptance', () => {
