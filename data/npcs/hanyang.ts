@@ -1,10 +1,10 @@
 import type { NpcId, VillageNpc } from "../../app/npc-dialogue";
 
-/** Content-only definitions for the ten interactable NPCs in Hanyang village. */
+/** Content-only definitions for the Hanyang village NPCs. */
 export const HANYANG_NPC_PORTRAIT_SHEET = "/assets/npc/hanyang-village-portraits-v1.png";
 export const HANYANG_NPC_PORTRAIT_POSITIONS: Record<NpcId, string> = {
   "kim-seongho": "0% 0%", "choi-daesan": "25% 0%", "han-sowol": "50% 0%", "heo-muncheol": "75% 0%", "hong-museong": "100% 0%",
-  "wang-deokchang": "0% 100%", "lee-taesan": "25% 100%", "baegun-elder": "50% 100%", "jang-miryung": "75% 100%", "jo-manbok": "100% 100%",
+  "wang-deokchang": "0% 100%", "lee-taesan": "25% 100%", "baegun-elder": "50% 100%", "jang-miryung": "75% 100%", "jo-manbok": "100% 100%", "mysterious-traveler": "100% 100%",
 };
 
 export const HANYANG_NPCS: VillageNpc[] = [
@@ -19,3 +19,5 @@ export const HANYANG_NPCS: VillageNpc[] = [
   { id: "jang-miryung", name: "張美玲", role: "客棧掌櫃", portrait: "/game-assets/merchant-3.png", map: { x: 54, y: 43 }, first: "張美玲的客棧，熱湯、好床，還有不外傳的消息。", beforeQuest: "旅人總要有一身像樣行頭。添幾件裝備再回來聊。", inProgress: "客棧的火還熱著，等你帶回好消息。", afterQuest: "看來你的商隊已經整裝待發。今晚這桌酒我請。", quest: { id: "npc-inn-gear", name: "整裝出發", metric: "equipment", target: 3, reward: { gold: 3000, affinity: 5 } }, options: [{ label: "接受整裝建議", reply: "持有 3 件裝備後回來。", quest: "start" }, { label: "入住客棧", reply: "客棧已備好房間。", service: "inn" }, { label: "打聽消息", reply: "商隊剛從港口回來，說東海的風向變了。", affinity: 1 }] },
   { id: "jo-manbok", name: "趙萬福", role: "流浪商人", portrait: "/game-assets/merchant-0.png", map: { x: 69, y: 68 }, first: "趙萬福，四海為家。有些貨，只在剛好遇見時才買得到。", beforeQuest: "走得更遠，我才拿得出更稀罕的貨。", inProgress: "路還沒走夠呢，朋友。", afterQuest: "我就知道你辦得到。這份貨單，只給肯走遠路的人。", quest: { id: "npc-wanderer-route", name: "遠行商路", metric: "stage", target: 5, reward: { gold: 5200, affinity: 7 } }, hidden: { requirement: state => (state.npcProgress.affinity["jo-manbok"] || 0) >= 3, label: "查看隱藏貨單", reply: "流浪商人的貨單永遠不會寫在招牌上。" }, options: [{ label: "接受遠行考驗", reply: "推進至第 5 關後再來。", quest: "start" }, { label: "前往材料交易所", reply: "我在那裡留了一份可公開交易的貨單。", service: "exchange" }, { label: "交換旅行故事", reply: "最好的貨，往往是路上聽來的一句真話。", affinity: 1 }] },
 ];
+
+export const HANYANG_MYSTERY_NPC: VillageNpc = { id: "mysterious-traveler", name: "無名旅人", role: "神秘 NPC", portrait: "/game-assets/merchant-0.png", portraitPosition: "100% 100%", map: { x: 58, y: 22 }, first: "……終於來了。比預想的，還要早一些。", beforeQuest: "他沒有再說話，只是望向你即將離開的城門。", inProgress: "他的目光越過城牆，像是在等待另一支商隊。", afterQuest: "那名旅人已經消失，只留下地上的一枚陌生商印。", options: [{ label: "聽他說下去", reply: "別急著問我的名字。等你走得夠遠，自然會知道誰在看著這條路。" }] };

@@ -31,7 +31,15 @@ export function NpcDialoguePanel({
   const progress = quest ? npcQuestProgress(game, quest) : 0;
   const history = useMemo(() => game.npcProgress.history.filter(entry => entry.npcId === npc.id), [game.npcProgress.history, npc.id]);
   const portraitSprite = npcPortraitSprite(npc);
-  const visibleOptions = npc.options.filter(option => {
+  const prologueOptions: NpcOption[] = npc.id === "wang-deokchang" && game.hanyangPrologueStep === "caravan-delivery"
+    ? [{ label: "交付找回的商隊貨物", reply: "這箱貨居然還完整……先把貨交給我。至於它真正值多少，我勸你記住接下來的話。", pages: ["在漢陽，這批貨頂多值幾百文。", "但送到北方城鎮，需求一上來，價格至少能翻上幾倍。", "看懂地域差價，你才算真正踏上商路。"], prologueStep: "caravan-delivery" }]
+    : npc.id === "kim-seongho" && game.hanyangPrologueStep === "return"
+      ? [{ label: "回報商路平安", reply: "貨物已經找回並交給王德昌，北邊商路暫時安全了。", prologueStep: "return" }]
+      : npc.id === "kim-seongho" && game.hanyangPrologueStep === "departure"
+        ? [{ label: "確認離開漢陽", reply: "去吧。別忘了，真正的商路才剛在城門外等著你。", prologueStep: "departure" }]
+        : [];
+  const visibleOptions = [...npc.options, ...prologueOptions].filter(option => {
+    if (option.prologueStep && option.prologueStep !== game.hanyangPrologueStep) return false;
     if (option.quest === "start") return phase === "before";
     if (option.quest === "complete") return phase === "active" && !!quest && progress >= quest.target;
     return true;

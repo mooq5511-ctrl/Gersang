@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { claimHanyangJourneyFund, freshHanyangPrologueFlags, hanyangJourneyFund, markHanyangLootSold, normalizeHanyangPrologueFlags, syncHanyangPrologue } from '../app/hanyang-prologue.ts';
+import { claimHanyangJourneyFund, completeHanyangPrologue, freshHanyangPrologueFlags, hanyangJourneyFund, markHanyangCaravanDelivered, markHanyangLootSold, markHanyangMysteryNpcSeen, markHanyangReturnReported, normalizeHanyangPrologueFlags, syncHanyangPrologue } from '../app/hanyang-prologue.ts';
 import { isBossMonster } from '../app/dungeon-engine.ts';
 import { sourceEnemies } from '../app/v17-content.ts';
 
@@ -17,7 +17,7 @@ test('journey fund targets 125% of the current guild price and never grants twic
 test('selling the wrong item or reloading cannot fabricate the flag', () => {
   const original = state({ hanyangPrologueStep: 'guild' });
   assert.strictEqual(markHanyangLootSold(original), original);
-  assert.deepEqual(normalizeHanyangPrologueFlags({ journeyFundClaimed: true, lootSold: 'yes' }), { starterSupplyGranted: false, equipmentEquipped: false, medicinePurchased: false, lootSold: false, journeyFundClaimed: true, firstMercenaryContract: false, firstMercenaryDeployed: false, caravanRestored: false, completionRewardClaimed: false });
+  assert.deepEqual(normalizeHanyangPrologueFlags({ journeyFundClaimed: true, lootSold: 'yes' }), { starterSupplyGranted: false, equipmentEquipped: false, medicinePurchased: false, lootSold: false, journeyFundClaimed: true, firstMercenaryContract: false, firstMercenaryDeployed: false, caravanRestored: false, caravanCargoDelivered: false, merchantPriceRevealed: false, mysteryNpcSeen: false, worldMapUnlocked: false, completionRewardClaimed: false });
 });
 
 test('recruitment keeps the formation teaching step for one explicit confirmation', () => {
@@ -38,4 +38,18 @@ test('black bandit is an elite encounter, while pirate king remains the Hanyang 
   assert.equal(isBossMonster('黑巾山賊'), false);
   assert.equal(pirateKing?.boss, true);
   assert.equal(isBossMonster('海賊王'), true);
+});
+
+test('caravan delivery, departure and mystery encounter advance once and persist their flags', () => {
+  const base = state({ hanyangPrologueStep: 'caravan-delivery', hanyangPrologueFlags: freshHanyangPrologueFlags(), gold: 100 });
+  const delivered = markHanyangCaravanDelivered(base);
+  assert.equal(delivered.hanyangPrologueStep, 'return');
+  assert.equal(delivered.hanyangPrologueFlags.caravanCargoDelivered, true);
+  assert.equal(delivered.hanyangPrologueFlags.merchantPriceRevealed, true);
+  const departure = markHanyangReturnReported(delivered);
+  assert.equal(departure.hanyangPrologueStep, 'departure');
+  const complete = completeHanyangPrologue({ ...departure, medicines: {}, hanyangPrologueFlags: { ...departure.hanyangPrologueFlags } });
+  assert.equal(complete.hanyangPrologueStep, 'completed');
+  assert.equal(complete.hanyangPrologueFlags.worldMapUnlocked, true);
+  assert.equal(markHanyangMysteryNpcSeen(complete).hanyangPrologueFlags.mysteryNpcSeen, true);
 });

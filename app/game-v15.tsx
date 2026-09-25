@@ -89,7 +89,7 @@ import { BattleLogManager } from "./battle-log-manager";
 import { fusionItemKey, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
 import { getStarterWeaponObjective } from "./starter-equipment-objective";
 import { getFirstMercenaryObjective } from "./first-mercenary-objective";
-import { HANYANG_PROLOGUE_DIALOGUE, HANYANG_PROLOGUE_STEPS, claimHanyangJourneyFund, completeHanyangPrologue, grantHanyangStarterSupplies, hanyangRecruitmentCost, recommendedMercenaryIds } from "./hanyang-prologue";
+import { HANYANG_PROLOGUE_DIALOGUE, HANYANG_PROLOGUE_STEPS, claimHanyangJourneyFund, completeHanyangPrologue, grantHanyangStarterSupplies, hanyangRecruitmentCost, markHanyangCaravanDelivered, markHanyangMysteryNpcSeen, markHanyangReturnReported, recommendedMercenaryIds } from "./hanyang-prologue";
 import { TIER_EQUIPMENT_DROP_REGIONS, tierEquipmentPrice, tierEquipmentShopCatalog, type TierEquipment } from "./tier-equipment";
 import { profileFromGame, readCharacterSave, restoreGame, saveCharacterProfile, writeCharacterSave, writeProfileIndex, writeSharedWarehouse } from "./game-profile-storage";
 import {
@@ -244,8 +244,13 @@ export default function GameV15() {
     if (game.hanyangPrologueStep !== "bandit-trial" || game.dungeon?.status === "fighting") return;
     const banditVictoryLogged = game.dungeon?.logs.some((entry) => entry.includes("成功擊敗") && entry.includes("黑巾山賊"));
     if (!banditVictoryLogged) return;
-    setGame((previous) => ({ ...previous, hanyangPrologueStep: "return", hanyangPrologueFlags: { ...previous.hanyangPrologueFlags, caravanRestored: true }, dungeon: previous.dungeon ? { ...previous.dungeon, status: "idle", autoHunt: false } : previous.dungeon }));
+    setGame((previous) => ({ ...previous, hanyangPrologueStep: "caravan-delivery", hanyangPrologueFlags: { ...previous.hanyangPrologueFlags, caravanRestored: true }, dungeon: previous.dungeon ? { ...previous.dungeon, status: "idle", autoHunt: false } : previous.dungeon }));
   }, [game.dungeon, game.hanyangPrologueStep]);
+
+  useEffect(() => {
+    if (game.hanyangPrologueStep !== "return" || game.hanyangPrologueFlags.caravanCargoDelivered) return;
+    setGame(previous => ({ ...previous, hanyangPrologueStep: "caravan-delivery" }));
+  }, [game.hanyangPrologueStep, game.hanyangPrologueFlags.caravanCargoDelivered]);
 
   useEffect(() => {
     if (loaded.current) return;
@@ -389,12 +394,14 @@ export default function GameV15() {
   const currentNation = nations.find((nation) => nation.id === currentCity.nation) || nations[0];
   const displayCityName = currentCity.id === "hanyang" ? STARTER_VILLAGE_NAME : currentCity.name;
   const mapLocationLabel = currentCity.id === "hanyang" ? "新村村郊" : displayCityName;
-  const tutorialMapLocked = game.hanyangPrologueStep === "arrival" || game.hanyangPrologueStep === "journey-fund" || game.hanyangPrologueStep === "caravan-crisis" || game.hanyangPrologueStep === "return";
+  const tutorialMapLocked = game.hanyangPrologueStep === "arrival" || game.hanyangPrologueStep === "journey-fund" || game.hanyangPrologueStep === "caravan-crisis" || game.hanyangPrologueStep === "caravan-delivery" || game.hanyangPrologueStep === "return" || game.hanyangPrologueStep === "departure";
   const tutorialBattleLocked = game.hanyangPrologueStep === "outskirts";
   const tutorialTrialLocked = false;
   const tutorialCityLocked = game.hanyangPrologueStep === "guild";
+  const tutorialNpcIds = game.hanyangPrologueStep === "caravan-delivery" ? ["wang-deokchang" as NpcId] : ["kim-seongho" as NpcId];
+  const mysteryNpcVisible = game.hanyangPrologueStep === "completed" && !game.hanyangPrologueFlags.mysteryNpcSeen;
   const hanyangStep = HANYANG_PROLOGUE_STEPS.find(({ step }) => step === game.hanyangPrologueStep) || HANYANG_PROLOGUE_STEPS[0];
-  const hanyangLockedTab = game.hanyangPrologueStep === "arrival" || game.hanyangPrologueStep === "journey-fund" || game.hanyangPrologueStep === "caravan-crisis" || game.hanyangPrologueStep === "return" ? "map" : game.hanyangPrologueStep === "outskirts" || game.hanyangPrologueStep === "bandit-trial" ? "battle" : game.hanyangPrologueStep === "first-sale" || game.hanyangPrologueStep === "formation" ? "squad" : game.hanyangPrologueStep === "guild" || game.hanyangPrologueStep === "medicine" ? "city" : undefined;
+  const hanyangLockedTab = game.hanyangPrologueStep === "arrival" || game.hanyangPrologueStep === "journey-fund" || game.hanyangPrologueStep === "caravan-crisis" || game.hanyangPrologueStep === "caravan-delivery" || game.hanyangPrologueStep === "return" || game.hanyangPrologueStep === "departure" ? "map" : game.hanyangPrologueStep === "outskirts" || game.hanyangPrologueStep === "bandit-trial" ? "battle" : game.hanyangPrologueStep === "first-sale" || game.hanyangPrologueStep === "formation" ? "squad" : game.hanyangPrologueStep === "guild" || game.hanyangPrologueStep === "medicine" ? "city" : undefined;
   const trackedNpcQuests = activeNpcQuests(game);
   const firstCaravanBossReady = game.npcProgress.completedQuests.includes(FIRST_CARAVAN_QUEST_ID) && game.hero.level >= 20 && game.territory.buildings.waystation >= 1 && (game.firstGreenEquipped || [game.hero, ...game.mercs, ...game.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== '普通')));
   const cityArmors = officialEquipment.filter((item) => item.kind === "armor").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
@@ -423,8 +430,10 @@ export default function GameV15() {
       if (game.hanyangPrologueStep === "guild") return { title: hanyangStep.title, detail: HANYANG_PROLOGUE_DIALOGUE.guild.join(" "), tab: "city" as const, service: "mercenary" as const };
       if (game.hanyangPrologueStep === "formation") return { title: hanyangStep.title, detail: "打開隊伍介面，確認第一名傭兵已處於出戰狀態。", tab: "squad" as const };
       if (game.hanyangPrologueStep === "caravan-crisis") return { title: hanyangStep.title, detail: "北邊商路出事了；先向老商人了解發生什麼事。", tab: "map" as const };
+      if (game.hanyangPrologueStep === "caravan-delivery") return { title: hanyangStep.title, detail: "前往老商人王德昌處，親手交付找回的商隊貨物。", tab: "map" as const, npcId: "wang-deokchang" as NpcId };
       if (game.hanyangPrologueStep === "bandit-trial") return { title: hanyangStep.title, detail: hanyangStep.detail, tab: "battle" as const, mapId: "starter-outskirts", monsterName: "黑巾山賊" };
-      return { title: hanyangStep.title, detail: "黑巾山賊已退去，返回漢陽看看商路的變化。", tab: "map" as const };
+      if (game.hanyangPrologueStep === "return") return { title: hanyangStep.title, detail: "商隊貨物已交回；回到村長金成浩處，報告北邊商路的結果。", tab: "map" as const, npcId: "kim-seongho" as NpcId };
+      return { title: hanyangStep.title, detail: "村長已聽完回報；向他確認離開漢陽，正式踏上世界地圖。", tab: "map" as const, npcId: "kim-seongho" as NpcId };
     }
     if (game.hero.status === '客棧中') return { title: '恢復商隊戰力', detail: `生命 ${heroVital.hp} / ${heroVital.maxHp}，療傷完成後可再度出發。`, tab: 'city' };
     const firstDeliveryCompleted = game.npcProgress.completedQuests.includes(FIRST_CARAVAN_QUEST_ID);
@@ -470,18 +479,13 @@ export default function GameV15() {
       return;
     }
     if (game.hanyangPrologueStep === "bandit-trial" && game.dungeon?.status === "respawning") {
-      setGame(previous => ({ ...previous, hanyangPrologueStep: "return", hanyangPrologueFlags: { ...previous.hanyangPrologueFlags, caravanRestored: true }, dungeon: previous.dungeon ? { ...previous.dungeon, status: "idle", autoHunt: false } : previous.dungeon }));
+      setGame(previous => ({ ...previous, hanyangPrologueStep: "caravan-delivery", hanyangPrologueFlags: { ...previous.hanyangPrologueFlags, caravanRestored: true }, dungeon: previous.dungeon ? { ...previous.dungeon, status: "idle", autoHunt: false } : previous.dungeon }));
       setActiveTab("map");
       return;
     }
     if (game.hanyangPrologueStep === "caravan-crisis") {
       setGame(previous => ({ ...previous, hanyangPrologueStep: "bandit-trial", logs: addLog(previous.logs, "商隊夥計：不好了！北邊商路又出事了，黑巾山賊把路堵住了。") }));
       setActiveTab("battle");
-      return;
-    }
-    if (game.hanyangPrologueStep === "return") {
-      setGame(previous => completeHanyangPrologue(previous));
-      setActiveTab("map");
       return;
     }
     if ('npcId' in mainObjective && mainObjective.npcId) {
@@ -826,7 +830,10 @@ export default function GameV15() {
       if (next.hanyangPrologueStep === "arrival" && npc.id === "kim-seongho") next = { ...next, hanyangPrologueStep: "outskirts", logs: addLog(next.logs, "村長：村外驛路就交給你了，先去處理狸貓。") };
       if (next.hanyangPrologueStep === "journey-fund" && npc.id === "wang-deokchang") next = claimHanyangJourneyFund(next, Math.floor(6000 * currentCity.priceFactor));
       if (next.hanyangPrologueStep === "caravan-crisis") next = { ...next, hanyangPrologueStep: "bandit-trial" };
-      if (next.hanyangPrologueStep === "return") next = completeHanyangPrologue(next);
+      if (next.hanyangPrologueStep === "caravan-delivery" && npc.id === "wang-deokchang" && option.prologueStep === "caravan-delivery") next = markHanyangCaravanDelivered(next);
+      if (next.hanyangPrologueStep === "return" && npc.id === "kim-seongho" && option.prologueStep === "return") next = markHanyangReturnReported(next);
+      if (next.hanyangPrologueStep === "departure" && npc.id === "kim-seongho" && option.prologueStep === "departure") next = completeHanyangPrologue(next);
+      if (npc.id === "mysterious-traveler") next = markHanyangMysteryNpcSeen(next);
       next = awardNpcAffinity(next, npc, option);
       if (option.quest === "start") {
         next = startNpcQuest(next, npc);
@@ -861,7 +868,13 @@ export default function GameV15() {
   function openNpcDialogue(npcId: NpcId) {
     const npc = npcById(npcId);
     if (!npc) return;
-    const greeting = npcGreeting(game, npc);
+    const greeting = game.hanyangPrologueStep === "caravan-delivery" && npcId === "wang-deokchang"
+      ? "這箱貨……你真的從黑巾山賊手裡帶回來了？先別急著高興，我有件事要讓你看清楚。"
+      : game.hanyangPrologueStep === "return" && npcId === "kim-seongho"
+        ? "你回來了。王德昌已把貨物收妥？那麼，告訴我北邊商路究竟發生了什麼。"
+        : game.hanyangPrologueStep === "departure" && npcId === "kim-seongho"
+          ? "我都聽明白了。漢陽欠你一份人情，但別把這裡當成終點。"
+          : npcGreeting(game, npc);
     setNpcOpeningLine(greeting);
     setGame(previous => recordNpcLine(previous, npc.id, `${npc.name}：${greeting}`));
     setActiveNpcId(npcId);
@@ -1038,7 +1051,7 @@ export default function GameV15() {
         {game.hanyangPrologueStep !== "completed" && <aside className="village-onboarding-buddy hanyang-prologue-buddy" aria-live="polite"><span className="village-onboarding-avatar" aria-hidden="true">🧭</span><div><strong>小嚮導・米米</strong><p>{game.hanyangPrologueStep === "arrival" ? "村長正在村口等你，先去聽聽他的緊急委託。" : game.hanyangPrologueStep === "outskirts" ? "先到新手村郊外擊敗狸貓，取得第一批可以出售的戰利品。" : game.hanyangPrologueStep === "first-sale" ? "狸貓戰利品帶回來了，先穿戴剛取得的裝備，再把材料賣掉。" : game.hanyangPrologueStep === "journey-fund" ? "老商人準備了一筆啟程資金，回漢陽找他領取。" : game.hanyangPrologueStep === "medicine" ? "啟程資金已備妥，前往藥店實際購買一瓶金創藥。" : game.hanyangPrologueStep === "guild" ? "一個人守不住商路，前往傭兵公會招募一名夥伴。" : game.hanyangPrologueStep === "formation" ? "傭兵已加入商團，打開隊伍介面確認他在出戰名單中。" : game.hanyangPrologueStep === "caravan-crisis" ? "北邊商路出事了，先找老商人了解貨物被搶的經過。" : game.hanyangPrologueStep === "bandit-trial" ? "精英黑巾山賊就在新手村郊外；他不是 Boss，和第一名夥伴一起把他擊退。" : "商路已恢復，回到漢陽看看老商人怎麼說。"}</p><small>序章引導・{hanyangStep.title}</small></div></aside>}
 
         <TabsContent value="map" className="tab-panel isometric-map-tab">
-          <IsometricWorldMap cityName={displayCityName} locationLabel={mapLocationLabel} heroImage={game.hero.image} objectiveExpanded={objectiveExpanded} npcLabelsVisible={npcLabelsVisible} onNpcLabelsVisibleChange={setNpcLabelsVisible} onNpcTalk={openNpcDialogue} tutorialLocked={tutorialMapLocked} onEnter={(destination) => {
+          <IsometricWorldMap cityName={displayCityName} locationLabel={mapLocationLabel} heroImage={game.hero.image} objectiveExpanded={objectiveExpanded} npcLabelsVisible={npcLabelsVisible} onNpcLabelsVisibleChange={setNpcLabelsVisible} onNpcTalk={openNpcDialogue} tutorialLocked={tutorialMapLocked} tutorialNpcIds={tutorialNpcIds} npcVisible={npcId => npcId !== "mysterious-traveler" || mysteryNpcVisible} onEnter={(destination) => {
             if (destination === "city") { setCityService("mercenary"); setActiveTab("city"); }
             else if (destination === "trade") setActiveTab("trade");
             else if (destination === "raid") setActiveTab("raid");

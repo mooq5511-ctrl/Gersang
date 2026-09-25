@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { TOWN_MAP_BACKGROUND } from "./town-map-config";
-import { VILLAGE_NPCS, type NpcId } from "./npc-dialogue";
+import { HANYANG_MYSTERY_NPC, VILLAGE_NPCS, type NpcId } from "./npc-dialogue";
 
 const COLS = 12;
 const ROWS = 12;
@@ -80,6 +80,8 @@ export function IsometricWorldMap({
   onEnter,
   onNpcTalk,
   tutorialLocked = false,
+  tutorialNpcIds,
+  npcVisible,
 }: {
   cityName: string;
   locationLabel: string;
@@ -90,6 +92,8 @@ export function IsometricWorldMap({
   onEnter: (destination: Destination) => void;
   onNpcTalk: (npcId: NpcId) => void;
   tutorialLocked?: boolean;
+  tutorialNpcIds?: NpcId[];
+  npcVisible?: (npcId: NpcId) => boolean;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<{ destroy: (removeCanvas: boolean) => void } | null>(null);
@@ -330,7 +334,7 @@ export function IsometricWorldMap({
     <section className="isometric-world" aria-label={`${cityName}斜角城鎮地圖`} data-objective-expanded={objectiveExpanded} data-npc-labels={npcLabelsVisible ? "shown" : "hidden"}>
       <div ref={hostRef} className="isometric-world-canvas" />
       <div className="village-npc-layer" aria-label="漢陽村 NPC">
-        {VILLAGE_NPCS.filter(npc => !tutorialLocked || npc.id === "kim-seongho").map(npc => <button key={npc.id} type="button" className={'village-npc-pin'+(tutorialLocked && npc.id === "kim-seongho" ? ' tutorial-target' : '')} style={{ left: `${npc.map.x}%`, top: `${npc.map.y}%` }} onClick={() => onNpcTalk(npc.id)} aria-label={`與${npc.role}${npc.name}交談`}>
+        {[...VILLAGE_NPCS, HANYANG_MYSTERY_NPC].filter(npc => (npcVisible?.(npc.id) ?? true) && (!tutorialLocked || tutorialNpcIds?.includes(npc.id))).map(npc => <button key={npc.id} type="button" className={'village-npc-pin'+(tutorialLocked && tutorialNpcIds?.includes(npc.id) ? ' tutorial-target' : '')} style={{ left: `${npc.map.x}%`, top: `${npc.map.y}%` }} onClick={() => onNpcTalk(npc.id)} aria-label={`與${npc.role}${npc.name}交談`}>
           <span>●</span><b>{npc.name}</b><small>{npc.role}</small>
         </button>)}
       </div>
