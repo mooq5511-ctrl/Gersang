@@ -339,6 +339,10 @@ export function IsometricWorldMap({
           <span>●</span><b>{npc.name}</b><small>{npc.role}</small>
         </button>)}
       </div>
+      <button type="button" className="village-city-hall-pin" disabled={tutorialLocked} onClick={() => navigate("hall")} aria-label="前往市政廳委託公告">
+        <span className="village-city-hall-icon" aria-hidden="true">♜</span>
+        <span><b>市政廳</b><small>委託公告</small></span>
+      </button>
       <header className="isometric-world-heading"><small>目前所在</small><strong>{locationLabel}</strong><span>點擊地面移動</span></header>
       <button type="button" className="map-label-toggle" disabled={tutorialLocked} aria-pressed={npcLabelsVisible} aria-label={npcLabelsVisible ? "隱藏 NPC 名牌" : "顯示 NPC 名牌"} onClick={() => onNpcLabelsVisibleChange(!npcLabelsVisible)}>
         {npcLabelsVisible ? "隱藏 NPC 名牌" : "顯示 NPC 名牌"}
