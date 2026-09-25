@@ -11,6 +11,7 @@ test("Phaser isometric map is the default live game scene", () => {
   assert.match(game, /useState\("map"\)/);
   assert.match(game, /<IsometricWorldMap/);
   assert.match(game, /TabsTrigger value="map"/);
+  assert.match(map, /audio: \{ noAudio: true \}/);
 });
 
 test("map connects its destinations to existing game tabs and the Thunder Altar raid", () => {

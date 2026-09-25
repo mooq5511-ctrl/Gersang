@@ -181,6 +181,7 @@ export function IsometricWorldMap({
       gameRef.current = new Phaser.Game({
         type: Phaser.AUTO,
         parent: hostRef.current,
+        audio: { noAudio: true },
         transparent: true,
         backgroundColor: "rgba(0,0,0,0)",
         scale: { mode: Phaser.Scale.RESIZE, width: "100%", height: "100%" },
