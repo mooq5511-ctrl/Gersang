@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { TOWN_MAP_BACKGROUND } from "./town-map-config";
 import { HANYANG_MYSTERY_NPC, VILLAGE_NPCS, type NpcId } from "./npc-dialogue";
 
@@ -12,14 +12,6 @@ const TILE_H = 36;
 type Cell = { col: number; row: number };
 type Destination = "city" | "trade" | "battle" | "raid" | "hall";
 
-const blocked = new Set([
-  "1,1", "1,2", "2,1", "2,2",
-  "8,1", "8,2", "9,1", "9,2",
-  "4,5", "5,5", "4,6", "5,6",
-  "8,8", "9,8", "8,9", "9,9",
-  "2,8", "2,9", "3,8", "3,9",
-]);
-
 const destinations: Record<Destination, Cell & { label: string }> = {
   city: { col: 3, row: 4, label: "市集" },
   trade: { col: 7, row: 3, label: "港口" },
@@ -28,53 +20,9 @@ const destinations: Record<Destination, Cell & { label: string }> = {
   hall: { col: 9, row: 4, label: "市政廳" },
 };
 
-const cellKey = (cell: Cell) => `${cell.col},${cell.row}`;
-
-function findPath(start: Cell, goal: Cell) {
-  const open: Cell[] = [start];
-  const cameFrom = new Map<string, Cell>();
-  const cost = new Map<string, number>([[cellKey(start), 0]]);
-  const moves = [
-    { col: 1, row: 0 }, { col: -1, row: 0 }, { col: 0, row: 1 }, { col: 0, row: -1 },
-    { col: 1, row: 1 }, { col: -1, row: -1 }, { col: 1, row: -1 }, { col: -1, row: 1 },
-  ];
-
-  while (open.length) {
-    open.sort((a, b) => {
-      const ah = Math.abs(goal.col - a.col) + Math.abs(goal.row - a.row);
-      const bh = Math.abs(goal.col - b.col) + Math.abs(goal.row - b.row);
-      return (cost.get(cellKey(a)) ?? 0) + ah - ((cost.get(cellKey(b)) ?? 0) + bh);
-    });
-    const current = open.shift()!;
-    if (cellKey(current) === cellKey(goal)) {
-      const path: Cell[] = [];
-      let cursor = current;
-      while (cellKey(cursor) !== cellKey(start)) {
-        path.unshift(cursor);
-        cursor = cameFrom.get(cellKey(cursor))!;
-      }
-      return path;
-    }
-    for (const move of moves) {
-      const next = { col: current.col + move.col, row: current.row + move.row };
-      if (next.col < 0 || next.row < 0 || next.col >= COLS || next.row >= ROWS || blocked.has(cellKey(next))) continue;
-      const diagonal = move.col !== 0 && move.row !== 0;
-      if (diagonal && (blocked.has(`${current.col + move.col},${current.row}`) || blocked.has(`${current.col},${current.row + move.row}`))) continue;
-      const nextCost = (cost.get(cellKey(current)) ?? 0) + (diagonal ? 1.4 : 1);
-      if (nextCost < (cost.get(cellKey(next)) ?? Infinity)) {
-        cost.set(cellKey(next), nextCost);
-        cameFrom.set(cellKey(next), current);
-        if (!open.some((cell) => cellKey(cell) === cellKey(next))) open.push(next);
-      }
-    }
-  }
-  return [];
-}
-
 export function IsometricWorldMap({
   cityName,
   locationLabel,
-  heroImage,
   objectiveExpanded,
   npcLabelsVisible,
   onNpcLabelsVisibleChange,
@@ -86,7 +34,6 @@ export function IsometricWorldMap({
 }: {
   cityName: string;
   locationLabel: string;
-  heroImage: string;
   objectiveExpanded: boolean;
   npcLabelsVisible: boolean;
   onNpcLabelsVisibleChange: (visible: boolean) => void;
@@ -98,11 +45,6 @@ export function IsometricWorldMap({
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<{ destroy: (removeCanvas: boolean) => void } | null>(null);
-  const enterRef = useRef(onEnter);
-  const [status, setStatus] = useState("點擊地面移動");
-  const tutorialLockedRef = useRef(tutorialLocked);
-  enterRef.current = onEnter;
-  tutorialLockedRef.current = tutorialLocked;
 
   useEffect(() => {
     let cancelled = false;
@@ -114,15 +56,8 @@ export function IsometricWorldMap({
       class WorldScene extends Phaser.Scene {
         private originX = 0;
         private originY = 0;
-        private actor!: Phaser.GameObjects.Container;
-        private actorCell: Cell = { col: 6, row: 10 };
-        private marker!: Phaser.GameObjects.Graphics;
-        private route: Cell[] = [];
-        private movement?: Phaser.Tweens.Tween;
-        private targetDestination?: Destination;
 
         preload() {
-          this.load.image("map-hero", heroImage);
           this.load.image("town-background", TOWN_MAP_BACKGROUND.src);
           this.load.image("map-portal", "/game-assets/map-field-portal-0.png");
           this.load.image("map-inn", "/game-assets/building-korea-inn-0.png");
@@ -136,28 +71,11 @@ export function IsometricWorldMap({
 
         create() {
           this.drawWorld();
-          this.marker = this.add.graphics().setDepth(900);
-          this.actor = this.createActor();
-          this.positionActor(this.actorCell);
-          this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.moveTo(this.cellFromScreen(pointer.x, pointer.y)));
-          const navigate = (event: Event) => {
-            const destination = (event as CustomEvent<Destination>).detail;
-            this.targetDestination = destination;
-            this.moveTo(destinations[destination]);
-          };
-          window.addEventListener("gersang:navigate-map", navigate);
-          this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => window.removeEventListener("gersang:navigate-map", navigate));
           this.scale.on("resize", () => this.rebuild());
         }
 
         private iso(col: number, row: number) {
           return { x: this.originX + (col - row) * TILE_W / 2, y: this.originY + (col + row) * TILE_H / 2 };
-        }
-
-        private cellFromScreen(x: number, y: number): Cell {
-          const dx = x - this.originX;
-          const dy = y - this.originY;
-          return { col: Math.floor(dy / TILE_H + dx / TILE_W), row: Math.floor(dy / TILE_H - dx / TILE_W) };
         }
 
         private diamond(graphics: Phaser.GameObjects.Graphics, x: number, y: number, color: number, alpha = 1) {
@@ -255,62 +173,8 @@ export function IsometricWorldMap({
           text.setOrigin(0.5, 1).setDepth(860);
         }
 
-        private createActor() {
-          const shadow = this.add.ellipse(0, 12, 38, 13, 0x142a29, 0.45);
-          const sprite = this.add.image(0, -17, "map-hero").setOrigin(0.5, 1).setDisplaySize(48, 66);
-          return this.add.container(0, 0, [shadow, sprite]);
-        }
-
-        private positionActor(cell: Cell) {
-          const point = this.iso(cell.col, cell.row);
-          this.actor.setPosition(point.x, point.y + TILE_H / 2 - 5).setDepth(130 + (cell.col + cell.row) * 10);
-        }
-
-        private moveTo(destination: Cell) {
-          if (tutorialLockedRef.current) { setStatus("請先前往村長處"); return; }
-          if (destination.col < 0 || destination.row < 0 || destination.col >= COLS || destination.row >= ROWS || blocked.has(cellKey(destination))) {
-            this.targetDestination = undefined; setStatus("該處無法通行"); return;
-          }
-          const clickedDestination = (Object.entries(destinations) as Array<[Destination, Cell]>).find(([, cell]) => cellKey(cell) === cellKey(destination));
-          if (clickedDestination) this.targetDestination = clickedDestination[0];
-          const path = findPath(this.actorCell, destination);
-          if (!path.length && cellKey(destination) !== cellKey(this.actorCell)) { this.targetDestination = undefined; setStatus("找不到可行路線"); return; }
-          if (!this.targetDestination || cellKey(destinations[this.targetDestination]) !== cellKey(destination)) this.targetDestination = undefined;
-          this.movement?.stop();
-          this.route = path;
-          this.drawMarker(destination);
-          setStatus(path.length ? `前往 ${this.targetDestination ? destinations[this.targetDestination].label : "目的地"}` : "已在目的地");
-          this.walkNext();
-        }
-
-        private drawMarker(cell: Cell) {
-          this.tweens.killTweensOf(this.marker); this.marker.clear(); this.marker.setAlpha(1);
-          const point = this.iso(cell.col, cell.row);
-          this.marker.lineStyle(3, 0xf5d36f, 0.95);
-          this.marker.strokePoints([new Phaser.Geom.Point(point.x, point.y + 4), new Phaser.Geom.Point(point.x + 29, point.y + 18), new Phaser.Geom.Point(point.x, point.y + 32), new Phaser.Geom.Point(point.x - 29, point.y + 18)], true);
-          this.tweens.add({ targets: this.marker, alpha: { from: 0.35, to: 1 }, duration: 430, yoyo: true, repeat: -1 });
-        }
-
-        private walkNext() {
-          const next = this.route.shift();
-          if (!next) {
-            const destination = this.targetDestination;
-            this.targetDestination = undefined;
-            setStatus(destination ? `抵達${destinations[destination].label}` : "已抵達");
-            if (destination) this.time.delayedCall(220, () => enterRef.current(destination));
-            return;
-          }
-          const point = this.iso(next.col, next.row);
-          this.movement = this.tweens.add({
-            targets: this.actor, x: point.x, y: point.y + TILE_H / 2 - 5, duration: 145, ease: "Linear",
-            onStart: () => this.actor.setDepth(130 + (next.col + next.row) * 10),
-            onComplete: () => { this.actorCell = next; this.walkNext(); },
-          });
-        }
-
         private rebuild() {
-          const saved = this.actorCell;
-          this.tweens.killAll(); this.drawWorld(); this.marker = this.add.graphics().setDepth(900); this.actor = this.createActor(); this.actorCell = saved; this.positionActor(saved);
+          this.drawWorld();
         }
       }
 
@@ -327,9 +191,11 @@ export function IsometricWorldMap({
 
     boot();
     return () => { cancelled = true; gameRef.current?.destroy(true); gameRef.current = null; };
-  }, [heroImage]);
+  }, []);
 
-  const navigate = (destination: Destination) => window.dispatchEvent(new CustomEvent("gersang:navigate-map", { detail: destination }));
+  const navigate = (destination: Destination) => {
+    if (!tutorialLocked) onEnter(destination);
+  };
 
   return (
     <section className="isometric-world" aria-label={`${cityName}斜角城鎮地圖`} data-objective-expanded={objectiveExpanded} data-npc-labels={npcLabelsVisible ? "shown" : "hidden"}>
@@ -343,7 +209,7 @@ export function IsometricWorldMap({
         <span className="village-city-hall-icon" aria-hidden="true">♜</span>
         <span><b>市政廳</b><small>委託公告</small></span>
       </button>
-      <header className="isometric-world-heading"><small>目前所在</small><strong>{locationLabel}</strong><span>點擊地面移動</span></header>
+      <header className="isometric-world-heading"><small>目前所在</small><strong>{locationLabel}</strong><span>選擇設施互動</span></header>
       <button type="button" className="map-label-toggle" disabled={tutorialLocked} aria-pressed={npcLabelsVisible} aria-label={npcLabelsVisible ? "隱藏 NPC 名牌" : "顯示 NPC 名牌"} onClick={() => onNpcLabelsVisibleChange(!npcLabelsVisible)}>
         {npcLabelsVisible ? "隱藏 NPC 名牌" : "顯示 NPC 名牌"}
       </button>
@@ -354,7 +220,7 @@ export function IsometricWorldMap({
         <button type="button" disabled={tutorialLocked} onClick={() => navigate("raid")}><b>雷霆祭壇</b><span>神仙谷首領戰</span></button>
         <button type="button" disabled={tutorialLocked} onClick={() => navigate("hall")}><b>市政廳</b><span>村莊委託公告欄</span></button>
       </nav>
-      <output className="isometric-status" aria-live="polite">{status}</output>
+      <output className="isometric-status" aria-live="polite">點擊 NPC 或設施互動</output>
     </section>
   );
 }

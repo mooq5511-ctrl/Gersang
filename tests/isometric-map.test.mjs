@@ -25,9 +25,12 @@ test("map connects its destinations to existing game tabs and the Thunder Altar 
   assert.match(game, /else setActiveTab\("squad"\)/);
 });
 
-test("movement uses obstacle-aware A-star routes", () => {
-  assert.match(map, /function findPath/);
-  assert.match(map, /blocked\.has\(cellKey\(next\)\)/);
-  assert.match(map, /const diagonal =/);
-  assert.match(map, /this\.walkNext\(\)/);
+test("village map is a static interaction hub without protagonist movement", () => {
+  assert.doesNotMatch(map, /function findPath/);
+  assert.doesNotMatch(map, /pointerdown/);
+  assert.doesNotMatch(map, /map-hero/);
+  assert.doesNotMatch(map, /點擊地面移動/);
+  assert.match(map, /className="village-city-hall-pin"/);
+  assert.match(map, /onClick=\{\(\) => navigate\("hall"\)\}/);
+  assert.match(map, /選擇設施互動/);
 });
