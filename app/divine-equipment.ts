@@ -1,4 +1,5 @@
 import {equipFromInventory,unequipToInventory,type EquipmentSlot,type EquipmentKind} from './equipment-slots.ts';
+import {effectiveEquipmentStats} from './equipment-stats.ts';
 export const HERO_DISPLAY_SLOTS=['weapon','helm','armor','ring1','ring2','boots'] as const;
 export const DIVINE_EQUIPMENT={
   staff:{name:'高級神仙棒',slot:'weapon' as const,description:'仙人遺世之杖，凝聚天地靈氣。',bonus:{str:10,agi:0,vit:0,intel:50},def:0},
@@ -20,7 +21,8 @@ export type TooltipGear={rarity?:string;name?:string;source?:string;atk?:number;
 export function equipmentDetailLines(item:TooltipGear){
   const lines:string[]=[];
   for(const [key,label] of [['str','力量'],['agi','敏捷'],['vit','體質'],['intel','智力']] as const) if(item.bonus?.[key])lines.push(label+' +'+item.bonus[key]);
-  for(const [key,label] of [['atk','攻擊力'],['def','防禦力'],['hp','生命值']] as const)if(item[key])lines.push(label+' +'+item[key]);
+  const effective=effectiveEquipmentStats(item);
+  for(const [key,label] of [['atk','攻擊力'],['def','防禦力'],['hp','生命值']] as const)if(effective[key])lines.push(label+' +'+effective[key]);
   if(item.enhance)lines.push('強化 +'+item.enhance);
   if(item.luckyValue)lines.push('幸運值 '+item.luckyValue+'/100');
   for(const bonus of item.enhanceBonuses||[])lines.push((bonus.name||bonus.stat)+'：'+(bonus.text||'+'+bonus.value+'%'));

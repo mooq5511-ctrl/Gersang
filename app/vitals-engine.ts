@@ -1,6 +1,7 @@
 import { mercenarySpec, ratingAccuracy } from './mercenary-roster.ts';
 import {formationTarget,rearDodge,type BattlePosition} from './formation-position.ts';
 import { resistanceMultiplier } from './combat-damage.js';
+import { effectiveEquipmentStats } from './equipment-stats.ts';
 export type VitalUnit = {
   templateId?: string; physicalResist?: number; magicResist?: number;
   level: number; vit: number; intel: number; str?: number; agi?: number; tier?: number; hp?: number; mp?: number; maxHp?:number; flatAttackBonus?:number;
@@ -20,8 +21,9 @@ export function vitalStats(unit: VitalUnit) {
     if (!item) continue;
     vitality += item.bonus?.vit || 0;
     intelligence += item.bonus?.intel || 0;
-    equipmentHp += item.hp || 0;
-    defense += item.def || 0;
+    const effective = effectiveEquipmentStats(item);
+    equipmentHp += effective.hp;
+    defense += effective.def;
     physicalResist += item.resist?.physical || 0;
     magicResist += item.resist?.magic || 0;
     for (const bonus of item.enhanceBonuses || []) if (bonus.stat === "allStats") allStatsPercent += bonus.value;
@@ -59,9 +61,9 @@ export function combatStats(unit: VitalUnit) {
     flat.str += item.bonus?.str || 0;
     flat.agi += item.bonus?.agi || 0;
     flat.vit += item.bonus?.vit || 0;
-    const enhancement = 1.15 ** Math.max(0, Math.floor(item.enhance || 0));
-    equipmentAttack += (item.atk || 0) * enhancement;
-    equipmentDefense += (item.def || 0) * enhancement;
+    const effective = effectiveEquipmentStats(item);
+    equipmentAttack += effective.atk;
+    equipmentDefense += effective.def;
     for (const affix of item.magic || []) if (Object.hasOwn(percent, affix.stat)) percent[affix.stat as keyof typeof percent] += affix.value;
     for (const bonus of item.enhanceBonuses || []) {
       if (bonus.stat === "allStats") { percent.str += bonus.value; percent.agi += bonus.value; percent.vit += bonus.value; percent.intel += bonus.value; }

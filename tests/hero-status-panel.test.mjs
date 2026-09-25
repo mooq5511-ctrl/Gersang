@@ -13,6 +13,12 @@ test('specified initial hero power weight HP and MP',()=>{
   assert.equal(vitalStats({...hero,intel:11}).maxMp,44);
   assert.equal(heroWeightLimit({...hero,str:21}),305);
 });
+test('hero power includes direct equipment combat values',()=>{
+  const hero={...HERO_INITIAL_ATTRIBUTES,templateId:'hero',level:1,equip:{}};
+  const geared={...hero,equip:{weapon:{atk:100,def:50,hp:200,enhance:2,magic:[{value:10}],resist:{physical:4,magic:6},bonus:{str:0,agi:0,vit:0,intel:0}}}};
+  assert.ok(heroPersonalPower(geared)>heroPersonalPower(hero));
+  assert.equal(heroPersonalPower(geared),641);
+});
 test('existing hero health clamps to new max and equipment still contributes',()=>{
   const hero={...HERO_INITIAL_ATTRIBUTES,templateId:'hero',level:1,hp:1000,mp:1000,equip:{armor:{hp:30,bonus:{vit:2,intel:3}}}};
   const v=vitalStats(hero);assert.equal(v.hp,138);assert.equal(v.mp,52);

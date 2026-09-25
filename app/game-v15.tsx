@@ -114,17 +114,8 @@ const slots = EQUIPMENT_SLOTS;
 const bossMonsterArt:Record<string,string> = {
   '海賊王': '/assets/archive/s32_0028.webp',
   '狂虎': '/assets/monsters/gale-tiger.jpg?v=20260910',
-  '訓練的雷獸': '/assets/monsters/sumeru/training-monsters.jpg',
-  '訓練的瘟神': '/assets/monsters/sumeru/training-monsters.jpg',
-  '訓練的虎鶴': '/assets/monsters/sumeru/training-monsters.jpg',
-  '青臉夜叉金剛': '/assets/monsters/sumeru/vaisravana-area.jpg',
-  '神獸玄武': '/assets/monsters/sumeru/vaisravana-area.jpg',
   '多聞天王': '/assets/monsters/sumeru/vaisravana-area.jpg',
-  '神獸白虎': '/assets/monsters/sumeru/virupaksa-area.jpg',
   '廣目天王': '/assets/monsters/sumeru/virupaksa-area.jpg',
-  '辟寒金剛': '/assets/monsters/sumeru/virupaksa-area.jpg',
-  '紫賢金剛': '/assets/monsters/sumeru/virupaksa-area.jpg',
-  '強力棍兵': '/assets/monsters/sumeru/virupaksa-area.jpg',
 };
 const slotLabels = EQUIPMENT_LABELS;
 const FIRST_CARAVAN_QUEST_ID = "npc-first-caravan-delivery";
@@ -136,6 +127,16 @@ const DEFAULT_GAME_UI_SETTINGS: GameUiSettings = { musicVolume: 42, sceneMode: "
 const mapFeatureIcons: Record<string, string> = { field: "🌾", lake: "🌊", sea: "⚓", forest: "🌲", ice: "❄️", desert: "☀️", sumeru: "⛰️", shambhala: "🏯" };
 const DEFAULT_BATTLE_PANEL_VISIBILITY = { partyVitals: true, mapNavigation: true, monsterSelection: true, battlefield: true, battleLogs: true };
 type BattlePanelVisibility = typeof DEFAULT_BATTLE_PANEL_VISIBILITY;
+const WORLD_MAP_NODE_POSITIONS: Record<string, [number, number]> = {
+  "starter-outskirts": [15, 58],
+  "millennium-lake": [28, 41],
+  "japan-sea": [50, 31],
+  "miasma-forest": [53, 51],
+  "ice-temple": [74, 35],
+  "taj-mahal": [79, 63],
+  sumeru: [60, 14],
+  shambhala: [91, 19],
+};
 const BATTLE_PANEL_LABELS: Array<[keyof BattlePanelVisibility, string]> = [
   ["partyVitals", "出戰隊伍"],
   ["mapNavigation", "地圖瀏覽"],
@@ -192,6 +193,7 @@ export default function GameV15() {
   const [characterName, setCharacterName] = useState("");
   const [characterGender, setCharacterGender] = useState<"male"|"female">("male");
   const [notice, setNotice] = useState("");
+  const [shopPurchaseFeedback, setShopPurchaseFeedback] = useState<string | null>(null);
   const [returnReport, setReturnReport] = useState<{ minutes: number; gold: number; credit: number } | null>(null);
   const [selectedUid, setSelectedUid] = useState("hero");
   const [equipmentPulseUid, setEquipmentPulseUid] = useState<string | null>(null);
@@ -205,6 +207,11 @@ export default function GameV15() {
   const [npcOpeningLine, setNpcOpeningLine] = useState("");
   const warehouseWritable = useRef(true);
   const loaded = useRef(false);
+
+  function flashShopPurchase(key: string) {
+    setShopPurchaseFeedback(key);
+    window.setTimeout(() => setShopPurchaseFeedback(current => current === key ? null : current), 900);
+  }
 
   const setSceneMode = useCallback(async (sceneMode: SceneDisplayMode) => {
     if (sceneMode === "fullscreen") {
@@ -410,7 +417,7 @@ export default function GameV15() {
   const firstCaravanBossReady = game.npcProgress.completedQuests.includes(FIRST_CARAVAN_QUEST_ID) && game.hero.level >= 20 && game.territory.buildings.waystation >= 1 && (game.firstGreenEquipped || [game.hero, ...game.mercs, ...game.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== '普通')));
   const cityArmors = officialEquipment.filter((item) => item.kind === "armor").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
   const cityWeapons = officialEquipment.filter((item) => item.kind === "weapon").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
-  const musicScene:SceneMusicKind=activeTab==='battle'?'boss':game.hero.status==='客棧中'||(activeTab==='city'&&cityService==='inn')?'inn':activeTab==='city'||activeTab==='trade'?'merchant':'outskirts';
+  const musicScene:SceneMusicKind=activeTab==='raid'?'raid':activeTab==='battle'?'boss':game.hero.status==='客棧中'||(activeTab==='city'&&cityService==='inn')?'inn':activeTab==='city'||activeTab==='trade'?'merchant':'outskirts';
   const mapGate = (map: typeof battleMaps[number]) => {
     const stageReady = game.stage >= map.unlockStage;
     const bossReady = map.id !== 'millennium-lake' || game.newbieBossDefeated;
@@ -424,6 +431,8 @@ export default function GameV15() {
       : '已開放';
     return { unlocked, requirement };
   };
+  const currentMapGate = mapGate(currentMap);
+  const currentMapEnemies = sourceEnemies.filter(enemy => enemy.mapId === currentMap.id);
   const mainObjective = (() => {
     if (game.hanyangPrologueStep !== "completed") {
       if (game.hanyangPrologueStep === "arrival") {
@@ -634,7 +643,9 @@ export default function GameV15() {
   }
 
   function buyLootMaterial(itemName:string){
-    setGame(previous => buyMaterialAction(previous, itemName, addLog, format));
+    const price = MATERIAL_BUY_PRICES[itemName] || 0;
+    if (price > 0 && game.gold >= price) flashShopPurchase(`material:${itemName}`);
+    setGame(previous => buyMaterialAction(previous, itemName, addLog, format, setNotice));
   }
 
   function buyExchangeUpgrade(id:VillageWeaponId){
@@ -656,6 +667,7 @@ export default function GameV15() {
 
   function buyWearable(base:WearableBase) {
     const price=Math.floor(base.price*currentCity.priceFactor);
+    if (game.gold >= price) flashShopPurchase(`wearable:${base.id}`);
     setGame(previous=>{
       const baseItem:Equipment={...base,uid:uid(base.id),enhance:0,rarity:'普通',magic:[],requiredLevel:1,bonus:{str:0,agi:0,intel:0,vit:0},resist:{physical:0,magic:0}};
       const item=applyShopQuality(baseItem);
@@ -665,6 +677,7 @@ export default function GameV15() {
 
   function buyMagicEquipment() {
     const cost = 12000;
+    if (game.gold >= cost) flashShopPurchase("magic-equipment");
     setGame((previous) => {
       const item = applyShopQuality(rollEquipment(previous.stage, true));
       return purchaseEquipmentAction(previous,item,cost,"購入附魔裝備「"+item.name+"」・品質倍率 x"+SHOP_QUALITY[item.rarity].multiplier+"。",addLog,setNotice);
@@ -672,6 +685,7 @@ export default function GameV15() {
   }
 
   function buyOfficialItem(record: OfficialEquipment, price = record.price) {
+    if (game.gold >= price) flashShopPurchase(`official:${record.id}`);
     setGame((previous) => {
       const item = makeOfficialEquipment(record);
       return purchaseEquipmentAction(previous,item,price,"從"+currentCity.name+(record.kind === "weapon" ? "武器商店" : "防具商店")+"購入「"+item.name+"」・品質倍率 x"+SHOP_QUALITY[item.rarity].multiplier+"。",addLog,setNotice);
@@ -704,6 +718,8 @@ export default function GameV15() {
 
   function buyTierEquipment(spec: TierEquipment) {
     const itemUid = uid(spec.id);
+    const price = Math.floor(tierEquipmentPrice(spec) * currentCity.priceFactor);
+    if (game.hero.level >= spec.requiredLevel && game.gold >= price) flashShopPurchase(`tier:${spec.id}`);
     setGame(previous => purchaseTierEquipmentAction(previous, spec.id, currentCity.priceFactor, currentCity.name, itemUid, addLog, setNotice));
   }
 
@@ -741,6 +757,9 @@ export default function GameV15() {
   }
 
   function buyMedicine(medicineId: string, requestedAmount = 1) {
+    const medicine = medicineCatalog.find(entry => entry.id === medicineId);
+    const unitPrice = medicine ? Math.floor(medicine.price * currentCity.priceFactor) : 0;
+    if (unitPrice > 0 && game.gold >= unitPrice) flashShopPurchase(`medicine:${medicineId}`);
     setGame(previous => buyMedicineAction(previous, medicineId, requestedAmount, currentCity.priceFactor, currentCity.name, addLog, setNotice));
   }
 
@@ -1152,28 +1171,34 @@ export default function GameV15() {
           </section>}
           <section className="panel battle-map-panel">
             {import.meta.env.DEV&&<button type="button" className="battle-map-test-unlock" disabled={tutorialBattleLocked} onClick={()=>setGame(previous=>({...previous,stage:Math.max(previous.stage,...battleMaps.map(map=>map.unlockStage)),newbieBossDefeated:true,lakeBossDefeated:true,goldenStarfishDefeated:true,logs:addLog(previous.logs,'測試模式：已解鎖全部戰鬥地圖。')}))}>測試用・解鎖全部地圖</button>}
-            <header className="battle-world-map-header"><div><small>東方商路</small><h2>世界地圖</h2><p>選擇已解鎖的區域後即可開始戰鬥；可在戰鬥區開啟自動狩獵。</p></div><div className="battle-world-map-tools"><span>目前：{currentMap.name}</span><MonsterCompendium /></div></header>
-            {battlePanelVisibility.mapNavigation && <nav className="battle-map-selector" aria-label="世界地圖清單">
-              {battleMaps.map((map) => {
-                const { unlocked, requirement } = mapGate(map);
-                const tutorialMapBlocked = tutorialBattleLocked && map.id !== "starter-outskirts";
-                return <button type="button" key={map.id} className={'battle-map-card map-theme-'+map.theme+' '+(currentMap.id === map.id ? 'active ' : '')+(unlocked && !tutorialMapBlocked ? '' : 'locked')} disabled={!unlocked || tutorialMapBlocked} onClick={() => selectBattleMap(map.id)}>
-                  <span className="battle-map-card-icon" aria-hidden="true">{mapFeatureIcons[map.theme] || '✦'}</span>
-                  <span className="battle-map-card-copy"><small>{map.region}</small><strong>{map.name}</strong><em>{tutorialMapBlocked ? '新手引導中・尚未開放' : currentMap.id === map.id ? '目前位置' : unlocked ? '選擇地圖' : requirement}</em></span>
-                </button>;
-              })}
-            </nav>}
-            {battlePanelVisibility.mapNavigation && <div className="battle-world-map" aria-label="世界地圖戰鬥區域">
-              <span className="world-route route-one"/><span className="world-route route-two"/><span className="world-route route-three"/>
-              {battleMaps.map((map) => {
-                const { unlocked, requirement } = mapGate(map);
-                const positions:Record<string,[number,number]>={'starter-outskirts':[13,70],'millennium-lake':[28,50],'japan-sea':[55,36],'miasma-forest':[48,68],'ice-temple':[72,48],'taj-mahal':[78,72],'sumeru':[48,18],'shambhala':[92,24]};
-                const [x,y]=positions[map.id]||[50,50];
-                const tutorialMapBlocked = tutorialBattleLocked && map.id !== "starter-outskirts";
-                return <button key={map.id} aria-label={`${map.name}・${unlocked && !tutorialMapBlocked ? '前往' : '尚未解鎖'}`} style={{'--map-x':x+'%','--map-y':y+'%'} as React.CSSProperties} className={'battle-map-node map-theme-'+map.theme+' '+(currentMap.id === map.id ? "active " : "") + (unlocked && !tutorialMapBlocked ? "" : "locked")} disabled={!unlocked || tutorialMapBlocked} onClick={() => selectBattleMap(map.id)}>
-                  <span className="map-node-orb"/><span className="map-node-copy"><small>{map.region}</small><strong>{map.name}</strong><em>{currentMap.id === map.id ? "遠征中" : unlocked ? "前往" : requirement}</em></span>
-                </button>;
-              })}
+            <header className="battle-world-map-header"><div><small>東方商路・遠征指揮台</small><h2>世界地圖・商路航線</h2><p>沿著商路選擇遠征區域；已解鎖的地點可直接前往戰鬥。</p></div><div className="battle-world-map-tools"><span>目前：{currentMap.name}</span><MonsterCompendium /></div></header>
+            {battlePanelVisibility.mapNavigation && <div className="world-map-voyage-layout" aria-label="世界地圖商路航線">
+              <div className="battle-world-map world-map-atlas">
+                <div className="world-map-atlas-title" aria-hidden="true"><span>商路航線圖</span><small>大商帝國・遠征紀錄</small></div>
+                <span className="world-map-landmass world-map-landmass-north" aria-hidden="true"/><span className="world-map-landmass world-map-landmass-west" aria-hidden="true"/><span className="world-map-landmass world-map-landmass-east" aria-hidden="true"/><span className="world-map-landmass world-map-landmass-south" aria-hidden="true"/>
+                <span className="world-route route-one"/><span className="world-route route-two"/><span className="world-route route-three"/><span className="world-route route-four"/>
+                {battleMaps.map((map) => {
+                  const { unlocked, requirement } = mapGate(map);
+                  const [x, y] = WORLD_MAP_NODE_POSITIONS[map.id] || [50, 50];
+                  const tutorialMapBlocked = tutorialBattleLocked && map.id !== "starter-outskirts";
+                  const available = unlocked && !tutorialMapBlocked;
+                  const nodeStatus = tutorialMapBlocked ? "新手引導中" : currentMap.id === map.id ? "目前位置" : unlocked ? "前往" : "未解鎖";
+                  return <button key={map.id} aria-label={`${map.name}・${available ? '前往' : '尚未解鎖'}`} title={available ? `${map.name}・${nodeStatus}` : `${map.name}・${tutorialMapBlocked ? '請先完成新手引導' : requirement}`} style={{ "--map-x": `${x}%`, "--map-y": `${y}%` } as React.CSSProperties} className={'battle-map-node map-theme-'+map.theme+' '+(currentMap.id === map.id ? "active " : "") + (available ? "" : "locked")} disabled={!available} onClick={() => selectBattleMap(map.id)}>
+                    <span className="map-node-orb" aria-hidden="true"><span>{mapFeatureIcons[map.theme] || '✦'}</span></span><span className="map-node-copy"><small>{map.region}</small><strong>{map.name}</strong><em>{nodeStatus}</em></span>
+                  </button>;
+                })}
+                <div className="world-map-legend" aria-label="地圖狀態圖例"><span><i className="legend-dot current"/>目前位置</span><span><i className="legend-dot explored"/>已探索</span><span><i className="legend-dot locked"/>未解鎖</span></div>
+                <span className="world-map-compass" aria-hidden="true">N</span>
+              </div>
+              <aside className="world-map-detail-panel" aria-label="選定地區詳情">
+                <div className="world-map-detail-kicker"><span className={'map-detail-status-dot map-theme-'+currentMap.theme}/><span>{currentMap.region}・遠征區域</span><b>{currentMapGate.unlocked && !tutorialBattleLocked ? '可前往' : '未解鎖'}</b></div>
+                <h3>{currentMap.name}</h3>
+                <p className="world-map-detail-description">{currentMap.description}</p>
+                <dl className="world-map-detail-stats"><div><dt>建議進度</dt><dd>第 {currentMap.unlockStage} 區</dd></div><div><dt>生命倍率</dt><dd>×{currentMap.hpMultiplier}</dd></div><div><dt>金錢倍率</dt><dd>×{currentMap.goldMultiplier}</dd></div><div><dt>核心加成</dt><dd>+{currentMap.coreBonus}</dd></div></dl>
+                <div className="world-map-detail-encounters"><small>本區遭遇</small><div>{currentMapEnemies.slice(0, 3).map(enemy => <span key={enemy.name}>{enemy.name}{enemy.boss ? '・首領' : ''}</span>)}</div></div>
+                <div className="world-map-detail-note"><strong>{currentMapGate.unlocked && !tutorialBattleLocked ? '商路已打通' : tutorialBattleLocked ? '新手引導進行中' : currentMapGate.requirement}</strong><span>{tutorialBattleLocked && currentMap.id !== 'starter-outskirts' ? '完成村長交付的驛路任務後，其他地點會依序開放。' : '選擇下方怪物後即可開始自動狩獵。'}</span></div>
+                <button type="button" className="world-map-detail-travel" disabled={!currentMapGate.unlocked || tutorialBattleLocked} onClick={() => selectBattleMap(currentMap.id)}>{currentMap.id === game.battleMap ? '目前正在此區域' : `前往・${currentMap.name}`}</button>
+              </aside>
             </div>}
             <p className="battle-world-map-description">{currentMap.region}・{currentMap.description}　生命 ×{currentMap.hpMultiplier}・金錢 ×{currentMap.goldMultiplier}</p>
             {TIER_EQUIPMENT_DROP_REGIONS.filter(region => region.mapId === currentMap.id).map(region => <p key={region.id} className="battle-world-map-description">本區怪物掉落：Lv.{region.tiers.join('／Lv.')} 系列裝備（達到對應等級後可掉落；一般 4%、首領 12%）</p>)}
@@ -1257,12 +1282,12 @@ export default function GameV15() {
             {(cityService === "weapon" || cityService === "armor") && <div className="city-service-body"><div className="panel-title">{cityService === "weapon" ? <Swords /> : <Shield />}<h2>{currentCity.name}{cityService === "weapon" ? "武器商店" : "防具商店"}</h2><span>本城獨立庫存</span></div><p className="shop-quality-notice">購入時隨機鑑定：普通 75%（×1）・稀有 10%（×1.5）・史詩 0.2%（×10）・傳說 0.05%（×150）；未命中高階品時以普通品質出貨。</p>
               <div className="official-item-grid">{(cityService === "weapon" ? cityWeapons : cityArmors).map((record) => {
                 const price = Math.floor(record.price * currentCity.priceFactor);
-                return <article key={record.id}><img src={cuteEquipmentArt(record.name,gersangItemArt(record.kind === "weapon" ? "weapon" : "armor"))} alt="" /><small>Lv.{record.level}・{record.kind === "weapon" ? "武器" : "防具"}</small><strong>{record.name}</strong><span>{record.atk ? "攻 " + record.atk : "防 " + record.def}{record.skill ? "・" + record.skill : ""}</span><em>{[record.str ? "力+" + record.str : "", record.agi ? "敏+" + record.agi : "", record.intel ? "智+" + record.intel : "", record.vit ? "體+" + record.vit : ""].filter(Boolean).join("・") || "基礎裝備"}</em><Button size="sm" onClick={() => buyOfficialItem(record, price)}>{format(price)} 兩</Button></article>;
+                return <article key={record.id} className={shopPurchaseFeedback === `official:${record.id}` ? "shop-purchase-flash" : undefined}><img src={cuteEquipmentArt(record.name,gersangItemArt(record.kind === "weapon" ? "weapon" : "armor"))} alt="" /><small>Lv.{record.level}・{record.kind === "weapon" ? "武器" : "防具"}</small><strong>{record.name}</strong><span>{record.atk ? "攻 " + record.atk : "防 " + record.def}{record.skill ? "・" + record.skill : ""}</span><em>{[record.str ? "力+" + record.str : "", record.agi ? "敏+" + record.agi : "", record.intel ? "智+" + record.intel : "", record.vit ? "體+" + record.vit : ""].filter(Boolean).join("・") || "基礎裝備"}</em><Button size="sm" onClick={() => buyOfficialItem(record, price)}>{format(price)} 兩</Button></article>;
               })}</div>
-              <div className="official-item-grid">{wearableCatalog.filter(item=>cityService==='weapon'?['weapon','ring','amulet'].includes(item.slot):!['weapon','ring','amulet'].includes(item.slot)).map(item=><article key={item.id}><img src={gersangItemArt(item.slot)} alt="" /><small>{slotLabels[item.slot]}</small><strong>{item.name}</strong><span>攻 {item.atk} · 防 {item.def} · HP {item.hp}</span><Button onClick={()=>buyWearable(item)}>{format(Math.floor(item.price*currentCity.priceFactor))} 兩</Button></article>)}</div>
+              <div className="official-item-grid">{wearableCatalog.filter(item=>cityService==='weapon'?['weapon','ring','amulet'].includes(item.slot):!['weapon','ring','amulet'].includes(item.slot)).map(item=><article key={item.id} className={shopPurchaseFeedback === `wearable:${item.id}` ? "shop-purchase-flash" : undefined}><img src={gersangItemArt(item.slot)} alt="" /><small>{slotLabels[item.slot]}</small><strong>{item.name}</strong><span>攻 {item.atk} · 防 {item.def} · HP {item.hp}</span><Button onClick={()=>buyWearable(item)}>{format(Math.floor(item.price*currentCity.priceFactor))} 兩</Button></article>)}</div>
               <p className="shop-quality-notice">過渡供應：Lv.120／150／180／200 系列裝備，達到等級後可購買；後續地圖完成將調整取得來源。</p>
-              <div className="official-item-grid">{tierEquipmentShopCatalog.filter(item=>cityService==='weapon'?item.part==='weapon':item.part!=='weapon').map(item=><article key={item.id}><img src={item.image} alt="" /><small>Lv.{item.requiredLevel}・{item.partLabel}</small><strong>{item.name}</strong><span>攻 {item.atk} · 防 {item.def} · HP {item.hp}</span><Button size="sm" disabled={game.hero.level<item.requiredLevel} onClick={()=>buyTierEquipment(item)}>{game.hero.level<item.requiredLevel?`Lv.${item.requiredLevel} 開放`:`${format(Math.floor(tierEquipmentPrice(item)*currentCity.priceFactor))} 兩`}</Button></article>)}</div>
-              {cityService === "weapon" && <div className="enchant-counter"><div><strong>附魔裝備櫃</strong><p>購入與目前關卡相符、附帶 1～3 條魔法屬性的隨機裝備。</p></div><Button onClick={buyMagicEquipment}><ShoppingBag />12,000 兩</Button></div>}
+              <div className="official-item-grid">{tierEquipmentShopCatalog.filter(item=>cityService==='weapon'?item.part==='weapon':item.part!=='weapon').map(item=><article key={item.id} className={shopPurchaseFeedback === `tier:${item.id}` ? "shop-purchase-flash" : undefined}><img src={item.image} alt="" /><small>Lv.{item.requiredLevel}・{item.partLabel}</small><strong>{item.name}</strong><span>攻 {item.atk} · 防 {item.def} · HP {item.hp}</span><Button size="sm" disabled={game.hero.level<item.requiredLevel} onClick={()=>buyTierEquipment(item)}>{game.hero.level<item.requiredLevel?`Lv.${item.requiredLevel} 開放`:`${format(Math.floor(tierEquipmentPrice(item)*currentCity.priceFactor))} 兩`}</Button></article>)}</div>
+              {cityService === "weapon" && <div className={shopPurchaseFeedback === "magic-equipment" ? "enchant-counter shop-purchase-flash" : "enchant-counter"}><div><strong>附魔裝備櫃</strong><p>購入與目前關卡相符、附帶 1～3 條魔法屬性的隨機裝備。</p></div><Button onClick={buyMagicEquipment}><ShoppingBag />12,000 兩</Button></div>}
             </div>}
 
             {cityService === "warehouse" && <div className="city-service-body warehouse-service"><div className="panel-title"><Warehouse /><h2>三角色共用倉庫</h2><span>{sharedWarehouse.length}/{warehouseLimit(game.territory)} 格</span></div><Progress value={sharedWarehouse.length / warehouseLimit(game.territory) * 100} />
@@ -1272,9 +1297,9 @@ export default function GameV15() {
 
             {cityService === "inn" && <div className="city-service-body inn-service"><BedDouble /><div><small>{currentCity.name}客棧</small><h2>商團歇腳與修練</h2><p>全員 HP / MP 恢復至上限；主角獲得 700 經驗，出戰傭兵各獲得 550 經驗。</p><Button type="button" onClick={restAtInn}>{game.hero.status==='客棧中'||game.dungeon?.status==='recovering'?'立即療傷・'+format(quickHealCost)+' 兩':'入住・'+format(Math.floor(1800 * currentCity.priceFactor))+' 兩'}</Button></div></div>}
 
-            {cityService === "pharmacy" && <div className="city-service-body"><div className="panel-title"><Pill /><h2>{currentCity.name}藥店</h2><span>可設定每次購買數量</span></div><div className="medicine-grid">{medicineCatalog.filter(medicine => (medicine as { shop?: boolean }).shop !== false).map((medicine) => {const amount=medicineAmounts[medicine.id]||1;const unitPrice=Math.floor(medicine.price * currentCity.priceFactor);return <article key={medicine.id}><Pill /><div><strong>{medicine.name}</strong><small>{medicine.effect}</small><em>持有 {game.medicines[medicine.id] || 0} ・單價 {format(unitPrice)} 兩</em></div><div className="medicine-purchase"><label>數量<input aria-label={`${medicine.name}購買數量`} type="number" min="1" max="999" value={amount} onChange={event=>setMedicineAmounts(previous=>({...previous,[medicine.id]:Math.min(999,Math.max(1,Math.floor(Number(event.target.value)||1)))}))}/></label><Button size="sm" onClick={() => buyMedicine(medicine.id,amount)}>購買 {format(unitPrice*amount)} 兩</Button></div><Button size="sm" variant="outline" disabled={!game.medicines[medicine.id]} onClick={() => consumeMedicine(medicine.id)}>使用</Button></article>;})}</div></div>}
+            {cityService === "pharmacy" && <div className="city-service-body"><div className="panel-title"><Pill /><h2>{currentCity.name}藥店</h2><span>可設定每次購買數量</span></div><div className="medicine-grid">{medicineCatalog.filter(medicine => (medicine as { shop?: boolean }).shop !== false).map((medicine) => {const amount=medicineAmounts[medicine.id]||1;const unitPrice=Math.floor(medicine.price * currentCity.priceFactor);return <article key={medicine.id} className={shopPurchaseFeedback === `medicine:${medicine.id}` ? "shop-purchase-flash" : undefined}><Pill /><div><strong>{medicine.name}</strong><small>{medicine.effect}</small><em>持有 {game.medicines[medicine.id] || 0} ・單價 {format(unitPrice)} 兩</em></div><div className="medicine-purchase"><label>數量<input aria-label={`${medicine.name}購買數量`} type="number" min="1" max="999" value={amount} onChange={event=>setMedicineAmounts(previous=>({...previous,[medicine.id]:Math.min(999,Math.max(1,Math.floor(Number(event.target.value)||1)))}))}/></label><Button size="sm" onClick={() => buyMedicine(medicine.id,amount)}>購買 {format(unitPrice*amount)} 兩</Button></div><Button size="sm" variant="outline" disabled={!game.medicines[medicine.id]} onClick={() => consumeMedicine(medicine.id)}>使用</Button></article>;})}</div></div>}
 
-            {cityService === "exchange" && <div className="city-service-body village-exchange"><div className="panel-title"><PackageOpen /><h2>全東亞材料交易所</h2><span>永久攻擊 +{exchangeAttackBonus(game.exchangePurchases)}</span></div><div className="exchange-layout"><div className="exchange-weapons"><div className="exchange-subtitle"><strong>{currentCity.name}鍛造所</strong><small>可重複購買，每次漲價 30%</small></div><div className="weapon-upgrade-grid">{VILLAGE_WEAPONS.map(good=>{const cost=weaponCost(good.id,game.exchangePurchases),bought=game.exchangePurchases[good.id]||0;return <article key={good.id} className={good.id==='immortal-great-blade'?'divine':''}><div><strong>{good.name}</strong><small>主角永久攻擊 +{good.atkBonus}｜已鍛造 {bought} 次</small></div><button onClick={()=>buyExchangeUpgrade(good.id)} disabled={game.gold<cost}>🪙 {format(cost)} 兩</button></article>;})}</div></div><div className="exchange-market"><div className="exchange-subtitle"><strong>本地材料櫃檯</strong><small>{currentWorldZone.name}・可買回本地怪物材料</small><small>材料請至商隊背包出售。</small></div><div className="material-market-grid">{currentWorldZone.dropTable.map(item=>{const price=MATERIAL_BUY_PRICES[item.item]||0;return <article key={item.item}><div><strong>{item.item}</strong><small>持有 ×{game.materials[item.item]||0}・買價 {format(price)} 兩</small></div><button type="button" disabled={!price||game.gold<price} onClick={()=>buyLootMaterial(item.item)}>買入 1 件</button></article>;})}</div></div></div></div>}
+            {cityService === "exchange" && <div className="city-service-body village-exchange"><div className="panel-title"><PackageOpen /><h2>全東亞材料交易所</h2><span>永久攻擊 +{exchangeAttackBonus(game.exchangePurchases)}</span></div><div className="exchange-layout"><div className="exchange-weapons"><div className="exchange-subtitle"><strong>{currentCity.name}鍛造所</strong><small>可重複購買，每次漲價 30%</small></div><div className="weapon-upgrade-grid">{VILLAGE_WEAPONS.map(good=>{const cost=weaponCost(good.id,game.exchangePurchases),bought=game.exchangePurchases[good.id]||0;return <article key={good.id} className={good.id==='immortal-great-blade'?'divine':''}><div><strong>{good.name}</strong><small>主角永久攻擊 +{good.atkBonus}｜已鍛造 {bought} 次</small></div><button onClick={()=>buyExchangeUpgrade(good.id)} disabled={game.gold<cost}>🪙 {format(cost)} 兩</button></article>;})}</div></div><div className="exchange-market"><div className="exchange-subtitle"><strong>本地材料櫃檯</strong><small>{currentWorldZone.name}・可買回本地怪物材料</small><small>材料請至商隊背包出售。</small></div><div className="material-market-grid">{currentWorldZone.dropTable.map(item=>{const price=MATERIAL_BUY_PRICES[item.item]||0;return <article key={item.item} className={shopPurchaseFeedback === `material:${item.item}` ? "shop-purchase-flash" : undefined}><div><strong>{item.item}</strong><small>持有 ×{game.materials[item.item]||0}・買價 {format(price)} 兩</small></div><button type="button" disabled={!price||game.gold<price} onClick={()=>buyLootMaterial(item.item)}>買入 1 件</button></article>;})}</div></div></div></div>}
           </section>
 
           <div className="city-auxiliary">

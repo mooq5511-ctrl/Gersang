@@ -57,9 +57,11 @@ export function sellAllMaterialsAction(state: GameState, addLog: Log, format: Fo
   return markHanyangLootSold({ ...state, materials: result.materials, gold: result.gold, logs: addLog(state.logs, `交易所完成全部變賣，獲得 ${format(result.earned)} 兩。`) });
 }
 
-export function buyMaterialAction(state: GameState, itemName: string, addLog: Log, format: Format): GameState {
+export function buyMaterialAction(state: GameState, itemName: string, addLog: Log, format: Format, notify?: (message: string) => void): GameState {
   const result = buyMarketMaterial(state.materials, state.gold, itemName);
-  return result.error ? { ...state, logs: addLog(state.logs, result.error) } : { ...state, materials: result.materials, gold: result.gold, logs: addLog(state.logs, `交易所買入「${itemName}」×1，支付 ${format(result.spent)} 兩。`) };
+  if (result.error) { notify?.(result.error); return { ...state, logs: addLog(state.logs, result.error) }; }
+  notify?.(`購買成功：「${itemName}」×1，支付 ${format(result.spent)} 兩。`);
+  return { ...state, materials: result.materials, gold: result.gold, logs: addLog(state.logs, `交易所買入「${itemName}」×1，支付 ${format(result.spent)} 兩。`) };
 }
 
 export function sellInventoryEquipmentAction(state: GameState, itemUid: string, addLog: Log, format: Format): GameState {
@@ -94,6 +96,7 @@ export function forgeThunderItemAction(state: GameState, id: ThunderForgeId, uid
 
 export function purchaseEquipmentAction(state: GameState, item: Equipment, price: number, message: string, addLog: Log, notify: (message: string) => void): GameState {
   if (state.gold < price) { notify("裝備商店資金不足。"); return state; }
+  notify(`購買成功：「${item.name}」×1，支付 ${price.toLocaleString("zh-TW")} 兩，已放入背包。`);
   return { ...state, gold: state.gold - price, inventory: [item, ...state.inventory], logs: addLog(state.logs, message) };
 }
 
@@ -107,6 +110,7 @@ export function purchaseTierEquipmentAction(state: GameState, itemId: string, pr
   const item = makeTierEquipment(spec, uid, `${cityName}商店・過渡供應`);
   const pickup = addInventoryItem(state.inventory, item);
   if (pickup.error) { notify("背包已滿，無法購買裝備。"); return state; }
+  notify(`購買成功：「${item.name}」×1，支付 ${price.toLocaleString("zh-TW")} 兩，已放入背包。`);
   return { ...state, gold: state.gold - price, inventory: pickup.inventory, logs: addLog(state.logs, `購入「${item.name}」（Lv.${spec.requiredLevel}），支付 ${price.toLocaleString("zh-TW")} 兩。`) };
 }
 
@@ -142,7 +146,8 @@ export function buyMedicineAction(state: GameState, medicineId: string, requeste
   if (!medicine) return state;
   const price = Math.floor(medicine.price * priceFactor), amount = Math.max(1, Math.floor(requestedAmount) || 1), purchased = Math.min(amount, Math.floor(state.gold / price));
   if (purchased <= 0) { notify(`購買「${medicine.name}」的資金不足。`); return state; }
-  if (purchased < amount) notify(`金幣不足，僅購入「${medicine.name}」×${purchased}。`);
+  const spent = price * purchased;
+  notify(purchased < amount ? `購買完成：「${medicine.name}」×${purchased}，支付 ${spent.toLocaleString("zh-TW")} 兩（受資金限制）。` : `購買成功：「${medicine.name}」×${purchased}，支付 ${spent.toLocaleString("zh-TW")} 兩。`);
   return markHanyangMedicinePurchased({ ...state, gold: state.gold - price * purchased, medicines: { ...state.medicines, [medicine.id]: (state.medicines[medicine.id] || 0) + purchased }, logs: addLog(state.logs, `在${cityName}藥店購入「${medicine.name}」×${purchased}。`) }, medicine.id);
 }
 

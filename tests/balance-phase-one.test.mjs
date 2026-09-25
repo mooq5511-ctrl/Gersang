@@ -49,4 +49,8 @@ test('thunder altar keeps fixed boss HP and individual timers with burst cooldow
   assert.ok(source.includes('const BURST_COOLDOWN = 10'));
   assert.ok(source.includes('setBurstCooldown(BURST_COOLDOWN)'));
   assert.ok(source.includes('raidPower * .25'));
+  assert.ok(source.includes('raid-action-grid'));
+  assert.ok(source.includes('狂雷倒數'));
+  assert.ok(source.includes('const stabilize'));
+  assert.ok(source.includes('const interrupt'));
 });

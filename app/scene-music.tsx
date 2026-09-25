@@ -2,12 +2,13 @@
 
 import {useEffect,useRef,useState} from 'react';
 
-export type SceneMusicKind='outskirts'|'merchant'|'inn'|'boss';
+export type SceneMusicKind='outskirts'|'merchant'|'inn'|'boss'|'raid';
 const tracks:Record<SceneMusicKind,{src:string;label:string}>= {
   outskirts:{src:'/assets/music/newbie-outskirts.mp3',label:'新手村郊外'},
   merchant:{src:'/assets/music/merchant-base.mp3',label:'商團駐地'},
   inn:{src:'/assets/music/inn.mp3',label:'客棧'},
   boss:{src:'/assets/music/boss-battle.mp3',label:'世界地圖'},
+  raid:{src:'/assets/music/BOSS.mp3',label:'雷霆祭壇'},
 };
 
 export function SceneMusic({scene,volume}:{scene:SceneMusicKind;volume:number}){

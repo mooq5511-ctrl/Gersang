@@ -1,4 +1,5 @@
 import type { Equipment, EnhancementBonus, GameState } from "./game-state";
+import { enhancementMultiplier as sharedEnhancementMultiplier } from "./equipment-stats.ts";
 
 export const TERRITORY_ENTRY_ID = "guild-territory";
 export const TERRITORY_UNLOCK_LEVEL = 20;
@@ -140,7 +141,7 @@ export function enhancementChance(territory: GuildTerritory, item: Equipment): n
 
 /** 強化屬性採用每級 ×115%，避免高階仍停留在線性成長。 */
 export function enhancementMultiplier(level: number): number {
-  return 1.15 ** Math.max(0, Math.floor(level));
+  return sharedEnhancementMultiplier(level);
 }
 
 const ENHANCEMENT_MILESTONE_TABLE = {

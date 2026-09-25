@@ -96,7 +96,7 @@ export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, mat
       <h3>鐵匠鋪・裝備強化</h3>
       <p>僅可強化背包裝備，最高 +15。成功後裝備能力提高；失敗只消耗金錢，不損壞裝備。旗幟與鐵匠鋪成功率加成相加，上限 100%。</p>
       {smithyOpen ? <div className="territory-smithy-controls">
-        <label>選擇裝備<select value={selectedItem} onChange={(event) => setSelectedItem(event.target.value)}><option value="">請選擇背包裝備</option>{inventory.map((entry) => <option value={entry.uid} key={entry.uid}>{entry.name} +{entry.enhance}</option>)}</select></label>
+        <label>選擇裝備<select value={selectedItem} onChange={(event) => setSelectedItem(event.target.value)}><option value="">請選擇背包裝備</option>{inventory.map((entry) => <option value={entry.uid} key={entry.uid}>{rarityPresentation(entry.rarity).label}・{entry.name} +{entry.enhance}</option>)}</select></label>
         {item && <span>成功率 {Math.round(enhancementChance(territory, item) * 1000) / 10}%・花費 {enhancementCost(item).toLocaleString()} 兩</span>}
         <button type="button" className={itemEnhanceFeedback ? "enhance-button-pulse" : ""} disabled={!item || item.enhance >= 15 || gold < enhancementCost(item)} onClick={() => item && enhance(item.uid)}>強化裝備</button>
         {itemEnhanceFeedback && <output className={'enhance-feedback '+(itemEnhanceFeedback.success ? 'success' : 'failure')} aria-live="polite">{itemEnhanceFeedback.success ? `強化成功・+${itemEnhanceFeedback.level}` : '強化失敗・裝備未受損'}</output>}

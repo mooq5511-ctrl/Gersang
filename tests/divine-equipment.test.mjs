@@ -6,6 +6,7 @@ import {DIVINE_EQUIPMENT,toggleDivineEquipment,HERO_DISPLAY_SLOTS,equipmentDetai
 import {heroPersonalPower,heroTotalAttributes,heroWeightLimit,HERO_INITIAL_ATTRIBUTES} from '../app/hero-rules.ts';
 import {vitalStats,combatStats,normalizeVitals} from '../app/vitals-engine.ts';
 import {emptyEquipmentSlots,migrateSevenSlotSave} from '../app/equipment-slots.ts';
+import {effectiveEquipmentStats} from '../app/equipment-stats.ts';
 const makeHero=()=>({...HERO_INITIAL_ATTRIBUTES,uid:'hero',templateId:'hero',level:1,equip:emptyEquipmentSlots()});
 const gear=key=>({...DIVINE_EQUIPMENT[key],uid:'test-'+key,atk:0,hp:0,enhance:0,magic:[],requiredLevel:1});
 test('six display slots and divine definitions match requested equipment',()=>{
@@ -17,7 +18,7 @@ test('staff and armor increase real resources totals weight power and defense',(
   const hero=makeHero(),a=toggleDivineEquipment(hero,[],gear('staff')),b=toggleDivineEquipment(a.unit,a.inventory,gear('armor'));
   assert.equal(heroPersonalPower(a.unit),265);assert.equal(heroWeightLimit(a.unit),350);assert.equal(vitalStats(a.unit).maxMp,240);
   assert.deepEqual(heroTotalAttributes(b.unit),{str:30,agi:15,vit:100,intel:60});
-  assert.equal(heroPersonalPower(b.unit),385);assert.equal(vitalStats(b.unit).maxHp,420);
+  assert.equal(heroPersonalPower(b.unit),545);assert.equal(vitalStats(b.unit).maxHp,420);
   assert.ok(combatStats(b.unit).defense>=combatStats(hero).defense+100);
   assert.equal(hero.str,20);assert.equal(hero.vit,20);
 });
@@ -44,6 +45,14 @@ test('unequipping clamps remaining health to reduced maximum without reviving',(
   const off=toggleDivineEquipment({...on.unit,hp:400},on.inventory,gear('armor'));
   assert.equal(normalizeVitals(off.unit).hp,100);
   assert.equal(normalizeVitals({...off.unit,hp:0}).hp,0);
+});
+test('enhancement level is reflected in effective equipment attributes',()=>{
+  const item={atk:100,def:50,hp:200,enhance:10};
+  assert.deepEqual(effectiveEquipmentStats(item),{atk:404,def:202,hp:809});
+  assert.ok(equipmentDetailLines({...item,name:'強化測試甲'}).includes('攻擊力 +404'));
+  assert.ok(equipmentDetailLines({...item,name:'強化測試甲'}).includes('生命值 +809'));
+  const hero={...HERO_INITIAL_ATTRIBUTES,templateId:'hero',level:1,maxHp:100,equip:{weapon:item}};
+  assert.equal(vitalStats(hero).maxHp,909);
 });
 test('single HTML toggles independently, restores baseline, and keeps paid attributes',()=>{
   const html=readFileSync(new URL('../public/hero-equipment-panel.html',import.meta.url),'utf8');

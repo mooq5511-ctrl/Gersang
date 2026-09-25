@@ -1,3 +1,5 @@
+import { effectiveEquipmentStats } from './equipment-stats.ts';
+
 export type TooltipField = { label: string; value: string };
 export type ItemTooltipData = {
   name: string;
@@ -19,7 +21,13 @@ export type TooltipEquipment = {
   source?: string;
   atk?: number;
   def?: number;
+  hp?: number;
   enhance?: number;
+  enhanceBonuses?: Array<{ name?: string; text?: string; stat?: string; value?: number }>;
+  magic?: Array<{ id?: string; name?: string; text?: string; stat?: string; value?: number; color?: string }>;
+  resist?: { physical?: number; magic?: number };
+  socketGem?: { name: string; count: number; totalValue: number };
+  skill?: string;
   requiredLevel?: number;
   requiredJob?: string;
   durability?: number;
@@ -80,6 +88,7 @@ export const ItemTooltipManager = Object.freeze({
       owned: number;
     },
   ): ItemTooltipData {
+    const effective = effectiveEquipmentStats(item);
     const data = {
       name: item.name,
       image: item.image,
@@ -98,12 +107,15 @@ export const ItemTooltipManager = Object.freeze({
         {
           title: '裝備屬性',
           fields: [
-            { label: '攻擊', value: `+${format(item.atk || 0)}` },
-            { label: '防禦', value: `+${format(item.def || 0)}` },
+            { label: '攻擊', value: `+${format(effective.atk)}` },
+            { label: '防禦', value: `+${format(effective.def)}` },
+            { label: '生命', value: `+${format(effective.hp)}` },
             { label: '力量', value: `+${format(item.bonus?.str || 0)}` },
             { label: '敏捷', value: `+${format(item.bonus?.agi || 0)}` },
             { label: '智力', value: `+${format(item.bonus?.intel || 0)}` },
             { label: '體質', value: `+${format(item.bonus?.vit || 0)}` },
+            ...(item.resist?.physical ? [{ label: '物理抗性', value: `+${format(item.resist.physical)}` }] : []),
+            ...(item.resist?.magic ? [{ label: '魔法抗性', value: `+${format(item.resist.magic)}` }] : []),
             {
               label: '需求等級',
               value: `Lv.${Math.max(1, Math.floor(item.requiredLevel || 1))}`,
@@ -114,6 +126,16 @@ export const ItemTooltipManager = Object.freeze({
               : []),
           ],
         },
+        ...(item.enhance ? [{ title: '強化與鑲嵌', fields: [
+          { label: '強化等級', value: `+${format(item.enhance)}` },
+          ...(item.socketGem ? [{ label: '鑲嵌寶石', value: `${item.socketGem.name} ×${format(item.socketGem.count)}（+${format(item.socketGem.totalValue)}）` }] : []),
+          ...(item.enhanceBonuses || []).map(bonus => ({ label: bonus.name || bonus.stat || '強化效果', value: bonus.text || `+${format(bonus.value || 0)}` })),
+        ] }] : item.socketGem || item.enhanceBonuses?.length ? [{ title: '強化與鑲嵌', fields: [
+          ...(item.socketGem ? [{ label: '鑲嵌寶石', value: `${item.socketGem.name} ×${format(item.socketGem.count)}（+${format(item.socketGem.totalValue)}）` }] : []),
+          ...(item.enhanceBonuses || []).map(bonus => ({ label: bonus.name || bonus.stat || '強化效果', value: bonus.text || `+${format(bonus.value || 0)}` })),
+        ] }] : []),
+        ...(item.magic?.filter(affix => !affix.id?.startsWith('socket-')).length ? [{ title: '魔法詞條', fields: item.magic.filter(affix => !affix.id?.startsWith('socket-')).map(affix => ({ label: affix.name || affix.stat || '附加效果', value: affix.text || `+${format(affix.value || 0)}` })) }] : []),
+        ...(item.skill ? [{ title: '裝備技能', fields: [{ label: '技能', value: item.skill }] }] : []),
       ],
     };
   },

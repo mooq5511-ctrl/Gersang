@@ -88,6 +88,12 @@ test('settings expose a persistent live music-volume control', () => {
   assert.match(music, /audioRef\.current\.volume=Math\.max\(0,Math\.min\(1,volume\)\)/);
 });
 
+test('Thunder Altar selects the dedicated BOSS track', () => {
+  assert.equal(existsSync(new URL('../public/assets/music/BOSS.mp3', import.meta.url)), true);
+  assert.match(music, /raid:\{src:'\/assets\/music\/BOSS\.mp3',label:'雷霆祭壇'\}/);
+  assert.match(ui, /activeTab==='raid'\?'raid'/);
+});
+
 test('screen-fit settings default to responsive full-bleed and can preserve the complete scene', () => {
   assert.match(ui, /sceneFit: "cover"/);
   assert.match(ui, /<legend>畫面比例與場景顯示<\/legend>/);
