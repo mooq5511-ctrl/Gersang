@@ -21,7 +21,7 @@ function rewardText(commission: NonNullable<ReturnType<typeof cityHallCommission
   const equipment = reward.rewardEquipmentRarity === "傳說" ? "隨機部位・紫色品階裝備 ×1" : reward.rewardEquipmentRarity === "金色" ? "隨機部位・金色品階裝備 ×1" : "";
   const multiplier = cityHallRewardMultiplier(reward.quality);
   const multiplierText = multiplier > 1 ? `品質倍率 ×${multiplier}` : "";
-  return [`${reward.rewardGold.toLocaleString("zh-TW")} 兩`, `信用經驗 ${reward.rewardCreditXp}`, multiplierText, equipment, ...materials].filter(Boolean).join("・");
+  return [`${reward.rewardGold.toLocaleString("zh-TW")} 兩`, `主角經驗 +${reward.rewardXp.toLocaleString("zh-TW")}`, `信用經驗 ${reward.rewardCreditXp}`, multiplierText, equipment, ...materials].filter(Boolean).join("・");
 }
 
 export function CityHall({

@@ -781,10 +781,11 @@ export default function GameV15() {
     setGame(previous => {
       const result = claimCityHallCommissionAction(previous, commissionId);
       if (result.error || !result.reward) { setNotice(result.error || "無法領取這份委託。"); return previous; }
-      const withCreditXp = grantCreditXp(result.state, result.reward.rewardCreditXp);
+      const withHeroXp = grantTerritoryXp(result.state, result.state.hero, result.reward.rewardXp);
+      const withCreditXp = grantCreditXp({ ...result.state, hero: withHeroXp }, result.reward.rewardCreditXp);
       const materials = Object.entries(result.reward.rewardMaterials || {}).map(([name, amount]) => `${name} ×${amount}`).join("、");
       const equipment = result.equipment ? `、獲得「${result.equipment.name}」` : "";
-      return { ...withCreditXp, logs: addLog(withCreditXp.logs, `市政廳委託「${result.reward.name}」完成，獲得 ${format(result.reward.rewardGold)} 兩、信用經驗 ${result.reward.rewardCreditXp}${materials ? `、${materials}` : ""}${equipment}。`) };
+      return { ...withCreditXp, logs: addLog(withCreditXp.logs, `市政廳委託「${result.reward.name}」完成，獲得 ${format(result.reward.rewardGold)} 兩、主角經驗 ${format(result.reward.rewardXp)}、信用經驗 ${result.reward.rewardCreditXp}${materials ? `、${materials}` : ""}${equipment}。`) };
     });
   }
 

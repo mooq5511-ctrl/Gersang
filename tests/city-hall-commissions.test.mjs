@@ -100,13 +100,23 @@ test('purple and gold commissions apply their reward multipliers to all ordinary
   const purple = cityHallEffectiveReward(cityHallCommission('hall-drive-bandits'));
   assert.equal(purple.rewardGold, 22_500);
   assert.equal(purple.rewardCreditXp, 1_500);
+  assert.equal(purple.rewardXp, 15_000);
   assert.equal(purple.rewardMaterials['下級精髓'], 15);
 
   const gold = cityHallEffectiveReward(cityHallCommission('hall-prepare-supplies'));
   assert.equal(gold.rewardGold, 120_000);
   assert.equal(gold.rewardCreditXp, 8_500);
+  assert.equal(gold.rewardXp, 30_000);
   assert.equal(gold.rewardMaterials['肉類'], 200);
   assert.equal(gold.rewardMaterials['下級精髓'], 50);
+});
+
+test('commission experience scales by quality without using currency multipliers', () => {
+  assert.equal(cityHallCommission('hall-clear-raccoon').rewardXp, 300);
+  assert.equal(cityHallCommission('hall-gather-herbs').rewardXp, 600);
+  assert.equal(cityHallCommission('hall-scout-route').rewardXp, 1_000);
+  assert.equal(cityHallCommission('hall-drive-bandits').rewardXp, 15_000);
+  assert.equal(cityHallCommission('hall-prepare-supplies').rewardXp, 30_000);
 });
 
 test('refresh uses a ticket and preserves active commissions', () => {
