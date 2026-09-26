@@ -32,9 +32,9 @@ export const database = {
   e_japan_sea_bat: { spriteUrl: "/assets/characters/char_053_pirate_skeleton_cannon_R.png" },
   e_japan_sea_crab: { spriteUrl: "/assets/characters/char_055_pirate_skeleton_captain_D.png" },
   e_japan_sea_leech: { spriteUrl: "/assets/characters/char_052_pirate_skeleton_cannon_N.png" },
-  e_japan_sea_starfish: { spriteUrl: "/assets/monsters/golden-starfish.gif" },
-  e_japan_sea_starfish_strong: { spriteUrl: "/assets/monsters/golden-starfish.gif" },
-  e_japan_sea_golden_starfish: { spriteUrl: "/assets/monsters/golden-starfish.gif" },
+  e_japan_sea_starfish: { spriteUrl: "/assets/monsters/golden-starfish-boss.png" },
+  e_japan_sea_starfish_strong: { spriteUrl: "/assets/monsters/golden-starfish-boss.png" },
+  e_japan_sea_golden_starfish: { spriteUrl: "/assets/monsters/golden-starfish-boss.png" },
 
   e_white_tiger_soul_eater: { spriteUrl: "/assets/monsters/gale-tiger.jpg" },
   e_white_tiger_trainer: { spriteUrl: "/assets/monsters/gale-tiger.jpg" },

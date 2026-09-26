@@ -12,13 +12,20 @@ import { formationDamageMultiplier } from "./formation-position";
 import { addInventoryItem } from "./inventory-layout";
 import { combatStats, enemyCombatStats, resolveVitalBattle, spellCost, vitalStats } from "./vitals-engine";
 import type { Hero, Unit } from "./game-state";
+import { unitPower } from "./game-progression";
 
-export function dispatchTradeAction(state: GameState, routeId: string, now: number, addLog: (logs: string[], message: string) => string[]) {
+export function dispatchTradeAction(state: GameState, routeId: string, now: number, addLog: (logs: string[], message: string) => string[], escortIds: string[] = state.active.slice(0, 11)) {
   if (dungeonBusy(state.dungeon)) return { ...state, logs: addLog(state.logs, "請先結束副本並完成療傷。") };
-  const result = dispatchTrade(state.trade, state.gold, routeId, Math.max(state.stage, state.hero.level), state.active.length, now);
+  const available = new Set(state.active);
+  const selectedEscortIds = escortIds.filter((uid, index) => available.has(uid) && escortIds.indexOf(uid) === index).slice(0, 11);
+  const escortUnits = state.mercs.filter((unit) => selectedEscortIds.includes(unit.uid));
+  const escortPower = escortUnits.reduce((sum, unit) => sum + unitPower(unit), 0);
+  const result = dispatchTrade(state.trade, state.gold, routeId, Math.max(state.stage, state.hero.level), selectedEscortIds.length, now, undefined, { escortIds: selectedEscortIds, escortPower, rewardMultiplier: state.trade.rewardMultiplier });
   if (result.error) return { ...state, logs: addLog(state.logs, result.error) };
   const route = TRADE_ROUTES.find((item) => item.id === routeId)!;
-  return { ...state, gold: result.gold, trade: result.trade, logs: addLog(state.logs, route.from + " → " + route.to + "：商隊裝載「" + route.good + "」啟航。") };
+  const names = escortUnits.map((unit) => unit.name).join("、");
+  const nextActive = state.active.filter((uid) => !selectedEscortIds.includes(uid));
+  return { ...state, gold: result.gold, trade: result.trade, active: nextActive, logs: addLog(state.logs, route.from + " → " + route.to + "：商隊裝載「" + route.good + "」啟航。" + (names ? ` 已派遣 ${names} 擔任護衛。` : " 本趟未派遣傭兵護衛。")) };
 }
 
 export function upgradeCaravanAction(state: GameState, addLog: (logs: string[], message: string) => string[]) {

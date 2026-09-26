@@ -26,7 +26,7 @@ export const sourceEnemyDefinitions: SourceEnemyDefinition[] = [
   { name: "山賊", id: "e_starter_bandit", mapId: "starter-outskirts", physicalResistance: 0, magicResistance: 0, drops: ["下級精髓", "桂皮", "[訓練用]咒術秘訣", "舊短弓", "古錢箱"] },
   { name: "海賊", id: "e_starter_pirate", mapId: "starter-outskirts", physicalResistance: 0, magicResistance: 0, drops: ["海鮮", "牛黃", "舊三叉戟", "下級精髓", "古錢箱"] },
   { name: "鐵鉤海賊", id: "e_starter_hook_pirate", mapId: "starter-outskirts", physicalResistance: 0, magicResistance: 0, drops: ["熟地黃", "舊貓娃娃", "舊蓮花佛鐘", "下級精髓", "古錢箱"] },
-  { name: "海賊王", id: "e_starter_pirate_king", mapId: "starter-outskirts", grade: 9, physicalResistance: 290, magicResistance: 290, drops: ["古錢箱", "幽冥石", "[新手]兌換銅錢"], boss: true },
+  { name: "山賊首領", id: "e_starter_pirate_king", mapId: "starter-outskirts", grade: 9, physicalResistance: 290, magicResistance: 290, drops: ["古錢箱", "幽冥石", "[新手]兌換銅錢"], boss: true },
   { name: "鹿", id: "e_korea_field_deer", mapId: "korea-field", xp: 6, physicalResistance: 0, magicResistance: 0, drops: ["甘草", "鹿茸", "下級精髓"] },
   { name: "小山賊", id: "e_korea_field_small_bandit", mapId: "korea-field", xp: 7, physicalResistance: 0, magicResistance: 0, drops: ["乾馬肉", "舊念珠", "下級精髓"] },
   { name: "弓手山賊", id: "e_korea_field_archer_bandit", mapId: "korea-field", xp: 8, physicalResistance: 0, magicResistance: 0, drops: ["藍色精氣石", "白銀咒術秘訣", "下級精髓"] },

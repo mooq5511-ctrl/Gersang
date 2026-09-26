@@ -8,6 +8,7 @@ import {BattleArena} from './battle-arena';
 import {gersangWorldMap,type GersangNationId} from './gersang-world-map';
 import type {AutoPotionSettings,HealingPotion} from './auto-potion-manager';
 import type {BattleLogEntry} from './battle-log-manager';
+const BATTLE_MAP_THEMES:Record<string,string>={"新手村郊外":"field","千年湖":"lake","日本海底洞":"sea","白虎林":"forest"};
 /** 不另外快取解鎖布林值：升級、配點、穿脫裝備引發重繪時，立即用新數值判斷。 */
 export function WorldMapNavigation({state,level,power,travel}:{state:DungeonState;level:number;power:number;travel:(id:ZoneId)=>void}){
  return <nav className="world-zone-nav" aria-label="大商帝國地域傳送（地圖選擇）">
@@ -25,8 +26,8 @@ export function WorldMapNavigation({state,level,power,travel}:{state:DungeonStat
  </section>)}</div><p>{state.status==='recovering'?'漢陽客棧療傷中，HP 回滿後可再次傳送。':'點選已解鎖關卡立即傳送並開戰；可在戰鬥區停止狩獵以保留當前狀態，之後再按「開始狩獵」繼續。'}</p>
  </nav>;
 }
-export function DungeonPanel({state,hero,party,dps=0,act,autoSkill,toggleAutoSkill,autoPotion,healingPotions,medicineStock,onAutoPotionChange,battleLogs,clearBattleLogs,mapName,mapRegion,medicineQuickbar}:{state:DungeonState;mp:number;hero:CaravanMember;party:CaravanMember[];dps?:number;act:(action:DungeonAction,key?:DungeonKey)=>void;autoSkill:boolean;toggleAutoSkill:()=>void;autoPotion:AutoPotionSettings;healingPotions:HealingPotion[];medicineStock:Record<string,number>;onAutoPotionChange:(change:Partial<AutoPotionSettings>)=>void;battleLogs:BattleLogEntry[];clearBattleLogs:()=>void;mapName?:string;mapRegion?:string;medicineQuickbar?:ReactNode}){
- const monster=DUNGEONS[state.key],boss=isBossMonster(monster.name),enemyCount=state.realtime?.enemies.length??state.enemyCount??0,zone=zoneFor(state.zone),active=state.status==='fighting'&&state.phase==='交戰';
+export function DungeonPanel({state,hero,party,dps=0,act,autoSkill,toggleAutoSkill,autoPotion,healingPotions,medicineStock,onAutoPotionChange,battleLogs,clearBattleLogs,mapName,mapRegion,mapTheme,medicineQuickbar}:{state:DungeonState;mp:number;hero:CaravanMember;party:CaravanMember[];dps?:number;act:(action:DungeonAction,key?:DungeonKey)=>void;autoSkill:boolean;toggleAutoSkill:()=>void;autoPotion:AutoPotionSettings;healingPotions:HealingPotion[];medicineStock:Record<string,number>;onAutoPotionChange:(change:Partial<AutoPotionSettings>)=>void;battleLogs:BattleLogEntry[];clearBattleLogs:()=>void;mapName?:string;mapRegion?:string;mapTheme?:string;medicineQuickbar?:ReactNode}){
+ const monster=DUNGEONS[state.key],boss=isBossMonster(monster.name),enemyCount=state.realtime?.enemies.length??state.enemyCount??0,zone=zoneFor(state.zone),active=state.status==='fighting'&&state.phase==='交戰',battleTheme=mapTheme||BATTLE_MAP_THEMES[mapName||'']||'default';
  const enemyMaxHp=state.realtime?.enemies.reduce((sum,unit)=>sum+unit.maxHp,0)??monster.hp*enemyCount;
  const liveLogs=state.logs.filter(line=>/施放|造成|受到|攻擊|技能|暴擊/.test(line)).slice(0,4);
  const selectedPotionQuantity=autoPotion.medicineId?Math.max(0,Math.floor(medicineStock[autoPotion.medicineId]||0)):0;
@@ -36,7 +37,7 @@ export function DungeonPanel({state,hero,party,dps=0,act,autoSkill,toggleAutoSki
  <div className="battle-phase" aria-live="polite"><span><small>我方・{party.length} 名</small><strong>{state.realtime?.players.filter(unit=>unit.hp>0).length??party.filter(unit=>(unit.hp||0)>0).length} 名存活</strong></span><span><small>敵方・{enemyCount?`${boss?'首領・':''}${enemyCount} 隻${monster.name}`:'等待遭遇'}</small><strong>{enemyCount?`HP ${Math.max(0,state.enemyHp).toLocaleString()} / ${enemyMaxHp.toLocaleString()}`:'尚未交戰'}</strong></span><span><small>戰況</small><strong>{state.status==='fighting'?(boss?'首領單體即時交戰':`${party.length} 對 ${enemyCount} 即時交戰`):state.status==='respawning'?(boss?'首領重新出現中':'敵方整隊重生中'):state.status==='recovering'?'返回療傷':'待命'}</strong></span><div><i style={{width:(100-(state.distance??100))+'%'}}/></div></div>
  <div className="battle-live-feed" aria-label="即時戰鬥資訊" aria-live="polite"><strong>即時戰鬥資訊</strong>{liveLogs.length?liveLogs.map((line,index)=><span key={state.serial+'-'+index+'-'+line}>{line}</span>):<span>等待敵我行動……</span>}</div>
  {state.key==='e_white_tiger_fierce_tiger'&&<div className="boss-skill-hud" aria-label="狂虎技能"><strong>狂虎技能</strong><span><b>暴君風吼嘯</b><small>{state.status==='fighting' ? `MP ${Math.max(0,state.tigerMp||0).toLocaleString()}・${Math.max(0,Math.ceil(((state.tigerHowlAt||state.stamp)-state.stamp)/1000))} 秒後可用` : '等待狂虎重生'}</small></span><span className={state.tigerRageActive?'active':''}><b>白虎凶煞</b><small>{state.tigerRageActive?'已啟動・攻速與移速 +300%':'HP ≤ 40% 時啟動'}</small></span></div>}
- <BattleArena state={state} hero={hero} party={party}/>
+ <BattleArena state={state} hero={hero} party={party} mapTheme={battleTheme}/>
  {medicineQuickbar}
  <output className={'dungeon-flash'+(state.logs[0]?.startsWith('🎁')?' dungeon-loot-flash':'')} key={state.serial+'-'+state.logs[0]}>{state.logs[0]||'選擇對手，開始戰鬥。'}</output>
  <div className="dungeon-auto-skill"><span><strong>滿 MP 自動技能</strong><small>每次普攻 +20 MP；達到 100 MP 後於下次個人攻擊時施放</small></span><button type="button" role="switch" aria-checked={autoSkill} className={autoSkill?'enabled':''} onClick={toggleAutoSkill}>{autoSkill?'開啟':'關閉'}</button></div>

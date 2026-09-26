@@ -27,7 +27,7 @@ export interface MonsterCompendiumEntry {
 
 const prerequisites: Record<CompendiumMapId, string | null> = {
   "starter-outskirts": null,
-  "millennium-lake": "擊敗海賊王",
+  "millennium-lake": "擊敗山賊首領",
   "japan-sea": "擊敗狂風阿魯塔",
   "miasma-forest": "擊敗黃金海星",
   sumeru: "世界地圖達到第 40 關",

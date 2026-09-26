@@ -206,7 +206,7 @@ export const ItemTooltipManager = Object.freeze({
   position(
     pointer: { x: number; y: number },
     viewport: { width: number; height: number },
-    size = { width: 320, height: 390 },
+    size = { width: 360, height: 380 },
   ) {
     const gap = 12,
       margin = 8;

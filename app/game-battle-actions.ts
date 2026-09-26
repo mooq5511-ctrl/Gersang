@@ -25,7 +25,7 @@ type BattleActionDependencies = {
 export function selectBattleMapAction(state: GameState, mapId: string, deps: BattleActionDependencies): GameState {
   const map = battleMaps.find((entry) => entry.id === mapId);
   if (!map) return state;
-  if (map.id === "millennium-lake" && !state.newbieBossDefeated) { deps.notify("請先在新手村郊外擊敗海賊王，才能進入千年湖。"); return state; }
+  if (map.id === "millennium-lake" && !state.newbieBossDefeated) { deps.notify("請先在新手村郊外擊敗山賊首領，才能進入千年湖。"); return state; }
   if (map.id === "japan-sea" && !state.lakeBossDefeated) { deps.notify("請先在千年湖擊敗狂風阿魯塔，才能進入日本海底洞。"); return state; }
   if (map.id === "miasma-forest" && !state.goldenStarfishDefeated) { deps.notify("請先在日本海底洞擊敗黃金海星，才能進入白虎林。"); return state; }
   if (state.stage < map.unlockStage) { deps.notify("請依世界地圖完成前置區域，才能進入「" + map.name + "」。"); return state; }
@@ -63,7 +63,7 @@ export function runDungeonAction(
     const firstDeliveryComplete = previous.npcProgress.completedQuests.includes("npc-first-caravan-delivery");
     const firstGreenEquipped = previous.firstGreenEquipped || [previous.hero, ...previous.mercs, ...previous.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== "普通"));
     if (!firstDeliveryComplete || previous.hero.level < 20 || previous.territory.buildings.waystation < 1 || !firstGreenEquipped) {
-      return { ...previous, logs: deps.addLog(previous.logs, "海賊王挑戰尚未開放：請完成第一份商隊委託、升至 Lv.20、建立驛站並穿戴第一件綠裝。") };
+      return { ...previous, logs: deps.addLog(previous.logs, "山賊首領挑戰尚未開放：請完成第一份商隊委託、升至 Lv.20、建立驛站並穿戴第一件綠裝。") };
     }
   }
   const roll = rolls.roll ?? .99, choice = rolls.choice ?? 0, spawnRoll = rolls.spawnRoll ?? 0, retaliationRoll = rolls.retaliationRoll ?? 0, materialRolls = rolls.materialRolls ?? [1, 1, 1];
@@ -117,7 +117,7 @@ export function runDungeonAction(
     next = { ...next, logs: deps.addLog(next.logs, "戰利品：獲得融合核心 ×1。") };
   }
   if (specialCoinDrop) next = { ...next, logs: deps.addLog(next.logs, "獲得特殊貨幣【新手兌換銅錢】×1。") };
-  if (defeatedNewbieBoss) next = { ...next, logs: deps.addLog(next.logs, "海賊王已被擊敗，千年湖地圖現已開放。") };
+  if (defeatedNewbieBoss) next = { ...next, logs: deps.addLog(next.logs, "山賊首領已被擊敗，千年湖地圖現已開放。") };
   if (defeatedLakeBoss) next = { ...next, logs: deps.addLog(next.logs, "狂風阿魯塔已被擊敗，日本海底洞現已開放。") };
   if (defeatedGoldenStarfish) next = { ...next, logs: deps.addLog(next.logs, "黃金海星已被擊敗，白虎林現已開放。") };
   if (droppedMaterials.length) {

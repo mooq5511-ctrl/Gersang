@@ -87,6 +87,48 @@
 .realtime-floating-damage.player-damage{color:#ff7062;text-shadow:0 2px 0 #680000,0 4px 6px #160000dd,0 0 8px #f01c13,0 0 16px #9c0000cc}
 @keyframes realtime-damage-float{0%{opacity:0;transform:translate(-50%,10px) scale(.72)}16%{opacity:1;transform:translate(-50%,-5px) scale(1.18)}42%{opacity:1;transform:translate(-50%,-26px) scale(1.04)}100%{opacity:0;transform:translate(-50%,-66px) scale(.9)}}
 @media(prefers-reduced-motion:reduce){.realtime-hp-tail{transition-duration:1ms}.realtime-floating-damage{animation-duration:260ms}}
+
+/* Standalone monster health HUD: the bar is intentionally separated from the portrait card. */
+.realtime-unit.enemy > strong,
+.realtime-unit.enemy > small{display:none}
+.realtime-health-hud{position:absolute;z-index:14;top:-42px;left:50%;display:flex;align-items:center;gap:8px;width:260px;transform:translateX(-50%);filter:drop-shadow(0 5px 9px #000c);pointer-events:none}
+.realtime-health-emblem{position:relative;z-index:2;display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border:2px solid #f1bd59;border-radius:50%;color:#ffe9a4;background:radial-gradient(circle at 50% 45%,#81421e 0 25%,#241008 27% 56%,#0d0806 58%);box-shadow:inset 0 0 0 2px #6b3518,0 0 0 2px #241105,0 0 12px #e86a2588;font-size:20px;text-shadow:0 0 9px #ff9f32}
+.realtime-health-emblem::before,.realtime-health-emblem::after{content:"";position:absolute;inset:-7px;border:1px solid #c78938;border-radius:50%;transform:rotate(28deg);opacity:.85}
+.realtime-health-emblem::after{inset:-10px;border-color:#f3d57c66;border-top-color:#f8e8a9;border-right-color:transparent;transform:rotate(-35deg)}
+.realtime-health-main{position:relative;flex:1;min-width:0;padding:4px 10px 6px;border:1px solid #d6a64e;border-radius:4px 15px 15px 4px;background:linear-gradient(180deg,#27130cF2,#0f0806F2);box-shadow:inset 0 0 0 1px #f4d07333,0 0 0 1px #261307}
+.realtime-health-main::before{content:"";position:absolute;inset:-5px -9px -5px -6px;z-index:-1;border:1px solid #8b5c26;border-radius:6px 19px 19px 6px;box-shadow:inset 0 0 0 1px #f0c86a22}
+.realtime-health-heading{display:flex;align-items:baseline;justify-content:space-between;gap:6px;margin:0 3px 3px;color:#ffe9ae;line-height:1;text-shadow:0 1px 3px #120300}
+.realtime-health-heading strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:900}
+.realtime-health-heading small{flex:none;color:#e4bd70;font-size:10px;font-weight:800}
+.realtime-health-hud .realtime-unit-bars{position:relative;top:auto;left:auto;display:grid;width:auto;gap:3px}
+.realtime-health-hud .realtime-hp{height:17px;border-width:2px;border-radius:3px 13px 13px 3px}
+.realtime-health-hud .realtime-hp::before{inset:-5px -8px -5px -6px;border-radius:5px 17px 17px 5px}
+.realtime-health-hud .realtime-hp-value{font-size:10px}
+.realtime-health-hud .realtime-mp{height:4px;border-radius:2px;opacity:.9}
+.realtime-health-hud-boss{top:-18px;width:500px;gap:14px}
+.realtime-health-hud-boss .realtime-health-emblem{flex-basis:62px;width:62px;height:62px;border-width:3px;font-size:30px;box-shadow:inset 0 0 0 3px #6b3518,0 0 0 3px #241105,0 0 20px #e86a25aa}
+.realtime-health-hud-boss .realtime-health-emblem::before{inset:-9px;border-width:2px}
+.realtime-health-hud-boss .realtime-health-emblem::after{inset:-13px}
+.realtime-health-hud-boss .realtime-health-main{padding:7px 14px 9px;border-width:2px;border-radius:6px 20px 20px 6px}
+.realtime-health-hud-boss .realtime-health-main::before{inset:-7px -12px -7px -8px;border-width:2px;border-radius:8px 24px 24px 8px;box-shadow:inset 0 0 0 1px #f0c86a44,0 0 9px #d66c2e55}
+.realtime-health-hud-boss .realtime-health-heading{margin:0 5px 5px}
+.realtime-health-hud-boss .realtime-health-heading strong{font-size:16px}
+.realtime-health-hud-boss .realtime-health-heading small{font-size:12px}
+.realtime-health-hud-boss .realtime-hp{height:25px;border-width:3px;border-radius:5px 19px 19px 5px}
+.realtime-health-hud-boss .realtime-hp::before{inset:-8px -13px -8px -10px;border-width:2px;border-radius:7px 24px 24px 7px}
+.realtime-health-hud-boss .realtime-hp-value{font-size:13px;letter-spacing:.02em}
+.realtime-health-hud-boss .realtime-mp{height:5px}
+.realtime-health-hud-boss .realtime-hp-impact{width:32px;height:32px}
+.realtime-health-hud-boss .realtime-floating-damage{font-size:32px}
+.realtime-unit.enemy:not(.realtime-unit-boss) .realtime-floating-damage{top:-48px;left:64%}
+.realtime-unit-boss .realtime-floating-damage{top:-12px;left:70%;z-index:20}
+.realtime-health-emblem{flex-basis:58px;width:58px;height:58px;border:0;background:transparent;box-shadow:none;font-size:0;filter:drop-shadow(0 0 8px #e6782caa)}
+.realtime-health-emblem::before,.realtime-health-emblem::after{display:none}
+.realtime-health-emblem img{display:block;width:100%;height:100%;object-fit:contain}
+.realtime-health-hud .realtime-unit-bars::before,.realtime-health-hud .realtime-unit-bars::after{content:none!important;display:none!important}
+.realtime-health-hud-boss .realtime-health-emblem{flex-basis:86px;width:86px;height:86px;border:0;box-shadow:none;filter:drop-shadow(0 0 13px #e6782ccc)}
+.realtime-health-hud-boss .realtime-health-main{margin-left:-2px}
+@media(max-width:560px){.realtime-health-hud{width:230px}.realtime-health-hud-boss{width:360px}.realtime-health-hud-boss .realtime-health-heading strong{font-size:14px}.realtime-health-hud-boss .realtime-hp-value{font-size:11px}}
 /* 即時扣血、延遲尾條與傷害飄字。 */
 .realtime-hp {
   position: relative;
@@ -189,7 +231,153 @@
     animation-duration: 260ms;
   }
 }
+
+/* Ornate monster HP treatment: the current fill cuts immediately, while the
+   amber-red tail follows behind and the hit spark marks the exact boundary. */
+.realtime-unit-bars{top:-2px;left:-1px;width:70px;gap:3px;z-index:9}
+.realtime-hp{height:15px;overflow:visible;border:2px solid #d3a44d;border-radius:4px 11px 11px 4px;background:linear-gradient(180deg,#170a08,#3b0b08);box-shadow:inset 0 0 0 1px #5d1c13,inset 0 2px 3px #000b,0 2px 7px #000b}
+.realtime-hp>i{overflow:hidden;border-radius:2px 8px 8px 2px}
+.realtime-hp::before{content:"";position:absolute;inset:-6px -9px -6px -7px;z-index:-1;border:1px solid #825b26;border-radius:6px 15px 15px 6px;background:linear-gradient(180deg,#3c2814aa,#120b07cc);box-shadow:inset 0 0 0 1px #f0c86a33,0 0 0 1px #130b06}
+.realtime-hp::after{content:"";position:absolute;left:8px;right:10px;top:2px;height:2px;z-index:5;pointer-events:none;background:linear-gradient(90deg,#fff5c766,transparent 78%);opacity:.8}
+.realtime-hp-tail{background:linear-gradient(180deg,#ffb24d 0%,#d94b1f 28%,#79120d 88%,#3c0808 100%);box-shadow:inset 0 1px 1px #ffe2a5aa,inset 0 -2px 2px #2a0000cc,0 0 5px #f04a1f99}
+.realtime-hp-now{background:linear-gradient(180deg,#ff9b7c 0%,#f13a2c 30%,#b41010 76%,#690606 100%);box-shadow:inset 0 1px 1px #fff0c688,inset 0 -2px 2px #3d0000cc,0 0 7px #ff3425cc}
+.realtime-hp-value{position:absolute;inset:0;z-index:6;display:grid;place-items:center;color:#fff3d0;font-size:9px;font-weight:900;line-height:1;text-shadow:0 1px 2px #2b0000;pointer-events:none;white-space:nowrap}
+.realtime-hp-impact{position:absolute;left:var(--hp-now);top:50%;z-index:8;width:20px;height:20px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,#fff8d0 0 9%,#ffd86b 15%,#ff6b2a 28%,transparent 64%);filter:drop-shadow(0 0 5px #ffbd45);pointer-events:none;animation:realtime-hp-impact .46s ease-out forwards}
+.realtime-hp-impact::before,.realtime-hp-impact::after{content:"";position:absolute;left:50%;top:50%;width:34px;height:2px;transform:translate(-50%,-50%);background:linear-gradient(90deg,transparent,#fff2a6 40%,#ff6b2a 60%,transparent);box-shadow:0 0 6px #ff5b23}
+.realtime-hp-impact::after{transform:translate(-50%,-50%) rotate(90deg)}
+.realtime-unit:not(.realtime-unit-boss) .realtime-hp-value{display:none}
+.realtime-unit-boss .realtime-unit-bars{left:10px;top:0;width:170px}
+.realtime-unit-boss .realtime-hp{height:23px;border-width:3px;border-radius:5px 18px 18px 5px}
+.realtime-unit-boss .realtime-hp::before{inset:-8px -14px -8px -12px;border-width:2px;border-radius:7px 23px 23px 7px;background:linear-gradient(180deg,#3c2612dd,#100906ee);box-shadow:inset 0 0 0 1px #f4c96855,0 0 0 1px #0b0704,0 3px 11px #000b}
+.realtime-unit-boss .realtime-hp::after{left:12px;right:18px;top:3px;height:3px}
+.realtime-unit-boss .realtime-hp-value{font-size:13px;letter-spacing:.03em;text-shadow:0 2px 3px #350000,0 0 5px #ff8b3c66}
+.realtime-unit-boss .realtime-hp-impact{width:30px;height:30px}
+.realtime-unit-boss .realtime-unit-bars::before{content:"✦";position:absolute;left:-57px;top:-18px;z-index:2;display:grid;place-items:center;width:54px;height:54px;border:3px solid #d6a64b;border-radius:50%;background:radial-gradient(circle,#3d2110 0 48%,#160b06 51% 100%);box-shadow:inset 0 0 0 2px #f1ce7355,0 0 0 2px #4a2813,0 0 16px #e7792f88;color:#ffe7a2;font-size:25px;text-shadow:0 0 8px #ff6a22}
+.realtime-unit-boss .realtime-unit-bars::after{content:"";position:absolute;left:-67px;top:-28px;width:74px;height:74px;border:2px solid #b8742e;border-radius:50%;border-top-color:#ffe49b;border-right-color:transparent;transform:rotate(-24deg);box-shadow:0 0 9px #ff6a2266;pointer-events:none}
+.realtime-unit-boss>strong{top:-42px;width:220px;color:#ffe4a1;font-size:18px;text-shadow:0 2px 4px #170500,0 0 8px #e87d2a55}
+.realtime-unit-boss>small{top:-22px;width:220px;color:#f0c98b;font-size:11px}
+.realtime-unit.player .realtime-hp{border-color:#5fb898;background:linear-gradient(180deg,#071916,#0c332a);box-shadow:inset 0 0 0 1px #1c5645,inset 0 2px 3px #000b,0 2px 7px #000b}
+.realtime-unit.player .realtime-hp::before{border-color:#276754;background:linear-gradient(180deg,#15392ecc,#081712ee);box-shadow:inset 0 0 0 1px #8ce2bd33,0 0 0 1px #06120f}
+.realtime-unit.player .realtime-hp-tail{background:linear-gradient(180deg,#96e5b6 0%,#3ca477 30%,#167154 84%,#093b31 100%);box-shadow:inset 0 1px 1px #d6ffe5aa,inset 0 -2px 2px #03241dcc,0 0 5px #43d39a99}
+.realtime-unit.player .realtime-hp-now{background:linear-gradient(180deg,#d2ffd9 0%,#52d69b 30%,#189c70 76%,#0d604d 100%);box-shadow:inset 0 1px 1px #fff8d288,inset 0 -2px 2px #063528cc,0 0 7px #45e0a5aa}
+@keyframes realtime-hp-impact{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}22%{opacity:1;transform:translate(-50%,-50%) scale(1.35)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.9)}}
 .realtime-floating-heal {
   color: #7dff9a;
   text-shadow: 0 2px 0 #07521f, 0 4px 6px #001b08dd, 0 0 8px #23ff64, 0 0 16px #0a9b3dcc;
 }
+
+/* Final HUD override: the generated emblem is the only badge shown. */
+.realtime-health-hud .realtime-unit-bars {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  width: auto !important;
+}
+.realtime-health-hud .realtime-unit-bars::before,
+.realtime-health-hud .realtime-unit-bars::after {
+  content: none !important;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.realtime-health-emblem {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 0 !important;
+}
+.realtime-health-emblem::before,
+.realtime-health-emblem::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Boss proportion pass: slimmer emblem, taller breathing room, longer readable bar. */
+.realtime-health-hud-boss {
+  top: -24px;
+  width: 540px;
+  gap: 10px;
+}
+.realtime-health-hud-boss .realtime-health-emblem {
+  flex-basis: 72px;
+  width: 72px;
+  height: 72px;
+}
+.realtime-health-hud-boss .realtime-health-main {
+  padding: 5px 13px 7px;
+}
+.realtime-health-hud-boss .realtime-health-heading {
+  margin-bottom: 4px;
+}
+.realtime-health-hud-boss .realtime-health-heading strong {
+  font-size: 15px;
+}
+.realtime-health-hud-boss .realtime-hp {
+  height: 21px;
+}
+.realtime-health-hud-boss .realtime-hp-value {
+  font-size: 12px;
+}
+@media(max-width:560px){
+  .realtime-health-hud-boss{width:390px}
+  .realtime-health-hud-boss .realtime-health-emblem{flex-basis:62px;width:62px;height:62px}
+}
+
+/* Boss portrait layout: keep the health HUD above the art and center the full cutout below it. */
+.realtime-battle-theater .battle-theater-enemy-units.battle-theater-boss {
+  height: 300px;
+  align-items: flex-start;
+}
+.realtime-battle-theater .realtime-unit-boss {
+  height: 300px;
+}
+.realtime-battle-theater .realtime-unit-boss .realtime-portrait {
+  top: 76px;
+  left: 5px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: 0 12px 24px #0009;
+}
+.realtime-battle-theater .realtime-unit-boss .realtime-portrait > img {
+  border-radius: 0;
+}
+
+/* 地圖戰場背景：保留中央戰鬥留白，讓切換地域時有明確的場景變化。 */
+.realtime-battle-theater[class*="realtime-battle-theme-"] {
+  background-color: #101516;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center 56%;
+}
+.realtime-battle-theater[class*="realtime-battle-theme-"]::before {
+  z-index: 0;
+  inset: 0;
+  opacity: .18;
+  transform: none;
+  background:
+    linear-gradient(180deg, #05060928 0 38%, transparent 48%, #0206059c 100%),
+    repeating-linear-gradient(104deg, transparent 0 48px, #b79b6322 49px 51px);
+  transform-origin: center bottom;
+  transform: perspective(250px) rotateX(18deg);
+  pointer-events: none;
+}
+.realtime-battle-theater[class*="realtime-battle-theme-"]::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 44%, transparent 0 26%, #0205081a 62%, #0203048f 100%),
+    linear-gradient(180deg, #05060770 0, transparent 24%, transparent 72%, #020504a8 100%);
+  mix-blend-mode: multiply;
+}
+.realtime-battle-theater.realtime-battle-theme-field { background-image: url('/assets/backgrounds/battle-field.png'); }
+.realtime-battle-theater.realtime-battle-theme-lake { background-image: url('/assets/backgrounds/battle-lake.png'); background-position: center 54%; }
+.realtime-battle-theater.realtime-battle-theme-sea { background-image: url('/assets/backgrounds/battle-sea.png'); background-position: center 53%; }
+.realtime-battle-theater.realtime-battle-theme-forest { background-image: url('/assets/backgrounds/battle-forest.png'); background-position: center 55%; }
+.realtime-battle-theater.realtime-battle-theme-default { background-image: linear-gradient(180deg,#24100d 0 42%,#0d1517 42% 52%,#16281e 52% 100%); }
+.realtime-portrait-injured { filter: saturate(1.12) drop-shadow(0 0 10px #ff5b35aa); }

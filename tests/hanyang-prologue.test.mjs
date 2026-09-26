@@ -30,14 +30,14 @@ test('recruitment keeps the formation teaching step for one explicit confirmatio
   assert.equal(deployed.hanyangPrologueFlags.firstMercenaryDeployed, true);
 });
 
-test('black bandit is an elite encounter, while pirate king remains the Hanyang boss', () => {
+test('black bandit is an elite encounter, while bandit chief remains the Hanyang boss', () => {
   const blackBandit = sourceEnemies.find((enemy) => enemy.id === 'e_starter_black_bandit');
-  const pirateKing = sourceEnemies.find((enemy) => enemy.name === '海賊王');
+  const pirateKing = sourceEnemies.find((enemy) => enemy.name === '山賊首領');
   assert.equal(blackBandit?.elite, true);
   assert.equal(blackBandit?.boss, undefined);
   assert.equal(isBossMonster('黑巾山賊'), false);
   assert.equal(pirateKing?.boss, true);
-  assert.equal(isBossMonster('海賊王'), true);
+  assert.equal(isBossMonster('山賊首領'), true);
 });
 
 test('caravan delivery, departure and mystery encounter advance once and persist their flags', () => {

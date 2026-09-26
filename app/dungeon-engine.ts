@@ -15,7 +15,7 @@ export const DUNGEONS = {
 } as const;
 export type DungeonKey=keyof typeof DUNGEONS;
 /** 劇情首領以單體戰鬥呈現，其餘遭遇維持 12 格部隊。 */
-export const isBossMonster=(name?:string)=>name==='海賊王'||name==='狂風阿魯塔'||name==='黃金海星'||name==='狂虎'||name==='多聞天王'||name==='廣目天王';
+export const isBossMonster=(name?:string)=>name==='山賊首領'||name==='海賊王'||name==='狂風阿魯塔'||name==='黃金海星'||name==='狂虎'||name==='多聞天王'||name==='廣目天王';
 /** One uniform roll per normal encounter; bosses always spawn alone. */
 export const normalEncounterCount=(roll:number,partySize=12)=>{const limit=Math.min(12,Math.max(1,Math.floor(Number.isFinite(partySize)?partySize:12))),sample=Math.max(0,Math.min(.999999999,Number.isFinite(roll)?roll:0));return 1+Math.min(limit-1,Math.floor(sample*limit))};
 /** 地圖資料是畫面鎖定與實際傳送的唯一來源；等級、戰鬥力兩條件必須同時滿足。 */

@@ -1,13 +1,13 @@
 export type GersangNation = "taiwan" | "china" | "korea" | "japan";
 
 export const gersangHeroArt: Record<GersangNation, string> = {
-  taiwan: "/game-assets/cute-hero-taiwan-0.png",
-  china: "/game-assets/cute-hero-china-0.png",
-  korea: "/game-assets/cute-hero-korea-0.png",
-  japan: "/game-assets/cute-hero-japan-0.png",
+  taiwan: "/game-assets/cute-hero-taiwan-transparent-0.png",
+  china: "/game-assets/cute-hero-china-transparent-0.png",
+  korea: "/game-assets/cute-hero-korea-transparent-0.png",
+  japan: "/game-assets/cute-hero-japan-transparent-0.png",
 };
 export const gersangHeroFemaleArt: Record<GersangNation, string> = {
-  taiwan: "/game-assets/cute-hero-taiwan-female-0.png", china: "/game-assets/cute-hero-china-female-0.png", korea: "/game-assets/cute-hero-korea-female-0.png", japan: "/game-assets/cute-hero-japan-female-0.png",
+  taiwan: "/game-assets/cute-hero-taiwan-female-transparent-0.png", china: "/game-assets/cute-hero-china-female-transparent-0.png", korea: "/game-assets/cute-hero-korea-female-transparent-0.png", japan: "/game-assets/cute-hero-japan-female-transparent-0.png",
 };
 
 const mercenaryIds = [

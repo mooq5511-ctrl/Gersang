@@ -79,6 +79,34 @@ function normalizeStoredMercenary(unit: Unit, index: number): Unit {
   };
 }
 
+type SavedBattleUnit = { hp?: unknown };
+type SavedDungeonState = {
+  status?: string;
+  autoHunt?: boolean;
+  resumeAutoHuntAfterRecovery?: boolean;
+  key?: string;
+  lockedEnemyKey?: string;
+  realtime?: { winner?: string | null; players?: SavedBattleUnit[] };
+};
+
+/** Only an explicit recovery state or a confirmed full wipe may trigger inn recovery on reload. */
+function savedDungeonNeedsRecovery(parsed: Partial<GameState>, savedDungeon: SavedDungeonState): boolean {
+  if (savedDungeon.status === "recovering") return true;
+  if (savedDungeon.status !== "fighting") return false;
+  if (savedDungeon.realtime?.winner === "player") return false;
+  if (savedDungeon.realtime?.winner === "enemy" || savedDungeon.realtime?.winner === "draw") return true;
+  const realtimePlayers = savedDungeon.realtime?.players;
+  if (Array.isArray(realtimePlayers) && realtimePlayers.length > 0) {
+    return realtimePlayers.every((unit) => typeof unit.hp === "number" && Number.isFinite(unit.hp) && unit.hp <= 0);
+  }
+  const activeIds = new Set(Array.isArray(parsed.active) ? parsed.active : []);
+  const savedMercs = Array.isArray(parsed.mercs)
+    ? (Array.isArray(parsed.active) ? parsed.mercs.filter((unit) => activeIds.has(unit.uid)) : parsed.mercs)
+    : [];
+  const savedParty = [parsed.hero, ...savedMercs].filter(Boolean);
+  return savedParty.length > 0 && savedParty.every((unit) => typeof unit?.hp === "number" && Number.isFinite(unit.hp) && unit.hp <= 0);
+}
+
 /** Restores only the current character-save schema; legacy V14-V18 imports are intentionally unsupported. */
 export function restoreGame(raw: unknown): GameState {
   raw = migrateSevenSlotSave(raw);
@@ -130,13 +158,21 @@ export function restoreGame(raw: unknown): GameState {
     lastSeen: Number(parsed.lastSeen) || Date.now(),
   });
   if (dungeonBusy(parsed.dungeon)) {
-    const now = Date.now(), pause = Math.max(0, now - (Number(parsed.lastSeen) || now)), healInterval = territoryHealInterval(next.territory), savedDungeon = parsed.dungeon as { autoHunt?: boolean; resumeAutoHuntAfterRecovery?: boolean; key?: string; lockedEnemyKey?: string };
-    const maxHp = Math.max(1, next.hero.maxHp ?? vitalStats(next.hero).maxHp), hpBefore = Math.max(0, Math.min(maxHp, next.hero.hp ?? maxHp)), healSteps = Math.min(Math.ceil(Math.max(0, maxHp - hpBefore) / 10), Math.floor(pause / healInterval)), healedHp = Math.min(maxHp, hpBefore + healSteps * 10), healElapsed = healSteps * healInterval, recovered = healedHp >= maxHp, remainingPause = Math.max(0, pause - healElapsed), resumeAutoHunt = savedDungeon.autoHunt === true || savedDungeon.resumeAutoHuntAfterRecovery === true;
+    const now = Date.now(), pause = Math.max(0, now - (Number(parsed.lastSeen) || now)), healInterval = territoryHealInterval(next.territory), savedDungeon = parsed.dungeon as SavedDungeonState;
     const baseDungeon = freshDungeon(), savedKey = savedDungeon.key && savedDungeon.key in DUNGEONS ? savedDungeon.key as keyof typeof DUNGEONS : baseDungeon.key;
-    next.dungeon = { ...baseDungeon, key: savedKey, lockedEnemyKey: savedDungeon.lockedEnemyKey as typeof baseDungeon.lockedEnemyKey, autoHunt: resumeAutoHunt, status: recovered ? (resumeAutoHunt ? "respawning" : "idle") : "recovering", stamp: now, spawnAt: recovered && resumeAutoHunt ? now + 500 : 0, innHealAt: recovered ? 0 : now + healInterval, logs: [recovered && resumeAutoHunt ? "離線療傷完成，自動狩獵已恢復。" : "返回漢陽客棧療傷；療傷完成前不結算掛機收益。"] };
-    next.hero = { ...next.hero, hp: healedHp, status: recovered ? "正常" : "客棧中" };
-    next.idleStamp = recovered ? now - remainingPause : now;
-    if (next.trade.caravan) next.trade = { ...next.trade, caravan: { ...next.trade.caravan, startedAt: next.trade.caravan.startedAt + pause } };
+    if (savedDungeonNeedsRecovery(parsed, savedDungeon)) {
+      const maxHp = Math.max(1, next.hero.maxHp ?? vitalStats(next.hero).maxHp), hpBefore = Math.max(0, Math.min(maxHp, next.hero.hp ?? maxHp)), healSteps = Math.min(Math.ceil(Math.max(0, maxHp - hpBefore) / 10), Math.floor(pause / healInterval)), healedHp = Math.min(maxHp, hpBefore + healSteps * 10), healElapsed = healSteps * healInterval, recovered = healedHp >= maxHp, remainingPause = Math.max(0, pause - healElapsed), resumeAutoHunt = savedDungeon.autoHunt === true || savedDungeon.resumeAutoHuntAfterRecovery === true;
+      next.dungeon = { ...baseDungeon, key: savedKey, lockedEnemyKey: savedDungeon.lockedEnemyKey as typeof baseDungeon.lockedEnemyKey, autoHunt: resumeAutoHunt, status: recovered ? (resumeAutoHunt ? "respawning" : "idle") : "recovering", stamp: now, spawnAt: recovered && resumeAutoHunt ? now + 500 : 0, innHealAt: recovered ? 0 : now + healInterval, logs: [recovered && resumeAutoHunt ? "離線療傷完成，自動狩獵已恢復。" : "返回漢陽客棧療傷；療傷完成前不結算掛機收益。"] };
+      next.hero = { ...next.hero, hp: healedHp, status: recovered ? "正常" : "客棧中" };
+      next.idleStamp = recovered ? now - remainingPause : now;
+      if (next.trade.caravan) next.trade = { ...next.trade, caravan: { ...next.trade.caravan, startedAt: next.trade.caravan.startedAt + pause } };
+    } else {
+      // A reload during a live battle is not a defeat. Stop the unfinished encounter safely,
+      // preserve current vitals, and let the normal idle timer settle offline earnings.
+      next.dungeon = { ...baseDungeon, key: savedKey, lockedEnemyKey: savedDungeon.lockedEnemyKey as typeof baseDungeon.lockedEnemyKey, autoHunt: false, status: "idle", stamp: now, pauseAt: now, logs: ["離線期間戰鬥已安全結束；未判定為戰敗，離線收益正常結算。"] };
+      next.hero = { ...next.hero, status: "正常" };
+      next.idleStamp = Number(parsed.idleStamp) > 0 ? Number(parsed.idleStamp) : Number(parsed.lastSeen) || now;
+    }
   } else {
     next.dungeon = freshDungeon();
     next.hero = { ...next.hero, status: "正常" };

@@ -813,3 +813,100 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
   .classic-live-game .forced-inn { right:calc(var(--quicknav-width) + 8px); }
   .classic-live-game[data-quicknav-collapsed="true"] .forced-inn { right:8px; }
 }
+
+/* Premium desktop quick navigation: match the gold-framed reference while keeping mobile compact. */
+@media (min-width:981px) {
+  .classic-live-game .tab-panel {
+    right: var(--quicknav-width, 300px);
+  }
+  .classic-live-game > .classic-live-quicknav {
+    width: var(--quicknav-width, 300px);
+    gap: 14px;
+    padding: 16px 14px 20px;
+    border-left: 1px solid #b49351;
+    background:
+      linear-gradient(90deg, #070a0be8 0%, #0b1112f5 100%),
+      url('/assets/backgrounds/character-panel-dusk-v1.png') center / cover;
+    box-shadow: -12px 0 30px #000b, inset 1px 0 #f9de8a22, inset 0 0 42px #0008;
+  }
+  .quick-nav-group { gap: 10px; }
+  .quick-nav-group + .quick-nav-group { padding-top: 14px; border-top: 1px solid #b0925866; }
+  .quick-nav-group-label {
+    min-height: 23px;
+    margin: 0 4px 1px;
+    gap: 9px;
+    color: #f0cc76;
+    font-size: 16px;
+    letter-spacing: .18em;
+    text-shadow: 0 1px 3px #000, 0 0 8px #e8b85233;
+  }
+  .quick-nav-group-label::before { color: #e0b54f; font-size: 12px; }
+  .quick-nav-group-label::after { background: linear-gradient(90deg, #c29545cc, #6f542b55 72%, transparent); }
+  .classic-live-quicknav button {
+    position: relative;
+    width: 100%;
+    min-height: 68px;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 12px;
+    padding: 5px 12px 5px 7px;
+    overflow: hidden;
+    border: 1px solid #a9874b;
+    border-radius: 11px;
+    background: linear-gradient(145deg, #27313aee 0%, #151d22f2 58%, #0c1115f6 100%);
+    box-shadow: inset 0 1px #fff3, inset 0 -4px #0008, 0 4px 11px #000a;
+    transition: transform .18s ease, filter .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+  }
+  .classic-live-quicknav button::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 4px;
+    border-radius: 0 4px 4px 0;
+    background: linear-gradient(180deg, #fff0a0, #c4872e 55%, #fff0a0);
+    box-shadow: 0 0 12px #f5c958;
+    opacity: 0;
+    transition: opacity .18s ease;
+  }
+  .classic-live-game .quick-nav-icon {
+    width: 56px;
+    height: 56px;
+    border: 2px solid #c4a15a;
+    background: radial-gradient(circle at 32% 24%, #a48552 0%, #514329 37%, #24251f 66%, #101518 100%);
+    box-shadow: inset 0 0 0 2px #1b1913, inset 0 2px #fff4, 0 3px 8px #000c;
+  }
+  .quick-nav-icon svg { width: 24px; height: 24px; }
+  .classic-live-game .quick-nav-label {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #f2e7cc;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-shadow: 0 1px 3px #000, 0 0 5px #fff4;
+  }
+  .classic-live-game .classic-live-quicknav button:hover,
+  .classic-live-game .classic-live-quicknav button:focus-visible {
+    border-color: #f0ce71;
+    background: linear-gradient(145deg, #3d4a51f4 0%, #202c31f4 58%, #10171bf8 100%);
+    box-shadow: inset 0 1px #fff5, inset 0 -4px #0008, 0 0 16px #e7c36a55, 0 5px 12px #000b;
+  }
+  .classic-live-game .classic-live-quicknav button.active,
+  .classic-live-game .classic-live-quicknav button[aria-current="page"] {
+    border-color: #f0ca68;
+    background: linear-gradient(145deg, #5b4826f7 0%, #30291ff4 58%, #151719fa 100%);
+    box-shadow: inset 0 1px #fff6, inset 0 0 0 1px #f2c85a55, 0 0 18px #d8ae4c66, 0 5px 12px #000b;
+  }
+  .classic-live-game .classic-live-quicknav button.active::before,
+  .classic-live-game .classic-live-quicknav button[aria-current="page"]::before { opacity: 1; }
+  .classic-live-quicknav button.active .quick-nav-icon,
+  .classic-live-quicknav button[aria-current="page"] .quick-nav-icon {
+    border-color: #ffe79a;
+    color: #fff1bb;
+    box-shadow: inset 0 0 0 2px #342817, 0 0 14px #f1c66099;
+  }
+  .classic-live-quicknav button.active .quick-nav-label { color: #ffe8a2; }
+  .quick-nav-group-system { margin-top: 2px; }
+}
