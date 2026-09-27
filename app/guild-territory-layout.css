@@ -1,4 +1,89 @@
 /* Keep every guild facility in document flow instead of stacking absolute buttons. */
+.caravan-status .floating-guild-skills .guild-skill-grid {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  grid-template-rows: 1fr !important;
+  min-height: 500px !important;
+  padding: 282px 18px 20px !important;
+  gap: 10px !important;
+  background:
+    linear-gradient(180deg, #090d1208, #090d1228 58%, #090d1258),
+    url('/assets/backgrounds/guild-skill-tree-map-clean-v1.png') center / 100% 100% no-repeat !important;
+  box-shadow: inset 0 0 50px #0004 !important;
+}
+.caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card {
+  position: absolute !important;
+  top: 30px !important;
+  width: 14% !important;
+  min-height: 180px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+.caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card:nth-child(1) { left: 11.8% !important; }
+.caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card:nth-child(2) { left: 23.7% !important; }
+.caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card:nth-child(3) { left: 36% !important; }
+.caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card:nth-child(4) { left: 48% !important; }
+.caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card:nth-child(5) { left: 61.5% !important; }
+.caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card:nth-child(6) { left: 73.7% !important; }
+.caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card > .guild-skill-hotspot {
+  inset: 0 !important;
+  display: grid !important;
+  grid-template-rows: 68px auto !important;
+  justify-items: center !important;
+  align-content: start !important;
+  gap: 4px !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 7px 5px 8px !important;
+  border: 1px solid #c9984fbb !important;
+  border-radius: 14px !important;
+  background: linear-gradient(180deg, #0d1719d9, #16100de8) !important;
+  box-shadow: inset 0 0 0 1px #ffe6a51c, 0 6px 16px #0009 !important;
+  color: #ffe5a5 !important;
+  text-align: center !important;
+}
+.caravan-status .floating-guild-skills .guild-skill-node-art {
+  display: block !important;
+  width: 66px !important;
+  height: 66px !important;
+  overflow: hidden !important;
+  border: 2px solid #e2b45c !important;
+  border-radius: 50% !important;
+  background: #21170f !important;
+  box-shadow: 0 0 0 4px #21170dcc, 0 0 17px #e8ad4e88 !important;
+}
+.caravan-status .floating-guild-skills .guild-skill-node-art img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center top !important;
+  transform: scale(1.08) !important;
+}
+.caravan-status .floating-guild-skills .guild-skill-node-copy {
+  display: grid !important;
+  gap: 1px !important;
+  justify-items: center !important;
+  min-width: 0 !important;
+  line-height: 1.15 !important;
+}
+.caravan-status .floating-guild-skills .guild-skill-node-copy b { color: #ffe8a7 !important; font-size: 11px !important; white-space: nowrap !important; }
+.caravan-status .floating-guild-skills .guild-skill-node-copy small { color: #dfc58e !important; font-size: 10px !important; }
+.caravan-status .floating-guild-skills .guild-skill-node-copy em { color: #f4c86b !important; font-size: 9px !important; font-style: normal !important; }
+.caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card > .guild-skill-hotspot::before { display: none !important; }
+.caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:hover,
+.caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:focus-visible,
+.caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card > .guild-skill-hotspot.selected {
+  border-color: #ffe9a0 !important;
+  background: linear-gradient(180deg, #392719e8, #1d130eea) !important;
+  box-shadow: inset 0 0 0 1px #fff0b044, 0 0 22px #eeb04c88 !important;
+  outline: none !important;
+}
+.caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card.locked > .guild-skill-hotspot { filter: saturate(.45) brightness(.78) !important; }
+.caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card.maxed > .guild-skill-hotspot { border-color: #f4c55f !important; }
 .caravan-status .guild-facility-actions {
   position: relative;
   z-index: 2;
@@ -98,4 +183,1025 @@
     min-height: 78px;
     padding: 8px;
   }
+}
+
+/* 商團階位是駐地的核心操作，與四個設施並列但使用更醒目的升階色。 */
+.caravan-status .guild-facility-actions {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.caravan-status .guild-facility-actions .guild-rank-entry {
+  border-color: #e4b95e;
+  background: linear-gradient(145deg, #835525, #4b2817 58%, #251712);
+  box-shadow: inset 0 0 0 2px #f3d37b44, inset 0 1px #fff4, 0 5px 13px #000b, 0 0 15px #d2a44c33;
+  color: #ffe8ae;
+}
+.caravan-status .guild-facility-actions .guild-rank-entry strong { color: #fff0bf; }
+.caravan-status .guild-facility-actions .guild-rank-entry small { color: #e8c987; }
+.caravan-status .guild-facility-actions .guild-rank-entry:hover:not(:disabled),
+.caravan-status .guild-facility-actions .guild-rank-entry:focus-visible {
+  border-color: #fff0a6;
+  background: linear-gradient(145deg, #a66b30, #6a351d 60%, #311a13);
+  box-shadow: inset 0 0 0 2px #ffe5a866, 0 0 19px #edc56e88, 0 7px 16px #000c;
+}
+.caravan-status .guild-facility-actions .guild-rank-entry.insufficient {
+  border-color: #9f7b4a;
+  background: linear-gradient(145deg, #5c4128, #30241b 60%, #1b1713);
+}
+.caravan-status .guild-facility-actions .guild-rank-entry:disabled {
+  opacity: .8;
+  cursor: default;
+}
+.caravan-status .guild-facility-actions .guild-skill-entry {
+  border-color: #bb8b4b;
+  background: linear-gradient(145deg, #3e2819, #6a3e20);
+  box-shadow: inset 0 0 0 1px #f0cf8166, 0 3px 10px #0006;
+}
+.caravan-status .guild-facility-actions .guild-skill-entry:hover,
+.caravan-status .guild-facility-actions .guild-skill-entry:focus-visible {
+  border-color: #ffe6a0;
+  background: linear-gradient(145deg, #6f4824, #874827);
+}
+.caravan-status .guild-facility-actions .guild-skill-entry strong { color: #fff0bd; }
+.caravan-status .guild-facility-actions .guild-skill-entry small { color: #e5c889; }
+@media (max-width: 1150px) and (min-width: 901px) {
+  .caravan-status .guild-facility-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .caravan-status .guild-facility-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.caravan-status .floating-guild-rank {
+  position: fixed;
+  z-index: 90 !important;
+  top: 50%;
+  left: calc(50% + 80px);
+  right: auto;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  width: min(760px, calc(100% - 250px));
+  max-height: min(760px, calc(100dvh - 92px));
+  overflow: auto;
+}
+.caravan-status .floating-guild-rank > header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.guild-rank-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  padding: 12px;
+  background: linear-gradient(135deg, #f9e8bb, #d0a568);
+}
+.guild-rank-summary > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #a87842;
+  background: #5a2a1c;
+  color: #ffe8ae;
+  box-shadow: inset 0 1px #fff4;
+}
+.guild-rank-summary small { color: #e3bf7d; font-size: 10px; }
+.guild-rank-summary strong { color: #fff2c7; font-size: 20px; }
+.guild-rank-summary span { color: #e5c997; font-size: 10px; }
+.guild-rank-upgrade {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-top: 1px solid #a87c48;
+  border-bottom: 1px solid #a87c48;
+  background: #f1d9a7;
+  color: #4b291b;
+}
+.guild-rank-upgrade > div { display: grid; gap: 3px; min-width: 0; }
+.guild-rank-upgrade strong { font-size: 15px; }
+.guild-rank-upgrade small { color: #765235; font-size: 11px; }
+.guild-rank-upgrade > button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid #9c693b;
+  background: linear-gradient(#8e4a25, #572216);
+  color: #fff0c4;
+  font-size: 11px;
+  font-weight: 800;
+}
+.guild-rank-upgrade > button:hover:not(:disabled) { border-color: #fff0aa; background: linear-gradient(#b96730, #762c1b); }
+.guild-rank-upgrade > button:disabled { opacity: .55; cursor: not-allowed; }
+.guild-rank-roadmap {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: #d8b77e;
+}
+.guild-rank-roadmap > section { padding: 8px; border: 1px solid #a47744; background: #eed5a0; }
+.guild-rank-roadmap > section > header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 2px 6px; border-bottom: 1px solid #bd9258; color: #4d2b1b; }
+.guild-rank-roadmap > section > header strong { font-size: 15px; }
+.guild-rank-roadmap > section > header small { color: #795638; font-size: 10px; }
+.guild-rank-roadmap > section > div { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 5px; padding-top: 7px; }
+.guild-rank-roadmap article { position: relative; display: grid; gap: 2px; min-width: 0; min-height: 47px; padding: 5px 3px; border: 1px solid #ac8a5a; background: #cdb07c; color: #6a4a2d; text-align: center; }
+.guild-rank-roadmap article > strong { color: #5a341e; font-size: 12px; }
+.guild-rank-roadmap article > small { overflow: visible; color: #7a5a39; font-size: 8px; line-height: 1.15; white-space: normal; overflow-wrap: anywhere; }
+.guild-rank-roadmap article.unlocked { border-color: #65856a; background: linear-gradient(#d4e0b4, #a9c38d); }
+.guild-rank-roadmap article.current { border-color: #e4a836; background: linear-gradient(#ffeaa2, #dca653); box-shadow: 0 0 0 2px #fff0a866, 0 0 12px #e9b84c88; }
+.guild-rank-roadmap article.current > b { position: absolute; top: -7px; left: 50%; transform: translateX(-50%); padding: 1px 4px; border: 1px solid #9a6430; background: #6b2c1d; color: #ffe7ab; font-size: 8px; white-space: nowrap; }
+.guild-rank-roadmap article.locked { background: #b79a6d; filter: saturate(.45); }
+.guild-rank-roadmap article.cap { border-color: #a85d2f; }
+.guild-rank-note { margin: 0; padding: 0 12px 13px; background: #d8b77e; color: #65482e; font-size: 11px; line-height: 1.55; }
+.caravan-status .floating-guild-skills {
+  position: fixed;
+  z-index: 91 !important;
+  top: 50%;
+  left: calc(50% + 80px);
+  right: auto;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  width: min(780px, calc(100% - 250px));
+  max-height: min(760px, calc(100dvh - 70px));
+  overflow: auto;
+}
+.guild-skill-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px; background: linear-gradient(135deg, #5b2b20, #7c3b25); color: #ffe6b0; }
+.guild-skill-summary > div { display: grid; gap: 2px; padding: 9px 11px; border: 1px solid #d29d5d; background: #2b1711aa; }
+.guild-skill-summary small { color: #efc983; font-size: 10px; }
+.guild-skill-summary strong { font-size: 18px; color: #fff1c1; }
+.guild-skill-summary > span { grid-column: 1 / -1; color: #f4dcae; font-size: 11px; line-height: 1.45; }
+.guild-skill-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px; background: #ead09b; }
+.guild-skill-card { display: grid; gap: 8px; min-width: 0; padding: 12px; border: 1px solid #b17c43; background: linear-gradient(145deg, #fff0c1, #d5ae6b); color: #432719; box-shadow: inset 0 0 0 1px #fff7d566, 0 3px 9px #5a2b1633; }
+.guild-skill-card.locked { filter: saturate(.45); opacity: .76; }
+.guild-skill-card.maxed { border-color: #e2a531; background: linear-gradient(145deg, #ffeeb0, #c98635); }
+.guild-skill-card-head { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 8px; }
+.guild-skill-card-head > span { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid #c7944e; border-radius: 50%; background: #3b2115; color: #ffd76f; font-size: 19px; }
+.guild-skill-card-head > div { display: grid; gap: 2px; min-width: 0; }
+.guild-skill-card-head strong { color: #4b2919; font-size: 15px; }
+.guild-skill-card-head small { color: #815836; font-size: 10px; }
+.guild-skill-card-head > b { color: #75411f; font-size: 10px; white-space: nowrap; }
+.guild-skill-card p { min-height: 36px; margin: 0; color: #63452c; font-size: 11px; line-height: 1.45; }
+.guild-skill-effect { color: #7c2d1c; font-size: 12px; font-weight: 800; }
+.guild-skill-progress { height: 7px; border: 1px solid #996a3a; background: #5c3a25; }
+.guild-skill-progress i { display: block; height: 100%; background: linear-gradient(90deg, #f7c85a, #fff0a2); }
+.guild-skill-card button { padding: 7px 8px; border: 1px solid #9a5b2e; background: linear-gradient(#86412a, #5f2518); color: #fff0c5; font-size: 11px; font-weight: 800; }
+.guild-skill-card button:hover:not(:disabled) { border-color: #fff0aa; background: linear-gradient(#b96730, #762c1b); }
+.guild-skill-card button:disabled { opacity: .55; cursor: not-allowed; }
+.guild-skill-note { margin: 0; padding: 0 12px 13px; background: #d8b77e; color: #65482e; font-size: 11px; line-height: 1.55; }
+@media (max-width: 900px) {
+  .caravan-status .floating-guild-rank { left: 50%; width: calc(100% - 20px); max-height: calc(100dvh - 100px); }
+  .caravan-status .floating-guild-skills { left: 50%; width: calc(100% - 20px); max-height: calc(100dvh - 100px); }
+  .guild-rank-roadmap > section > div { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .guild-rank-summary { grid-template-columns: 1fr; }
+  .guild-rank-upgrade { align-items: stretch; flex-direction: column; }
+  .guild-rank-upgrade > button { width: 100%; }
+  .guild-skill-summary { grid-template-columns: 1fr; }
+  .guild-skill-summary > span { grid-column: auto; }
+  .guild-skill-grid { grid-template-columns: 1fr; }
+}
+
+/* 技能樹視覺：三條主脈由商團核心向下展開。 */
+.guild-skill-grid {
+  position: relative;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto auto auto;
+  gap: 40px 14px;
+  padding: 104px 18px 22px;
+  background:
+    radial-gradient(circle at 50% 7%, #fff1b833 0 8%, transparent 24%),
+    linear-gradient(180deg, #f3dca8, #d8b77e);
+}
+.guild-skill-grid::before {
+  content: "商團核心";
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+  width: 138px;
+  height: 42px;
+  border: 2px solid #f4ca62;
+  border-radius: 22px;
+  background: linear-gradient(145deg, #6b301e, #321713);
+  box-shadow: 0 0 0 3px #8f532b66, 0 0 18px #f0bb5d88;
+  color: #ffe9ac;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: .18em;
+  z-index: 1;
+}
+.guild-skill-grid::after {
+  content: "";
+  position: absolute;
+  top: 78px;
+  left: 17%;
+  right: 17%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #a86b2e, #ffe29a, #a86b2e, transparent);
+  box-shadow: 0 0 8px #a86b2e88;
+}
+.guild-skill-grid > .guild-skill-card { position: relative; }
+.guild-skill-grid > .guild-skill-card:nth-child(1) { grid-column: 1; grid-row: 1; }
+.guild-skill-grid > .guild-skill-card:nth-child(2) { grid-column: 1; grid-row: 2; }
+.guild-skill-grid > .guild-skill-card:nth-child(3) { grid-column: 2; grid-row: 1; }
+.guild-skill-grid > .guild-skill-card:nth-child(4) { grid-column: 2; grid-row: 2; }
+.guild-skill-grid > .guild-skill-card:nth-child(5) { grid-column: 3; grid-row: 1; }
+.guild-skill-grid > .guild-skill-card:nth-child(6) { grid-column: 2; grid-row: 3; }
+.guild-skill-grid > .guild-skill-card:nth-child(1)::before,
+.guild-skill-grid > .guild-skill-card:nth-child(3)::before,
+.guild-skill-grid > .guild-skill-card:nth-child(5)::before,
+.guild-skill-grid > .guild-skill-card:nth-child(2)::before,
+.guild-skill-grid > .guild-skill-card:nth-child(4)::before,
+.guild-skill-grid > .guild-skill-card:nth-child(6)::before {
+  content: "";
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  width: 2px;
+  height: 40px;
+  transform: translateX(-50%);
+  background: linear-gradient(#a86b2e, #efc66c);
+  box-shadow: 0 0 7px #e9b44d99;
+}
+.guild-skill-grid > .guild-skill-card:nth-child(1)::after,
+.guild-skill-grid > .guild-skill-card:nth-child(3)::after,
+.guild-skill-grid > .guild-skill-card:nth-child(5)::after {
+  content: attr(data-branch);
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 9px;
+  border: 1px solid #b47735;
+  border-radius: 10px;
+  background: #6c351f;
+  color: #ffe6a6;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.guild-skill-grid > .guild-skill-card:nth-child(2),
+.guild-skill-grid > .guild-skill-card:nth-child(4),
+.guild-skill-grid > .guild-skill-card:nth-child(6) { border-color: #9c6a34; }
+@media (max-width: 700px) {
+  .guild-skill-grid { grid-template-columns: 1fr; grid-template-rows: none; gap: 30px 10px; padding: 90px 12px 18px; }
+  .guild-skill-grid > .guild-skill-card:nth-child(n) { grid-column: 1; grid-row: auto; }
+  .guild-skill-grid > .guild-skill-card:nth-child(n)::before { display: none; }
+  .guild-skill-grid > .guild-skill-card:nth-child(1)::after,
+  .guild-skill-grid > .guild-skill-card:nth-child(3)::after,
+  .guild-skill-grid > .guild-skill-card:nth-child(5)::after { top: -24px; left: 0; transform: none; }
+  .guild-skill-grid::after { left: 50%; right: auto; top: 74px; width: 2px; height: calc(100% - 90px); background: linear-gradient(#a86b2e88, #a86b2e11); }
+}
+
+/* 技能樹成果圖底稿：保留可互動節點，同時讓黃昏商路古卷成為整個面板的場景。 */
+.caravan-status .floating-guild-skills {
+  border: 1px solid #d7a94f;
+  background: linear-gradient(180deg, #17100de8, #0d1215f5);
+  box-shadow: 0 18px 55px #000c, 0 0 0 2px #5e401e88, inset 0 0 0 1px #ffe3a244;
+  color: #f7e5bd;
+  backdrop-filter: blur(1px);
+}
+.caravan-status .floating-guild-skills > header {
+  border-bottom-color: #bf8f42;
+  background: linear-gradient(90deg, #21150fd9, #3b2414e8 50%, #21150fd9);
+  box-shadow: inset 0 -1px #ffe3a244;
+}
+.caravan-status .floating-guild-skills > header strong { color: #ffe7a5; letter-spacing: .12em; }
+.caravan-status .floating-guild-skills > header button { color: #ffe9b2; border-color: #bb8a42; background: #2b1c12cc; }
+.guild-skill-summary {
+  background: linear-gradient(135deg, #351c17ed, #241611ed 52%, #16100ee8);
+  border-bottom: 1px solid #bb8739;
+  box-shadow: inset 0 -12px 24px #170d0a88;
+}
+.guild-skill-summary > div { border-color: #c9994c; background: #130e0bd1; box-shadow: inset 0 0 0 1px #ffe3a21f; }
+.guild-skill-summary small { color: #e6b965; }
+.guild-skill-summary strong { color: #ffe6a5; text-shadow: 0 1px 8px #f0b64c66; }
+.guild-skill-summary > span { color: #f3d9a5; }
+.guild-skill-grid {
+  background:
+    linear-gradient(180deg, #0b1218b8, #0a1017df),
+    url('/assets/backgrounds/guild-skill-tree-hero-v2.png') center / cover;
+  box-shadow: inset 0 0 45px #000b;
+}
+.guild-skill-grid::before { background: linear-gradient(145deg, #6e3b1d, #1a1512 72%); }
+.guild-skill-grid::after { background: linear-gradient(90deg, transparent, #a86b2e, #ffe29a, #a86b2e, transparent); }
+.guild-skill-card {
+  border-color: #ad7b38;
+  background:
+    linear-gradient(145deg, #241b16e8, #0d151ae8),
+    url('/assets/backgrounds/guild-skill-tree-hero-v2.png') center / cover;
+  color: #f2dfb5;
+  box-shadow: inset 0 0 0 1px #ffe5a522, 0 5px 16px #000b;
+}
+.guild-skill-card.locked { filter: saturate(.6); opacity: .82; }
+.guild-skill-card.maxed { border-color: #f0bb54; background: linear-gradient(145deg, #563018ee, #21120fe8); }
+.guild-skill-card-head > span { border-color: #d09b42; background: radial-gradient(circle at 35% 30%, #6c421d, #120e0d 72%); color: #ffe39a; box-shadow: 0 0 10px #e9a94d44; }
+.guild-skill-card-head strong { color: #ffe9b1; }
+.guild-skill-card-head small { color: #c9a66b; }
+.guild-skill-card-head > b { color: #eec879; }
+.guild-skill-card p { color: #d9c59f; }
+.guild-skill-effect { color: #ffd46d; text-shadow: 0 1px 6px #ffad3d33; }
+.guild-skill-progress { border-color: #a77838; background: #16110d; }
+.guild-skill-progress i { background: linear-gradient(90deg, #d18b2d, #fff1a6, #e2a844); box-shadow: 0 0 8px #f1b94c99; }
+.guild-skill-card button { border-color: #ba7b32; background: linear-gradient(#874d26, #4d2417); box-shadow: inset 0 0 0 1px #ffe3a222; }
+.guild-skill-card button:hover:not(:disabled) { border-color: #fff0aa; background: linear-gradient(#b56d31, #6f2d1b); }
+.guild-skill-note { background: #120e0cd9; color: #d8bf91; border-top: 1px solid #8a632e; }
+
+/* 進階排版：讓六個節點在常見筆電視窗中更完整露出，並把底稿退到第二層。 */
+.caravan-status .floating-guild-skills {
+  width: min(920px, calc(100% - 28px));
+  max-height: min(820px, calc(100dvh - 24px));
+}
+.guild-skill-summary { gap: 6px; padding: 9px 12px; }
+.guild-skill-summary > div { padding: 7px 10px; }
+.guild-skill-summary strong { font-size: 16px; }
+.guild-skill-summary > span { font-size: 10px; }
+.guild-skill-grid {
+  gap: 24px 12px;
+  padding: 86px 14px 16px;
+  background:
+    linear-gradient(180deg, #0b1218e8, #0a1017f0),
+    url('/assets/backgrounds/guild-skill-tree-hero-v2.png') center / cover;
+}
+.guild-skill-card {
+  gap: 6px;
+  padding: 9px 10px;
+  min-height: 0;
+  background:
+    linear-gradient(145deg, #241b16f2, #0d151af2),
+    url('/assets/backgrounds/guild-skill-tree-hero-v2.png') center / cover;
+}
+.guild-skill-card-head { grid-template-columns: 30px 1fr auto; gap: 7px; }
+.guild-skill-card-head > span { width: 28px; height: 28px; font-size: 16px; }
+.guild-skill-card-head strong { font-size: 14px; }
+.guild-skill-card-head small,
+.guild-skill-card-head > b { font-size: 9px; }
+.guild-skill-card p { min-height: 29px; font-size: 10px; line-height: 1.35; }
+.guild-skill-effect { font-size: 11px; }
+.guild-skill-progress { height: 6px; }
+.guild-skill-card button { min-height: 31px; padding: 5px 7px; font-size: 10px; }
+.guild-skill-grid::before { top: 12px; height: 38px; }
+.guild-skill-grid::after { top: 66px; }
+.guild-skill-grid > .guild-skill-card:nth-child(n)::before { top: -24px; height: 24px; }
+.guild-skill-grid > .guild-skill-card:nth-child(1)::after,
+.guild-skill-grid > .guild-skill-card:nth-child(3)::after,
+.guild-skill-grid > .guild-skill-card:nth-child(5)::after { top: -20px; }
+.guild-skill-note { padding: 7px 12px 10px; font-size: 10px; }
+@media (max-width: 700px) {
+  .guild-skill-grid { gap: 24px 10px; padding: 78px 10px 14px; }
+  .guild-skill-grid::before { top: 10px; }
+  .guild-skill-grid::after { top: 62px; }
+}
+
+/* 成果圖構圖：三條主脈各自承接兩個技能節點。 */
+.guild-skill-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto auto;
+  gap: 18px 14px;
+  padding: 84px 18px 18px;
+  background:
+    linear-gradient(180deg, #090d121c, #090d1238 48%, #090d1266),
+    url('/assets/backgrounds/guild-skill-tree-hero-v2.png') center / cover;
+  box-shadow: inset 0 0 55px #0005;
+}
+.guild-skill-grid::before { top: 10px; height: 40px; }
+.guild-skill-grid::after { top: 68px; left: 15%; right: 15%; opacity: .9; }
+.guild-skill-grid > .guild-skill-card:nth-child(1) { grid-column: 1; grid-row: 1; }
+.guild-skill-grid > .guild-skill-card:nth-child(2) { grid-column: 1; grid-row: 2; }
+.guild-skill-grid > .guild-skill-card:nth-child(3) { grid-column: 2; grid-row: 1; }
+.guild-skill-grid > .guild-skill-card:nth-child(4) { grid-column: 2; grid-row: 2; }
+.guild-skill-grid > .guild-skill-card:nth-child(5) { grid-column: 3; grid-row: 1; }
+.guild-skill-grid > .guild-skill-card:nth-child(6) { grid-column: 3; grid-row: 2; }
+.guild-skill-grid > .guild-skill-card {
+  padding: 11px 12px;
+  border: 1px solid #d09a47;
+  border-radius: 7px;
+  background: linear-gradient(145deg, #14171acc, #0c1014b8);
+  box-shadow: inset 0 0 0 1px #ffe6a84c, 0 5px 16px #0008;
+}
+.guild-skill-grid > .guild-skill-card:nth-child(2),
+.guild-skill-grid > .guild-skill-card:nth-child(4),
+.guild-skill-grid > .guild-skill-card:nth-child(6) { border-color: #b8833d; }
+.guild-skill-grid > .guild-skill-card:nth-child(n)::before { top: -18px; height: 18px; }
+.guild-skill-grid > .guild-skill-card:nth-child(1)::after,
+.guild-skill-grid > .guild-skill-card:nth-child(3)::after,
+.guild-skill-grid > .guild-skill-card:nth-child(5)::after { top: -22px; }
+.guild-skill-card-head > span { width: 34px; height: 34px; font-size: 18px; }
+.guild-skill-card-head strong { font-size: 15px; }
+.guild-skill-card p { min-height: 32px; }
+.guild-skill-card button { min-height: 32px; }
+@media (max-width: 700px) {
+  .guild-skill-grid { grid-template-columns: 1fr; grid-template-rows: none; gap: 26px 10px; padding: 78px 10px 14px; }
+  .guild-skill-grid > .guild-skill-card:nth-child(n) { grid-column: 1; grid-row: auto; }
+}
+
+/* 成果圖主視覺模式：底稿完整呈現，互動資訊以節點狀態層疊加。 */
+.guild-skill-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-rows: 1fr;
+  align-items: end;
+  gap: 10px;
+  min-height: 500px;
+  padding: 282px 18px 20px;
+  background:
+    linear-gradient(180deg, #090d1208, #090d1228 58%, #090d1258),
+    url('/assets/backgrounds/guild-skill-tree-map-clean-v1.png') center / 100% 100% no-repeat;
+  box-shadow: inset 0 0 50px #0004;
+}
+.guild-skill-grid::before,
+.guild-skill-grid::after { display: none; }
+.guild-skill-grid > .guild-skill-card:nth-child(n) { grid-column: auto; grid-row: 1; }
+.guild-skill-grid > .guild-skill-card {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 7px;
+  border: 1px solid #c99243cc;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #12171bd0, #24180edb);
+  box-shadow: 0 3px 12px #0009, inset 0 0 0 1px #ffe8ad26;
+  backdrop-filter: blur(3px);
+}
+.guild-skill-grid > .guild-skill-card:nth-child(n)::before,
+.guild-skill-grid > .guild-skill-card:nth-child(n)::after { display: none; }
+.guild-skill-card-head { grid-template-columns: 25px 1fr; gap: 4px; }
+.guild-skill-card-head > span { width: 24px; height: 24px; font-size: 13px; }
+.guild-skill-card-head > div { gap: 0; }
+.guild-skill-card-head strong { font-size: 11px; white-space: nowrap; }
+.guild-skill-card-head small { font-size: 9px; }
+.guild-skill-card-head > b { grid-column: 1 / -1; overflow: hidden; color: #f0c56d; font-size: 8px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.guild-skill-card p { display: none; }
+.guild-skill-effect { overflow: hidden; font-size: 9px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.guild-skill-progress { height: 4px; }
+.guild-skill-card button { min-height: 24px; padding: 3px 2px; font-size: 9px; white-space: nowrap; }
+.guild-skill-card.locked { opacity: .92; }
+.guild-skill-card.maxed { border-color: #f4bd54; }
+@media (max-width: 700px) {
+  .guild-skill-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, auto);
+    min-height: 0;
+    gap: 10px;
+    padding: 160px 10px 14px;
+    background-size: auto 100%;
+  }
+  .guild-skill-grid > .guild-skill-card:nth-child(n) { grid-column: auto; grid-row: auto; }
+}
+
+/* 技能圖章：移除矩形卡片，改用成果圖同款的圓形徽章與銘牌。 */
+.guild-skill-grid > .guild-skill-card {
+  align-self: end;
+  gap: 4px;
+  padding: 0 3px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  text-align: center;
+}
+.guild-skill-grid > .guild-skill-card::before,
+.guild-skill-grid > .guild-skill-card::after { display: none; }
+.guild-skill-card-head {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 3px;
+}
+.guild-skill-card-head > span {
+  width: 54px;
+  height: 54px;
+  border: 2px solid #e7b85a;
+  background: radial-gradient(circle at 38% 30%, #725024, #1b1410 70%);
+  color: #ffe8a5;
+  font-size: 25px;
+  box-shadow: 0 0 0 4px #1c140eaa, 0 0 0 6px #b4772f99, 0 0 17px #eab04e99;
+}
+.guild-skill-card-head > div { justify-items: center; text-align: center; }
+.guild-skill-card-head strong {
+  padding: 2px 8px;
+  border: 1px solid #d6a14c;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #2a1b12e8, #120e0bdc);
+  color: #ffe8a6;
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.guild-skill-card-head strong { display: none; }
+.guild-skill-card-head small { color: #f0d18a; font-size: 9px; }
+.guild-skill-card-head > b { min-height: 12px; color: #f5cc72; font-size: 8px; }
+.guild-skill-effect {
+  padding: 1px 3px;
+  border-radius: 8px;
+  background: #140e0bc9;
+  color: #ffe3a0;
+  font-size: 9px;
+  text-shadow: 0 1px 5px #000;
+}
+.guild-skill-progress { width: 82%; height: 4px; margin: 0 auto; border-color: #c08a3f; background: #16110d99; }
+.guild-skill-card button {
+  width: 88%;
+  min-height: 24px;
+  margin: 0 auto;
+  padding: 3px 5px;
+  border: 1px solid #d09a45;
+  border-radius: 13px;
+  background: #20140dcc;
+  color: #ffe7a2;
+  font-size: 9px;
+  box-shadow: 0 0 8px #0008, inset 0 0 0 1px #ffe3a225;
+}
+.guild-skill-card button:hover:not(:disabled) { background: #70401ddd; box-shadow: 0 0 12px #e9a94d66; }
+.guild-skill-card.locked { opacity: .76; filter: saturate(.5); }
+.guild-skill-card.locked .guild-skill-card-head > span { border-color: #9d8054; box-shadow: 0 0 0 4px #17120dbb, 0 0 0 6px #725a3788; }
+.guild-skill-card.maxed .guild-skill-card-head > span { box-shadow: 0 0 0 4px #29170cbf, 0 0 0 6px #e0a848cc, 0 0 22px #ffc85fdd; }
+@media (max-width: 700px) {
+  .guild-skill-grid > .guild-skill-card { padding-bottom: 7px; }
+  .guild-skill-card-head > span { width: 48px; height: 48px; font-size: 22px; }
+}
+
+/* 無縫融入底稿：平時只看見成果圖，滑入節點才顯示即時操作資訊。 */
+.guild-skill-grid > .guild-skill-card {
+  position: relative;
+  min-height: 168px;
+  padding: 0;
+  cursor: pointer;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-card-head,
+.guild-skill-grid > .guild-skill-card > .guild-skill-effect,
+.guild-skill-grid > .guild-skill-card > .guild-skill-progress,
+.guild-skill-grid > .guild-skill-card > button {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .16s ease, visibility .16s ease;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-card-head,
+.guild-skill-grid > .guild-skill-card > .guild-skill-effect,
+.guild-skill-grid > .guild-skill-card > .guild-skill-progress {
+  position: absolute;
+  left: 50%;
+  width: min(170px, 94%);
+  transform: translateX(-50%);
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-card-head {
+  top: 24px;
+  padding: 7px 8px;
+  border: 1px solid #d4a24e;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #25170fe8, #0e0b09e8);
+  box-shadow: 0 7px 22px #000b, inset 0 0 0 1px #ffe7a52b;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-card-head > span { width: 38px; height: 38px; font-size: 18px; }
+.guild-skill-grid > .guild-skill-card > .guild-skill-card-head strong { display: block; }
+.guild-skill-grid > .guild-skill-card > .guild-skill-effect { bottom: 52px; }
+.guild-skill-grid > .guild-skill-card > .guild-skill-progress { bottom: 42px; }
+.guild-skill-grid > .guild-skill-card > button {
+  position: absolute;
+  left: 50%;
+  bottom: 7px;
+  width: min(148px, 88%);
+  transform: translateX(-50%);
+}
+.guild-skill-grid > .guild-skill-card:hover > .guild-skill-card-head,
+.guild-skill-grid > .guild-skill-card:hover > .guild-skill-effect,
+.guild-skill-grid > .guild-skill-card:hover > .guild-skill-progress,
+.guild-skill-grid > .guild-skill-card:hover > button,
+.guild-skill-grid > .guild-skill-card:focus-within > .guild-skill-card-head,
+.guild-skill-grid > .guild-skill-card:focus-within > .guild-skill-effect,
+.guild-skill-grid > .guild-skill-card:focus-within > .guild-skill-progress,
+.guild-skill-grid > .guild-skill-card:focus-within > button {
+  opacity: 1;
+  visibility: visible;
+}
+.guild-skill-grid > .guild-skill-card:hover,
+.guild-skill-grid > .guild-skill-card:focus-within { z-index: 4; }
+.guild-skill-grid > .guild-skill-card > button { pointer-events: auto; }
+@media (max-width: 700px) {
+  .guild-skill-grid > .guild-skill-card { min-height: 142px; }
+  .guild-skill-grid > .guild-skill-card > .guild-skill-card-head { top: 16px; }
+}
+
+/* 最終節點層：不再浮出矩形資訊卡，直接操作成果圖上的原始圖章。 */
+.guild-skill-grid > .guild-skill-card {
+  min-height: 180px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-card-head,
+.guild-skill-grid > .guild-skill-card > .guild-skill-effect,
+.guild-skill-grid > .guild-skill-card > .guild-skill-progress { display: none !important; }
+.guild-skill-grid > .guild-skill-card > button {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: transparent;
+  font-size: 0;
+  opacity: 0;
+  visibility: visible;
+}
+.guild-skill-grid > .guild-skill-card:hover,
+.guild-skill-grid > .guild-skill-card:focus-within { filter: brightness(1.16) saturate(1.12); }
+.guild-skill-grid > .guild-skill-card:hover::before,
+.guild-skill-grid > .guild-skill-card:focus-within::before,
+.guild-skill-grid > .guild-skill-card:hover::after,
+.guild-skill-grid > .guild-skill-card:focus-within::after { display: none !important; }
+.guild-skill-grid > .guild-skill-card > button:hover:not(:disabled),
+.guild-skill-grid > .guild-skill-card > button:focus-visible {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none;
+}
+
+/* 最終覆蓋：技能節點只使用背景中的一份徽章，不再疊加裁切圖。 */
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  background-size: auto !important;
+  background-position: center !important;
+  opacity: 1 !important;
+  transform: none !important;
+  outline: none !important;
+  filter: none !important;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:hover,
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:focus-visible {
+  background: transparent !important;
+  background-image: none !important;
+  outline: none !important;
+  filter: none !important;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 47% !important;
+  width: 116px !important;
+  height: 116px !important;
+  transform: translate(-50%, -50%) !important;
+  border: 2px solid transparent !important;
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:hover::before,
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:focus-visible::before,
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot.selected::before {
+  border-color: #ffd36b !important;
+  box-shadow: 0 0 0 4px #d6933c55, 0 0 22px #f7c65fcc !important;
+}
+.guild-skill-grid > .guild-skill-card:nth-child(n) > .guild-skill-hotspot {
+  background-image: none !important;
+}
+
+/* 技能樹只保留 grid 內的成果圖，避免外層面板再疊一張造成重影。 */
+.caravan-status .floating-guild-skills {
+  background: linear-gradient(180deg, #17100de8, #0d1215f5);
+}
+.caravan-status .floating-guild-skills > .guild-skill-summary {
+  background: linear-gradient(135deg, #351c17ed, #241611ed 52%, #16100ee8);
+}
+
+/* 技能樹只保留 grid 內的成果圖，避免外層面板再疊一張造成重影。 */
+.caravan-status .floating-guild-skills {
+  background: linear-gradient(180deg, #17100de8, #0d1215f5);
+}
+.caravan-status .floating-guild-skills > .guild-skill-summary {
+  background: linear-gradient(135deg, #351c17ed, #241611ed 52%, #16100ee8);
+}
+
+/* 最終覆蓋：技能節點只使用背景中的一份徽章，不再疊加裁切圖。 */
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  background-size: auto !important;
+  background-position: center !important;
+  opacity: 1 !important;
+  transform: none !important;
+  outline: none !important;
+  filter: none !important;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:hover,
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:focus-visible {
+  background: transparent !important;
+  background-image: none !important;
+  outline: none !important;
+  filter: none !important;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 47% !important;
+  width: 116px !important;
+  height: 116px !important;
+  transform: translate(-50%, -50%) !important;
+  border: 2px solid transparent !important;
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:hover::before,
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:focus-visible::before,
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot.selected::before {
+  border-color: #ffd36b !important;
+  box-shadow: 0 0 0 4px #d6933c55, 0 0 22px #f7c65fcc !important;
+}
+
+/* 技能樹重製：背景只保留一份美術，節點本身改為精準熱區，詳情另行顯示。 */
+.guild-skill-stage {
+  position: relative;
+  isolation: isolate;
+}
+.guild-skill-grid > .guild-skill-card {
+  position: absolute;
+  top: 282px;
+  width: 14%;
+  min-height: 180px;
+  filter: none !important;
+}
+.guild-skill-grid > .guild-skill-card:nth-child(1) { left: 11.8%; }
+.guild-skill-grid > .guild-skill-card:nth-child(2) { left: 23.7%; }
+.guild-skill-grid > .guild-skill-card:nth-child(3) { left: 36%; }
+.guild-skill-grid > .guild-skill-card:nth-child(4) { left: 48%; }
+.guild-skill-grid > .guild-skill-card:nth-child(5) { left: 61.5%; }
+.guild-skill-grid > .guild-skill-card:nth-child(6) { left: 73.7%; }
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  color: transparent !important;
+  cursor: pointer;
+  transform: none !important;
+  outline: none;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot::before {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 47%;
+  width: 116px;
+  height: 116px;
+  transform: translate(-50%, -50%);
+  border: 2px solid transparent;
+  border-radius: 50%;
+  box-shadow: none;
+  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+  pointer-events: none;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:hover::before,
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:focus-visible::before,
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot.selected::before {
+  border-color: #ffd36b;
+  box-shadow: 0 0 0 4px #d6933c55, 0 0 22px #f7c65fcc;
+  transform: translate(-50%, -50%) scale(1.04);
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot.selected::before {
+  border-color: #fff0b0;
+  box-shadow: 0 0 0 4px #d6933c88, 0 0 28px #f7c65fff;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:active::before {
+  transform: translate(-50%, -50%) scale(.96);
+}
+.guild-skill-detail {
+  position: absolute;
+  z-index: 5;
+  top: 16px;
+  right: 18px;
+  width: min(286px, 31%);
+  min-height: 148px;
+  padding: 14px 16px;
+  border: 1px solid #d6a85d;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #160f0ddd, #0d1719e8 70%, #111c1ae8);
+  box-shadow: 0 10px 26px #05040488, inset 0 0 0 1px #fff0b014;
+  backdrop-filter: blur(4px);
+  color: #f6e3b2;
+}
+.guild-skill-detail-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #d6a85d55;
+}
+.guild-skill-detail-heading > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid #e8bd6d;
+  border-radius: 50%;
+  color: #ffe7a7;
+  background: #352312;
+}
+.guild-skill-detail-heading > div { display: grid; gap: 2px; min-width: 0; }
+.guild-skill-detail-heading strong { color: #ffe5a5; font-size: 16px; }
+.guild-skill-detail-heading small { color: #d9bf8b; font-size: 11px; }
+.guild-skill-detail-heading > b { margin-left: auto; color: #ffcf70; font-size: 10px; text-align: right; }
+.guild-skill-detail > p { margin: 9px 0 6px; color: #e1d0aa; font-size: 11px; line-height: 1.5; }
+.guild-skill-detail-effect { display: block; color: #ffdc87; font-size: 12px; }
+.guild-skill-detail-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.guild-skill-detail-actions small { flex: 1; color: #baa67f; font-size: 10px; line-height: 1.35; }
+.guild-skill-detail-actions button {
+  flex: 0 0 auto;
+  min-width: 106px;
+  padding: 7px 10px;
+  border: 1px solid #efbd5e;
+  border-radius: 7px;
+  color: #24170b;
+  background: linear-gradient(180deg, #f4c76d, #b8752c);
+  font-weight: 700;
+  cursor: pointer;
+}
+.guild-skill-detail-actions button:hover { filter: brightness(1.12); box-shadow: 0 0 13px #f2bd6288; }
+.guild-skill-detail-actions button:active { transform: translateY(1px); }
+.guild-skill-detail-actions button:disabled { cursor: default; opacity: .62; filter: grayscale(.25); }
+@media (max-width: 880px) {
+  .guild-skill-detail { top: 12px; right: 12px; width: min(260px, 35%); }
+}
+@media (max-width: 700px) {
+  .guild-skill-detail { position: relative; inset: auto; width: auto; margin: -2px 12px 12px; }
+  .guild-skill-grid { min-height: 420px; padding-top: 235px; }
+  .guild-skill-grid > .guild-skill-card { min-height: 165px; }
+}
+
+/* 六張裁切圖是實際技能按鈕，而不是只鋪在地圖上的裝飾。 */
+.guild-skill-grid > .guild-skill-card > button {
+  inset: 8px auto auto 50%;
+  width: 112px;
+  height: 82px;
+  transform: translateX(-50%);
+  display: block;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  border: 0 !important;
+  border-radius: 50%;
+  background-color: transparent !important;
+  background-repeat: no-repeat !important;
+  background-position: center top !important;
+  background-size: auto 140px !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  transition: transform .16s ease, filter .16s ease;
+}
+.guild-skill-grid > .guild-skill-card:nth-child(1) > button:not(.guild-skill-hotspot) { background-image: url('/assets/skills/guild-trade-prosperity.png') !important; }
+.guild-skill-grid > .guild-skill-card:nth-child(2) > button:not(.guild-skill-hotspot) { background-image: url('/assets/skills/guild-battle-spoils.png') !important; }
+.guild-skill-grid > .guild-skill-card:nth-child(3) > button:not(.guild-skill-hotspot) { background-image: url('/assets/skills/guild-expedition-wisdom.png') !important; }
+.guild-skill-grid > .guild-skill-card:nth-child(4) > button:not(.guild-skill-hotspot) { background-image: url('/assets/skills/guild-mercenary-training.png') !important; }
+.guild-skill-grid > .guild-skill-card:nth-child(5) > button:not(.guild-skill-hotspot) { background-image: url('/assets/skills/guild-hero-legacy.png') !important; }
+.guild-skill-grid > .guild-skill-card:nth-child(6) > button:not(.guild-skill-hotspot) { background-image: url('/assets/skills/guild-special-contracts.png') !important; }
+.guild-skill-grid > .guild-skill-card > button:hover:not(:disabled),
+.guild-skill-grid > .guild-skill-card > button:focus-visible {
+  background-color: transparent !important;
+  background-repeat: no-repeat !important;
+  background-position: center top !important;
+  border: 0 !important;
+  outline: 2px solid #ffd36b;
+  outline-offset: 3px;
+  filter: brightness(1.18) saturate(1.16) drop-shadow(0 0 10px #f7c65fcc);
+  transform: translateX(-50%) scale(1.055);
+}
+.guild-skill-grid > .guild-skill-card > button:active:not(:disabled) {
+  transform: translateX(-50%) scale(.96);
+  filter: brightness(1.28) saturate(1.22) drop-shadow(0 0 14px #f7c65fff);
+}
+.guild-skill-grid > .guild-skill-card > button:disabled {
+  opacity: .9;
+  cursor: not-allowed;
+  filter: saturate(.72) brightness(.8);
+}
+
+/* 圖章下方的可讀說明，不覆蓋地圖本體。 */
+.guild-skill-note {
+  display: block;
+  min-height: 32px;
+  padding: 8px 14px 10px;
+  border-top: 1px solid #c4944a;
+  background: linear-gradient(180deg, #1b130de8, #0c0b0ae8);
+  color: #efd39a;
+  font-size: 0;
+  line-height: 1.5;
+  text-align: center;
+}
+.guild-skill-note::before {
+  content: "技能效果總覽　・　貿易繁榮＝貿易收益　・　戰利豐收＝戰利品加成　・　遠征學識＝經驗收益　・　傭兵訓練＝傭兵能力　・　主角傳承＝主角能力　・　特殊傭兵契約＝解鎖特殊傭兵";
+  color: #f3d9a5;
+  font-size: 10px;
+  letter-spacing: .03em;
+}
+.guild-skill-summary > span::after {
+  content: "效果：貿易收益・戰利品加成・經驗收益・傭兵能力・主角能力・特殊傭兵解鎖";
+  display: block;
+  margin-top: 3px;
+  color: #ffe4a7;
+  font-size: 10px;
+  letter-spacing: .04em;
+}
+.guild-skill-grid > .guild-skill-card:hover::before,
+.guild-skill-grid > .guild-skill-card:focus-within::before {
+  content: "";
+  display: block !important;
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 48%;
+  width: 108px;
+  height: 108px;
+  transform: translate(-50%, -50%);
+  border: 2px solid #f4c55f;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px #d6933c55, 0 0 22px #f7c65fbb;
+  pointer-events: none;
+}
+@media (max-width: 700px) {
+  .guild-skill-grid > .guild-skill-card { min-height: 150px; }
+}
+
+/* 背景圖已自帶節點光效，禁止操作層再畫幾何 hover 遮罩。 */
+.guild-skill-grid > .guild-skill-card:hover::before,
+.guild-skill-grid > .guild-skill-card:focus-within::before,
+.guild-skill-grid > .guild-skill-card:hover::after,
+.guild-skill-grid > .guild-skill-card:focus-within::after { display: none !important; content: none !important; }
+.guild-skill-grid > .guild-skill-card > button:hover:not(:disabled),
+.guild-skill-grid > .guild-skill-card > button:focus-visible {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none;
+}
+
+/* 最終覆蓋：技能節點只使用背景中的一份徽章，不再疊加裁切圖。 */
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  background-size: auto !important;
+  background-position: center !important;
+  opacity: 1 !important;
+  transform: none !important;
+  outline: none !important;
+  filter: none !important;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:hover,
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:focus-visible {
+  background: transparent !important;
+  background-image: none !important;
+  outline: none !important;
+  filter: none !important;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 47% !important;
+  width: 116px !important;
+  height: 116px !important;
+  transform: translate(-50%, -50%) !important;
+  border: 2px solid transparent !important;
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:hover::before,
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot:focus-visible::before,
+.guild-skill-grid > .guild-skill-card > .guild-skill-hotspot.selected::before {
+  border-color: #ffd36b !important;
+  box-shadow: 0 0 0 4px #d6933c55, 0 0 22px #f7c65fcc !important;
 }

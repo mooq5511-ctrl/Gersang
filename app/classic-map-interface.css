@@ -626,6 +626,138 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
   .classic-live-quicknav button,.quick-nav-icon { transition:none; }
 }
 
+/* Merchant command dashboard: give every resource a clear identity instead of one flat strip. */
+.classic-live-game .resource-strip {
+  gap: 7px;
+  padding: 4px 6px;
+}
+.classic-live-game .resource-strip .resource-card {
+  position: relative;
+  min-width: 0;
+  height: 40px;
+  min-height: 40px;
+  padding: 5px 12px 5px 10px;
+  overflow: hidden;
+  border: 1px solid #756545;
+  border-radius: 11px;
+  background: linear-gradient(145deg, #26332fef 0%, #101719f5 62%, #0a0e10f8 100%);
+  box-shadow: inset 0 1px #fff4, inset 0 -5px #0003, 0 4px 10px #0009;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.classic-live-game .resource-strip .resource-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, transparent, #d7b76c, transparent);
+  opacity: .8;
+}
+.classic-live-game .resource-strip .resource-card:hover {
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px #fff5, inset 0 -5px #0003, 0 6px 14px #000b, 0 0 12px #e6bf6544;
+}
+.classic-live-game .resource-strip .resource-card svg {
+  width: 17px;
+  color: #e1bd68;
+  filter: drop-shadow(0 0 4px #e1bd6855);
+}
+.classic-live-game .resource-strip .resource-card span {
+  color: #f5e9cf;
+  font-size: clamp(10px, 1.2vw, 13px);
+  font-weight: 800;
+  letter-spacing: .01em;
+  text-shadow: 0 1px 2px #000;
+}
+.classic-live-game .resource-strip .resource-card small {
+  color: #bdb49e;
+  font-size: 8px;
+  letter-spacing: .02em;
+}
+.classic-live-game .resource-strip .resource-gold {
+  flex: 1.05 1 0;
+  border-color: #a9874c;
+}
+.classic-live-game .resource-strip .resource-gold::after { background: linear-gradient(90deg, transparent, #f5d37a, transparent); }
+.classic-live-game .resource-strip .resource-credit {
+  flex: 1.1 1 0;
+  border-color: #628f9b;
+  background: linear-gradient(145deg, #1d3540ef, #10191af5 66%, #0a1112f8);
+}
+.classic-live-game .resource-strip .resource-credit svg { color: #8ec6d2; }
+.classic-live-game .resource-strip .resource-credit::after { background: linear-gradient(90deg, transparent, #8ec6d2, transparent); }
+.classic-live-game .resource-strip .resource-credit small { color: #a9d4dd; }
+.classic-live-game .resource-strip .resource-hp {
+  flex: 1.2 1 0;
+  border-color: #9b504a;
+  background: linear-gradient(145deg, #38201fef, #161617f5 66%, #0e1112f8);
+}
+.classic-live-game .resource-strip .resource-hp svg { color: #f17c6d; }
+.classic-live-game .resource-strip .resource-hp::after { background: linear-gradient(90deg, transparent, #f17d6c, transparent); }
+.classic-live-game .resource-strip .resource-hp small { color: #e0a19a; }
+.classic-live-game .resource-strip .resource-hp.at-inn { border-color: #c69a4b; background: linear-gradient(145deg, #3d3321ef, #171817f5 66%, #0f1212f8); }
+.classic-live-game .resource-strip .resource-hp.at-inn svg { color: #f0c767; }
+.classic-live-game .resource-strip .resource-power {
+  flex: 1.05 1 0;
+  border-color: #ad7c41;
+}
+.classic-live-game .resource-strip .resource-power svg { color: #eab35d; }
+.classic-live-game .resource-strip .resource-power::after { background: linear-gradient(90deg, transparent, #eab35d, transparent); }
+.classic-live-game .resource-strip .resource-mercs {
+  flex: .95 1 0;
+  border-color: #568473;
+  background: linear-gradient(145deg, #1d3632ef, #10191af5 66%, #0a1112f8);
+}
+.classic-live-game .resource-strip .resource-mercs svg { color: #8bc5a8; }
+.classic-live-game .resource-strip .resource-mercs::after { background: linear-gradient(90deg, transparent, #8bc5a8, transparent); }
+.classic-live-game .resource-strip .resource-mercs small { color: #a9d0bb; }
+.classic-live-game .character-switch {
+  min-height: 40px;
+  height: 40px;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 1px solid #c29a4d;
+  border-radius: 11px;
+  background: linear-gradient(145deg, #584522, #2b2417 58%, #151817);
+  color: #ffe7a0;
+  font-size: 10px;
+  font-weight: 800;
+  box-shadow: inset 0 1px #fff5, inset 0 -4px #0003, 0 4px 10px #0009;
+  white-space: nowrap;
+}
+.classic-live-game .character-switch:hover,
+.classic-live-game .character-switch:focus-visible {
+  border-color: #f6d77e;
+  background: linear-gradient(145deg, #80632c, #49371d 60%, #1c1a14);
+  color: #fff4c7;
+  box-shadow: inset 0 1px #fff7, 0 0 14px #edc86d77, 0 6px 14px #000b;
+  transform: translateY(-1px);
+}
+.classic-live-game .character-switch svg { width: 15px; color: #f2cf78; }
+
+@media (max-width: 639px) {
+  .classic-live-game .resource-strip { gap: 3px; padding: 3px; }
+  .classic-live-game .resource-strip .resource-card {
+    height: 60px;
+    min-height: 60px;
+    padding: 4px;
+    border-radius: 9px;
+  }
+  .classic-live-game .resource-strip .resource-card::after { left: 5px; right: 5px; }
+  .classic-live-game .resource-strip .resource-card svg { width: 14px; }
+  .classic-live-game .resource-strip .resource-card span { font-size: 9px; }
+  .classic-live-game .resource-strip .resource-card small { font-size: 7px; }
+  .classic-live-game .character-switch {
+    min-height: 48px;
+    height: 48px;
+    padding: 3px 4px;
+    border-radius: 9px;
+    font-size: 8px;
+  }
+}
+
 /* Collision-safe HUD: keep the objective, game menu and map labels independently collapsible. */
 .classic-live-game { --quicknav-width:300px;--game-topbar-height:50px; }
 .classic-live-game .forced-inn[hidden] { display:none!important; }

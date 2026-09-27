@@ -13,6 +13,8 @@ import { freshHanyangPrologueFlags } from "./hanyang-prologue";
 import { freshCityHallState } from "./city-hall-commissions";
 import { AutoPotionManager } from "./auto-potion-manager";
 import { BattleLogManager } from "./battle-log-manager";
+import { freshGuildSkills } from "./guild-skills";
+import { freshRelicDungeon } from "./relic-dungeon";
 import type { Equipment, EquipmentSet, GameState, Hero, Unit } from "./game-state";
 
 export function isNationId(value: unknown): value is NationId { return value === "taiwan" || value === "china" || value === "korea" || value === "japan"; }
@@ -28,7 +30,11 @@ export function makeHero(nation: NationId = "korea", name = "王天下", gender:
 export const STARTER_NATION: NationId = "korea";
 export const STARTER_VILLAGE_NAME = "新手村・漢陽";
 
-export function freshGame(heroName = "王天下", gender: "male" | "female" = "male"): GameState {
+function freshGameBase(heroName = "王天下", gender: "male" | "female" = "male"): Omit<GameState, "guildRank" | "guildSkillPoints" | "guildSkills"> {
   const starters: Unit[] = [];
-  return { version: 30, trade: { ...freshTrade(), rewardMultiplier: 3 }, territory: freshTerritory(), credit: 0, creditXp: 0, creditLevel: 1, idleStamp: Date.now(), gold: 0, stage: 1, kills: 0, starterDeliveryKills: 0, newbieBossDefeated: false, lakeBossDefeated: false, goldenStarfishDefeated: false, newbieCoins: 0, city: worldCities.find((city) => city.nation === STARTER_NATION)?.id || worldCities[0].id, battleMap: battleMaps[0].id, hero: makeHero(STARTER_NATION, heroName, gender), mercs: starters, restingMercs: [], active: starters.map((unit) => unit.uid), inventory: [], fusionCores: 0, soulStones: 0, awakeningStones: 0, materials: {}, exchangePurchases: {}, medicines: {}, autoSkill: true, autoMedicine: { healing: 0, mana: 0 }, autoMedicineAt: { healing: 0, mana: 0 }, autoPotion: AutoPotionManager.defaults(), autoPotionAt: 0, onboardingStep: "completed", hanyangPrologueStep: "arrival", hanyangPrologueFlags: freshHanyangPrologueFlags(), battleLogs: BattleLogManager.clear(), claimedContracts: [], cityHall: freshCityHallState(), npcProgress: freshNpcProgress(), lastEncounter: "老商人正在漢陽港口等你。", enemyHp: enemyMaxForStage(1, battleMaps[0].hpMultiplier), formation: "goose", logs: [`你初到漢陽；城門附近有位老商人似乎注意到了你。`], lastSeen: Date.now() };
+  return { version: 30, trade: { ...freshTrade(), rewardMultiplier: 3 }, territory: freshTerritory(), credit: 0, creditXp: 0, creditLevel: 1, idleStamp: Date.now(), gold: 0, stage: 1, kills: 0, starterDeliveryKills: 0, newbieBossDefeated: false, lakeBossDefeated: false, goldenStarfishDefeated: false, newbieCoins: 0, city: worldCities.find((city) => city.nation === STARTER_NATION)?.id || worldCities[0].id, battleMap: battleMaps[0].id, hero: makeHero(STARTER_NATION, heroName, gender), mercs: starters, restingMercs: [], active: starters.map((unit) => unit.uid), inventory: [], fusionCores: 0, soulStones: 0, awakeningStones: 0, materials: {}, exchangePurchases: {}, medicines: {}, autoSkill: true, autoMedicine: { healing: 0, mana: 0 }, autoMedicineAt: { healing: 0, mana: 0 }, autoPotion: AutoPotionManager.defaults(), autoPotionAt: 0, onboardingStep: "completed", hanyangPrologueStep: "arrival", hanyangPrologueFlags: freshHanyangPrologueFlags(), battleLogs: BattleLogManager.clear(), claimedContracts: [], cityHall: freshCityHallState(), npcProgress: freshNpcProgress(), relicDungeon: freshRelicDungeon(100), lastEncounter: "老商人正在漢陽港口等你。", enemyHp: enemyMaxForStage(1, battleMaps[0].hpMultiplier), formation: "goose", logs: [`你初到漢陽；城門附近有位老商人似乎注意到了你。`], lastSeen: Date.now() };
+}
+
+export function freshGame(heroName = "王天下", gender: "male" | "female" = "male"): GameState {
+  return { ...freshGameBase(heroName, gender), guildRank: 1, guildSkillPoints: 0, guildSkills: freshGuildSkills() };
 }

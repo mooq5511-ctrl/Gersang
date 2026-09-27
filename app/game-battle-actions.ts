@@ -14,6 +14,7 @@ import { makeTierEquipmentDrop, pickTierEquipmentDrop } from "./tier-equipment";
 import { hasFullAmaterasuSet } from "./equipment-set-effects";
 import { battleExperienceMultiplier, equipmentExperienceMultiplier, sharedBattleExperience } from "./dungeon-kill-xp";
 import { BattleLogManager, type BattleLogCategory } from "./battle-log-manager";
+import { guildSkillTradeBonuses } from "./guild-skills";
 
 type BattleActionDependencies = {
   notify: (message: string) => void;
@@ -73,7 +74,8 @@ export function runDungeonAction(
   const fighters = [previous.hero, ...deployedMercs], living = fighters.filter((unit) => vitalStats(unit).hp > 0);
   const mercenaryIntelligence = fighters.reduce((sum, unit) => sum + heroTotalAttributes(unit).intel, 0);
   const attack = living.reduce((sum, unit) => sum + combatStats(unit).attack * (unit.position === "前排" ? 1.2 : 1), 0);
-  const party = fighters.map((unit) => { const stats = vitalStats(unit), combat = combatStats(unit); return { uid: unit.uid, templateId: unit.templateId, name: unit.name, skill: unit.skill, hp: stats.hp, maxHp: stats.maxHp, mp: stats.mp, maxMp: stats.maxMp, position: unit.position, defense: combat.defense, physicalResist: stats.physicalResist, magicResist: stats.magicResist, attack: combat.attack, accuracy: combat.accuracy, attackInterval: Math.max(.6, 2.2 - combat.speed / 100) }; });
+  const guildSkillBonus = guildSkillTradeBonuses(previous.guildSkills);
+  const party = fighters.map((unit) => { const stats = vitalStats(unit), combat = combatStats(unit), abilityBonus = 1 + (unit.uid === "hero" ? guildSkillBonus.heroPowerBonus : guildSkillBonus.mercenaryPowerBonus); return { uid: unit.uid, templateId: unit.templateId, name: unit.name, skill: unit.skill, hp: stats.hp, maxHp: stats.maxHp, mp: stats.mp, maxMp: stats.maxMp, position: unit.position, defense: Math.floor(combat.defense * abilityBonus), physicalResist: stats.physicalResist, magicResist: stats.magicResist, attack: Math.floor(combat.attack * abilityBonus), accuracy: combat.accuracy, attackInterval: Math.max(.6, 2.2 - combat.speed / 100) }; });
   const passiveDamage = deployedMercs.reduce((sum, unit) => sum + Math.max(0, Math.floor(combatStats(unit).attack * .18)), 0);
   const amaterasuSet = hasFullAmaterasuSet(previous.hero.equip);
   const result = dungeonStep(previous.dungeon || freshDungeon(), { ...vital, str: total.str, dex: total.agi, mercenaryIntelligence, attack, defense: combatStats(previous.hero).defense, staff: previous.hero.equip.weapon?.name === DIVINE_EQUIPMENT.staff.name, amaterasuGaze: amaterasuSet }, action, now, key, roll, choice, spawnRoll, retaliationRoll, party, passiveDamage, materialRolls, previous.autoSkill, rolls.encounterCountRoll, territoryHealInterval(previous.territory));
@@ -83,7 +85,7 @@ export function runDungeonAction(
   if (result.state.status === "recovering" && previous.dungeon?.status !== "recovering") next = addBattleLog(next, "玩家死亡，商隊返回客棧療傷。", "warning");
   if (previous.dungeon && previous.dungeon.autoHunt !== result.state.autoHunt) next = addBattleLog(next, result.state.autoHunt ? "Auto Hunt 啟動。" : "Auto Hunt 停止。", "auto-hunt");
   const battleMembers = 1 + deployedMercs.length;
-  const xpMultiplier = battleExperienceMultiplier(previous.hero.level, deployedMercs.length) * equipmentExperienceMultiplier(fighters);
+  const xpMultiplier = battleExperienceMultiplier(previous.hero.level, deployedMercs.length) * equipmentExperienceMultiplier(fighters) * (1 + guildSkillBonus.xpBonus);
   const shareXp = sharedBattleExperience(result.xpEarned * xpMultiplier, battleMembers);
   if (result.killsEarned) {
     const isFirstDeliveryTarget = previous.npcProgress.activeQuests.includes("npc-first-caravan-delivery") && result.state.key === "e_starter_raccoon";

@@ -38,6 +38,53 @@ export function rollEquipment(stage: number, guaranteed = false, slot?: Equipmen
   return { uid: makeUid(base.id), name: (rarity === "普通" ? "" : rarity + "・") + base.name, slot: base.slot, atk: base.atk + stage * 2, def: base.def + Math.floor(stage * 1.4), hp: base.hp + stage * 6, image: gersangItemArt(base.slot), enhance: 0, luckyValue: 0, enhanceBonuses: [], rarity, magic: magic.map((affix) => ({ ...affix })), bonus: { str: 0, agi: 0, intel: 0, vit: 0 }, resist: { physical: 0, magic: 0 } };
 }
 
+const RELIC_LOOT_RARITIES: Array<{ rarity: Equipment["rarity"]; weight: number; multiplier: number; affixes: number }> = [
+  { rarity: "普通", weight: 60, multiplier: 1, affixes: 0 },
+  { rarity: "稀有", weight: 25, multiplier: 1.18, affixes: 1 },
+  { rarity: "史詩", weight: 10, multiplier: 1.42, affixes: 2 },
+  { rarity: "傳說", weight: 4.5, multiplier: 1.8, affixes: 3 },
+  { rarity: "金色", weight: 0.5, multiplier: 2.25, affixes: 4 },
+];
+
+function relicRarity(random: () => number, guaranteed: boolean) {
+  const total = RELIC_LOOT_RARITIES.reduce((sum, entry) => sum + entry.weight, 0);
+  let cursor = random() * total;
+  let selected = RELIC_LOOT_RARITIES[0];
+  for (const entry of RELIC_LOOT_RARITIES) {
+    cursor -= entry.weight;
+    if (cursor <= 0) {
+      selected = entry;
+      break;
+    }
+  }
+  if (guaranteed && selected.rarity === "普通") selected = RELIC_LOOT_RARITIES[1];
+  return selected;
+}
+
+/** 遺跡專用掉落：沿用現有裝備資料，但使用地下城的稀有度權重與詞條數。 */
+export function rollRelicEquipment(layer: number, random: () => number = Math.random, guaranteed = false): Equipment {
+  const safeLayer = Math.max(1, Math.floor(layer));
+  const base = rollEquipment(safeLayer, false);
+  const quality = relicRarity(random, guaranteed);
+  const name = base.name.replace(/^(普通|稀有|史詩|傳說|金色)・/, "");
+  const layerMultiplier = 1 + Math.min(80, safeLayer) * 0.012;
+  const magic = [...magicAffixes].sort(() => random() - 0.5).slice(0, quality.affixes).map((affix) => ({
+    ...affix,
+    value: Math.round(affix.value * layerMultiplier),
+    text: affix.text.replace(/\+(\d+)%/, "+" + Math.round(affix.value * layerMultiplier) + "%"),
+  }));
+  return {
+    ...base,
+    name: quality.rarity === "普通" ? name : quality.rarity + "・" + name,
+    rarity: quality.rarity,
+    atk: Math.max(1, Math.floor(base.atk * quality.multiplier)),
+    def: Math.max(0, Math.floor(base.def * quality.multiplier)),
+    hp: Math.max(0, Math.floor(base.hp * quality.multiplier)),
+    magic,
+    source: "沉沒王朝遺跡・遠征掉落",
+  };
+}
+
 export function makeOfficialEquipment(record: OfficialEquipment, rarity = rollShopQuality()): Equipment {
   const multiplier = SHOP_QUALITY[rarity].multiplier;
   const magic = [...magicAffixes].sort(() => Math.random() - .5).slice(0, record.level >= 130 ? 3 : record.level >= 50 ? 2 : 1);

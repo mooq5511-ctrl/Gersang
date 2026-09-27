@@ -3,9 +3,20 @@ export const TRADE_ROUTES = [
   { id: "tea", from: "台北", to: "南京", good: "烏龍茶", nation: "台灣 → 中國", cost: 3600, sale: 6000, seconds: 24, reputation: 40, stage: 5, rewardRep: 12, color: "#88c9a6" },
   { id: "silk", from: "南京", to: "江戶", good: "雲錦", nation: "中國 → 日本", cost: 6500, sale: 11000, seconds: 32, reputation: 150, stage: 15, rewardRep: 18, color: "#e2ac73" },
   { id: "porcelain", from: "江戶", to: "漢陽", good: "江戶刀具", nation: "日本 → 朝鮮", cost: 10000, sale: 18000, seconds: 40, reputation: 350, stage: 30, rewardRep: 24, color: "#c6a6df" },
+  { id: "legendary", from: "江戶", to: "漢陽", good: "龍骨秘寶", nation: "東海秘航・傳奇商路", cost: 30000, sale: 72000, seconds: 60, reputation: 650, stage: 40, rewardRep: 60, color: "#e6c56d" },
 ] as const;
 
 export type TradeRoute = (typeof TRADE_ROUTES)[number];
+export type TradeCargo = { id: string; name: string; description: string; costMultiplier: number; saleMultiplier: number; risk: number; color: string };
+export const TRADE_CARGOES: TradeCargo[] = [
+  { id: "standard", name: "地方特產", description: "穩定可靠，適合日常跑商。", costMultiplier: 1, saleMultiplier: 1, risk: 0, color: "#d4b56d" },
+  { id: "luxury", name: "珍稀工藝品", description: "售價高，但容易引來覬覦。", costMultiplier: 1.25, saleMultiplier: 1.8, risk: .18, color: "#d89a73" },
+  { id: "provisions", name: "民生補給品", description: "利潤較低，貨損風險也較低。", costMultiplier: .78, saleMultiplier: 1.12, risk: -.14, color: "#85c6a1" },
+  { id: "contraband", name: "秘製軍需品", description: "極高收益，查扣與劫掠風險上升。", costMultiplier: 1.45, saleMultiplier: 2.25, risk: .3, color: "#d87570" },
+];
+export const DEFAULT_TRADE_CARGO_ID = "standard";
+export const TRADE_PORTS = ["漢陽", "台北", "南京", "江戶"] as const;
+export type TradePortId = (typeof TRADE_PORTS)[number];
 export type TradeEventKind = "danger" | "neutral" | "fortune";
 export type TradeEventResult = {
   id: string;
@@ -17,6 +28,7 @@ export type TradeEventResult = {
   protected: boolean;
   cargoLossRate: number;
   revenueDelta: number;
+  insuranceRefund: number;
 };
 export type Voyage = {
   routeId: string; startedAt: number; duration: number; cost: number;
@@ -24,19 +36,52 @@ export type Voyage = {
   encounterSeed: number; encountersResolved: number;
   escortIds?: string[];
   escortPower?: number;
+  escortRoster?: "active" | "resting";
+  cargoId?: string;
+  cargoName?: string;
+  cargoRisk?: number;
+  insurance?: boolean;
+  insuranceCost?: number;
+  insuranceCoverage?: number;
+  marketMultiplier?: number;
+  portInvestmentLevel?: number;
+  escortRiskReduction?: number;
+  escortRevenueBonus?: number;
 };
 export type TradeState = {
   reputation: number; cargoLevel: number; totalProfit: number; trips: number;
   selectedRouteId: string; auto: boolean; caravan: Voyage | null;
+  selectedCargoId: string; insurance: boolean;
+  marketDay?: number; market?: Record<string, number>; portLevels?: Partial<Record<TradePortId, number>>;
   /** New games use the richer trade economy; old direct engine callers keep the legacy baseline. */
   rewardMultiplier?: number;
 };
 export const OFFLINE_LIMIT = 8 * 60 * 60 * 1000;
 export const MAX_CARGO_LEVEL = 20;
-export const freshTrade = (): TradeState => ({ reputation: 0, cargoLevel: 1, totalProfit: 0, trips: 0, selectedRouteId: "hanji", auto: true, caravan: null });
+export const freshTrade = (): TradeState => ({ reputation: 0, cargoLevel: 1, totalProfit: 0, trips: 0, selectedRouteId: "hanji", auto: true, caravan: null, selectedCargoId: DEFAULT_TRADE_CARGO_ID, insurance: false, marketDay: 0, market: {}, portLevels: {} });
 export const cargoCapacity = (level: number) => 10 + (level - 1) * 5;
 export const upgradeCost = (level: number) => Math.floor(30_000 * Math.pow(1.15, level - 1));
 const safe = (value: unknown, fallback = 0) => typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : fallback;
+const cargoById = (id?: string) => TRADE_CARGOES.find((cargo) => cargo.id === id) || TRADE_CARGOES[0];
+const routePort = (route: TradeRoute) => route.from as TradePortId;
+const hashMarket = (routeId: string, day: number) => {
+  let hash = day | 0;
+  for (const character of routeId) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
+  return hash >>> 0;
+};
+export function marketMultiplier(routeId: string, now = Date.now()) {
+  const day = Math.floor(now / 86_400_000);
+  return .82 + (hashMarket(routeId, day) % 61) / 100;
+}
+export function portInvestmentLevel(trade: TradeState, port: TradePortId) { return Math.min(6, Math.max(0, Math.floor(trade.portLevels?.[port] || 0))); }
+export function portInvestmentBonus(level: number) { return 1 + Math.min(0.3, Math.max(0, level) * .05); }
+export function portInvestmentCost(trade: TradeState, port: TradePortId) { return Math.floor(12_000 * Math.pow(1.7, portInvestmentLevel(trade, port))); }
+export function refreshMarket(trade: TradeState, now = Date.now()): TradeState {
+  const day = Math.floor(now / 86_400_000);
+  if (trade.marketDay === day && trade.market && Object.keys(trade.market).length) return trade;
+  return { ...trade, marketDay: day, market: Object.fromEntries(TRADE_ROUTES.map((route) => [route.id, marketMultiplier(route.id, now)])) };
+}
+export type VoyageQuoteOptions = { cargoId?: string; marketMultiplier?: number; portInvestmentLevel?: number; insurance?: boolean; escortRevenueBonus?: number };
 
 /** 舊版戰鬥遭遇排程保留為零；跑商改用完成時結算的隨機商路事件。 */
 export const encounterCount = (_seed: number) => 0;
@@ -62,39 +107,70 @@ export function restoreTrade(raw: unknown): TradeState {
     totalProfit: safe(parsed.totalProfit), trips: Math.floor(safe(parsed.trips)),
     selectedRouteId: TRADE_ROUTES.some((route) => route.id === parsed.selectedRouteId) ? parsed.selectedRouteId! : "hanji",
     auto: parsed.auto !== false, rewardMultiplier: typeof parsed.rewardMultiplier === "number" && Number.isFinite(parsed.rewardMultiplier) ? Math.min(4, Math.max(1, parsed.rewardMultiplier)) : 3,
+    selectedCargoId: TRADE_CARGOES.some((cargo) => cargo.id === parsed.selectedCargoId) ? parsed.selectedCargoId! : DEFAULT_TRADE_CARGO_ID,
+    insurance: parsed.insurance === true,
+    marketDay: typeof parsed.marketDay === "number" && Number.isFinite(parsed.marketDay) ? Math.floor(parsed.marketDay) : 0,
+    market: parsed.market && typeof parsed.market === "object" ? Object.fromEntries(Object.entries(parsed.market).filter(([id, value]) => TRADE_ROUTES.some((route) => route.id === id) && typeof value === "number" && Number.isFinite(value)).map(([id, value]) => [id, Math.min(1.43, Math.max(.75, value as number))])) : {},
+    portLevels: parsed.portLevels && typeof parsed.portLevels === "object" ? Object.fromEntries(TRADE_PORTS.map((port) => [port, Math.min(6, Math.max(0, Math.floor(safe(parsed.portLevels?.[port], 0))))])) : {},
     caravan: validCaravan ? { ...caravan,
       encounterSeed: safe(caravan.encounterSeed, Math.floor(caravan.startedAt)) >>> 0,
       // Pre-update voyages start with their encounters consumed, preventing retroactive fights.
       encountersResolved: caravan.encounterSeed === undefined ? encounterCount(Math.floor(caravan.startedAt)) : Math.min(encounterCount(caravan.encounterSeed), Math.floor(safe(caravan.encountersResolved))),
       escortIds: Array.isArray(caravan.escortIds) ? caravan.escortIds.filter((id): id is string => typeof id === "string").slice(0, 12) : undefined,
       escortPower: safe(caravan.escortPower),
+      escortRoster: caravan.escortRoster === "resting" ? "resting" : caravan.escortIds?.length ? "active" : undefined,
+      cargoId: TRADE_CARGOES.some((cargo) => cargo.id === caravan.cargoId) ? caravan.cargoId : DEFAULT_TRADE_CARGO_ID,
+      cargoName: typeof caravan.cargoName === "string" ? caravan.cargoName : undefined,
+      cargoRisk: safe(caravan.cargoRisk), insurance: caravan.insurance === true,
+      insuranceCost: safe(caravan.insuranceCost), insuranceCoverage: Math.min(.9, Math.max(0, safe(caravan.insuranceCoverage, .7))),
+      marketMultiplier: Math.min(1.43, Math.max(.75, safe(caravan.marketMultiplier, 1))), portInvestmentLevel: Math.min(6, Math.floor(safe(caravan.portInvestmentLevel))),
+      escortRiskReduction: Math.min(.45, Math.max(0, safe(caravan.escortRiskReduction))), escortRevenueBonus: Math.min(.2, Math.max(0, safe(caravan.escortRevenueBonus))),
     } : null,
   };
 }
 
-export function voyageQuote(route: TradeRoute, level: number, escorts: number, now: number, rewardMultiplier = 1): Voyage {
+export function voyageQuote(route: TradeRoute, level: number, escorts: number, now: number, rewardMultiplier = 1, options: VoyageQuoteOptions = {}): Voyage {
   const cargo = cargoCapacity(level);
   const multiplier = cargo / 10;
   const economy = Math.min(4, Math.max(1, rewardMultiplier));
+  const cargoSpec = cargoById(options.cargoId);
+  const insuranceCost = options.insurance ? Math.floor(route.cost * Math.pow(multiplier, 1.1) * cargoSpec.costMultiplier * .12) : 0;
+  const market = Math.min(1.43, Math.max(.75, options.marketMultiplier ?? 1));
+  const investment = portInvestmentBonus(options.portInvestmentLevel || 0);
+  const escortRevenueBonus = Math.min(.2, Math.max(0, options.escortRevenueBonus || 0));
+  const baseCost = Math.floor(route.cost * Math.pow(multiplier, 1.1) * cargoSpec.costMultiplier);
   return {
     routeId: route.id, startedAt: now, duration: route.seconds * 1000, cargo,
-    cost: Math.floor(route.cost * Math.pow(multiplier, 1.1)),
-    revenue: Math.floor(route.sale * multiplier * economy * (1 + Math.min(10, Math.max(0, escorts)) * 0.015)),
+    cost: baseCost + insuranceCost,
+    revenue: Math.floor(route.sale * multiplier * economy * cargoSpec.saleMultiplier * market * investment * (1 + Math.min(10, Math.max(0, escorts)) * 0.015 + escortRevenueBonus)),
     reputation: route.rewardRep, xp: route.rewardRep * 8,
     encounterSeed: 0, encountersResolved: 0,
+    cargoId: cargoSpec.id, cargoName: cargoSpec.id === DEFAULT_TRADE_CARGO_ID ? route.good : cargoSpec.name,
+    cargoRisk: cargoSpec.risk, insurance: options.insurance === true, insuranceCost, insuranceCoverage: options.insurance ? .7 : 0,
+    marketMultiplier: market, portInvestmentLevel: options.portInvestmentLevel || 0, escortRevenueBonus,
   };
 }
 
-export type DispatchTradeOptions = { escortIds?: string[]; escortPower?: number; rewardMultiplier?: number };
+export type DispatchTradeOptions = { escortIds?: string[]; escortPower?: number; rewardMultiplier?: number; escortRoster?: "active" | "resting"; cargoId?: string; insurance?: boolean; marketMultiplier?: number; portInvestmentLevel?: number; escortRiskReduction?: number; escortRevenueBonus?: number };
 export function dispatchTrade(trade: TradeState, gold: number, routeId: string, stage: number, escorts: number, now: number, seed = Math.floor(Math.random() * 4294967296), options: DispatchTradeOptions = {}) {
   const route = TRADE_ROUTES.find((entry) => entry.id === routeId);
   if (!route) return { error: "找不到這條商路。", trade, gold };
   if (trade.caravan) return { error: "商隊正在航行，請先等候本趟完成。", trade, gold };
   if (trade.reputation < route.reputation || stage < route.stage) return { error: "商譽或戰場關卡尚未達到解鎖條件。", trade, gold };
-  const caravan = voyageQuote(route, trade.cargoLevel, escorts, now, options.rewardMultiplier ?? trade.rewardMultiplier ?? 1);
+  const market = options.marketMultiplier ?? trade.market?.[route.id] ?? 1;
+  const caravan = voyageQuote(route, trade.cargoLevel, escorts, now, options.rewardMultiplier ?? trade.rewardMultiplier ?? 1, {
+    cargoId: options.cargoId ?? trade.selectedCargoId,
+    marketMultiplier: market,
+    portInvestmentLevel: options.portInvestmentLevel ?? portInvestmentLevel(trade, routePort(route)),
+    insurance: options.insurance ?? trade.insurance,
+    escortRevenueBonus: options.escortRevenueBonus,
+  });
   caravan.encounterSeed = seed >>> 0;
   if (options.escortIds?.length) caravan.escortIds = options.escortIds.slice(0, 12);
   if (options.escortPower) caravan.escortPower = Math.max(0, Math.floor(options.escortPower));
+  if (options.escortRoster && options.escortIds?.length) caravan.escortRoster = options.escortRoster;
+  caravan.escortRiskReduction = Math.min(.45, Math.max(0, options.escortRiskReduction || 0));
+  caravan.escortRevenueBonus = Math.min(.2, Math.max(0, options.escortRevenueBonus || 0));
   if (gold < caravan.cost) return { error: "銀兩不足，無法支付本趟進貨費用。", trade, gold };
   return { error: null, trade: { ...trade, selectedRouteId: route.id, caravan }, gold: gold - caravan.cost };
 }
@@ -131,15 +207,19 @@ export function resolveTradeEvent(voyage: Voyage): TradeEventResult | null {
   const escortPower = Math.max(0, voyage.escortPower || 0);
   const protectedEvent = event.kind === "danger" && escortPower > 0 && escortPower >= event.threat;
   const partialProtection = event.kind === "danger" && escortPower > 0 && !protectedEvent;
-  const cargoLossRate = event.kind !== "danger" ? Math.max(0, event.loss) : protectedEvent ? 0 : partialProtection ? event.loss * .45 : event.loss;
-  const revenueDelta = Math.floor(voyage.revenue * -cargoLossRate);
+  const riskMultiplier = Math.max(.35, 1 + (voyage.cargoRisk || 0)) * (1 - Math.min(.45, Math.max(0, voyage.escortRiskReduction || 0)));
+  const cargoLossRate = event.kind === "danger" ? (protectedEvent ? 0 : partialProtection ? event.loss * .45 : event.loss) * riskMultiplier : event.kind === "neutral" ? event.loss * riskMultiplier : 0;
+  const rawLoss = event.kind === "fortune" ? Math.floor(voyage.revenue * -event.loss) : -Math.floor(voyage.revenue * cargoLossRate);
+  const insuranceRefund = voyage.insurance && rawLoss < 0 ? Math.floor(Math.abs(rawLoss) * Math.min(.9, Math.max(0, voyage.insuranceCoverage || .7))) : 0;
+  const revenueDelta = rawLoss + insuranceRefund;
   const escortText = event.kind === "danger" ? (protectedEvent ? "護衛傭兵及時擊退威脅，貨物完整保全。" : partialProtection ? "護衛傭兵減少了損失，但仍有部分貨物受損。" : "沒有足夠護衛，貨物損失慘重。") : "";
-  return { id: event.id, name: event.name, kind: event.kind, message: `${event.message} ${escortText}`.trim(), threat: event.threat, escortPower, protected: protectedEvent, cargoLossRate, revenueDelta };
+  const insuranceText = insuranceRefund ? `保險理賠 ${insuranceRefund.toLocaleString("zh-TW")} 兩。` : "";
+  return { id: event.id, name: event.name, kind: event.kind, message: `${event.message} ${escortText} ${insuranceText}`.trim(), threat: event.threat, escortPower, protected: protectedEvent, cargoLossRate, revenueDelta, insuranceRefund };
 }
 
 /** Same settlement for foreground, sleeping tabs and offline reloads; voyage terms are fixed at dispatch. */
 export function advanceTrade(trade: TradeState, gold: number, now: number, options: { resolveEvents?: boolean } = {}) {
-  if (!trade.caravan || now < trade.caravan.startedAt) return { trade, gold, trips: 0, xp: 0, profit: 0, encounters: 0 };
+  if (!trade.caravan || now < trade.caravan.startedAt) return { trade, gold, trips: 0, xp: 0, profit: 0, encounters: 0, tradeEvents: [] as TradeEventResult[], releasedEscorts: [] as string[] };
   const effectiveNow = Math.min(now, trade.caravan.startedAt + OFFLINE_LIMIT);
   let caravan: Voyage | null = { ...trade.caravan };
   let trips = 0;

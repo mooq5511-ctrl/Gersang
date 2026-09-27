@@ -11,6 +11,7 @@ import type { AutoPotionSettings } from "./auto-potion-manager";
 import type { BattleLogEntry } from "./battle-log-manager";
 import type { HanyangPrologueFlags, HanyangPrologueStep } from "./hanyang-prologue";
 import type { CityHallState } from "./city-hall-commissions";
+import type { RelicDungeonState } from "./relic-dungeon";
 
 /** Persistent save keys. These names are compatibility contracts with existing players. */
 export const PROFILE_INDEX = "bt52_v19_character_profiles";
@@ -116,6 +117,7 @@ export type CityService = "mercenary" | "weapon" | "armor" | "warehouse" | "inn"
 
 export type GameState = {
   dungeon?: DungeonState;
+  relicDungeon?: RelicDungeonState;
   version: 30;
   firstGreenEquipped?: boolean;
   trade: TradeState;
@@ -123,6 +125,12 @@ export type GameState = {
   credit: number;
   creditXp: number;
   creditLevel: number;
+  /** 玩家手動消耗信用值提升的商團階位，1 = 黑鐵一階，50 = 紫金十階。 */
+  guildRank: number;
+  /** 商團升階贈送、用於解鎖商團技能的技能點。 */
+  guildSkillPoints: number;
+  /** 六條商團技能線，各自最高 10 級。 */
+  guildSkills: Record<string, number>;
   idleStamp: number;
   gold: number;
   stage: number;

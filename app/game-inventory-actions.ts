@@ -2,7 +2,7 @@ import { buyMarketMaterial, sellAllMaterials, sellMaterial } from "./village-exc
 import { VILLAGE_WEAPONS, buyVillageWeapon, exchangeAttackBonus, type VillageWeaponId } from "./village-exchange";
 import { sellAllEquipmentFromInventory, sellEquipmentFromInventory } from "./equipment-market";
 import { addInventoryItem } from "./inventory-layout";
-import { advanceEquipmentQuality, makeUid } from "./game-equipment-factory";
+import { advanceEquipmentQuality, makeUid, rollRelicEquipment } from "./game-equipment-factory";
 import { fusionBaseName, fusionItemKey, fusionRecipe, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
 import { THUNDER_FORGE_ITEMS, type ThunderForgeId } from "./mythic-forge";
 import { compatibleSlots, equipFromInventory, unequipToInventory, type EquipmentSlot } from "./equipment-slots";
@@ -44,6 +44,27 @@ export function fuseAllInventoryEquipmentAction(state: GameState, sourceRarity: 
   const failures = batches - successes;
   notify(`批次合成完成：投入 ${consumedCount} 件${sourceRarity}裝備，共 ${batches} 組；成功 ${successes} 組、失敗 ${failures} 組。`);
   return { ...state, inventory, logs: addLog(state.logs, `商團駐地批次合成所有${sourceRarity}裝備：投入 ${consumedCount} 件，成功 ${successes} 組、失敗 ${failures} 組。`) };
+}
+
+const RELIC_SMELT_VALUE: Partial<Record<Equipment["rarity"], number>> = { 普通: 5, 稀有: 15 };
+
+/** 對應遺跡原型的低階裝備熔煉，僅處理尚在背包內、尚未穿戴的裝備。 */
+export function smeltLowRarityEquipmentAction(state: GameState, roll: () => number, addLog: Log, notify: (message: string) => void): GameState {
+  const candidates = state.inventory.filter(item => item.rarity === "普通" || item.rarity === "稀有");
+  if (!candidates.length) {
+    notify("背包內沒有可熔煉的普通或稀有裝備。");
+    return { ...state, logs: addLog(state.logs, "熔煉爐沒有找到可處理的低階裝備。") };
+  }
+  const gained = candidates.reduce((sum, item) => sum + (RELIC_SMELT_VALUE[item.rarity] || 0), 0);
+  let inventory = state.inventory.filter(item => !candidates.some(candidate => candidate.uid === item.uid));
+  let bonusText = "";
+  if (candidates.length >= 5 && roll() < 0.35) {
+    const bonus = rollRelicEquipment(Math.max(1, state.stage), roll, true);
+    inventory = addInventoryItem(inventory, bonus).inventory;
+    bonusText = `熔煉共鳴取得「${bonus.name}」；`;
+  }
+  notify(`熔煉 ${candidates.length} 件低階裝備，獲得遺跡魔晶 +${gained}。${bonusText}`);
+  return { ...state, inventory, materials: { ...state.materials, "遺跡魔晶": (state.materials["遺跡魔晶"] || 0) + gained }, logs: addLog(state.logs, `遺跡熔煉爐處理 ${candidates.length} 件低階裝備，獲得遺跡魔晶 +${gained}。${bonusText}`) };
 }
 
 export function sellMaterialAction(state: GameState, itemName: string, addLog: Log, format: Format): GameState {

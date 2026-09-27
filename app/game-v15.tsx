@@ -78,14 +78,16 @@ import { restAtInnAction, travelCityAction } from "./game-city-actions";
 import { claimContractAction, contractProgress } from "./game-contract-actions";
 import { formatGameNumber as format } from "./game-display";
 import { appendGameLog as addLog, enemyMaxForStage as enemyMax, enterGameInnAction as enterGameInn, leaveGameInnAction as leaveGameInn, payGameInnAction as payGameInn } from "./game-runtime-actions";
-import { applyShopQuality, makeOfficialEquipment, makeUid as uid, rollEquipment } from "./game-equipment-factory";
+import { applyShopQuality, makeOfficialEquipment, makeUid as uid, rollEquipment, rollRelicEquipment } from "./game-equipment-factory";
 import { emptyEquipment, freshGame, heroPortrait, isNationId, STARTER_NATION, STARTER_VILLAGE_NAME } from "./game-hero-factory";
 import { applyGersangVisuals } from "./game-save-normalizers";
 import { SceneMusic, type SceneMusicKind } from './scene-music';
 import { runDungeonAction, selectBattleMapAction } from "./game-battle-actions";
-import { dispatchTradeAction, upgradeCaravanAction } from "./game-trade-actions";
+import { dispatchTradeAction, upgradeCaravanAction, upgradeTradePortAction } from "./game-trade-actions";
+import { guildSkillPointsForRank, promoteGuildRankAction } from "./guild-rank";
+import { guildSkillTradeBonuses, normalizeGuildSkills, upgradeGuildSkillAction, type GuildSkillId } from "./guild-skills";
 import { allocateAttributeAction, cyclePositionAction, promoteMercenary, recruitGeneralAction, recruitMerchantAction, storeMercenaryAction, toggleActiveAction, withdrawMercenaryAction } from "./game-squad-actions";
-import { applyAutoPotionAction, buyMaterialAction, buyMedicineAction, configureAutoPotionAction, consumeMedicineAction, depositWarehouseItemAction, equipInventoryItemAction, forgeThunderItemAction, forgeVillageWeaponAction, fuseAllInventoryEquipmentAction, openAncientCoinBoxAction, purchaseEquipmentAction, purchaseTierEquipmentAction, sellAllInventoryEquipmentAction, sellAllMaterialsAction, sellInventoryEquipmentAction, sellMaterialAction, socketGemAction, unequipInventoryItemAction, withdrawWarehouseItemAction } from "./game-inventory-actions";
+import { applyAutoPotionAction, buyMaterialAction, buyMedicineAction, configureAutoPotionAction, consumeMedicineAction, depositWarehouseItemAction, equipInventoryItemAction, forgeThunderItemAction, forgeVillageWeaponAction, fuseAllInventoryEquipmentAction, openAncientCoinBoxAction, purchaseEquipmentAction, purchaseTierEquipmentAction, sellAllInventoryEquipmentAction, sellAllMaterialsAction, sellInventoryEquipmentAction, sellMaterialAction, smeltLowRarityEquipmentAction, socketGemAction, unequipInventoryItemAction, withdrawWarehouseItemAction } from "./game-inventory-actions";
 import { AutoPotionManager, type AutoPotionSettings } from "./auto-potion-manager";
 import { BattleLogManager } from "./battle-log-manager";
 import { fusionItemKey, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
@@ -107,8 +109,10 @@ import {
   type Unit,
 } from "./game-state";
 import './gersang-archive.css';
+import './relic-dungeon.css';
 import { craftRestaurantFood, enhanceEquipment, upgradeBuilding, warehouseLimit, type BuildingId } from './guild-territory';
 import { battleMonsterImage } from './battle-visual-data';
+import { RelicDispatchPanel, relicDungeonAction, freshRelicDungeon, type RelicDungeonAction } from './relic-dungeon';
 
 const slots = EQUIPMENT_SLOTS;
 const bossMonsterArt:Record<string,string> = {
@@ -401,6 +405,8 @@ export default function GameV15() {
   const currentWorldZone=WORLD_ZONES.find(zone=>zone.id===(game.dungeon?.zone||'hanyang'))||WORLD_ZONES[0];
   const currentCity = worldCities.find((city) => city.id === game.city) || worldCities[0];
   const heroVital=vitalStats(game.hero);
+  const guildSkillBonus=guildSkillTradeBonuses(game.guildSkills);
+  const displayedPower=(unit:Unit|Hero)=>Math.floor(unitPower(unit)*(1+(unit.uid==='hero'?guildSkillBonus.heroPowerBonus:guildSkillBonus.mercenaryPowerBonus)));
   const heroXpNeeded=xpNeed(game.hero.level);
   const quickHealCost=Math.max(0,heroVital.maxHp-heroVital.hp)*2;
   const currentNation = nations.find((nation) => nation.id === currentCity.nation) || nations[0];
@@ -552,6 +558,19 @@ export default function GameV15() {
   }, [ready, activeSlot, setGame]);
 
   useEffect(() => {
+    if (!ready || activeSlot === null) return;
+    setGame(previous => {
+      const normalizedSkills = normalizeGuildSkills(previous.guildSkills);
+      const skillsChanged = JSON.stringify(normalizedSkills) !== JSON.stringify(previous.guildSkills);
+      const skillLevelTotal = Object.values(normalizedSkills).reduce((sum, level) => sum + level, 0);
+      const expectedPoints = Math.max(0, guildSkillPointsForRank(previous.guildRank) - skillLevelTotal);
+      const legacyPoints = !Number.isFinite((previous as Partial<GameState>).guildSkillPoints) || Number(previous.guildSkillPoints) < expectedPoints;
+      if (!legacyPoints && !skillsChanged) return previous;
+      return { ...previous, guildSkillPoints: legacyPoints ? guildSkillPointsForRank(previous.guildRank) : previous.guildSkillPoints, guildSkills: normalizedSkills };
+    });
+  }, [ready, activeSlot, setGame]);
+
+  useEffect(() => {
     if ((game.hanyangPrologueStep === "outskirts" || game.hanyangPrologueStep === "first-sale") && game.starterDeliveryKills < FIRST_CARAVAN_TARGET) {
       if (game.hanyangPrologueStep !== "outskirts") setGame(previous => ({ ...previous, hanyangPrologueStep: "outskirts" }));
     } else if ((game.hanyangPrologueStep === "outskirts" || game.hanyangPrologueStep === "first-battle") && game.starterDeliveryKills >= FIRST_CARAVAN_TARGET) {
@@ -559,13 +578,25 @@ export default function GameV15() {
     }
   }, [game.hanyangPrologueStep, game.starterDeliveryKills]);
 
-  const sendCaravan = useCallback((routeId: string) => {
+  const sendCaravan = useCallback((routeId: string, escortIds?: string[]) => {
     const now = Date.now();
-    setGame((previous) => dispatchTradeAction(previous, routeId, now, addLog));
+    setGame((previous) => dispatchTradeAction(previous, routeId, now, addLog, escortIds ?? previous.restingMercs.slice(0, 11).map((unit) => unit.uid)));
   }, [setGame]);
 
   function upgradeCaravan() {
     setGame((previous) => upgradeCaravanAction(previous, addLog));
+  }
+
+  function upgradeTradePort() {
+    setGame((previous) => upgradeTradePortAction(previous, addLog));
+  }
+
+  function promoteGuildRank() {
+    setGame((previous) => promoteGuildRankAction(previous, addLog));
+  }
+
+  function upgradeGuildSkill(id: GuildSkillId) {
+    setGame((previous) => upgradeGuildSkillAction(previous, id, addLog));
   }
 
   useEffect(() => {
@@ -660,6 +691,10 @@ export default function GameV15() {
 
   function sellEveryInventoryEquipment(){
     setGame(previous => sellAllInventoryEquipmentAction(previous, addLog, format));
+  }
+
+  function smeltLowRarityEquipment(){
+    setGame(previous => smeltLowRarityEquipmentAction(previous, Math.random, addLog, setNotice));
   }
 
   function unequipItem(slot:EquipmentSlot,targetUid=selectedUid) {
@@ -1002,11 +1037,11 @@ export default function GameV15() {
           <div><h1>放置你的巨商魂</h1><p>雷霆祭壇與等級曲線</p></div>
         </div>
         <div className="resource-strip v15-resources">
-          <div><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
-          <div className="newbie-coin"><Coins /><span>{format(game.newbieCoins)}</span><small>新手兌換銅錢</small></div>
-          <div className={game.hero.status==='客棧中'?'hp-status at-inn':'hp-status'}><HeartPulse /><span id="p-hp">{heroVital.hp} / {heroVital.maxHp}</span><small>血量 · {game.hero.status}</small></div>
-          <div><Swords /><span>{format(unitPower(game.hero)+game.mercs.reduce((sum,unit)=>sum+unitPower(unit),0))}</span><small>總商隊戰力</small></div>
-          <div><Users /><span>{game.active.length}/{ACTIVE_MERCENARY_LIMIT}</span><small>出戰傭兵</small></div>
+          <div className="resource-card resource-gold" aria-label="商團資金"><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
+          <div className="resource-card resource-credit" aria-label="信用值"><Coins /><span>{format(game.credit)}</span><small>信用值 · Lv.{game.creditLevel}</small></div>
+          <div className={`resource-card resource-hp ${game.hero.status==='客棧中'?'hp-status at-inn':'hp-status'}`} aria-label="隊伍生命值"><HeartPulse /><span id="p-hp">{heroVital.hp} / {heroVital.maxHp}</span><small>血量 · {game.hero.status}</small></div>
+          <div className="resource-card resource-power" aria-label="總商隊戰力"><Swords /><span>{format(displayedPower(game.hero)+game.mercs.reduce((sum,unit)=>sum+displayedPower(unit),0))}</span><small>總商隊戰力</small></div>
+          <div className="resource-card resource-mercs" aria-label="出戰傭兵"><Users /><span>{game.active.length}/{ACTIVE_MERCENARY_LIMIT}</span><small>出戰傭兵</small></div>
           <Button className="character-switch" variant="outline" size="sm" onClick={returnToCharacterSelect}><Users />切換角色</Button>
         </div>
       </header>
@@ -1017,6 +1052,7 @@ export default function GameV15() {
           <button type="button" data-nav-key="battle" className={activeTab === "battle" ? "active" : ""} aria-current={activeTab === "battle" ? "page" : undefined} onClick={() => setActiveTab("battle")}><span className="quick-nav-icon"><Map aria-hidden="true" /></span><span className="quick-nav-label">世界地圖</span></button>
           <button type="button" data-nav-key="map" className={activeTab === "map" ? "active" : ""} aria-current={activeTab === "map" ? "page" : undefined} onClick={() => setActiveTab("map")}><span className="quick-nav-icon"><Castle aria-hidden="true" /></span><span className="quick-nav-label">城門</span></button>
           <button type="button" data-nav-key="trade" className={activeTab === "trade" ? "active" : ""} aria-current={activeTab === "trade" ? "page" : undefined} onClick={() => setActiveTab("trade")}><span className="quick-nav-icon"><Ship aria-hidden="true" /></span><span className="quick-nav-label">港口</span></button>
+          <button type="button" data-nav-key="relic" className={activeTab === "relic" ? "active" : ""} aria-current={activeTab === "relic" ? "page" : undefined} onClick={() => setActiveTab("relic")}><span className="quick-nav-icon"><Castle aria-hidden="true" /></span><span className="quick-nav-label">遺跡地下城</span></button>
         </section>
         <section className="quick-nav-group" aria-labelledby="quick-nav-character">
           <h2 id="quick-nav-character" className="quick-nav-group-label">角色</h2>
@@ -1063,7 +1099,7 @@ export default function GameV15() {
               <small className="quick-setting-ratio-note">全螢幕必須由使用者點擊啟動；按 Esc 可離開。</small>
             </fieldset>
             <div className="quick-setting-row"><span><strong>滿 MP 自動施放技能</strong><small>每名出戰角色集滿魔力後自動施放。</small></span><button type="button" role="switch" aria-checked={game.autoSkill} className={game.autoSkill ? "enabled" : ""} onClick={() => setGame(previous => ({ ...previous, autoSkill: !previous.autoSkill, logs: addLog(previous.logs, previous.autoSkill ? "已關閉技能自動施放。" : "已開啟技能自動施放。") }))}>{game.autoSkill ? "開啟" : "關閉"}</button></div>
-          </> : <><label className="treasure-search">搜尋材料、食物或藥品<input type="search" value={treasureQuery} onChange={event => setTreasureQuery(event.target.value)} placeholder="輸入名稱或效果" aria-label="搜尋秘寶圖鑑材料、食物或藥品" /></label><section className="treasure-codex-group"><h3>食物與藥品</h3><div className="treasure-codex-list">{treasureMedicineEntries.map(medicine => <article className="treasure-entry" key={medicine.id}><span className="treasure-entry-icon"><Pill aria-hidden="true" /></span><span><strong>{medicine.name}</strong><small>{("hpRestore" in medicine && medicine.hpRestore) ? `食物・${medicine.effect}` : `藥品・${medicine.effect}`}</small></span><b>×{format(game.medicines[medicine.id] || 0)}</b></article>)}</div></section><section className="treasure-codex-group"><h3>材料與貨幣</h3><div className="treasure-codex-list"><article className="treasure-entry"><span className="treasure-entry-icon"><Coins aria-hidden="true" /></span><span><strong>新手兌換銅錢</strong><small>特殊貨幣</small></span><b>×{format(game.newbieCoins)}</b></article>{treasureMaterialNames.map(name => <article className="treasure-entry" key={name}><span className="treasure-entry-icon"><Gem aria-hidden="true" /></span><span><strong>{name}</strong><small>{game.materials[name] ? "已收集" : "尚未取得"}</small></span><b>×{format(game.materials[name] || 0)}</b></article>)}</div></section>{!treasureMedicineEntries.length && !treasureMaterialNames.length && <p className="treasure-empty">找不到符合的秘寶、材料、食物或藥品。</p>}</>}
+          </> : <><label className="treasure-search">搜尋材料、食物或藥品<input type="search" value={treasureQuery} onChange={event => setTreasureQuery(event.target.value)} placeholder="輸入名稱或效果" aria-label="搜尋秘寶圖鑑材料、食物或藥品" /></label><section className="treasure-codex-group"><h3>食物與藥品</h3><div className="treasure-codex-list">{treasureMedicineEntries.map(medicine => <article className="treasure-entry" key={medicine.id}><span className="treasure-entry-icon"><Pill aria-hidden="true" /></span><span><strong>{medicine.name}</strong><small>{("hpRestore" in medicine && medicine.hpRestore) ? `食物・${medicine.effect}` : `藥品・${medicine.effect}`}</small></span><b>×{format(game.medicines[medicine.id] || 0)}</b></article>)}</div></section><section className="treasure-codex-group"><h3>材料與貨幣</h3><div className="treasure-codex-list"><article className="treasure-entry"><span className="treasure-entry-icon"><Coins aria-hidden="true" /></span><span><strong>信用值</strong><small>商團通用資源・Lv.{game.creditLevel}</small></span><b>{format(game.credit)}</b></article><article className="treasure-entry"><span className="treasure-entry-icon"><Coins aria-hidden="true" /></span><span><strong>新手兌換銅錢</strong><small>特殊貨幣</small></span><b>×{format(game.newbieCoins)}</b></article>{treasureMaterialNames.map(name => <article className="treasure-entry" key={name}><span className="treasure-entry-icon"><Gem aria-hidden="true" /></span><span><strong>{name}</strong><small>{game.materials[name] ? "已收集" : "尚未取得"}</small></span><b>×{format(game.materials[name] || 0)}</b></article>)}</div></section>{!treasureMedicineEntries.length && !treasureMaterialNames.length && <p className="treasure-empty">找不到符合的秘寶、材料、食物或藥品。</p>}</>}
         </DialogContent>
       </Dialog>
       <Dialog open={returnReport !== null} onOpenChange={open => { if (!open) setReturnReport(null); }}>
@@ -1109,7 +1145,7 @@ export default function GameV15() {
           <div><Coins /><span>{format(game.gold)} 兩</span></div>
           <div><HeartPulse /><span>{heroVital.hp} / {heroVital.maxHp}</span></div>
           <div title="主角升級經驗"><Sparkles /><span>{game.hero.level>=LEVEL_CAP?'EXP 已滿級':`EXP ${format(game.hero.xp)} / ${format(heroXpNeeded)}`}</span></div>
-          <div><Swords /><span>{format(unitPower(game.hero)+game.mercs.reduce((sum,unit)=>sum+unitPower(unit),0))}</span></div>
+          <div><Swords /><span>{format(displayedPower(game.hero)+game.mercs.reduce((sum,unit)=>sum+displayedPower(unit),0))}</span></div>
         </section>
         <section className="classic-live-log" aria-label="即時訊息">
           {game.logs.slice(0, 4).map((log, index) => <p key={index}>{log}</p>)}
@@ -1122,6 +1158,7 @@ export default function GameV15() {
           <TabsTrigger value="trade"><Ship />東海商路</TabsTrigger>
           <TabsTrigger value="battle"><Map />世界地圖</TabsTrigger>
           <TabsTrigger value="raid"><Crown />雷霆祭壇</TabsTrigger>
+          <TabsTrigger value="relic"><Castle />遺跡地下城</TabsTrigger>
           <TabsTrigger value="squad"><Users />主角與隊伍</TabsTrigger>
           <TabsTrigger value="city"><Castle />四國城市</TabsTrigger>
           <TabsTrigger value="contracts"><BookOpen />冒險委託</TabsTrigger>
@@ -1146,9 +1183,11 @@ export default function GameV15() {
           {activeNpcId && npcById(activeNpcId) && <NpcDialoguePanel npc={npcById(activeNpcId)!} game={game} initialLine={npcOpeningLine} onAction={handleNpcAction} onClose={() => setActiveNpcId(null)} />}
         </TabsContent>
 
-        <TabsContent value="trade" className="tab-panel">
-          <TradePanel trade={game.trade} gold={game.gold} stage={Math.max(game.stage, game.hero.level)} escorts={game.active.length} logs={game.logs} lastEncounter={game.lastEncounter}
-            onDispatch={sendCaravan} onUpgrade={upgradeCaravan}
+        <TabsContent value="trade" className="tab-panel trade-tab-panel">
+          <TradePanel trade={game.trade} gold={game.gold} stage={Math.max(game.stage, game.hero.level)} mercenaries={game.restingMercs.map((unit) => ({ uid: unit.uid, name: unit.name, level: unit.level, power: displayedPower(unit), available: true }))} logs={game.logs} lastEncounter={game.lastEncounter}
+            onDispatch={sendCaravan} onUpgrade={upgradeCaravan} onUpgradePort={upgradeTradePort}
+            onSelectCargo={(cargoId) => setGame((previous) => ({ ...previous, trade: { ...previous.trade, selectedCargoId: cargoId } }))}
+            onToggleInsurance={() => setGame((previous) => ({ ...previous, trade: { ...previous.trade, insurance: !previous.trade.insurance } }))}
             onSelect={(selectedRouteId) => setGame((previous) => ({ ...previous, trade: { ...previous.trade, selectedRouteId } }))}
             onToggleAuto={() => setGame((previous) => ({ ...previous, trade: { ...previous.trade, auto: !previous.trade.auto } }))} />
         </TabsContent>
@@ -1218,7 +1257,7 @@ export default function GameV15() {
         <TabsContent value="raid" className="tab-panel">
           <ThunderAltarRaid
             credit={game.credit}
-            power={Math.floor(unitPower(game.hero) + game.mercs.filter(unit => game.active.includes(unit.uid)).reduce((sum, unit) => sum + unitPower(unit), 0))}
+            power={Math.floor(displayedPower(game.hero) + game.mercs.filter(unit => game.active.includes(unit.uid)).reduce((sum, unit) => sum + displayedPower(unit), 0))}
             materials={game.materials}
             azureSetPieces={azureSetPieces} chiyouSetPieces={chiyouSetPieces} amaterasuSetPieces={amaterasuSetPieces}
             onEnter={() => setGame(previous => ({ ...previous, credit: previous.credit - 50_000, logs: addLog(previous.logs, "進入「神仙谷・雷霆祭壇」，支付 50,000 信用值。") }))}
@@ -1231,7 +1270,7 @@ export default function GameV15() {
 
 
         <TabsContent value="squad" className="tab-panel">
-          <CaravanStatus key={squadDestination.key} initialWindow={squadDestination.window} territory={game.territory} upgradeBuilding={upgradeTerritoryBuilding} enhanceEquipment={enhanceTerritoryEquipment} enhanceFeedback={enhanceFeedback} equipmentPulseUid={equipmentPulseUid} fuseAllEquipment={fuseAllTerritoryEquipment} busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} restingMercs={game.restingMercs} active={game.active} toggleActive={toggleActive} storeMercenary={storeMercenary} withdrawRestingMercenary={withdrawRestingMercenary} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet} redeemWandererChickenSoup={redeemWandererChickenSoup} redeemWandererGinsengChickenSoup={redeemWandererGinsengChickenSoup} redeemWandererBlackBoneChickenSoup={redeemWandererBlackBoneChickenSoup}
+          <CaravanStatus key={squadDestination.key} initialWindow={squadDestination.window} territory={game.territory} upgradeBuilding={upgradeTerritoryBuilding} enhanceEquipment={enhanceTerritoryEquipment} enhanceFeedback={enhanceFeedback} equipmentPulseUid={equipmentPulseUid} fuseAllEquipment={fuseAllTerritoryEquipment} busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} restingMercs={game.restingMercs} active={game.active} toggleActive={toggleActive} storeMercenary={storeMercenary} withdrawRestingMercenary={withdrawRestingMercenary} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} guildRank={game.guildRank} promoteGuildRank={promoteGuildRank} guildSkillPoints={game.guildSkillPoints} guildSkills={game.guildSkills} upgradeGuildSkill={upgradeGuildSkill} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet} redeemWandererChickenSoup={redeemWandererChickenSoup} redeemWandererGinsengChickenSoup={redeemWandererGinsengChickenSoup} redeemWandererBlackBoneChickenSoup={redeemWandererBlackBoneChickenSoup}
             navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now(),spawnRoll=Math.random();setGame(previous=>{
               const old=previous.dungeon||freshDungeon();
               const deployed=[previous.hero,...previous.mercs.filter(unit=>previous.active.slice(0,ACTIVE_MERCENARY_LIMIT).includes(unit.uid))];
@@ -1241,10 +1280,10 @@ export default function GameV15() {
             });}}/>}
             battle={null}
              inventory={game.inventory} materials={game.materials} materialPrices={MATERIAL_PRICES} medicines={game.medicines} craftRestaurantFood={craftTerritoryRestaurantFood}
-            equipSelected={(itemUid,targetUid)=>equipItem(itemUid,undefined,targetUid)} sellInventory={sellInventoryEquipment} sellAllInventory={sellEveryInventoryEquipment} sellMaterial={sellLoot} sellAllMaterials={sellEveryLoot} openAncientCoinBox={openAncientCoinBox} unequipHero={slot=>unequipItem(slot,'hero')} unequipEquipment={unequipItem} bagMessage={game.logs[0]||''}
+            equipSelected={(itemUid,targetUid)=>equipItem(itemUid,undefined,targetUid)} sellInventory={sellInventoryEquipment} sellAllInventory={sellEveryInventoryEquipment} smeltLowRarityEquipment={smeltLowRarityEquipment} sellMaterial={sellLoot} sellAllMaterials={sellEveryLoot} openAncientCoinBox={openAncientCoinBox} unequipHero={slot=>unequipItem(slot,'hero')} unequipEquipment={unequipItem} bagMessage={game.logs[0]||''}
 
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
-            maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>unitPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
+            maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>displayedPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
             cyclePosition={cycleUnitPosition}
             promote={(uid,targetTier)=>setGame(previous=>promoteMercenary(previous,uid,targetTier))}
             promotionItems={{fusionCores:game.fusionCores,soulStones:game.soulStones,awakeningStones:game.awakeningStones}}
@@ -1352,6 +1391,29 @@ export default function GameV15() {
 
         <TabsContent value="hall" className="tab-panel">
           <CityHall game={game} onAccept={acceptCityHallCommission} onClaim={claimCityHallCommission} onAbandon={abandonCityHall} onRefresh={refreshCityHall} onBuyTicket={buyCityHallTicket} />
+        </TabsContent>
+
+        <TabsContent value="relic" className="tab-panel relic-dungeon-tab">
+          <RelicDispatchPanel
+            state={game.relicDungeon || freshRelicDungeon(vitalStats(game.hero).maxHp)}
+            power={Math.floor(displayedPower(game.hero) + game.mercs.filter(unit => game.active.includes(unit.uid)).reduce((sum, unit) => sum + displayedPower(unit), 0))}
+            dispatchParty={game.restingMercs.map(unit => ({ name: unit.name, role: unit.role, level: unit.level, image: unit.image, hp: unit.hp, maxHp: vitalStats(unit).maxHp }))}
+            onAction={(action: RelicDungeonAction) => setGame(previous => {
+              const current = previous.relicDungeon || freshRelicDungeon(vitalStats(previous.hero).maxHp);
+              const activeParty = [previous.hero, ...previous.mercs.filter(unit => previous.active.includes(unit.uid)).slice(0, ACTIVE_MERCENARY_LIMIT)];
+              const party = action === 'dispatch' ? previous.restingMercs : activeParty;
+              const partyPower = Math.floor(party.reduce((sum, unit) => sum + displayedPower(unit), 0));
+              const partyMaxHp = party.reduce((sum, unit) => sum + vitalStats(unit).maxHp, 0);
+              const partyCurrentHp = party.reduce((sum, unit) => sum + Math.max(0, vitalStats(unit).hp), 0);
+              const partyReady = action === 'dispatch' ? previous.restingMercs.length > 0 : party.some(unit => vitalStats(unit).hp > 0);
+              const next = relicDungeonAction(current, action, partyPower, { maxHp: partyMaxHp, currentHp: partyCurrentHp, partyPower, partyNames: party.map(unit => unit.name), partyUids: party.map(unit => unit.uid), partyReady, now: Date.now(), dispatchDurationMs: import.meta.env.DEV ? 30_000 : 30 * 60 * 1000 });
+              const reward = next.lastReward;
+              const gained = reward.gold ? `獲得 ${reward.gold.toLocaleString()} 兩；` : "";
+              const relicItems = reward.equipment ? Array.from({ length: reward.equipment }, () => rollRelicEquipment(Math.max(1, Math.floor((next.progress || previous.stage) / 10)), Math.random, next.status === "cleared")) : [];
+              const rewardLog = reward.gold || reward.shards || reward.materials || reward.equipment ? addLog(previous.logs, `遺跡遠征結算：${gained}${reward.materials ? `遺跡材料 +${reward.materials}；` : ""}${reward.equipment ? `古代裝備 +${reward.equipment}；` : ""}${reward.shards ? `遺跡碎片 +${reward.shards}。` : ""}`) : previous.logs;
+              return { ...previous, gold: previous.gold + reward.gold, inventory: relicItems.length ? positionInventory([...previous.inventory, ...relicItems]) : previous.inventory, materials: reward.shards || reward.materials || reward.equipment ? { ...previous.materials, "遺跡碎片": (previous.materials["遺跡碎片"] || 0) + reward.shards, "遺跡材料": (previous.materials["遺跡材料"] || 0) + reward.materials, "古代裝備": (previous.materials["古代裝備"] || 0) + reward.equipment } : previous.materials, relicDungeon: next, logs: rewardLog };
+            })}
+          />
         </TabsContent>
 
         <TabsContent value="archive" className="tab-panel">

@@ -4,6 +4,8 @@ import { DUNGEONS, dungeonBusy, freshDungeon } from "./dungeon-engine";
 import { migrateSevenSlotSave, normalizeStoredItem } from "./equipment-slots";
 import { retainGuildRoster } from "./guild-migration";
 import { LEVEL_CAP } from "./level-progression";
+import { guildSkillPointsForRank, safeGuildRank } from "./guild-rank";
+import { freshGuildSkills, normalizeGuildSkills } from "./guild-skills";
 import { normalizeBattlePosition } from "./formation-position";
 import { gersangUnitArt } from "./gersang-visuals";
 import { exchangeAttackBonus } from "./village-exchange";
@@ -18,6 +20,7 @@ import { restoreTerritory } from "./guild-territory";
 import { AutoPotionManager } from "./auto-potion-manager";
 import { BattleLogManager } from "./battle-log-manager";
 import { territoryHealInterval } from "./guild-territory";
+import { freshRelicDungeon } from "./relic-dungeon";
 import type { Hero, Unit } from "./game-state";
 
 export function writeProfileIndex(storage: Storage, profiles: Array<CharacterProfile | null>) {
@@ -79,6 +82,15 @@ function normalizeStoredMercenary(unit: Unit, index: number): Unit {
   };
 }
 
+function restoreGuildSkillPoints(parsed: Partial<GameState>) {
+  const earned = guildSkillPointsForRank(parsed.guildRank);
+  const skills = normalizeGuildSkills(parsed.guildSkills);
+  const spent = Object.values(skills).reduce((sum, level) => sum + level, 0);
+  const expectedUnspent = Math.max(0, earned - spent);
+  const stored = Number(parsed.guildSkillPoints);
+  return Number.isFinite(stored) && stored >= expectedUnspent ? Math.max(0, Math.floor(stored)) : expectedUnspent;
+}
+
 type SavedBattleUnit = { hp?: unknown };
 type SavedDungeonState = {
   status?: string;
@@ -115,6 +127,8 @@ export function restoreGame(raw: unknown): GameState {
   const parsed = raw as Partial<GameState> & { version?: number; hero?: Partial<Hero> };
   const heroNation = isNationId(parsed.hero?.nation) ? parsed.hero.nation : next.hero.nation;
   const heroDefaults = makeHero(heroNation, String(parsed.hero?.name || next.hero.name));
+  const restoredHeroMaxHp = Number(parsed.hero?.maxHp) > 0 ? Number(parsed.hero.maxHp) : 100 + (Math.max(1, Number(parsed.hero?.level) || 1) - 1) * 20;
+  const relicDefaults = freshRelicDungeon(restoredHeroMaxHp);
   const restoredCity = typeof parsed.city === "string" && worldCities.some((city) => city.id === parsed.city)
     ? parsed.city
     : isNationId(parsed.city) ? worldCities.find((city) => city.nation === parsed.city)?.id || next.city : next.city;
@@ -126,6 +140,9 @@ export function restoreGame(raw: unknown): GameState {
     credit: Number.isFinite(parsed.credit) ? Math.max(0, Math.floor(parsed.credit!)) : 0,
     creditXp: Number.isFinite(parsed.creditXp) ? Math.max(0, Math.floor(parsed.creditXp!)) : 0,
     creditLevel: Math.max(1, Math.min(LEVEL_CAP, Math.floor(parsed.creditLevel || 1))),
+    guildRank: safeGuildRank(parsed.guildRank),
+    guildSkillPoints: restoreGuildSkillPoints(parsed),
+    guildSkills: normalizeGuildSkills(parsed.guildSkills || freshGuildSkills()),
     starterDeliveryKills: Number.isFinite(parsed.starterDeliveryKills) ? Math.max(0, Math.floor(parsed.starterDeliveryKills!)) : 0,
     newbieBossDefeated: parsed.newbieBossDefeated === true,
     lakeBossDefeated: parsed.lakeBossDefeated === true,
@@ -155,6 +172,7 @@ export function restoreGame(raw: unknown): GameState {
     claimedContracts: Array.isArray(parsed.claimedContracts) ? parsed.claimedContracts : [],
     cityHall: normalizeCityHallState((parsed as Partial<GameState>).cityHall),
     npcProgress: normalizeNpcProgress(parsed.npcProgress),
+    relicDungeon: parsed.relicDungeon && typeof parsed.relicDungeon === "object" ? { ...relicDefaults, ...parsed.relicDungeon, bossRage: parsed.relicDungeon.bossRage === true, partyPower: Number(parsed.relicDungeon.partyPower) || 0, partyNames: Array.isArray(parsed.relicDungeon.partyNames) ? parsed.relicDungeon.partyNames.filter(name => typeof name === "string") : [], partyCount: Number(parsed.relicDungeon.partyCount) || 0, progress: Math.max(0, Math.min(100, Number.isFinite(Number(parsed.relicDungeon.progress)) ? Number(parsed.relicDungeon.progress) : parsed.relicDungeon.status === "cleared" ? 100 : 0)), dispatchPartyNames: Array.isArray(parsed.relicDungeon.dispatchPartyNames) ? parsed.relicDungeon.dispatchPartyNames.filter(name => typeof name === "string") : [], dispatchPartyUids: Array.isArray(parsed.relicDungeon.dispatchPartyUids) ? parsed.relicDungeon.dispatchPartyUids.filter(uid => typeof uid === "string") : [], dispatchPower: Number(parsed.relicDungeon.dispatchPower) || 0, materialsFound: Number(parsed.relicDungeon.materialsFound) || 0, equipmentFound: Number(parsed.relicDungeon.equipmentFound) || 0, bossUnlocked: parsed.relicDungeon.bossUnlocked === true || parsed.relicDungeon.status === "cleared", lastReward: { gold: Number(parsed.relicDungeon.lastReward?.gold) || 0, shards: Number(parsed.relicDungeon.lastReward?.shards) || 0, materials: Number(parsed.relicDungeon.lastReward?.materials) || 0, equipment: Number(parsed.relicDungeon.lastReward?.equipment) || 0 }, rooms: Array.isArray(parsed.relicDungeon.rooms) && parsed.relicDungeon.rooms.length === relicDefaults.rooms.length ? parsed.relicDungeon.rooms : relicDefaults.rooms } : relicDefaults,
     lastSeen: Number(parsed.lastSeen) || Date.now(),
   });
   if (dungeonBusy(parsed.dungeon)) {

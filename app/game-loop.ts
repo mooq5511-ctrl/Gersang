@@ -4,12 +4,11 @@ import { advanceTrade } from "./trade-engine";
 import type { DungeonKey } from "./dungeon-engine";
 import type { GameState, Hero, Unit } from "./game-state";
 import { runDungeonAction } from "./game-battle-actions";
-import { rollEquipment } from "./game-equipment-factory";
 import { formatGameNumber } from "./game-display";
 import { grantCreditXp, grantXp, grantTerritoryXp } from "./game-progression";
-import { appendGameLog, enemyMaxForStage, enterGameInnAction, leaveGameInnAction } from "./game-runtime-actions";
-import { resolveRoadEncounterAction } from "./game-trade-actions";
+import { appendGameLog, enterGameInnAction, leaveGameInnAction } from "./game-runtime-actions";
 import { territoryBonus } from "./guild-territory";
+import { guildSkillTradeBonuses } from "./guild-skills";
 
 /** Random values are sampled once per tick so React retries cannot change an outcome. */
 export function createGameTickRolls() {
@@ -25,7 +24,6 @@ type LoopDependencies = {
   grantCreditXp: (state: GameState, amount: number) => GameState;
   addLog: (logs: string[], message: string) => string[];
   format: (value: number) => string;
-  resolveRoadEncounter: (state: GameState) => GameState;
 };
 
 export type GameTickRolls = {
@@ -49,10 +47,22 @@ export function settleGameLoop(previous: GameState, rolls: GameTickRolls, deps: 
   }
   const idle = settleCaravanIdle(previous.idleStamp, now, Math.max(previous.stage, previous.hero.level), territoryBonus(previous.territory, "idle"));
   if (idle.stamp !== previous.idleStamp) previous = deps.grantCreditXp({ ...previous, idleStamp: idle.stamp, gold: previous.gold + idle.gold, credit: previous.credit + idle.credit }, idle.credit);
-  const result = advanceTrade(previous.trade, previous.gold, now);
-  if (!result.trips && !result.encounters) return previous;
-  let next: GameState = { ...previous, trade: result.trade, gold: result.gold, hero: grantTerritoryXp(previous, previous.hero, result.xp), mercs: previous.mercs.map((unit) => previous.active.includes(unit.uid) ? grantTerritoryXp(previous, unit, Math.floor(result.xp * .8)) : unit), logs: result.trips ? deps.addLog(previous.logs, `商隊完成 ${result.trips} 趟交易，淨利 ${deps.format(result.profit)} 兩；主角與出戰傭兵獲得經驗。`) : previous.logs };
-  for (let index = 0; index < result.encounters; index++) next = deps.resolveRoadEncounter(next);
+  const result = advanceTrade(previous.trade, previous.gold, now, { resolveEvents: true });
+  if (!result.trips && !result.encounters && !result.tradeEvents.length) return previous;
+  let logs = result.trips ? deps.addLog(previous.logs, `商隊完成 ${result.trips} 趟交易，淨利 ${deps.format(result.profit)} 兩；主角與參與商隊的傭兵獲得經驗。`) : previous.logs;
+  for (const event of result.tradeEvents) {
+    const delta = event.revenueDelta === 0 ? "" : event.revenueDelta > 0 ? ` 收益增加 ${deps.format(event.revenueDelta)} 兩。` : ` 收益減少 ${deps.format(Math.abs(event.revenueDelta))} 兩。`;
+    logs = deps.addLog(logs, `商路事件「${event.name}」：${event.message}${delta}`);
+  }
+  const released = result.releasedEscorts;
+  const releasedToActive = released.length && previous.trade.caravan?.escortRoster !== "resting";
+  const active = releasedToActive ? [...new Set([...previous.active, ...released])] : previous.active;
+  const latestEvent = result.tradeEvents.at(-1);
+  const lastEncounter = latestEvent ? `商路事件「${latestEvent.name}」：${latestEvent.message}` : previous.lastEncounter;
+  const tradeXpIds = new Set([...previous.active, ...(previous.trade.caravan?.escortIds || []), ...released]);
+  const tradeXp = Math.floor(result.xp * (1 + guildSkillTradeBonuses(previous.guildSkills).xpBonus));
+  const tradeMercXp = Math.floor(tradeXp * .8);
+  const next: GameState = { ...previous, trade: result.trade, gold: result.gold, active, lastEncounter, hero: grantTerritoryXp(previous, previous.hero, tradeXp), mercs: previous.mercs.map((unit) => tradeXpIds.has(unit.uid) ? grantTerritoryXp(previous, unit, tradeMercXp) : unit), restingMercs: previous.restingMercs.map((unit) => tradeXpIds.has(unit.uid) ? grantTerritoryXp(previous, unit, tradeMercXp) : unit), logs };
   return next;
 }
 
@@ -69,13 +79,5 @@ export function settleCurrentGame(previous: GameState, rolls: GameTickRolls): Ga
     grantCreditXp,
     addLog: appendGameLog,
     format: formatGameNumber,
-    resolveRoadEncounter: (state) => resolveRoadEncounterAction(state, {
-      addLog: appendGameLog,
-      enterInn: enterGameInnAction,
-      grantXp,
-      rollEquipment,
-      enemyMax: enemyMaxForStage,
-      format: formatGameNumber,
-    }),
   });
 }
