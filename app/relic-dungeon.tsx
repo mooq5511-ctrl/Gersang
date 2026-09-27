@@ -200,8 +200,6 @@ export function RelicDungeonPanel({ state, power, party, onAction, footer }: { s
   const displayHp = state.status === "idle" && livePartyMaxHp > 0 ? livePartyHp : state.hp;
   const hpPercent = Math.round((displayHp / Math.max(1, displayMaxHp)) * 100);
   const bossPercent = state.bossMaxHp ? Math.round((state.bossHp / state.bossMaxHp) * 100) : 0;
-  const partyPercent = state.maxHp ? Math.round((state.hp / state.maxHp) * 100) : 0;
-  const partyCondition = partyPercent <= 25 ? "危急" : partyPercent <= 60 ? "受損" : "穩定";
   const canExplore = state.status === "exploring";
   return <section className="relic-dungeon-shell" aria-label="遺跡地下城">
     <header className="relic-dungeon-hero"><div><span className="relic-eyebrow">封印遺跡・第一遠征</span><h2>沉沒王朝地下城</h2><p>一座會自行改變路線的古代迷宮。每次探索都會遇到不同的守衛、事件與寶藏，最深處則由沉沒王親自鎮守。</p></div><div className="relic-hero-seal" aria-hidden="true">♛</div></header>
@@ -216,6 +214,8 @@ function RelicBossBattlePanel({ state, power, party, onAction }: { state: RelicD
   const [autoBattle, setAutoBattle] = useState(false);
   const onActionRef = useRef(onAction);
   const bossPercent = state.bossMaxHp ? Math.round((state.bossHp / state.bossMaxHp) * 100) : 0;
+  const partyPercent = state.maxHp ? Math.round((state.hp / state.maxHp) * 100) : 0;
+  const partyCondition = partyPercent <= 25 ? "危急" : partyPercent <= 60 ? "受損" : "穩定";
   const phase = state.bossRage ? "狂暴終局" : bossPercent <= 50 ? "王朝殘火" : "古王甦醒";
   const battleParty = state.dispatchPartyNames.length ? party.filter(member => state.dispatchPartyNames.includes(member.name)) : party;
   const shownParty = battleParty.length ? battleParty : state.dispatchPartyNames.map(name => ({ name, level: 1 }));
