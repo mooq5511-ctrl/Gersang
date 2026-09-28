@@ -13,6 +13,7 @@ import {
 import "./monster-compendium.css";
 
 const number = (value: number) => value.toLocaleString("zh-TW");
+const mapLabel = (id: CompendiumMapId) => id === "sunken-relic" ? "沉沒王朝遺跡" : battleMaps.find((map) => map.id === id)?.name ?? id;
 
 function isMonsterEntry(value: unknown): value is MonsterCompendiumEntry {
   if (!value || typeof value !== "object") return false;
@@ -59,7 +60,7 @@ export function MonsterCompendium({ json = monsterCompendiumJson }: { json?: str
         <label className="monster-codex-search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜尋怪物或掉落物" aria-label="搜尋怪物或掉落物" /></label>
         <fieldset className="monster-codex-filters"><legend className="sr-only">篩選地區</legend>
           <button type="button" aria-pressed={mapId === "all"} onClick={() => setMapId("all")}>全部</button>
-          {COMPENDIUM_MAP_IDS.map((id) => <button key={id} type="button" aria-pressed={mapId === id} onClick={() => setMapId(id)}>{battleMaps.find((map) => map.id === id)?.name ?? id}</button>)}
+          {COMPENDIUM_MAP_IDS.map((id) => <button key={id} type="button" aria-pressed={mapId === id} onClick={() => setMapId(id)}>{mapLabel(id)}</button>)}
         </fieldset>
       </div>
       <div className="monster-codex-layout">

@@ -17,7 +17,7 @@ export function vitalStats(unit: VitalUnit) {
   let defense = 0;
   let physicalResist = Number(unit.physicalResist) || 0;
   let magicResist = Number(unit.magicResist) || 0;
-  for (const item of Object.values(unit.equip)) {
+  for (const item of Object.values(unit.equip || {})) {
     if (!item) continue;
     vitality += item.bonus?.vit || 0;
     intelligence += item.bonus?.intel || 0;
@@ -56,7 +56,7 @@ export function combatStats(unit: VitalUnit) {
   const percent = { str: 0, agi: 0, vit: 0, intel: 0, atk: 0, def: 0 };
   let equipmentAttack = 0;
   let equipmentDefense = 0;
-  for (const item of Object.values(unit.equip)) {
+  for (const item of Object.values(unit.equip || {})) {
     if (!item) continue;
     flat.str += item.bonus?.str || 0;
     flat.agi += item.bonus?.agi || 0;

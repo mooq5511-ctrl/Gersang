@@ -397,6 +397,9 @@ export default function GameV15() {
   const activeUnits = game.active
     .map((unitUid) => game.mercs.find((unit) => unit.uid === unitUid))
     .filter(Boolean) as Unit[];
+  const relicReservationActive = game.relicDungeon?.status === "dispatching" || game.relicDungeon?.status === "ready" || game.relicDungeon?.status === "boss";
+  const relicReservedUids = relicReservationActive ? game.relicDungeon?.dispatchPartyUids || [] : [];
+  const availableRestingMercs = game.restingMercs.filter(unit => !relicReservedUids.includes(unit.uid));
   const equippedMythicNames = [game.hero, ...activeUnits].flatMap((unit) => Object.values(unit.equip).filter((item): item is Equipment => !!item).map(item => item.name));
   const azureSetPieces = mythicSetPieceCount(equippedMythicNames,'azure');
   const chiyouSetPieces = mythicSetPieceCount(equippedMythicNames,'chiyou');
@@ -405,6 +408,9 @@ export default function GameV15() {
   const currentWorldZone=WORLD_ZONES.find(zone=>zone.id===(game.dungeon?.zone||'hanyang'))||WORLD_ZONES[0];
   const currentCity = worldCities.find((city) => city.id === game.city) || worldCities[0];
   const heroVital=vitalStats(game.hero);
+  const activePartyVitals=[game.hero,...activeUnits].map(unit=>vitalStats(unit));
+  const activePartyHp=activePartyVitals.reduce((sum,unit)=>sum+Math.max(0,unit.hp),0);
+  const activePartyMaxHp=activePartyVitals.reduce((sum,unit)=>sum+Math.max(1,unit.maxHp),0);
   const guildSkillBonus=guildSkillTradeBonuses(game.guildSkills);
   const displayedPower=(unit:Unit|Hero)=>Math.floor(unitPower(unit)*(1+(unit.uid==='hero'?guildSkillBonus.heroPowerBonus:guildSkillBonus.mercenaryPowerBonus)));
   const heroXpNeeded=xpNeed(game.hero.level);
@@ -424,7 +430,7 @@ export default function GameV15() {
   const firstCaravanBossReady = game.npcProgress.completedQuests.includes(FIRST_CARAVAN_QUEST_ID) && game.hero.level >= 20 && game.territory.buildings.waystation >= 1 && (game.firstGreenEquipped || [game.hero, ...game.mercs, ...game.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== '普通')));
   const cityArmors = officialEquipment.filter((item) => item.kind === "armor").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
   const cityWeapons = officialEquipment.filter((item) => item.kind === "weapon").filter((_, index) => index % 5 === currentCity.stockIndex).slice(0, 8);
-  const musicScene:SceneMusicKind=activeTab==='raid'?'raid':activeTab==='battle'?'boss':game.hero.status==='客棧中'||(activeTab==='city'&&cityService==='inn')?'inn':activeTab==='city'||activeTab==='trade'?'merchant':'outskirts';
+  const musicScene:SceneMusicKind=activeTab==='relic'?'relic':activeTab==='raid'?'raid':activeTab==='battle'?'boss':game.hero.status==='客棧中'||(activeTab==='city'&&cityService==='inn')?'inn':activeTab==='city'||activeTab==='trade'?'merchant':'outskirts';
   const mapGate = (map: typeof battleMaps[number]) => {
     const stageReady = game.stage >= map.unlockStage;
     const bossReady = map.id !== 'millennium-lake' || game.newbieBossDefeated;
@@ -571,6 +577,16 @@ export default function GameV15() {
   }, [ready, activeSlot, setGame]);
 
   useEffect(() => {
+    const relic = game.relicDungeon;
+    if (!relic || relic.status !== "idle" || (!relic.dispatchPartyUids?.length && !relic.dispatchPartyNames?.length)) return;
+    setGame(previous => {
+      const current = previous.relicDungeon;
+      if (!current || current.status !== "idle" || (!current.dispatchPartyUids?.length && !current.dispatchPartyNames?.length)) return previous;
+      return { ...previous, relicDungeon: { ...current, dispatchPartyNames: [], dispatchPartyUids: [] } };
+    });
+  }, [game.relicDungeon?.status, game.relicDungeon?.dispatchPartyNames?.length, game.relicDungeon?.dispatchPartyUids?.length, setGame]);
+
+  useEffect(() => {
     if ((game.hanyangPrologueStep === "outskirts" || game.hanyangPrologueStep === "first-sale") && game.starterDeliveryKills < FIRST_CARAVAN_TARGET) {
       if (game.hanyangPrologueStep !== "outskirts") setGame(previous => ({ ...previous, hanyangPrologueStep: "outskirts" }));
     } else if ((game.hanyangPrologueStep === "outskirts" || game.hanyangPrologueStep === "first-battle") && game.starterDeliveryKills >= FIRST_CARAVAN_TARGET) {
@@ -580,7 +596,12 @@ export default function GameV15() {
 
   const sendCaravan = useCallback((routeId: string, escortIds?: string[]) => {
     const now = Date.now();
-    setGame((previous) => dispatchTradeAction(previous, routeId, now, addLog, escortIds ?? previous.restingMercs.slice(0, 11).map((unit) => unit.uid)));
+    setGame((previous) => {
+      const relic = previous.relicDungeon;
+      const reserved = relic && (relic.status === "dispatching" || relic.status === "ready" || relic.status === "boss") ? relic.dispatchPartyUids || [] : [];
+      const available = previous.restingMercs.filter(unit => !reserved.includes(unit.uid));
+      return dispatchTradeAction(previous, routeId, now, addLog, escortIds ?? available.slice(0, 11).map((unit) => unit.uid));
+    });
   }, [setGame]);
 
   function upgradeCaravan() {
@@ -1026,7 +1047,8 @@ export default function GameV15() {
   }
 
   const treasureTerm = treasureQuery.trim();
-  const treasureMaterialNames = Object.keys(MATERIAL_PRICES).sort((a, b) => a.localeCompare(b, "zh-TW")).filter(name => !treasureTerm || name.includes(treasureTerm));
+  const relicTreasureNames = ["遺跡材料", "古代裝備", "遺跡碎片"];
+  const treasureMaterialNames = Array.from(new Set([...Object.keys(MATERIAL_PRICES), ...relicTreasureNames])).sort((a, b) => a.localeCompare(b, "zh-TW")).filter(name => !treasureTerm || name.includes(treasureTerm));
   const treasureMedicineEntries = medicineCatalog.filter(medicine => !treasureTerm || medicine.name.includes(treasureTerm) || medicine.effect.includes(treasureTerm));
 
   return (
@@ -1039,7 +1061,7 @@ export default function GameV15() {
         <div className="resource-strip v15-resources">
           <div className="resource-card resource-gold" aria-label="商團資金"><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
           <div className="resource-card resource-credit" aria-label="信用值"><Coins /><span>{format(game.credit)}</span><small>信用值 · Lv.{game.creditLevel}</small></div>
-          <div className={`resource-card resource-hp ${game.hero.status==='客棧中'?'hp-status at-inn':'hp-status'}`} aria-label="隊伍生命值"><HeartPulse /><span id="p-hp">{heroVital.hp} / {heroVital.maxHp}</span><small>血量 · {game.hero.status}</small></div>
+          <div className={`resource-card resource-hp ${game.hero.status==='客棧中'?'hp-status at-inn':'hp-status'}`} aria-label="隊伍生命值"><HeartPulse /><span id="p-hp">{activePartyHp} / {activePartyMaxHp}</span><small>隊伍血量 · {game.hero.status}</small></div>
           <div className="resource-card resource-power" aria-label="總商隊戰力"><Swords /><span>{format(displayedPower(game.hero)+game.mercs.reduce((sum,unit)=>sum+displayedPower(unit),0))}</span><small>總商隊戰力</small></div>
           <div className="resource-card resource-mercs" aria-label="出戰傭兵"><Users /><span>{game.active.length}/{ACTIVE_MERCENARY_LIMIT}</span><small>出戰傭兵</small></div>
           <Button className="character-switch" variant="outline" size="sm" onClick={returnToCharacterSelect}><Users />切換角色</Button>
@@ -1184,7 +1206,7 @@ export default function GameV15() {
         </TabsContent>
 
         <TabsContent value="trade" className="tab-panel trade-tab-panel">
-          <TradePanel trade={game.trade} gold={game.gold} stage={Math.max(game.stage, game.hero.level)} mercenaries={game.restingMercs.map((unit) => ({ uid: unit.uid, name: unit.name, level: unit.level, power: displayedPower(unit), available: true }))} logs={game.logs} lastEncounter={game.lastEncounter}
+          <TradePanel trade={game.trade} gold={game.gold} stage={Math.max(game.stage, game.hero.level)} mercenaries={availableRestingMercs.map((unit) => ({ uid: unit.uid, name: unit.name, level: unit.level, power: displayedPower(unit), available: true }))} logs={game.logs} lastEncounter={game.lastEncounter}
             onDispatch={sendCaravan} onUpgrade={upgradeCaravan} onUpgradePort={upgradeTradePort}
             onSelectCargo={(cargoId) => setGame((previous) => ({ ...previous, trade: { ...previous.trade, selectedCargoId: cargoId } }))}
             onToggleInsurance={() => setGame((previous) => ({ ...previous, trade: { ...previous.trade, insurance: !previous.trade.insurance } }))}
@@ -1270,7 +1292,7 @@ export default function GameV15() {
 
 
         <TabsContent value="squad" className="tab-panel">
-          <CaravanStatus key={squadDestination.key} initialWindow={squadDestination.window} territory={game.territory} upgradeBuilding={upgradeTerritoryBuilding} enhanceEquipment={enhanceTerritoryEquipment} enhanceFeedback={enhanceFeedback} equipmentPulseUid={equipmentPulseUid} fuseAllEquipment={fuseAllTerritoryEquipment} busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} restingMercs={game.restingMercs} active={game.active} toggleActive={toggleActive} storeMercenary={storeMercenary} withdrawRestingMercenary={withdrawRestingMercenary} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} guildRank={game.guildRank} promoteGuildRank={promoteGuildRank} guildSkillPoints={game.guildSkillPoints} guildSkills={game.guildSkills} upgradeGuildSkill={upgradeGuildSkill} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet} redeemWandererChickenSoup={redeemWandererChickenSoup} redeemWandererGinsengChickenSoup={redeemWandererGinsengChickenSoup} redeemWandererBlackBoneChickenSoup={redeemWandererBlackBoneChickenSoup}
+          <CaravanStatus key={squadDestination.key} initialWindow={squadDestination.window} territory={game.territory} upgradeBuilding={upgradeTerritoryBuilding} enhanceEquipment={enhanceTerritoryEquipment} enhanceFeedback={enhanceFeedback} equipmentPulseUid={equipmentPulseUid} fuseAllEquipment={fuseAllTerritoryEquipment} busy={dungeonBusy(game.dungeon)} hero={game.hero} mercs={game.mercs} restingMercs={availableRestingMercs} active={game.active} toggleActive={toggleActive} storeMercenary={storeMercenary} withdrawRestingMercenary={withdrawRestingMercenary} gold={game.gold} credit={game.credit} creditXp={game.creditXp} creditLevel={game.creditLevel} guildRank={game.guildRank} promoteGuildRank={promoteGuildRank} guildSkillPoints={game.guildSkillPoints} guildSkills={game.guildSkills} upgradeGuildSkill={upgradeGuildSkill} newbieCoins={game.newbieCoins} redeemWandererSet={redeemWandererSet} redeemWandererChickenSoup={redeemWandererChickenSoup} redeemWandererGinsengChickenSoup={redeemWandererGinsengChickenSoup} redeemWandererBlackBoneChickenSoup={redeemWandererBlackBoneChickenSoup}
             navigation={<WorldMapNavigation state={game.dungeon||freshDungeon()} level={game.hero.level} power={heroPersonalPower(game.hero)} travel={id=>{const now=Date.now(),spawnRoll=Math.random();setGame(previous=>{
               const old=previous.dungeon||freshDungeon();
               const deployed=[previous.hero,...previous.mercs.filter(unit=>previous.active.slice(0,ACTIVE_MERCENARY_LIMIT).includes(unit.uid))];
@@ -1397,15 +1419,19 @@ export default function GameV15() {
           <RelicDispatchPanel
             state={game.relicDungeon || freshRelicDungeon(vitalStats(game.hero).maxHp)}
             power={Math.floor(displayedPower(game.hero) + game.mercs.filter(unit => game.active.includes(unit.uid)).reduce((sum, unit) => sum + displayedPower(unit), 0))}
-            dispatchParty={game.restingMercs.map(unit => ({ name: unit.name, role: unit.role, level: unit.level, image: unit.image, hp: unit.hp, maxHp: vitalStats(unit).maxHp }))}
-            onAction={(action: RelicDungeonAction) => setGame(previous => {
+            dispatchParty={game.restingMercs.map(unit => ({ uid: unit.uid, name: unit.name, role: unit.role, level: unit.level, image: unit.image, hp: unit.hp, maxHp: vitalStats(unit).maxHp, power: displayedPower(unit) }))}
+            onAction={(action: RelicDungeonAction, selectedPartyUids?: string[]) => setGame(previous => {
               const current = previous.relicDungeon || freshRelicDungeon(vitalStats(previous.hero).maxHp);
               const activeParty = [previous.hero, ...previous.mercs.filter(unit => previous.active.includes(unit.uid)).slice(0, ACTIVE_MERCENARY_LIMIT)];
-              const party = action === 'dispatch' ? previous.restingMercs : activeParty;
+              const reservationActive = current.status === 'dispatching' || current.status === 'ready' || current.status === 'boss';
+              const reservedUids = Array.isArray(current.dispatchPartyUids) ? current.dispatchPartyUids : [];
+              const reservedParty = reservationActive ? previous.restingMercs.filter(unit => reservedUids.includes(unit.uid)) : [];
+              const dispatchParty = current.status === 'cleared' || current.status === 'defeated' ? previous.restingMercs.filter(unit => !selectedPartyUids?.length || selectedPartyUids.includes(unit.uid)) : previous.restingMercs.filter(unit => !reservedUids.includes(unit.uid) && (!selectedPartyUids?.length || selectedPartyUids.includes(unit.uid)));
+              const party = action === 'dispatch' ? dispatchParty : (['claim', 'challenge-boss', 'attack-boss', 'retreat'].includes(action) && reservedParty.length ? reservedParty : activeParty);
               const partyPower = Math.floor(party.reduce((sum, unit) => sum + displayedPower(unit), 0));
               const partyMaxHp = party.reduce((sum, unit) => sum + vitalStats(unit).maxHp, 0);
               const partyCurrentHp = party.reduce((sum, unit) => sum + Math.max(0, vitalStats(unit).hp), 0);
-              const partyReady = action === 'dispatch' ? previous.restingMercs.length > 0 : party.some(unit => vitalStats(unit).hp > 0);
+              const partyReady = action === 'dispatch' ? dispatchParty.length > 0 : party.some(unit => vitalStats(unit).hp > 0);
               const next = relicDungeonAction(current, action, partyPower, { maxHp: partyMaxHp, currentHp: partyCurrentHp, partyPower, partyNames: party.map(unit => unit.name), partyUids: party.map(unit => unit.uid), partyReady, now: Date.now(), dispatchDurationMs: import.meta.env.DEV ? 30_000 : 30 * 60 * 1000 });
               const reward = next.lastReward;
               const gained = reward.gold ? `獲得 ${reward.gold.toLocaleString()} 兩；` : "";

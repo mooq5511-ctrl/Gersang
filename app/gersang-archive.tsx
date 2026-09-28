@@ -30,7 +30,8 @@ export function GersangArchive(){
    const mythic=THUNDER_FORGE_RECIPES.map(item=>({id:'mythic-'+item.id,name:item.name,category:'裝備' as const,image:item.image||gersangItemArt(item.slot),detailImage:item.name==='T10 蚩尤戰甲'?'/assets/equipment/chiyou/chiyou-armor-hd.png':undefined,detail:[`T10・${slotLabel[item.slot]||'裝備'}・無等級限制`, `攻擊 ${item.atk}・防禦 ${item.def}・生命 ${item.hp}`,`力量 ${item.bonus.str}・敏捷 ${item.bonus.agi}・體質 ${item.bonus.vit}・智力 ${item.bonus.intel}`,item.skill||item.magic.map(affix=>`${affix.name}：${affix.text}`).join('・')] }));
    const gems=officialGems.map(gem=>({id:'gem-'+gem.id,name:gem.name,category:'道具' as const,image:'/assets/items/a001_ELEMENT04_I.png',detail:[`寶石・${gem.label}`,`鑲嵌加成 +${gem.values.join('／+')}`,`工房費用 ${gem.costs.map(format).join('／')} 兩`]}));
    const materials=Object.entries(MATERIAL_PRICES).map(([name,price])=>({id:'material-'+name,name,category:'材料' as const,image:'/assets/sprites/loot-rare-cute-v1.png',detail:['怪物掉落／鍛造材料',`收購單價 ${format(price)} 兩`,name==='古錢箱'?'可選擇數量開啟，獲得新手兌換銅錢。':'可用於交易、鍛造或兌換。']}));
-   return [...base,...official,...tiers,...mythic,...gems,...materials].filter((entry,index,all)=>all.findIndex(other=>other.category===entry.category&&other.name===entry.name)===index);
+   const relicMaterials=['遺跡材料','古代裝備','遺跡碎片'].map(name=>({id:'relic-material-'+name,name,category:'材料' as const,image:'/assets/sprites/loot-rare-cute-v1.png',detail:['遺跡地下城遠征獎勵','可在遺跡派遣與沉沒王 Boss 戰取得。','數量會同步顯示於秘寶圖鑑。']}));
+   return [...base,...official,...tiers,...mythic,...gems,...materials,...relicMaterials].filter((entry,index,all)=>all.findIndex(other=>other.category===entry.category&&other.name===entry.name)===index);
  },[]);
  const filtered=entries.filter(entry=>(category==='全部'||entry.category===category)&&(!query.trim()||`${entry.name} ${entry.detail.join(' ')}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())));
  const selectedEntry=filtered.find(entry=>entry.id===selectedEntryId)||filtered[0];

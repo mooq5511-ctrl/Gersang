@@ -1,5 +1,8 @@
 /** 副本怪物數值與地圖怪物池。舊 ID 保留，讓既有存檔可安全載入。 */
+import { RELIC_DUNGEON_MONSTERS } from "./relic-dungeon-monsters.ts";
+
 export const ECOLOGY_MONSTERS={
+ ...RELIC_DUNGEON_MONSTERS,
  e_starter_raccoon:{name:'狸貓',level:1,hp:16,mp:0,atk:6,dex:10,xp:7,gold:7,drop:.06,loot:['boots']},
  e_starter_black_bandit:{name:'黑巾山賊',level:5,hp:520,mp:0,atk:58,dex:24,xp:0,gold:0,drop:0,loot:[]},
  e_starter_wako:{name:'倭寇',level:1,hp:16,mp:0,atk:10,dex:12,xp:9,gold:7,drop:.06,loot:['boots']},

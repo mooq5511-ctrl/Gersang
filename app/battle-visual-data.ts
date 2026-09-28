@@ -35,6 +35,10 @@ export const BATTLE_MONSTER_ART: Record<string, string> = {
   // 須彌山一般怪物暫不使用立繪；未列出的怪物會自動使用共用佔位圖。
   多聞天王: "/assets/monsters/sumeru/vaisravana-area.jpg",
   廣目天王: "/assets/monsters/sumeru/virupaksa-area.jpg",
+  "沉沒王・阿斯塔洛斯": "/assets/monsters/relic-boss-op-admin.png",
+  "深淵遺跡海龍": "/assets/monsters/relic-boss-abyssal-dragon.png",
+  "虛空鎮墓巨像": "/assets/monsters/relic-boss-void-colossus.png",
+  "潮汐女皇・奈芙拉": "/assets/monsters/relic-boss-tide-empress.png",
 };
 
 export const BATTLE_MONSTER_INJURED_ART: Record<string, string> = {

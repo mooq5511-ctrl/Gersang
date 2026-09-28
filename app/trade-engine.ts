@@ -178,9 +178,9 @@ export function dispatchTrade(trade: TradeState, gold: number, routeId: string, 
 const TRADE_EVENT_CHANCE = 0.3;
 const TRADE_EVENTS = [
   { id: "pirate-raid", name: "海盜劫掠", kind: "danger" as const, weight: 20, threat: 620, loss: 1, message: "黑帆從濃霧中逼近，海盜試圖奪走整批貨物。" },
-  { id: "bandit-roadblock", name: "山賊攔路", kind: "danger" as const, weight: 14, threat: 430, loss: .55, message: "商路前方被山賊封鎖，幾箱貨物遭到哄搶。" },
-  { id: "storm", name: "突遇暴風雨", kind: "danger" as const, weight: 13, threat: 280, loss: .28, message: "海象突然惡化，船隊在風浪中失去部分貨物。" },
-  { id: "wet-cargo", name: "貨物受潮", kind: "danger" as const, weight: 10, threat: 180, loss: .2, message: "貨艙滲水，部分貨物受潮，只能折價出售。" },
+  { id: "bandit-roadblock", name: "山賊攔路", kind: "danger" as const, weight: 14, threat: 430, loss: .55, message: "商路前方被山賊封鎖，幾箱貨物面臨哄搶。" },
+  { id: "storm", name: "突遇暴風雨", kind: "danger" as const, weight: 13, threat: 280, loss: .28, message: "海象突然惡化，船隊遭遇猛烈風浪。" },
+  { id: "wet-cargo", name: "貨物受潮", kind: "danger" as const, weight: 10, threat: 180, loss: .2, message: "貨艙出現滲水，貨物面臨受潮風險。" },
   { id: "checkpoint", name: "關卡盤查", kind: "neutral" as const, weight: 11, threat: 160, loss: .1, message: "地方關卡臨時盤查，商隊支付通行費後順利通過。" },
   { id: "merchant-buyout", name: "商會高價收購", kind: "fortune" as const, weight: 10, threat: 0, loss: -.25, message: "當地商會急需這批貨，願意以高價提前收購。" },
   { id: "village-supply", name: "漁村補給", kind: "fortune" as const, weight: 8, threat: 0, loss: -.12, message: "漁村提供補給與嚮導，商隊順利省下部分成本。" },

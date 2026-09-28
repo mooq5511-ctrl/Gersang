@@ -1,9 +1,10 @@
 import { isBossMonster } from "./dungeon-engine";
 import { battleMaps } from "./reference-data";
 import { sourceEnemies } from "./v17-content";
+import { RELIC_MONSTER_LIST } from "../data/monsters/relic-dungeon-monsters";
 
 export const COMPENDIUM_MAP_IDS = [
-  "starter-outskirts", "millennium-lake", "japan-sea", "miasma-forest", "sumeru",
+  "starter-outskirts", "millennium-lake", "japan-sea", "miasma-forest", "sumeru", "sunken-relic",
 ] as const;
 
 export type CompendiumMapId = (typeof COMPENDIUM_MAP_IDS)[number];
@@ -31,6 +32,7 @@ const prerequisites: Record<CompendiumMapId, string | null> = {
   "japan-sea": "擊敗狂風阿魯塔",
   "miasma-forest": "擊敗黃金海星",
   sumeru: "世界地圖達到第 40 關",
+  "sunken-relic": "遺跡探索進度達到 100%",
 };
 
 function monsterKind(name: string, boss: boolean, elite = false): MonsterKind {
@@ -41,7 +43,8 @@ function monsterKind(name: string, boss: boolean, elite = false): MonsterKind {
 
 /** JSON payload built from the same numerical and drop sources as the battle map. */
 export const monsterCompendiumJson = JSON.stringify(
-  sourceEnemies
+  [
+    ...sourceEnemies
     .filter((enemy): enemy is typeof enemy & { mapId: CompendiumMapId } =>
       COMPENDIUM_MAP_IDS.includes(enemy.mapId as CompendiumMapId))
     .map((enemy): MonsterCompendiumEntry => {
@@ -63,4 +66,20 @@ export const monsterCompendiumJson = JSON.stringify(
         skill: enemy.skill ?? null,
       };
     }),
+    ...RELIC_MONSTER_LIST.map((monster): MonsterCompendiumEntry => ({
+      id: monster.id,
+      name: monster.name,
+      mapId: "sunken-relic",
+      region: "沉沒王朝遺跡",
+      kind: monster.kind === "Boss" ? "首領" : monster.kind === "菁英" ? "菁英" : "一般",
+      hp: monster.hp,
+      mp: monster.mp,
+      atk: monster.atk,
+      exp: monster.xp,
+      drops: monster.loot,
+      isBoss: monster.kind === "Boss",
+      prerequisite: prerequisites["sunken-relic"],
+      skill: monster.skill,
+    })),
+  ],
 );

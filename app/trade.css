@@ -253,3 +253,4 @@
 .trade-port-investment > p { margin: 10px 0 13px; color: #9db0a7; font-size: 11px; line-height: 1.6; }
 .trade-port-investment button { width: 100%; }
 @media (max-width: 800px) { .trade-hero { grid-template-columns: 1fr; } .trade-chart { border-left: 0; border-top: 1px solid #d3a95a4f; } .trade-sidebar { position: static; } }
+.trade-route footer span small{color:#91b3a3;font-size:9px;letter-spacing:.02em}
