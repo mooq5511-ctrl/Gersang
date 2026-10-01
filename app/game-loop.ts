@@ -9,6 +9,7 @@ import { grantCreditXp, grantXp, grantTerritoryXp } from "./game-progression";
 import { appendGameLog, enterGameInnAction, leaveGameInnAction } from "./game-runtime-actions";
 import { territoryBonus } from "./guild-territory";
 import { guildSkillTradeBonuses } from "./guild-skills";
+import { pauseHanyangTutorialBattle } from "./hanyang-prologue";
 
 /** Random values are sampled once per tick so React retries cannot change an outcome. */
 export function createGameTickRolls() {
@@ -33,6 +34,7 @@ export type GameTickRolls = {
 /** Settles the shared idle timer, dungeon state and caravan completion exactly once. */
 export function settleGameLoop(previous: GameState, rolls: GameTickRolls, deps: LoopDependencies): GameState {
   const { now, roll, choice, spawnRoll, encounterCountRoll, retaliationRoll, materialRolls, gearDropRoll, gearChoiceRoll } = rolls;
+  previous = pauseHanyangTutorialBattle(previous);
   if (dungeonBusy(previous.dungeon)) {
     const battle = previous.dungeon!;
     const due = battle.status === "respawning" ? battle.spawnAt : battle.status === "recovering" ? (battle.innHealAt || battle.stamp + 2000) : battle.stamp + 50;

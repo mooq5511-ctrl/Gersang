@@ -4,12 +4,13 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import {dungeonBusy,freshDungeon} from '../app/dungeon-engine.ts';
+import {pauseHanyangTutorialBattle} from '../app/hanyang-prologue.ts';
 
 const source=readFileSync(new URL('../app/game-v15.tsx',import.meta.url),'utf8');
 const loopSource=readFileSync(new URL('../app/game-loop.ts',import.meta.url),'utf8');
 const actionsSource=readFileSync(new URL('../app/game-battle-actions.ts',import.meta.url),'utf8');
 const compile=(code,context)=>vm.runInContext(ts.transpileModule(code.replace(/^export /,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
-const recoveryContext=vm.createContext({dungeonBusy,runDungeon:(state,action,now)=>({...state,dungeon:{...state.dungeon,status:'idle',stamp:now}})});
+const recoveryContext=vm.createContext({dungeonBusy,pauseHanyangTutorialBattle,runDungeon:(state,action,now)=>({...state,dungeon:{...state.dungeon,status:'idle',stamp:now}})});
 compile(loopSource.slice(loopSource.indexOf('export function settleGameLoop('),loopSource.indexOf('/** Public game-loop entry point')),recoveryContext);
 const rollContext=vm.createContext({});
 compile(loopSource.slice(loopSource.indexOf('export function createGameTickRolls()'),loopSource.indexOf('type LoopDependencies')),rollContext);

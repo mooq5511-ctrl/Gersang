@@ -98,7 +98,7 @@ import type { ProgressionRoadmapStage } from "./progression-roadmap";
 import { QuestJournal } from "./quest-journal";
 import { claimAdventureQuest, normalizeQuestLedger, syncQuestProgress } from "./adventure-quests";
 import { abandonCityHallCommission, acceptCityHallCommission as acceptCityHallCommissionAction, buyCityHallRefreshTicket, claimCityHallCommission as claimCityHallCommissionAction, CITY_HALL_REFRESH_TICKET_PRICE, refreshCityHallCommissions, syncCityHallLifetime } from "./city-hall-commissions";
-import { HANYANG_PROLOGUE_DIALOGUE, HANYANG_PROLOGUE_STEPS, claimHanyangJourneyFund, completeHanyangPrologue, grantHanyangStarterSupplies, hanyangRecruitmentCost, markHanyangCaravanDelivered, markHanyangMysteryNpcSeen, markHanyangReturnReported, recommendedMercenaryIds, syncHanyangPrologue } from "./hanyang-prologue";
+import { HANYANG_PROLOGUE_DIALOGUE, HANYANG_PROLOGUE_STEPS, claimHanyangJourneyFund, completeHanyangPrologue, grantHanyangStarterSupplies, hanyangRecruitmentCost, markHanyangCaravanDelivered, markHanyangMysteryNpcSeen, markHanyangReturnReported, pauseHanyangTutorialBattle, recommendedMercenaryIds, syncHanyangPrologue } from "./hanyang-prologue";
 import { createGameSaveScheduler } from "./game-save-scheduler";
 import { TIER_EQUIPMENT_DROP_REGIONS, tierEquipmentPrice, tierEquipmentShopCatalog, type TierEquipment } from "./tier-equipment";
 import { profileFromGame, readCharacterSave, restoreGame, saveCharacterProfile, writeCharacterSave, writeProfileIndex, writeSharedWarehouse } from "./game-profile-storage";
@@ -269,6 +269,11 @@ export default function GameV15() {
   useEffect(() => {
     if (game.hero.status === "客棧中") setInnPanelExpanded(true);
   }, [game.hero.status]);
+
+  useEffect(() => {
+    if (pauseHanyangTutorialBattle(game) !== game) setNotice("序章回城整備：已停止自動練功；療傷後不會自動再戰。完成序章後可自由練功。");
+    setGame(pauseHanyangTutorialBattle);
+  }, [game.hanyangPrologueStep]);
 
   useEffect(() => {
     if (game.hanyangPrologueStep !== "bandit-trial" || game.dungeon?.status === "fighting") return;

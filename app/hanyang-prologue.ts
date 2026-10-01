@@ -33,6 +33,29 @@ export type HanyangPrologueFlags = {
   completionRewardClaimed: boolean;
 };
 
+/** Town-only tutorial steps must not leave an inaccessible battle running. */
+export function pauseHanyangTutorialBattle(state: GameState): GameState {
+  const step = state.hanyangPrologueStep;
+  if (!step || step === "completed" || step === "outskirts" || step === "first-battle" || step === "bandit-trial") return state;
+  const battle = state.dungeon;
+  if (!battle || (!battle.autoHunt && !battle.resumeAutoHuntAfterRecovery && battle.status !== "fighting" && battle.status !== "respawning")) return state;
+  const recovering = battle.status === "recovering";
+  return {
+    ...state,
+    dungeon: {
+      ...battle,
+      status: recovering ? "recovering" : "idle",
+      autoHunt: false,
+      resumeAutoHuntAfterRecovery: false,
+      spawnAt: 0,
+      realtime: undefined,
+      realtimeCursor: 0,
+      events: [],
+    },
+    logs: [...state.logs, "序章回城整備：已停止自動練功，血量與戰利品保留；療傷後不會自動再戰。"].slice(-80),
+  };
+}
+
 export const HANYANG_PROLOGUE_STEPS: ReadonlyArray<{ step: HanyangPrologueStep; title: string; detail: string }> = [
   { step: "arrival", title: "初來乍到", detail: "老商人注意到了站在漢陽城門口的你。" },
   { step: "outskirts", title: "城外走走", detail: "先到城外看看，別讓第一次出門就空手而回。" },
