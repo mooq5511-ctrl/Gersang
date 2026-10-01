@@ -12,7 +12,9 @@ test('battle XP is divided across the party without losing the remainder', () =>
   assert.ok(Math.abs(share * 11 - 7) < Number.EPSILON * 16);
   assert.equal(sharedBattleExperience(0, 11), 0);
   assert.equal(sharedBattleExperience(7, 0), 7);
-  assert.match(actionsSource, /sharedBattleExperience\(result\.xpEarned, battleMembers\)/);
+  assert.match(actionsSource, /sharedBattleExperience\(result\.xpEarned \* xpMultiplier, battleMembers\)/);
+  assert.match(actionsSource, /battleExperienceMultiplier\(previous\.hero\.level, deployedMercs\.length\)/);
+  assert.match(actionsSource, /equipmentExperienceMultiplier\(fighters\)/);
 });
 
 test('territory XP bonus preserves fractional battle shares on units', () => {

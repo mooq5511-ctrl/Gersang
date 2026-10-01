@@ -68,6 +68,8 @@ test('tooltip placement stays within the viewport', () => {
       { x: 990, y: 790 },
       { width: 1000, height: 800 },
     ),
-    { left: 672, top: 402 },
+    { left: 632, top: 412 },
   );
+  assert.deepEqual(ItemTooltipManager.position({ x: 0, y: 0 }, { width: 1000, height: 800 }), { left: 12, top: 12 });
+  assert.deepEqual(ItemTooltipManager.position({ x: 990, y: 790 }, { width: 1000, height: 800 }, { width: 320, height: 390 }), { left: 672, top: 402 });
 });

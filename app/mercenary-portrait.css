@@ -1,0 +1,28 @@
+/* Card portraits are opaque paintings; battle sprites retain their own assets. */
+.caravan-status img.mercenary-semireal-portrait,
+.relic-boss-party-avatar img.mercenary-semireal-portrait {
+  object-fit: cover;
+  object-position: 50% 25%;
+  border-radius: 3px;
+}
+.merchant-recruit-detail:has(.mercenary-semireal-portrait) {
+  grid-template-columns: 160px minmax(0, 1fr);
+}
+.merchant-recruit-detail img.mercenary-semireal-portrait {
+  width: 160px;
+  height: 240px;
+  object-fit: cover;
+  object-position: center top;
+}
+.caravan-status .character-equipment-portrait:has(.mercenary-semireal-portrait):before {
+  display: none;
+}
+.caravan-status .character-equipment-portrait img.mercenary-semireal-portrait {
+  filter: none !important;
+  object-fit: contain;
+  object-position: center top;
+}
+@media (max-width: 500px) {
+  .merchant-recruit-detail:has(.mercenary-semireal-portrait) { grid-template-columns: 100px minmax(0, 1fr); }
+  .merchant-recruit-detail img.mercenary-semireal-portrait { width: 100px; height: 150px; }
+}

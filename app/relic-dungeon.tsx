@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { relicBossForRun, relicMonsterForProgress, RELIC_BOSS_IDS, RELIC_DUNGEON_MONSTERS, type RelicMonsterId } from "../data/monsters/relic-dungeon-monsters";
 import { battleMonsterImage } from "./battle-visual-data";
 
@@ -14,8 +14,8 @@ export type RelicRoom = {
 };
 
 export type RelicDungeonAction = "enter" | "explore" | "attack-boss" | "retreat" | "dispatch" | "claim" | "challenge-boss";
-export type RelicPartyMember = { uid?: string; name: string; role?: string; level: number; image?: string; hp?: number; maxHp?: number; power?: number };
-export type RelicDungeonContext = { maxHp: number; currentHp: number; partyPower: number; partyNames: string[]; partyReady: boolean; partyUids?: string[]; now?: number; dispatchDurationMs?: number };
+export type RelicPartyMember = { uid?: string; templateId?: string; name: string; role?: string; level: number; image?: string; hp?: number; maxHp?: number; power?: number; equipmentScore?: number };
+export type RelicDungeonContext = { maxHp: number; currentHp: number; partyPower: number; partyEquipmentScore?: number; partyNames: string[]; partyReady: boolean; partyUids?: string[]; now?: number; dispatchDurationMs?: number };
 
 export type RelicDungeonState = {
   status: "idle" | "dispatching" | "ready" | "exploring" | "boss" | "cleared" | "defeated";
@@ -33,6 +33,7 @@ export type RelicDungeonState = {
   bossMonsterId: RelicMonsterId;
   encounterMonsterId: RelicMonsterId;
   partyPower: number;
+  partyEquipmentScore?: number;
   partyNames: string[];
   partyCount: number;
   progress: number;
@@ -41,6 +42,7 @@ export type RelicDungeonState = {
   dispatchPartyNames: string[];
   dispatchPartyUids: string[];
   dispatchPower: number;
+  dispatchEquipmentScore?: number;
   materialsFound: number;
   equipmentFound: number;
   bossUnlocked: boolean;
@@ -91,6 +93,7 @@ export function freshRelicDungeon(maxHp = 100): RelicDungeonState {
     bossMonsterId: "relic_sunken_king",
     encounterMonsterId: "relic_moss_warden",
     partyPower: 0,
+    partyEquipmentScore: 0,
     partyNames: [],
     partyCount: 0,
     progress: 0,
@@ -99,6 +102,7 @@ export function freshRelicDungeon(maxHp = 100): RelicDungeonState {
     dispatchPartyNames: [],
     dispatchPartyUids: [],
     dispatchPower: 0,
+    dispatchEquipmentScore: 0,
     materialsFound: 0,
     equipmentFound: 0,
     bossUnlocked: false,
@@ -135,6 +139,31 @@ function bossMaxHpFor(power: number, bossMonster: ReturnType<typeof relicBossFor
   return Math.max(1200, Math.floor(Math.max(bossMonster.hp, Math.max(1, power) * 6.5)));
 }
 
+function relicBossStrike(power: number, maxHp: number, count: number, equipmentScore: number, bossHp: number, bossMaxHp: number, turn: number, atk: number, wasEnraged = false) {
+  const bonus = Math.min(0.35, Math.max(0, equipmentScore) / Math.max(1, count * 80) * 0.35);
+  const enraged = wasEnraged || bossHp <= bossMaxHp * 0.5;
+  return {
+    damage: Math.max(80, Math.floor(power * (0.46 + bonus * 0.35))),
+    retaliation: Math.max(8, Math.floor((maxHp * (enraged ? 0.065 : 0.032) + atk * (enraged ? 0.04 : 0.025) + (turn % 3 === 0 ? maxHp * 0.035 : 0)) * (1 - Math.min(0.24, bonus * 0.68)))),
+    enraged,
+  };
+}
+
+/** Preview uses the same deterministic round formula as battle, not a level guess. */
+export function relicBossReadiness(power: number, maxHp: number, count: number, equipmentScore = 0, clearedRuns = 0) {
+  const boss = relicBossForRun(clearedRuns);
+  const bossMaxHp = bossMaxHpFor(power, boss);
+  let bossHp = bossMaxHp;
+  let hp = Math.max(1, maxHp);
+  let turns = 0;
+  while (bossHp > 0 && hp > 0 && turns < 200) {
+    const strike = relicBossStrike(Math.max(1, power), Math.max(1, maxHp), Math.max(1, count), equipmentScore, bossHp, bossMaxHp, ++turns, boss.atk);
+    hp -= strike.retaliation;
+    bossHp -= strike.damage;
+  }
+  return { ready: count > 0 && hp > 0 && bossHp <= 0, turns, bossLevel: boss.level, powerTarget: Math.ceil(boss.hp / 6.5 / 1000) * 1000, hpTarget: Math.ceil(boss.atk * 5 / 100) * 100, bossHp: bossMaxHp };
+}
+
 /** 與Python原型一致的非線性減傷，供派遣結算使用。 */
 export function calculateRelicDamage(attack: number, defense: number, layer: number) {
   const safeLayer = Math.max(1, Math.floor(layer));
@@ -142,16 +171,17 @@ export function calculateRelicDamage(attack: number, defense: number, layer: num
   return Math.max(1, Math.floor(Math.max(0, attack) * (1 - reductionRate)));
 }
 
-function relicRewardScale(layer: number, partyCount: number, power: number) {
+function relicRewardScale(layer: number, partyCount: number, power: number, equipmentScore = 0) {
   const depthBonus = Math.min(0.6, Math.max(0, layer - 1) * 0.06);
   const partyBonus = Math.min(0.3, Math.max(0, partyCount - 1) * 0.05);
   const powerBonus = Math.min(0.35, Math.max(0, power) / 250000 * 0.35);
-  return Math.min(2.2, 1 + depthBonus + partyBonus + powerBonus);
+  const equipmentBonus = Math.min(0.35, Math.max(0, equipmentScore) / Math.max(1, partyCount * 80) * 0.35);
+  return Math.min(2.2, 1 + depthBonus + partyBonus + powerBonus + equipmentBonus);
 }
 
-function relicRewardPreview(progress: number, partyCount: number, power: number) {
+function relicRewardPreview(progress: number, partyCount: number, power: number, equipmentScore = 0) {
   const layer = Math.max(1, Math.floor(progress / 10) + 1);
-  const scale = relicRewardScale(layer, partyCount, power);
+  const scale = relicRewardScale(layer, partyCount, power, equipmentScore);
   return {
     gold: Math.floor((1800 + partyCount * 700) * scale),
     materials: Math.max(1, Math.floor((2 + partyCount) * scale)),
@@ -162,6 +192,7 @@ function relicRewardPreview(progress: number, partyCount: number, power: number)
 
 export function relicDungeonAction(state: RelicDungeonState, action: RelicDungeonAction, power: number, context?: RelicDungeonContext): RelicDungeonState {
   const safePower = Math.max(1, Math.floor(power));
+  const safeEquipmentScore = Math.max(0, Math.floor(context?.partyEquipmentScore || state.dispatchEquipmentScore || state.partyEquipmentScore || 0));
   const dispatchPartyNames = Array.isArray(state.dispatchPartyNames) ? state.dispatchPartyNames : [];
   const dispatchPartyUids = Array.isArray(state.dispatchPartyUids) ? state.dispatchPartyUids : [];
   const fallbackBoss = relicBossForRun(state.clearedRuns);
@@ -175,7 +206,7 @@ export function relicDungeonAction(state: RelicDungeonState, action: RelicDungeo
     const startedAt = context.now || Date.now();
     const duration = Math.max(30_000, context.dispatchDurationMs || 30 * 60 * 1000);
     const dispatchMaxHp = Math.max(1, Math.floor(context.maxHp || clean.maxHp));
-    return { ...clean, status: "dispatching", hp: dispatchMaxHp, maxHp: dispatchMaxHp, dispatchStartedAt: startedAt, dispatchEndsAt: startedAt + duration, dispatchPartyNames: [...names], dispatchPartyUids: [...(context.partyUids || [])], dispatchPower: safePower, partyPower: safePower, partyNames: [...names], partyCount: names.length, logs: [`${names.length} 名休息中的傭兵已出發，預計 ${Math.ceil(duration / 60000)} 分鐘後回報。`, ...clean.logs].slice(0, 12) };
+    return { ...clean, status: "dispatching", hp: dispatchMaxHp, maxHp: dispatchMaxHp, dispatchStartedAt: startedAt, dispatchEndsAt: startedAt + duration, dispatchPartyNames: [...names], dispatchPartyUids: [...(context.partyUids || [])], dispatchPower: safePower, dispatchEquipmentScore: safeEquipmentScore, partyPower: safePower, partyEquipmentScore: safeEquipmentScore, partyNames: [...names], partyCount: names.length, logs: [`${names.length} 名休息中的傭兵已出發，預計 ${Math.ceil(duration / 60000)} 分鐘後回報。`, ...clean.logs].slice(0, 12) };
   }
   if (action === "claim" && state.status === "dispatching") {
     const now = context?.now || Date.now();
@@ -183,16 +214,18 @@ export function relicDungeonAction(state: RelicDungeonState, action: RelicDungeo
     const layer = Math.max(1, Math.floor(state.progress / 10) + 1);
     const monsterHp = Math.floor(50 * (1.14 ** (layer - 1)));
     const monsterDefense = Math.floor(5 * (1.1 ** (layer - 1)));
-    const partyDamage = calculateRelicDamage(state.dispatchPower, monsterDefense, layer);
+    const equipmentScore = Math.max(0, state.dispatchEquipmentScore || state.partyEquipmentScore || 0);
+    const equipmentBonus = Math.min(0.35, equipmentScore / Math.max(1, dispatchPartyNames.length * 80) * 0.35);
+    const partyDamage = Math.floor(calculateRelicDamage(state.dispatchPower, monsterDefense, layer) * (1 + equipmentBonus));
     const clearSeconds = Math.max(1, Math.ceil(monsterHp / partyDamage));
     const clearEfficiency = Math.max(0.45, Math.min(1.35, 10 / clearSeconds));
-    const progressGain = Math.min(38, Math.max(12, Math.floor(10 + dispatchPartyNames.length * 3 + clearEfficiency * 12)));
+    const progressGain = Math.min(38, Math.max(12, Math.floor(10 + dispatchPartyNames.length * 3 + clearEfficiency * 12 + equipmentBonus * 14)));
     const progress = Math.min(100, state.progress + progressGain);
     const encounterMonster = relicMonsterForProgress(progress, state.clearedRuns);
-    const rewardScale = relicRewardScale(layer, dispatchPartyNames.length, state.dispatchPower);
-    const reward = { gold: Math.floor((1800 + dispatchPartyNames.length * 700) * rewardScale), shards: Math.max(1, Math.floor(progressGain / 18) + (layer >= 6 ? 1 : 0)), materials: Math.max(1, Math.floor((2 + dispatchPartyNames.length) * rewardScale)), equipment: progressGain >= 30 ? Math.min(2, 1 + (layer >= 8 ? 1 : 0)) : 0 };
+    const rewardScale = relicRewardScale(layer, dispatchPartyNames.length, state.dispatchPower, equipmentScore);
+    const reward = { gold: Math.floor((1800 + dispatchPartyNames.length * 700) * rewardScale), shards: Math.max(1, Math.floor(progressGain / 18) + (layer >= 6 ? 1 : 0)), materials: Math.max(1, Math.floor((2 + dispatchPartyNames.length) * rewardScale)), equipment: progressGain >= 30 || equipmentBonus >= 0.16 ? Math.min(2, 1 + (layer >= 8 ? 1 : 0)) : 0 };
     const unlocked = progress >= 100;
-    const battleLog = `第 ${layer} 層遠征戰報：以每秒 ${partyDamage} 點有效傷害完成清剿，耗時約 ${clearSeconds} 秒。`;
+    const battleLog = `第 ${layer} 層遠征戰報：以每秒 ${partyDamage} 點有效傷害完成清剿，耗時約 ${clearSeconds} 秒；裝備品質貢獻 +${Math.round(equipmentBonus * 100)}%。`;
     return { ...clean, status: unlocked ? "ready" : "idle", floor: Math.max(state.floor, layer), maxFloor: Math.max(state.maxFloor, layer), progress, encounterMonsterId: encounterMonster.id, bossUnlocked: state.bossUnlocked || unlocked, dispatchStartedAt: 0, dispatchEndsAt: 0, dispatchPartyNames: unlocked ? dispatchPartyNames : [], dispatchPartyUids: unlocked ? dispatchPartyUids : [], materialsFound: state.materialsFound + reward.materials, equipmentFound: state.equipmentFound + reward.equipment, relicShards: state.relicShards + reward.shards, lastReward: reward, logs: [`遠征隊回報：遺跡材料 +${reward.materials}、古代裝備 +${reward.equipment}、遺跡碎片 +${reward.shards}。`, `${encounterMonster.kind}遭遇：${encounterMonster.name}，${encounterMonster.skill}。`, battleLog, unlocked ? "沉沒王朝的王座已開啟，可以挑戰獨特 Boss。" : `遺跡探索進度 +${progressGain}%。`, ...clean.logs].slice(0, 12) };
   }
   if (action === "challenge-boss" && (state.status === "ready" || state.bossUnlocked)) {
@@ -206,18 +239,16 @@ export function relicDungeonAction(state: RelicDungeonState, action: RelicDungeo
     const partyMaxHp = Math.max(1, Math.floor(context?.maxHp || state.maxHp));
     if (context && !context.partyReady) return { ...clean, logs: ["目前出戰隊伍生命值不足，請先到客棧恢復後再進入遺跡。", ...clean.logs].slice(0, 12) };
     const next = freshRelicDungeon(partyMaxHp);
-    return { ...next, status: "exploring", hp: Math.min(partyMaxHp, Math.max(1, Math.floor(context?.currentHp || partyMaxHp))), partyPower: safePower, partyNames: context?.partyNames || [], partyCount: context?.partyNames?.length || 1, logs: [`${context?.partyNames?.length || 1} 名隊員點燃遺跡入口的引魂燈，迷宮開始重組。`, ...next.logs] };
+    return { ...next, status: "exploring", hp: Math.min(partyMaxHp, Math.max(1, Math.floor(context?.currentHp || partyMaxHp))), partyPower: safePower, partyEquipmentScore: safeEquipmentScore, partyNames: context?.partyNames || [], partyCount: context?.partyNames?.length || 1, logs: [`${context?.partyNames?.length || 1} 名隊員點燃遺跡入口的引魂燈，迷宮開始重組。`, ...next.logs] };
   }
   if (action === "retreat") return { ...clean, status: "idle", hp: clean.maxHp, bossHp: 0, bossRage: false, bossTurn: 0, roomIndex: 0, dispatchPartyNames: [], dispatchPartyUids: [], bossLogs: [], logs: ["你在石門關閉前撤出遺跡；本次探索進度已保留在紀錄中。", ...clean.logs].slice(0, 12) };
   if (action === "attack-boss" && state.status === "boss") {
     const battlePower = Math.max(1, state.dispatchPower || safePower);
     const bossMonster = bossMonsterForState(state);
     const bossTurn = Math.max(0, state.bossTurn) + 1;
-    const damage = Math.max(80, Math.floor(battlePower * 0.46));
-    const enrageThreshold = state.bossMaxHp * 0.5;
-    const enraged = state.bossRage || state.bossHp <= enrageThreshold;
+    const equipmentScore = Math.max(0, state.dispatchEquipmentScore || state.partyEquipmentScore || 0);
+    const { damage, retaliation, enraged } = relicBossStrike(battlePower, state.maxHp, state.partyCount || 1, equipmentScore, state.bossHp, state.bossMaxHp, bossTurn, bossMonster.atk, state.bossRage);
     const tidalCounter = bossTurn % 3 === 0;
-    const retaliation = Math.max(8, Math.floor(state.maxHp * (enraged ? 0.065 : 0.032) + bossMonster.atk * (enraged ? 0.04 : 0.025) + (tidalCounter ? state.maxHp * 0.035 : 0)));
     const hp = Math.max(0, state.hp - retaliation);
     const bossHp = Math.max(0, state.bossHp - damage);
     if (hp <= 0) {
@@ -307,7 +338,7 @@ function RelicBossBattlePanel({ state, power, party, onAction }: { state: RelicD
     <header className="relic-boss-battle-header"><div><span className="relic-eyebrow">王座解放・最終決戰</span><h2>{bossMonster.name}</h2><p>{bossMonster.description}</p></div><div className="relic-boss-stage-badge"><strong>{phase}</strong><small>{bossMonster.kind}・Lv.{bossMonster.level}</small></div></header>
     <div className="relic-boss-battle-grid">
       <figure className="relic-boss-art-frame"><img src={battleMonsterImage(bossMonster.name)} alt={bossMonster.name}/><div className="relic-boss-art-vignette"/>{battlePopups.filter(popup => popup.target === "boss").map(popup => <b key={popup.id} className="relic-boss-damage-popup" onAnimationEnd={() => setBattlePopups(previous => previous.filter(entry => entry.id !== popup.id))}>−{popup.amount.toLocaleString()}</b>)}<figcaption><span>沉沒王朝・王座核心</span><strong>{bossMonster.name}</strong></figcaption></figure>
-      <aside className="relic-boss-console"><div className="relic-boss-console-title"><div><small>王座核心 HP</small><strong>{state.bossHp.toLocaleString()} <span>/ {state.bossMaxHp.toLocaleString()}</span></strong></div><b>{bossPercent}%</b></div><div className="relic-boss-large-bar"><i style={{ width: `${bossPercent}%` }}/></div><section className={`relic-party-vital-panel ${partyPercent <= 25 ? "critical" : partyPercent <= 60 ? "damaged" : ""}`}><div className="relic-boss-console-title"><div><small>遠征隊生命值</small><strong>{state.hp.toLocaleString()} <span>/ {state.maxHp.toLocaleString()}</span></strong></div><b>{partyCondition}</b></div><div className="relic-party-large-bar"><i style={{ width: `${partyPercent}%` }}/></div>{battlePopups.filter(popup => popup.target === "party").map(popup => <b key={popup.id} className="relic-party-damage-popup" onAnimationEnd={() => setBattlePopups(previous => previous.filter(entry => entry.id !== popup.id))}>−{popup.amount.toLocaleString()}</b>)}<small className="relic-party-vital-tip">Boss反擊會削減隊伍生命值；歸零時遠征失敗。</small></section><div className="relic-boss-phases"><span className={bossPercent > 50 ? "active" : "complete"}>Ⅰ 古王甦醒</span><span className={bossPercent > 25 && bossPercent <= 50 ? "active" : bossPercent <= 50 ? "complete" : ""}>Ⅱ 王朝殘火</span><span className={state.bossRage ? "active" : ""}>Ⅲ 狂暴終局</span></div><section className="relic-boss-party"><div className="relic-boss-section-heading"><span>參戰遠征隊</span><b>商團戰力 {power.toLocaleString()}</b></div><div className="relic-boss-party-list">{shownParty.slice(0, 6).map(member => <div className="relic-boss-party-member" key={member.name}><div className="relic-boss-party-avatar">{member.image ? <img src={member.image} alt=""/> : member.name.slice(0, 1)}</div><span>{member.name}</span><small>Lv.{member.level}</small></div>)}</div></section><section className="relic-boss-event"><div className="relic-boss-section-heading"><span>戰鬥事件</span><b>{state.bossRage ? "反擊增幅" : bossMonster.skill}</b></div><p>{state.bossRage ? `${bossMonster.name}進入狂暴，反擊傷害提升。` : bossPercent <= 75 ? "遺跡符文開始崩解，Boss即將進入下一階段。" : bossMonster.description}</p></section><section className="relic-boss-battle-log"><div className="relic-boss-section-heading"><span>逐回合戰報</span><b>本次戰鬥・最新 4 回合</b></div><ol>{state.bossLogs.slice(0, 4).map((log, index) => <li key={`${log}-${index}`}>{log}</li>)}</ol></section><div className="relic-boss-action-row"><button type="button" className="relic-primary-action" onClick={() => onAction("attack-boss")}>攻擊{bossMonster.name}</button><button type="button" className={`relic-secondary-action ${autoBattle ? "is-active" : ""}`} onClick={() => setAutoBattle(value => !value)}>{autoBattle ? "停止自動戰鬥" : "自動戰鬥"}</button><button type="button" className="relic-secondary-action" onClick={() => onAction("retreat")}>撤出遺跡</button></div></aside>
+      <aside className="relic-boss-console"><div className="relic-boss-console-title"><div><small>王座核心 HP</small><strong>{state.bossHp.toLocaleString()} <span>/ {state.bossMaxHp.toLocaleString()}</span></strong></div><b>{bossPercent}%</b></div><div className="relic-boss-large-bar"><i style={{ width: `${bossPercent}%` }}/></div><section className={`relic-party-vital-panel ${partyPercent <= 25 ? "critical" : partyPercent <= 60 ? "damaged" : ""}`}><div className="relic-boss-console-title"><div><small>遠征隊生命值</small><strong>{state.hp.toLocaleString()} <span>/ {state.maxHp.toLocaleString()}</span></strong></div><b>{partyCondition}</b></div><div className="relic-party-large-bar"><i style={{ width: `${partyPercent}%` }}/></div>{battlePopups.filter(popup => popup.target === "party").map(popup => <b key={popup.id} className="relic-party-damage-popup" onAnimationEnd={() => setBattlePopups(previous => previous.filter(entry => entry.id !== popup.id))}>−{popup.amount.toLocaleString()}</b>)}<small className="relic-party-vital-tip">Boss反擊會削減隊伍生命值；歸零時遠征失敗。</small></section><div className="relic-boss-phases"><span className={bossPercent > 50 ? "active" : "complete"}>Ⅰ 古王甦醒</span><span className={bossPercent > 25 && bossPercent <= 50 ? "active" : bossPercent <= 50 ? "complete" : ""}>Ⅱ 王朝殘火</span><span className={state.bossRage ? "active" : ""}>Ⅲ 狂暴終局</span></div><section className="relic-boss-party"><div className="relic-boss-section-heading"><span>參戰遠征隊</span><b>商團戰力 {power.toLocaleString()}</b></div><div className="relic-boss-party-list">{shownParty.slice(0, 6).map(member => <div className="relic-boss-party-member" key={member.name}><div className="relic-boss-party-avatar">{member.image ? <MercenaryPortrait unit={member}/> : member.name.slice(0, 1)}</div><span>{member.name}</span><small>Lv.{member.level}</small></div>)}</div></section><section className="relic-boss-event"><div className="relic-boss-section-heading"><span>戰鬥事件</span><b>{state.bossRage ? "反擊增幅" : bossMonster.skill}</b></div><p>{state.bossRage ? `${bossMonster.name}進入狂暴，反擊傷害提升。` : bossPercent <= 75 ? "遺跡符文開始崩解，Boss即將進入下一階段。" : bossMonster.description}</p></section><section className="relic-boss-battle-log"><div className="relic-boss-section-heading"><span>逐回合戰報</span><b>本次戰鬥・最新 4 回合</b></div><ol>{state.bossLogs.slice(0, 4).map((log, index) => <li key={`${log}-${index}`}>{log}</li>)}</ol></section><div className="relic-boss-action-row"><button type="button" className="relic-primary-action" onClick={() => onAction("attack-boss")}>攻擊{bossMonster.name}</button><button type="button" className={`relic-secondary-action ${autoBattle ? "is-active" : ""}`} onClick={() => setAutoBattle(value => !value)}>{autoBattle ? "停止自動戰鬥" : "自動戰鬥"}</button><button type="button" className="relic-secondary-action" onClick={() => onAction("retreat")}>撤出遺跡</button></div></aside>
     </div>
     <div className="relic-boss-battle-footer"><div><small>討伐規則</small><span>戰鬥結果會依派遣隊伍的總戰力與Boss階段即時結算。</span></div><div><small>本次遠征</small><span>傷害與獎勵會保留至遺跡戰報。</span></div></div>
   </section>;
@@ -325,8 +356,9 @@ function RelicRewardSummary({ reward, emphasized = false }: { reward: RelicDunge
   return <section className={`relic-last-reward ${emphasized ? "is-final" : ""}`} aria-label="最近結算獎勵"><small>{emphasized ? "本次戰利品" : "最近結算"}</small><div>{entries.map(entry => <span key={entry.label}>{entry.label} +{entry.value.toLocaleString()}</span>)}</div></section>;
 }
 
-export function RelicDispatchPanel({ state, power, dispatchParty, onAction }: { state: RelicDungeonState; power: number; dispatchParty: RelicPartyMember[]; onAction: (action: RelicDungeonAction, selectedPartyUids?: string[]) => void }) {
+export function RelicDispatchPanel({ state, power, dispatchParty, onAction, onPrepare }: { state: RelicDungeonState; power: number; dispatchParty: RelicPartyMember[]; onAction: (action: RelicDungeonAction, selectedPartyUids?: string[]) => void; onPrepare?: (destination: "battle" | "squad" | "mercenary" | "equipment") => void }) {
   const [now, setNow] = useState(() => Date.now());
+  const autoClaimKey = useRef(0);
   const partyKeySignature = dispatchParty.map(member => member.uid || member.name).join("|");
   const [selectedPartyKeys, setSelectedPartyKeys] = useState<string[]>(() => dispatchParty.map(member => member.uid || member.name));
   useEffect(() => {
@@ -343,6 +375,15 @@ export function RelicDispatchPanel({ state, power, dispatchParty, onAction }: { 
     });
   }, [partyKeySignature, state.status]);
   const remaining = Math.max(0, state.dispatchEndsAt - now);
+  useEffect(() => {
+    if (state.status !== "dispatching") {
+      autoClaimKey.current = 0;
+      return;
+    }
+    if (remaining > 0 || autoClaimKey.current === state.dispatchEndsAt) return;
+    autoClaimKey.current = state.dispatchEndsAt;
+    onAction("claim");
+  }, [state.status, state.dispatchEndsAt, remaining, onAction]);
   const dispatchPartyUids = Array.isArray(state.dispatchPartyUids) ? state.dispatchPartyUids : [];
   const dispatchPartyNames = Array.isArray(state.dispatchPartyNames) ? state.dispatchPartyNames : [];
   const reservedParty = dispatchPartyUids.length ? dispatchParty.filter(member => member.uid && dispatchPartyUids.includes(member.uid)) : [];
@@ -353,22 +394,30 @@ export function RelicDispatchPanel({ state, power, dispatchParty, onAction }: { 
   const selectablePower = selectedParty.reduce((sum, member) => sum + Math.max(0, member.power || 0), 0);
   const partyNames = state.status === "dispatching" || state.status === "ready" || state.status === "boss" ? (dispatchPartyNames.length ? dispatchPartyNames : reservedParty.map(member => member.name)) : selectedParty.map(member => member.name);
   const expeditionPower = state.status === "dispatching" || state.status === "ready" || state.status === "boss" ? state.dispatchPower : selectablePower || power;
+  const selectedEquipmentScore = selectedParty.reduce((sum, member) => sum + Math.max(0, member.equipmentScore || 0), 0);
+  const expeditionEquipmentScore = state.status === "dispatching" || state.status === "ready" || state.status === "boss" ? (state.dispatchEquipmentScore || state.partyEquipmentScore || 0) : selectedEquipmentScore;
+  const expeditionMaxHp = state.status === "ready" ? state.maxHp : selectedParty.reduce((sum, member) => sum + Math.max(1, member.maxHp || 1), 0);
+  const preparation = useMemo(() => relicBossReadiness(expeditionPower, expeditionMaxHp, partyNames.length, expeditionEquipmentScore, state.clearedRuns), [expeditionPower, expeditionMaxHp, partyNames.length, expeditionEquipmentScore, state.clearedRuns]);
+  const equipmentQualityPercent = Math.round(Math.min(100, expeditionEquipmentScore / Math.max(1, partyNames.length * 80) * 100));
   const statusText = state.status === "dispatching" ? "遠征隊行進中" : state.status === "ready" ? "王座已定位" : state.status === "boss" ? "獨特 Boss 戰" : state.status === "cleared" ? "遺跡已通關" : state.status === "defeated" ? "遠征失敗" : "等待派遣";
   const progress = Math.min(100, Math.max(0, Number.isFinite(state.progress) ? state.progress : 0));
   const dispatchMinutes = Math.floor(remaining / 60000);
   const dispatchSeconds = Math.floor((remaining % 60000) / 1000).toString().padStart(2, "0");
-  const rewardPreview = relicRewardPreview(progress, selectedParty.length, expeditionPower);
+  const rewardPreview = relicRewardPreview(progress, selectedParty.length, expeditionPower, selectedEquipmentScore);
   const encounterMonster = RELIC_DUNGEON_MONSTERS[state.encounterMonsterId] || relicMonsterForProgress(progress, state.clearedRuns);
   const togglePartyMember = (member: RelicPartyMember) => {
     const key = member.uid || member.name;
     setSelectedPartyKeys(previous => previous.includes(key) ? previous.filter(entry => entry !== key) : [...previous, key]);
   };
+  const preparationPanel = state.status !== "boss" && state.status !== "dispatching" ? <section className="relic-preparation" aria-label="Boss 討伐整備"><h3>{state.status === "defeated" ? "敗退後整備・探索進度保留" : "探索不等於具備 Boss 討伐資格"}</h3><p>第 {state.clearedRuns + 1} 層首領 Lv.{preparation.bossLevel}。目前遠征戰力 {expeditionPower.toLocaleString()}、生命 {expeditionMaxHp.toLocaleString()}；{preparation.ready ? "依目前編制推算可完成討伐。" : "依目前編制推算難以通關，先提升傭兵等級、補齊裝備，再重新派遣更新編制。"}</p><p>整備參考：戰力 {preparation.powerTarget.toLocaleString()}、生命 {preparation.hpTarget.toLocaleString()}。實際結果仍取決於裝備品質與完整編制。</p>{onPrepare && <nav aria-label="遠征整備入口"><button type="button" onClick={() => onPrepare("squad")}>取出傭兵並上陣</button><button type="button" onClick={() => onPrepare("battle")}>自動練功提升等級</button><button type="button" onClick={() => onPrepare("mercenary")}>招募遠征夥伴</button><button type="button" onClick={() => onPrepare("equipment")}>穿戴與整備裝備</button></nav>}</section> : null;
   return <section className="relic-dungeon-shell relic-dispatch-mode" aria-label="遺跡地下城派遣遠征">
+    {preparationPanel}
     <header className="relic-dungeon-hero"><div><span className="relic-eyebrow">傭兵派遣・第一遺跡</span><h2>沉沒王朝遠征隊</h2><p>派遣休息中的傭兵深入遺跡，帶回材料與古代裝備；探索進度達 100% 後，才能打開沉沒王的王座。</p></div><div className="relic-hero-seal" aria-hidden="true">♛</div></header>
     {state.status === "boss" ? <RelicBossBattlePanel state={state} power={state.dispatchPower || power} party={dispatchParty} onAction={onAction}/> : <div className="relic-dispatch-grid">
        <section className="relic-map-card"><div className="relic-card-heading"><div><small>遺跡探索進度</small><strong>{progress}%・沉沒王朝</strong></div><span>{statusText}</span></div><div className="relic-progress"><i style={{ width: `${progress}%` }} /></div><div className="relic-dispatch-milestones"><span className={progress >= 25 ? "reached" : ""}>第一層</span><span className={progress >= 50 ? "reached" : ""}>王陵</span><span className={progress >= 75 ? "reached" : ""}>黃金前廳</span><span className={progress >= 100 ? "reached boss" : ""}>王座</span></div><div className="relic-boss-roster"><small>首領階層・每次通關解鎖下一位</small><div>{RELIC_BOSS_IDS.map((bossId, index) => { const boss = RELIC_DUNGEON_MONSTERS[bossId]; const unlocked = state.clearedRuns > index || (state.clearedRuns === index && progress >= 100); return <span key={boss.id} className={unlocked ? "is-unlocked" : ""}><b>第 {index + 1} 層</b>{unlocked ? boss.name : "未解鎖首領"}</span>; })}</div></div><div className="relic-dispatch-report"><span className="relic-room-icon relic-room-treasure">◇</span><div><small>本次遺跡報告</small><h3>{state.status === "dispatching" ? "傭兵正在穿越地下甬道" : progress >= 100 ? "王座已解放・可再次挑戰" : "等待下一支遠征隊"}</h3><p>{state.status === "dispatching" ? `預計 ${dispatchMinutes}:${dispatchSeconds} 後返回。遠征期間傭兵會暫時無法再次派遣。` : progress >= 100 ? "派遣隊已找到古王陵寢；通關後可再次派遣休息中的傭兵，重新累積材料並挑戰下一層首領。" : "每次派遣都會累積探索進度，並帶回材料與裝備。"}</p></div></div><section className={`relic-encounter-card relic-encounter-${encounterMonster.kind === "菁英" ? "elite" : "normal"}`}><div><small>本層可能遭遇・{encounterMonster.kind}</small><strong>{encounterMonster.name}</strong><p>{encounterMonster.description}</p></div><dl><div><dt>技能</dt><dd>{encounterMonster.skill}</dd></div><div><dt>掉落</dt><dd>{encounterMonster.loot.join("、")}</dd></div></dl></section></section>
-       <aside className="relic-status-card"><div className="relic-card-heading"><div><small>派遣編制</small><strong>{state.status === "dispatching" ? "遠征中" : state.status === "ready" ? "已派遣隊伍" : "休息中的傭兵"}</strong></div><span>商團戰力 {expeditionPower.toLocaleString()}</span></div><div className="relic-party-strip"><small>{selectionEnabled ? "選擇遠征隊" : state.status === "dispatching" || state.status === "ready" ? "目前遠征隊" : "可派遣名單"}・{partyNames.length} 名</small><div>{selectionEnabled ? selectableParty.map(member => { const selected = selectedPartyKeys.includes(member.uid || member.name); return <button type="button" key={member.uid || member.name} className={`relic-party-choice ${selected ? "is-selected" : ""}`} aria-pressed={selected} onClick={() => togglePartyMember(member)}><span>{member.name}</span><small>{(member.power || 0).toLocaleString()} 戰力</small></button>; }) : partyNames.length ? partyNames.map(name => <span key={name}>{name}</span>) : <em>目前沒有休息中的傭兵</em>}</div></div><dl className="relic-reward-stats"><div><dt>遺跡材料</dt><dd>{state.materialsFound}</dd></div><div><dt>古代裝備</dt><dd>{state.equipmentFound}</dd></div><div><dt>遺跡碎片</dt><dd>{state.relicShards}</dd></div><div><dt>通關次數</dt><dd>{state.clearedRuns}</dd></div></dl>{(state.status === "idle" || state.status === "cleared" || state.status === "defeated") && canDispatch && <section className="relic-reward-preview"><div className="relic-boss-section-heading"><span>預估本次回報</span><b>依目前編制</b></div><div><span>銀兩 +{rewardPreview.gold.toLocaleString()}</span><span>材料 +{rewardPreview.materials}</span><span>碎片 +{rewardPreview.shards}</span><span>裝備 {rewardPreview.equipment}</span></div></section>}<RelicRewardSummary reward={state.lastReward} emphasized={state.status === "cleared"}/><div className="relic-dispatch-actions">{state.status === "dispatching" && <button type="button" className="relic-primary-action" disabled={remaining > 0} onClick={() => onAction("claim")}>{remaining > 0 ? `遠征中 ${dispatchMinutes}:${dispatchSeconds}` : "領取遠征報告"}</button>}{(state.status === "idle" || state.status === "cleared" || state.status === "defeated") && <button type="button" className="relic-primary-action" disabled={!canDispatch} onClick={() => onAction("dispatch", selectedParty.map(member => member.uid || member.name))}>{canDispatch ? (state.status === "cleared" ? "再次派遣・準備 Boss" : "派遣傭兵") : "請至少選擇 1 名傭兵"}</button>}{state.status === "ready" && <button type="button" className="relic-primary-action" onClick={() => onAction("challenge-boss")}>組織 Boss 討伐</button>}{state.status === "exploring" && <button type="button" className="relic-primary-action" onClick={() => onAction("explore")}>繼續舊版探索</button>}</div></aside>
+       <aside className="relic-status-card"><div className="relic-card-heading"><div><small>派遣編制</small><strong>{state.status === "dispatching" ? "遠征中" : state.status === "ready" ? "已派遣隊伍" : "休息中的傭兵"}</strong></div><span>商團戰力 {expeditionPower.toLocaleString()}</span></div><div className="relic-party-strip"><small>{selectionEnabled ? "選擇遠征隊" : state.status === "dispatching" || state.status === "ready" ? "目前遠征隊" : "可派遣名單"}・{partyNames.length} 名</small><div>{selectionEnabled ? selectableParty.map(member => { const selected = selectedPartyKeys.includes(member.uid || member.name); return <button type="button" key={member.uid || member.name} className={`relic-party-choice ${selected ? "is-selected" : ""}`} aria-pressed={selected} onClick={() => togglePartyMember(member)}><span>{member.name}</span><small>{(member.power || 0).toLocaleString()} 戰力</small></button>; }) : partyNames.length ? partyNames.map(name => <span key={name}>{name}</span>) : <em>目前沒有休息中的傭兵</em>}</div></div><div className="relic-build-quality"><span>裝備品質影響</span><b>+{equipmentQualityPercent}%</b><small>提升探索效率、Boss 傷害並降低反擊</small></div><dl className="relic-reward-stats"><div><dt>遺跡材料</dt><dd>{state.materialsFound}</dd></div><div><dt>古代裝備</dt><dd>{state.equipmentFound}</dd></div><div><dt>遺跡碎片</dt><dd>{state.relicShards}</dd></div><div><dt>通關次數</dt><dd>{state.clearedRuns}</dd></div></dl>{(state.status === "idle" || state.status === "cleared" || state.status === "defeated") && canDispatch && <section className="relic-reward-preview"><div className="relic-boss-section-heading"><span>預估本次回報</span><b>依目前編制</b></div><div><span>銀兩 +{rewardPreview.gold.toLocaleString()}</span><span>材料 +{rewardPreview.materials}</span><span>碎片 +{rewardPreview.shards}</span><span>裝備 {rewardPreview.equipment}</span></div></section>}<RelicRewardSummary reward={state.lastReward} emphasized={state.status === "cleared"}/><div className="relic-dispatch-actions">{state.status === "dispatching" && <button type="button" className="relic-primary-action" disabled={remaining > 0} onClick={() => onAction("claim")}>{remaining > 0 ? `遠征中 ${dispatchMinutes}:${dispatchSeconds}` : "遠征已完成・自動回報中"}</button>}{(state.status === "idle" || state.status === "cleared" || state.status === "defeated") && <button type="button" className="relic-primary-action" disabled={!canDispatch} onClick={() => onAction("dispatch", selectedParty.map(member => member.uid || member.name))}>{canDispatch ? (state.status === "cleared" ? "再次派遣・準備 Boss" : "派遣傭兵") : "請至少選擇 1 名傭兵"}</button>}{state.status === "ready" && <button type="button" className="relic-primary-action" onClick={() => onAction("challenge-boss")}>組織 Boss 討伐</button>}{state.status === "exploring" && <button type="button" className="relic-primary-action" onClick={() => onAction("explore")}>繼續舊版探索</button>}</div></aside>
     </div>}
     <div className="relic-bottom-grid"><section className="relic-log-card"><div className="relic-card-heading"><div><small>遠征紀錄</small><strong>商團派遣報告</strong></div><span>最近 6 則</span></div><ol>{state.logs.slice(0, 6).map((log, index) => <li key={`${log}-${index}`}>{log}</li>)}</ol></section><section className="relic-reward-card"><div className="relic-card-heading"><div><small>派遣規則</small><strong>讓休息中的傭兵持續創造價值</strong></div></div><ul><li>遺跡派遣只使用休息中的傭兵，不佔用目前上陣隊伍。</li><li>傭兵人數與總戰力越高，探索進度與回報越好。</li><li>遠征報告會依關卡層數計算有效傷害與清剿速度。</li><li>探索進度達 100% 後，依通關次數解鎖下一位遺跡首領。</li></ul></section></div>
   </section>;
 }
+import { MercenaryPortrait } from './mercenary-portrait';

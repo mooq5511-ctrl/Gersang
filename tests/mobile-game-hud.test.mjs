@@ -7,6 +7,7 @@ const styles = readFileSync(new URL('../app/classic-map-interface.css', import.m
 const mapConfig = readFileSync(new URL('../app/town-map-config.ts', import.meta.url), 'utf8');
 const townMap = readFileSync(new URL('../app/isometric-world-map.tsx', import.meta.url), 'utf8');
 const music = readFileSync(new URL('../app/scene-music.tsx', import.meta.url), 'utf8');
+const journal = readFileSync(new URL('../app/quest-journal.tsx', import.meta.url), 'utf8');
 
 test('classic game HUD exposes the full resource strip and all ten requested features', () => {
   for (const label of ['切換角色', '雷霞祭壇', '市集', '港口', '城門', '世界地圖', '主角與隊伍', '裝備圖鑑', '冒險委託', '秘寶圖鑑', '設定']) {
@@ -61,14 +62,15 @@ test('floating NPC markers and sidebar buttons use clear metal states and touch 
 
 test('overlapping HUD regions can be collapsed and map NPC nameplates can be hidden', () => {
   assert.match(ui, /data-objective-collapsed=\{!objectiveExpanded\}/);
-  assert.match(ui, /aria-expanded=\{objectiveExpanded\}/);
-  assert.match(ui, /objective-collapsed-label" title=\{mainObjective\.title\}>主線・\{mainObjective\.title\}/);
+  assert.match(ui, /aria-expanded=\{false\} aria-label="展開完整任務面板"/);
+  assert.match(ui, /objective-collapsed-label" title=\{mainObjective\.title\}>任務・\{mainObjective\.title\}/);
+  assert.match(journal, /onClick=\{onClose\} aria-label="收合任務面板"/);
   assert.match(ui, /aria-expanded=\{quickNavExpanded\}/);
   assert.match(ui, /data-quicknav-collapsed=\{!quickNavExpanded\}/);
   assert.match(ui, /id="mobile-game-nav" className="classic-live-quicknav"[^>]*hidden=\{!quickNavExpanded\}/);
   assert.match(ui, /className="forced-inn" hidden=\{game\.hero\.status!==['"]客棧中['"] \|\| !innPanelExpanded\}/);
   assert.match(ui, /className="forced-inn-reopen" aria-controls="inn-zone"/);
-  assert.match(ui, /目前所在・\{mapLocationLabel\}/);
+  assert.match(ui, /locationLabel=\{mapLocationLabel\}/);
   assert.match(townMap, /data-npc-labels=\{npcLabelsVisible \? "shown" : "hidden"\}/);
   assert.match(townMap, /data-objective-expanded=\{objectiveExpanded\}/);
   assert.match(townMap, /aria-pressed=\{npcLabelsVisible\}/);
@@ -94,11 +96,12 @@ test('Thunder Altar selects the dedicated BOSS track', () => {
   assert.match(ui, /activeTab==='raid'\?'raid'/);
 });
 
-test('screen-fit settings default to responsive full-bleed and can preserve the complete scene', () => {
-  assert.match(ui, /sceneFit: "cover"/);
-  assert.match(ui, /<legend>畫面比例與場景顯示<\/legend>/);
-  assert.match(ui, /name="game-scene-fit" value="cover"/);
-  assert.match(ui, /name="game-scene-fit" value="contain"/);
-  assert.match(ui, /data-scene-fit=\{uiSettings\.sceneFit\}/);
-  assert.match(styles, /\.classic-live-game\[data-scene-fit="contain"\] \.isometric-world \{ background-size:contain/);
+test('scene settings expose auto, mobile, desktop and browser-fullscreen layouts', () => {
+  assert.match(ui, /sceneMode: "auto"/);
+  for (const mode of ['auto', 'mobile-916', 'pc-169', 'fullscreen']) assert.ok(ui.includes(`setSceneMode("${mode}")`));
+  assert.match(ui, /data-scene-mode=\{uiSettings\.sceneMode\}/);
+  assert.match(ui, /document\.documentElement\.requestFullscreen\(\)/);
+  assert.match(styles, /data-scene-mode="mobile-916"/);
+  assert.match(styles, /data-scene-mode="pc-169"/);
+  assert.match(styles, /data-scene-mode="fullscreen"/);
 });

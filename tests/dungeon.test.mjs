@@ -29,6 +29,13 @@ test('battle starts in live auto-combat with stable formation positions',()=>{
  assert.equal(result.state.realtime.enemies.length,1);
 });
 
+test('bottom auto training action starts combat and enables the next encounter loop',()=>{
+ const result=dungeonStep(freshDungeon(),hero,'start-auto-hunt',1000,'e_raccoon',.99,0,0,0,party(1),0,[1,1,1],false,0);
+ assert.equal(result.state.autoHunt,true);
+ assert.equal(result.state.status,'fighting');
+ assert.equal(result.state.realtime.running,true);
+});
+
 test('manual normal and skill controls do not bypass realtime cooldowns',()=>{
  const battle=start('e_raccoon',0);
  const normal=dungeonStep(battle.state,hero,'normal',1050);

@@ -31,6 +31,7 @@ export function IsometricWorldMap({
   tutorialLocked = false,
   tutorialNpcIds,
   npcVisible,
+  destinationVisible,
 }: {
   cityName: string;
   locationLabel: string;
@@ -42,6 +43,7 @@ export function IsometricWorldMap({
   tutorialLocked?: boolean;
   tutorialNpcIds?: NpcId[];
   npcVisible?: (npcId: NpcId) => boolean;
+  destinationVisible?: (destination: Destination) => boolean;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<{ destroy: (removeCanvas: boolean) => void } | null>(null);
@@ -195,7 +197,7 @@ export function IsometricWorldMap({
   }, []);
 
   const navigate = (destination: Destination) => {
-    if (!tutorialLocked) onEnter(destination);
+    if (!tutorialLocked && (destinationVisible?.(destination) ?? true)) onEnter(destination);
   };
 
   return (
@@ -206,20 +208,20 @@ export function IsometricWorldMap({
           <span>●</span><b>{npc.name}</b><small>{npc.role}</small>
         </button>)}
       </div>
-      <button type="button" className="village-city-hall-pin" disabled={tutorialLocked} onClick={() => navigate("hall")} aria-label="前往市政廳委託公告">
+      {(destinationVisible?.("hall") ?? true) && <button type="button" className="village-city-hall-pin" disabled={tutorialLocked} onClick={() => navigate("hall")} aria-label="前往市政廳委託公告">
         <span className="village-city-hall-icon" aria-hidden="true">♜</span>
         <span><b>市政廳</b><small>委託公告</small></span>
-      </button>
+      </button>}
       <header className="isometric-world-heading"><small>目前所在</small><strong>{locationLabel}</strong><span>選擇設施互動</span></header>
       <button type="button" className="map-label-toggle" disabled={tutorialLocked} aria-pressed={npcLabelsVisible} aria-label={npcLabelsVisible ? "隱藏 NPC 名牌" : "顯示 NPC 名牌"} onClick={() => onNpcLabelsVisibleChange(!npcLabelsVisible)}>
         {npcLabelsVisible ? "隱藏 NPC 名牌" : "顯示 NPC 名牌"}
       </button>
       <nav className="isometric-destinations" aria-label="快速前往據點" aria-disabled={tutorialLocked}>
-        <button type="button" disabled={tutorialLocked} onClick={() => navigate("city")}><b>市集</b><span>商店與客棧</span></button>
-        <button type="button" disabled={tutorialLocked} onClick={() => navigate("trade")}><b>港口</b><span>東海商路</span></button>
-        <button type="button" disabled={tutorialLocked} onClick={() => navigate("battle")}><b>城門</b><span>野外與副本</span></button>
-        <button type="button" disabled={tutorialLocked} onClick={() => navigate("raid")}><b>雷霆祭壇</b><span>神仙谷首領戰</span></button>
-        <button type="button" disabled={tutorialLocked} onClick={() => navigate("hall")}><b>市政廳</b><span>村莊委託公告欄</span></button>
+        {(destinationVisible?.("city") ?? true) && <button type="button" disabled={tutorialLocked} onClick={() => navigate("city")}><b>市集</b><span>商店與客棧</span></button>}
+        {(destinationVisible?.("trade") ?? true) && <button type="button" disabled={tutorialLocked} onClick={() => navigate("trade")}><b>港口</b><span>東海商路</span></button>}
+        {(destinationVisible?.("battle") ?? true) && <button type="button" disabled={tutorialLocked} onClick={() => navigate("battle")}><b>城門</b><span>野外與副本</span></button>}
+        {(destinationVisible?.("raid") ?? true) && <button type="button" disabled={tutorialLocked} onClick={() => navigate("raid")}><b>雷霆祭壇</b><span>神仙谷首領戰</span></button>}
+        {(destinationVisible?.("hall") ?? true) && <button type="button" disabled={tutorialLocked} onClick={() => navigate("hall")}><b>市政廳</b><span>村莊委託公告欄</span></button>}
       </nav>
       <output className="isometric-status" aria-live="polite">點擊 NPC 或設施互動</output>
     </section>

@@ -23,7 +23,8 @@ test('building upgrades spend once and bonuses add without multiplying', () => {
   assert.equal(territoryBonus(flag.game.territory, 'idle'), 0.03);
   assert.equal(territoryBonus(flag.game.territory, 'xp'), 0.01);
   assert.equal(warehouseLimit(flag.game.territory), 30);
-  assert.equal(upgradeBuilding(base, 'smithy').error, '鐵匠鋪需要主角 Lv.50。');
+  assert.equal(upgradeBuilding(base, 'smithy').error, undefined);
+  assert.equal(upgradeBuilding({ ...base, hero: { level: 19 } }, 'smithy').error, '商團領地在主角 Lv.20 開放。');
   const poor = { ...base, gold: 0 };
   assert.equal(upgradeBuilding(poor, 'waystation').game, poor);
 });

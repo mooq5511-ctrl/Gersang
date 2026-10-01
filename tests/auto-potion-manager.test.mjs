@@ -10,7 +10,9 @@ test("Auto Potion lists only owned healing items and configures a default select
 
 test("Auto Potion consumes at its saved threshold and disables itself only when the potion is unavailable", () => {
   const settings = { enabled: true, medicineId: "healing", threshold: 50 };
-  assert.deepEqual(AutoPotionManager.nextAction(settings, { healing: 1 }, 501, 1000, catalog), { type: "none" });
-  assert.deepEqual(AutoPotionManager.nextAction(settings, { healing: 1 }, 500, 1000, catalog), { type: "use", medicineId: "healing" });
-  assert.deepEqual(AutoPotionManager.nextAction(settings, {}, 500, 1000, catalog), { type: "shortage", settings: { ...settings, enabled: false } });
+  assert.deepEqual(AutoPotionManager.nextAction(settings, { healing: 1 }, [{ hp: 501, maxHp: 1000 }], catalog), { type: "none" });
+  assert.deepEqual(AutoPotionManager.nextAction(settings, { healing: 1 }, [{ hp: 500, maxHp: 1000 }], catalog), { type: "use", medicineId: "healing" });
+  assert.deepEqual(AutoPotionManager.nextAction(settings, {}, [{ hp: 500, maxHp: 1000 }], catalog), { type: "shortage", settings: { ...settings, enabled: false } });
+  assert.deepEqual(AutoPotionManager.nextAction(settings, { healing: 1 }, [{ hp: 1000, maxHp: 1000 }, { hp: 0, maxHp: 500 }], catalog), { type: "use", medicineId: "healing" });
+  assert.deepEqual(AutoPotionManager.nextAction({ ...settings, enabled: false }, { healing: 1 }, [{ hp: 0, maxHp: 1000 }], catalog), { type: "none" });
 });

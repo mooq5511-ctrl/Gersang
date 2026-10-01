@@ -39,6 +39,6 @@ test('game tick samples deterministic inputs and clears its realtime interval',(
  assert.equal(rolls.materialRolls.length,3);
  assert.match(source,/const timer = window\.setInterval\(\(\) => \{/);
  assert.match(source,/const rolls = createGameTickRolls\(\);/);
- assert.match(source,/settleCurrentGame\(previous,rolls\)/);
+ assert.match(source,/settleCurrentGame\(previous,\s*rolls\)/);
  assert.match(source,/clearInterval\(timer\)/);
 });

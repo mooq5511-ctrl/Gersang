@@ -93,8 +93,13 @@ import { BattleLogManager } from "./battle-log-manager";
 import { fusionItemKey, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
 import { getStarterWeaponObjective } from "./starter-equipment-objective";
 import { getFirstMercenaryObjective } from "./first-mercenary-objective";
+import { newcomerUnlocks } from "./newcomer-unlocks";
+import type { ProgressionRoadmapStage } from "./progression-roadmap";
+import { QuestJournal } from "./quest-journal";
+import { claimAdventureQuest, normalizeQuestLedger, syncQuestProgress } from "./adventure-quests";
 import { abandonCityHallCommission, acceptCityHallCommission as acceptCityHallCommissionAction, buyCityHallRefreshTicket, claimCityHallCommission as claimCityHallCommissionAction, CITY_HALL_REFRESH_TICKET_PRICE, refreshCityHallCommissions, syncCityHallLifetime } from "./city-hall-commissions";
-import { HANYANG_PROLOGUE_DIALOGUE, HANYANG_PROLOGUE_STEPS, claimHanyangJourneyFund, completeHanyangPrologue, grantHanyangStarterSupplies, hanyangRecruitmentCost, markHanyangCaravanDelivered, markHanyangMysteryNpcSeen, markHanyangReturnReported, recommendedMercenaryIds } from "./hanyang-prologue";
+import { HANYANG_PROLOGUE_DIALOGUE, HANYANG_PROLOGUE_STEPS, claimHanyangJourneyFund, completeHanyangPrologue, grantHanyangStarterSupplies, hanyangRecruitmentCost, markHanyangCaravanDelivered, markHanyangMysteryNpcSeen, markHanyangReturnReported, recommendedMercenaryIds, syncHanyangPrologue } from "./hanyang-prologue";
+import { createGameSaveScheduler } from "./game-save-scheduler";
 import { TIER_EQUIPMENT_DROP_REGIONS, tierEquipmentPrice, tierEquipmentShopCatalog, type TierEquipment } from "./tier-equipment";
 import { profileFromGame, readCharacterSave, restoreGame, saveCharacterProfile, writeCharacterSave, writeProfileIndex, writeSharedWarehouse } from "./game-profile-storage";
 import {
@@ -110,11 +115,14 @@ import {
 } from "./game-state";
 import './gersang-archive.css';
 import './relic-dungeon.css';
+import './quest-journal.css';
 import { craftRestaurantFood, enhanceEquipment, upgradeBuilding, warehouseLimit, type BuildingId } from './guild-territory';
 import { battleMonsterImage } from './battle-visual-data';
-import { RelicDispatchPanel, relicDungeonAction, freshRelicDungeon, type RelicDungeonAction } from './relic-dungeon';
+import { RelicDispatchPanel, relicDungeonAction, freshRelicDungeon, relicBossReadiness, type RelicDungeonAction } from './relic-dungeon';
 
 const slots = EQUIPMENT_SLOTS;
+const relicRarityScore: Record<Equipment["rarity"], number> = { 普通: 1, 稀有: 2, 史詩: 4, 傳說: 7, 金色: 10 };
+const relicEquipmentScore = (unit: Unit | Hero) => Object.values(unit.equip).reduce((score, item) => item ? score + relicRarityScore[item.rarity] + (item.enhance || 0) * 0.5 + (item.socketGem ? 2 : 0) : score, 0);
 const bossMonsterArt:Record<string,string> = {
   '山賊首領': '/assets/monsters/bandit-chief-normal.png',
   '海賊王': '/assets/monsters/bandit-chief-normal.png',
@@ -170,11 +178,12 @@ function currentTimestamp() {
 }
 
 export default function GameV15() {
-  const [game, rawSetGame] = useState<GameState>(freshGame);
+  const [game, rawSetGame] = useState<GameState>(() => { const initial = freshGame(); return { ...initial, questLedger: normalizeQuestLedger(undefined, Date.now(), initial.hero.level) }; });
   const [activeTab, setActiveTab] = useState("map");
   const [quickDialog, setQuickDialog] = useState<"treasure" | "settings" | null>(null);
   const [treasureQuery, setTreasureQuery] = useState("");
-  const [objectiveExpanded, setObjectiveExpanded] = useState(true);
+  // 地圖是主要操作區；主線資訊先以一行摘要呈現，玩家需要時再展開，避免遮住地圖節點。
+  const [objectiveExpanded, setObjectiveExpanded] = useState(false);
   const [quickNavExpanded, setQuickNavExpanded] = useState(true);
   const [innPanelExpanded, setInnPanelExpanded] = useState(true);
   const [npcLabelsVisible, setNpcLabelsVisible] = useState(true);
@@ -185,8 +194,12 @@ export default function GameV15() {
   // 所有存檔與取得路徑共用格位整理：保留已有位置與超額舊物，不截斷陣列。
   const setGame=useCallback((action:GameState|((previous:GameState)=>GameState))=>rawSetGame(previous=>{
     const next=typeof action==='function'?action(previous):action;
-    const synced = next === previous ? previous : syncCityHallLifetime(previous, next);
-    return synced===previous?previous:applyGersangVisuals({...synced,inventory:positionInventory(synced.inventory)});
+    const sameCharacterUpdate = typeof action === 'function' || (next.questLedger && next.questLedger === previous.questLedger);
+    const questSynced = sameCharacterUpdate ? syncQuestProgress(previous, next, Date.now()) : { ...next, questLedger: normalizeQuestLedger(next.questLedger, Date.now(), next.hero.level) };
+    const synced = questSynced === previous ? previous : syncCityHallLifetime(previous, questSynced);
+    if (synced === previous) return previous;
+    const inventory = synced.inventory === previous.inventory ? synced.inventory : positionInventory(synced.inventory);
+    return applyGersangVisuals({ ...synced, inventory });
   }),[]);
   const [ready, setReady] = useState(false);
   const [loginEntered, setLoginEntered] = useState(false);
@@ -212,6 +225,7 @@ export default function GameV15() {
   const [npcOpeningLine, setNpcOpeningLine] = useState("");
   const warehouseWritable = useRef(true);
   const loaded = useRef(false);
+  const pendingSave = useRef<ReturnType<typeof createGameSaveScheduler<{ game: GameState; profiles: Array<CharacterProfile | null> }>> | null>(null);
 
   function flashShopPurchase(key: string) {
     setShopPurchaseFeedback(key);
@@ -304,11 +318,35 @@ export default function GameV15() {
 
   useEffect(() => {
     if (!ready || activeSlot === null) return;
-    writeCharacterSave(localStorage, activeSlot, game);
-    const nextProfiles = [...profiles];
-    nextProfiles[activeSlot] = profileFromGame(activeSlot, game);
-    writeProfileIndex(localStorage, nextProfiles);
+    const scheduler = createGameSaveScheduler<{ game: GameState; profiles: Array<CharacterProfile | null> }>(value => {
+      writeCharacterSave(localStorage, activeSlot, value.game);
+      const nextProfiles = [...value.profiles];
+      nextProfiles[activeSlot] = profileFromGame(activeSlot, value.game);
+      writeProfileIndex(localStorage, nextProfiles);
+    });
+    pendingSave.current = scheduler;
+    const flush = () => { try { scheduler.flush(Date.now(), true); } catch { setNotice("存檔未成功，請檢查瀏覽器儲存空間。"); } };
+    const onVisibility = () => { if (document.visibilityState === "hidden") flush(); };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      flush();
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (pendingSave.current === scheduler) pendingSave.current = null;
+    };
+  }, [activeSlot, ready]);
+
+  useEffect(() => {
+    if (!ready || activeSlot === null || !pendingSave.current) return;
+    pendingSave.current.update({ game, profiles });
+    try { pendingSave.current.flush(Date.now()); } catch { setNotice("存檔未成功，請檢查瀏覽器儲存空間。"); }
   }, [activeSlot, game, profiles, ready]);
+
+  useEffect(() => {
+    if (activeTab !== "squad" || game.hanyangPrologueStep !== "formation") return;
+    setGame(previous => previous.hanyangPrologueStep === "formation" ? syncHanyangPrologue(previous, 6000) : previous);
+  }, [activeTab, game.hanyangPrologueStep, game.active, game.mercs, setGame]);
 
   useEffect(() => {
     if (!ready) return;
@@ -424,6 +462,19 @@ export default function GameV15() {
   const tutorialCityLocked = game.hanyangPrologueStep === "guild";
   const tutorialNpcIds = game.hanyangPrologueStep === "caravan-delivery" ? ["wang-deokchang" as NpcId] : ["kim-seongho" as NpcId];
   const mysteryNpcVisible = game.hanyangPrologueStep === "completed" && !game.hanyangPrologueFlags.mysteryNpcSeen;
+  const progressiveUnlocks = newcomerUnlocks(game);
+  const visibleTabs = [
+    "map",
+    "battle",
+    "squad",
+    "city",
+    ...(progressiveUnlocks.trade ? ["trade"] : []),
+    ...(progressiveUnlocks.relic ? ["relic"] : []),
+    ...(progressiveUnlocks.collection ? ["archive"] : []),
+    ...(progressiveUnlocks.contracts ? ["contracts"] : []),
+    ...(progressiveUnlocks.hall ? ["hall"] : []),
+    ...(progressiveUnlocks.raid ? ["raid"] : []),
+  ];
   const hanyangStep = HANYANG_PROLOGUE_STEPS.find(({ step }) => step === game.hanyangPrologueStep) || HANYANG_PROLOGUE_STEPS[0];
   const hanyangLockedTab = game.hanyangPrologueStep === "arrival" || game.hanyangPrologueStep === "journey-fund" || game.hanyangPrologueStep === "caravan-crisis" || game.hanyangPrologueStep === "caravan-delivery" || game.hanyangPrologueStep === "return" || game.hanyangPrologueStep === "departure" ? "map" : game.hanyangPrologueStep === "outskirts" || game.hanyangPrologueStep === "bandit-trial" ? "battle" : game.hanyangPrologueStep === "first-sale" || game.hanyangPrologueStep === "formation" ? "squad" : game.hanyangPrologueStep === "guild" || game.hanyangPrologueStep === "medicine" ? "city" : undefined;
   const trackedNpcQuests = activeNpcQuests(game);
@@ -446,6 +497,17 @@ export default function GameV15() {
   };
   const currentMapGate = mapGate(currentMap);
   const currentMapEnemies = sourceEnemies.filter(enemy => enemy.mapId === currentMap.id);
+  const roadmapRelic = game.relicDungeon;
+  const roadmapDone = { outskirts: game.npcProgress.completedQuests.includes(FIRST_CARAVAN_QUEST_ID), bandit: game.newbieBossDefeated, relicOne: (roadmapRelic?.clearedRuns || 0) >= 1, relicTwo: (roadmapRelic?.clearedRuns || 0) >= 2, regionBoss: game.lakeBossDefeated };
+  const roadmapUnlocked = { outskirts: true, bandit: firstCaravanBossReady, relicOne: progressiveUnlocks.relic, relicTwo: roadmapDone.relicOne, regionBoss: roadmapDone.relicTwo };
+  const roadmapCurrentId = (Object.keys(roadmapDone) as Array<keyof typeof roadmapDone>).find(id => !roadmapDone[id] && roadmapUnlocked[id]) || (Object.keys(roadmapDone) as Array<keyof typeof roadmapDone>).find(id => !roadmapDone[id]);
+  const roadmapStages: ProgressionRoadmapStage[] = [
+    { id: "outskirts", label: "漢陽郊外", condition: `完成委託 ${Math.min(game.starterDeliveryKills, FIRST_CARAVAN_TARGET)} / ${FIRST_CARAVAN_TARGET}`, reward: "商路短劍與啟程資金", state: roadmapDone.outskirts ? "done" : roadmapCurrentId === "outskirts" ? "current" : "locked" },
+    { id: "bandit", label: "山賊首領", condition: "Lv.20・驛站 Lv.1・裝備一件非普通裝備", reward: "開通千年湖", state: roadmapDone.bandit ? "done" : roadmapCurrentId === "bandit" ? "current" : "locked" },
+    { id: "relicOne", label: "遺跡第一層", condition: "完成首趟貿易・探索進度 100%", reward: "沉沒王朝材料與第一位遺跡 Boss", state: roadmapDone.relicOne ? "done" : roadmapCurrentId === "relicOne" ? "current" : "locked" },
+    { id: "relicTwo", label: "遺跡第二層", condition: "擊敗第一層 Boss 後再次遠征", reward: "第二位 Boss 與更高品質古代裝備", state: roadmapDone.relicTwo ? "done" : roadmapCurrentId === "relicTwo" ? "current" : "locked" },
+    { id: "regionBoss", label: "區域 Boss", condition: "完成第二層遺跡・隊伍戰力達標", reward: "開通千年湖深處與下一張地圖", state: roadmapDone.regionBoss ? "done" : roadmapCurrentId === "regionBoss" ? "current" : "locked" },
+  ];
   const mainObjective = (() => {
     if (game.hanyangPrologueStep !== "completed") {
       if (game.hanyangPrologueStep === "arrival") {
@@ -486,6 +548,36 @@ export default function GameV15() {
       recruitmentCost: Math.floor(6000 * currentCity.priceFactor),
     });
     if (firstMercenaryObjective) return firstMercenaryObjective;
+    if (!progressiveUnlocks.firstTradeComplete) return { title: '完成第一趟東海商路', detail: '派遣傭兵運送貨物並完成結算；第一筆商路收益會帶來沉沒遺跡的線索。', tab: 'trade' as const };
+    if (progressiveUnlocks.relic && !progressiveUnlocks.firstRelicReward) {
+      const relicStatus = game.relicDungeon?.status || 'idle';
+      if (relicStatus === 'dispatching') return { title: '等待遺跡遠征回報', detail: '傭兵正在探索沉沒王朝。完成後領取材料、古代裝備與遺跡碎片。', tab: 'relic' as const };
+      return { title: '派遣傭兵探索沉沒遺跡', detail: '先將至少一名傭兵調往休息，再派遣他帶回第一份遺跡材料。', tab: 'relic' as const };
+    }
+    if (progressiveUnlocks.relic && !progressiveUnlocks.firstRelicBossDefeated) {
+      const relic = game.relicDungeon;
+      if ((relic?.status || 'idle') === 'dispatching') return { title: '等待第一層遺跡回報', detail: '遠征完成後會自動結算；探索進度達 100% 才能挑戰沉沒王。', tab: 'relic' as const };
+      if ((relic?.status || 'idle') === 'boss') return { title: '討伐遺跡第一層 Boss', detail: '依照隊伍戰力與裝備品質持續攻擊，注意遠征隊 HP 與 Boss 狂暴階段。', tab: 'relic' as const };
+      if ((relic?.progress || 0) >= 100) {
+        const reserved = relic?.status === 'ready';
+        const power = reserved ? relic.dispatchPower : game.restingMercs.reduce((sum, unit) => sum + displayedPower(unit), 0);
+        const hp = reserved ? relic.maxHp : game.restingMercs.reduce((sum, unit) => sum + vitalStats(unit).maxHp, 0);
+        const count = reserved ? relic.partyCount : game.restingMercs.length;
+        const quality = reserved ? relic.dispatchEquipmentScore || 0 : game.restingMercs.reduce((sum, unit) => sum + relicEquipmentScore(unit), 0);
+        const preparation = relicBossReadiness(power, hp, count, quality);
+        if (!preparation.ready && game.hero.level < 20) return { title: '討伐前整備・提升商隊等級', detail: `王座進度已保留。主角 Lv.${game.hero.level} / 20；先將傭兵取出上陣練功，再回遺跡準備 Lv.${preparation.bossLevel} 首領。`, tab: 'battle' as const };
+        if (!preparation.ready) return { title: '討伐前整備・壯大遠征隊', detail: `目前戰力 ${Math.floor(power).toLocaleString()}、生命 ${Math.floor(hp).toLocaleString()}。整備參考：戰力 ${preparation.powerTarget.toLocaleString()}、生命 ${preparation.hpTarget.toLocaleString()}；補齊傭兵與裝備後重新派遣。`, tab: 'relic' as const };
+        return { title: '組織第一層 Boss 討伐', detail: '目前編制已具備討伐能力；王座進度已保留，進入 Boss 戰取得第一枚遺跡核心。', tab: 'relic' as const };
+      }
+      return { title: '累積遺跡第一層探索進度', detail: `目前進度 ${Math.round(relic?.progress || 0)} / 100；派遣裝備品質越高的傭兵，清剿效率與回報越好。`, tab: 'relic' as const };
+    }
+    if (progressiveUnlocks.firstRelicBossDefeated && (game.relicDungeon?.clearedRuns || 0) < 2) {
+      const relic = game.relicDungeon;
+      if (relic?.status === 'dispatching') return { title: '等待遺跡第二層回報', detail: '第二層遠征完成後會自動結算，再組織下一位 Boss 討伐。', tab: 'relic' as const };
+      if (relic?.status === 'boss') return { title: '討伐遺跡第二層 Boss', detail: '第二位首領已現身；更高品質裝備會提高傷害並降低反擊。', tab: 'relic' as const };
+      if ((relic?.progress || 0) >= 100) return { title: '組織第二層 Boss 討伐', detail: '再次遠征已抵達王座，擊敗第二位首領以取得區域 Boss 資格。', tab: 'relic' as const };
+      return { title: '再次派遣，解鎖遺跡第二層', detail: `目前進度 ${Math.round(relic?.progress || 0)} / 100；第二層會提高材料與古代裝備品質。`, tab: 'relic' as const };
+    }
     if (game.hero.level < 20) return { title: '壯大商隊，建立第一座駐地', detail: `主角 Lv.${game.hero.level} / Lv.20，商團領地即將開放。`, tab: 'battle' };
     if (game.territory.buildings.waystation < 1) return { title: '建立驛站，提升放置收益', detail: `資金 ${Math.floor(game.gold).toLocaleString('zh-TW')} / 1,200 兩；建成後放置收益 +2%。`, tab: 'squad', window: 'territory' as const };
     const equippedGreen = game.firstGreenEquipped || [game.hero, ...game.mercs, ...game.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== '普通'));
@@ -559,7 +651,7 @@ export default function GameV15() {
         const settled = applyAutoPotionAction(settleCurrentGame(previous, rolls), Date.now(), addLog, grantXp);
         return settled;
       });
-    }, 50);
+    }, 200);
     return () => window.clearInterval(timer);
   }, [ready, activeSlot, setGame]);
 
@@ -703,6 +795,32 @@ export default function GameV15() {
 
   function buyExchangeUpgrade(id:VillageWeaponId){
     setGame(previous => forgeVillageWeaponAction(previous, id, addLog));
+  }
+
+  function craftRelicEquipment() {
+    const materialCost = 12;
+    const shardCost = 2;
+    const goldCost = 15000;
+    const materials = game.materials["遺跡材料"] || 0;
+    const shards = game.materials["遺跡碎片"] || 0;
+    if (game.gold < goldCost || materials < materialCost || shards < shardCost) {
+      setNotice(`遺跡鍛造需要 ${goldCost.toLocaleString("zh-TW")} 兩、遺跡材料 ${materialCost}、遺跡碎片 ${shardCost}。`);
+      return;
+    }
+    const item = rollRelicEquipment(Math.max(1, game.relicDungeon?.floor || 1), Math.random, true);
+    setGame(previous => {
+      const previousMaterials = previous.materials["遺跡材料"] || 0;
+      const previousShards = previous.materials["遺跡碎片"] || 0;
+      if (previous.gold < goldCost || previousMaterials < materialCost || previousShards < shardCost) return previous;
+      return {
+        ...previous,
+        gold: previous.gold - goldCost,
+        inventory: positionInventory([...previous.inventory, item]),
+        materials: { ...previous.materials, "遺跡材料": previousMaterials - materialCost, "遺跡碎片": previousShards - shardCost },
+        logs: addLog(previous.logs, `遺跡鍛造完成：${item.name}。`),
+      };
+    });
+    setNotice(`遺跡鍛造完成：${item.name}，已放入背包。`);
   }
 
   function sellInventoryEquipment(itemUid:string){
@@ -1059,11 +1177,11 @@ export default function GameV15() {
           <div><h1>放置你的巨商魂</h1><p>雷霆祭壇與等級曲線</p></div>
         </div>
         <div className="resource-strip v15-resources">
-          <div className="resource-card resource-gold" aria-label="商團資金"><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
-          <div className="resource-card resource-credit" aria-label="信用值"><Coins /><span>{format(game.credit)}</span><small>信用值 · Lv.{game.creditLevel}</small></div>
-          <div className={`resource-card resource-hp ${game.hero.status==='客棧中'?'hp-status at-inn':'hp-status'}`} aria-label="隊伍生命值"><HeartPulse /><span id="p-hp">{activePartyHp} / {activePartyMaxHp}</span><small>隊伍血量 · {game.hero.status}</small></div>
-          <div className="resource-card resource-power" aria-label="總商隊戰力"><Swords /><span>{format(displayedPower(game.hero)+game.mercs.reduce((sum,unit)=>sum+displayedPower(unit),0))}</span><small>總商隊戰力</small></div>
-          <div className="resource-card resource-mercs" aria-label="出戰傭兵"><Users /><span>{game.active.length}/{ACTIVE_MERCENARY_LIMIT}</span><small>出戰傭兵</small></div>
+          <div className="resource-card resource-gold" aria-label="商團資金" title="銀兩：用於招募、商店、客棧與城市建設"><Coins /><span>{format(game.gold)}</span><small>兩</small></div>
+          <div className="resource-card resource-credit" aria-label="信用值" title="信用值：用於商團升階與商團技能"><Coins /><span>{format(game.credit)}</span><small>信用值 · Lv.{game.creditLevel}</small></div>
+          <div className={`resource-card resource-hp ${game.hero.status==='客棧中'?'hp-status at-inn':'hp-status'}`} aria-label="隊伍生命值" title="隊伍血量：影響戰鬥與遺跡遠征，歸零會撤退"><HeartPulse /><span id="p-hp">{activePartyHp} / {activePartyMaxHp}</span><small>隊伍血量 · {game.hero.status}</small></div>
+          <div className="resource-card resource-power" aria-label="總商隊戰力" title="總商隊戰力：影響地圖戰鬥、商路護衛與遺跡效率"><Swords /><span>{format(displayedPower(game.hero)+game.mercs.reduce((sum,unit)=>sum+displayedPower(unit),0))}</span><small>總商隊戰力</small></div>
+          <div className="resource-card resource-mercs" aria-label="出戰傭兵" title="出戰傭兵：組成商路護衛與遺跡遠征隊"><Users /><span>{game.active.length}/{ACTIVE_MERCENARY_LIMIT}</span><small>出戰傭兵</small></div>
           <Button className="character-switch" variant="outline" size="sm" onClick={returnToCharacterSelect}><Users />切換角色</Button>
         </div>
       </header>
@@ -1073,21 +1191,21 @@ export default function GameV15() {
           <h2 id="quick-nav-explore" className="quick-nav-group-label">探索</h2>
           <button type="button" data-nav-key="battle" className={activeTab === "battle" ? "active" : ""} aria-current={activeTab === "battle" ? "page" : undefined} onClick={() => setActiveTab("battle")}><span className="quick-nav-icon"><Map aria-hidden="true" /></span><span className="quick-nav-label">世界地圖</span></button>
           <button type="button" data-nav-key="map" className={activeTab === "map" ? "active" : ""} aria-current={activeTab === "map" ? "page" : undefined} onClick={() => setActiveTab("map")}><span className="quick-nav-icon"><Castle aria-hidden="true" /></span><span className="quick-nav-label">城門</span></button>
-          <button type="button" data-nav-key="trade" className={activeTab === "trade" ? "active" : ""} aria-current={activeTab === "trade" ? "page" : undefined} onClick={() => setActiveTab("trade")}><span className="quick-nav-icon"><Ship aria-hidden="true" /></span><span className="quick-nav-label">港口</span></button>
-          <button type="button" data-nav-key="relic" className={activeTab === "relic" ? "active" : ""} aria-current={activeTab === "relic" ? "page" : undefined} onClick={() => setActiveTab("relic")}><span className="quick-nav-icon"><Castle aria-hidden="true" /></span><span className="quick-nav-label">遺跡地下城</span></button>
+          {progressiveUnlocks.trade && <button type="button" data-nav-key="trade" className={activeTab === "trade" ? "active" : ""} aria-current={activeTab === "trade" ? "page" : undefined} onClick={() => setActiveTab("trade")}><span className="quick-nav-icon"><Ship aria-hidden="true" /></span><span className="quick-nav-label">港口</span></button>}
+          {progressiveUnlocks.relic && <button type="button" data-nav-key="relic" className={activeTab === "relic" ? "active" : ""} aria-current={activeTab === "relic" ? "page" : undefined} onClick={() => setActiveTab("relic")}><span className="quick-nav-icon"><Castle aria-hidden="true" /></span><span className="quick-nav-label">遺跡地下城</span></button>}
         </section>
         <section className="quick-nav-group" aria-labelledby="quick-nav-character">
           <h2 id="quick-nav-character" className="quick-nav-group-label">角色</h2>
           <button type="button" data-nav-key="squad" className={activeTab === "squad" ? "active" : ""} aria-current={activeTab === "squad" ? "page" : undefined} onClick={() => setActiveTab("squad")}><span className="quick-nav-icon"><Users aria-hidden="true" /></span><span className="quick-nav-label">主角與隊伍</span></button>
-          <button type="button" data-nav-key="archive" className={activeTab === "archive" ? "active" : ""} aria-current={activeTab === "archive" ? "page" : undefined} onClick={() => setActiveTab("archive")}><span className="quick-nav-icon"><Shield aria-hidden="true" /></span><span className="quick-nav-label">裝備圖鑑</span></button>
-          <button type="button" data-nav-key="treasure" onClick={() => setQuickDialog("treasure")}><span className="quick-nav-icon"><Gem aria-hidden="true" /></span><span className="quick-nav-label">秘寶圖鑑</span></button>
+          {progressiveUnlocks.collection && <button type="button" data-nav-key="archive" className={activeTab === "archive" ? "active" : ""} aria-current={activeTab === "archive" ? "page" : undefined} onClick={() => setActiveTab("archive")}><span className="quick-nav-icon"><Shield aria-hidden="true" /></span><span className="quick-nav-label">裝備圖鑑</span></button>}
+          {progressiveUnlocks.collection && <button type="button" data-nav-key="treasure" onClick={() => setQuickDialog("treasure")}><span className="quick-nav-icon"><Gem aria-hidden="true" /></span><span className="quick-nav-label">秘寶圖鑑</span></button>}
         </section>
         <section className="quick-nav-group" aria-labelledby="quick-nav-town">
           <h2 id="quick-nav-town" className="quick-nav-group-label">城鎮</h2>
-          <button type="button" data-nav-key="contracts" className={activeTab === "contracts" ? "active" : ""} aria-current={activeTab === "contracts" ? "page" : undefined} onClick={() => setActiveTab("contracts")}><span className="quick-nav-icon"><ScrollText aria-hidden="true" /></span><span className="quick-nav-label">冒險委託</span></button>
-          <button type="button" data-nav-key="hall" className={activeTab === "hall" ? "active" : ""} aria-current={activeTab === "hall" ? "page" : undefined} onClick={() => setActiveTab("hall")}><span className="quick-nav-icon"><Building2 aria-hidden="true" /></span><span className="quick-nav-label">市政廳</span></button>
+          {progressiveUnlocks.contracts && <button type="button" data-nav-key="contracts" className={activeTab === "contracts" ? "active" : ""} aria-current={activeTab === "contracts" ? "page" : undefined} onClick={() => setActiveTab("contracts")}><span className="quick-nav-icon"><ScrollText aria-hidden="true" /></span><span className="quick-nav-label">冒險委託</span></button>}
+          {progressiveUnlocks.hall && <button type="button" data-nav-key="hall" className={activeTab === "hall" ? "active" : ""} aria-current={activeTab === "hall" ? "page" : undefined} onClick={() => setActiveTab("hall")}><span className="quick-nav-icon"><Building2 aria-hidden="true" /></span><span className="quick-nav-label">市政廳</span></button>}
           <button type="button" data-nav-key="city" className={activeTab === "city" ? "active" : ""} aria-current={activeTab === "city" ? "page" : undefined} onClick={() => { setCityService("weapon"); setActiveTab("city"); }}><span className="quick-nav-icon"><ShoppingBag aria-hidden="true" /></span><span className="quick-nav-label">市集</span></button>
-          <button type="button" data-nav-key="raid" className={activeTab === "raid" ? "active" : ""} aria-current={activeTab === "raid" ? "page" : undefined} onClick={() => setActiveTab("raid")}><span className="quick-nav-icon"><Crown aria-hidden="true" /></span><span className="quick-nav-label">雷霞祭壇</span></button>
+          {progressiveUnlocks.raid && <button type="button" data-nav-key="raid" className={activeTab === "raid" ? "active" : ""} aria-current={activeTab === "raid" ? "page" : undefined} onClick={() => setActiveTab("raid")}><span className="quick-nav-icon"><Crown aria-hidden="true" /></span><span className="quick-nav-label">雷霞祭壇</span></button>}
         </section>
         <section className="quick-nav-group quick-nav-group-system" aria-labelledby="quick-nav-system">
           <h2 id="quick-nav-system" className="quick-nav-group-label">系統</h2>
@@ -1142,13 +1260,12 @@ export default function GameV15() {
       </Dialog>
 
       <section className={`main-objective${objectiveExpanded ? "" : " is-collapsed"}`} aria-label="目前主線目標">
-        {objectiveExpanded ? <>
-          <div><small>目前主線目標</small><strong>{mainObjective.title}</strong><span>{mainObjective.detail}</span><small className="objective-location">目前所在・{mapLocationLabel}</small></div>
-          <Button type="button" variant="outline" onClick={goToObjective}>前往</Button>
-        </> : <strong className="objective-collapsed-label" title={mainObjective.title}>主線・{mainObjective.title}</strong>}
-        <button type="button" className="objective-collapse-toggle" aria-expanded={objectiveExpanded} aria-label={objectiveExpanded ? "收起主線目標" : "展開主線目標"} title={objectiveExpanded ? "收起主線目標" : "展開主線目標"} onClick={() => setObjectiveExpanded(value => !value)}>
-          {objectiveExpanded ? <ChevronUp aria-hidden="true"/> : <ChevronDown aria-hidden="true"/>}
-        </button>
+        {objectiveExpanded ? <QuestJournal game={game} current={mainObjective} stages={roadmapStages} contracts={gameplayContracts} onClaim={id => setGame(previous => claimAdventureQuest(previous, id, Date.now(), grantXp))} onClose={() => setObjectiveExpanded(false)} onNavigate={destination => {
+          setObjectiveExpanded(false);
+          if (destination === "current") goToObjective();
+          else if (["contracts", "hall", "battle", "squad", "trade", "relic"].includes(destination)) setActiveTab(destination);
+          else { setActiveTab("map"); openNpcDialogue(destination as NpcId); }
+        }}/> : <div className="objective-collapsed-row"><strong className="objective-collapsed-label" title={mainObjective.title}>任務・{mainObjective.title}</strong><button type="button" className="objective-collapse-toggle" aria-expanded={false} aria-label="展開完整任務面板" title="展開完整任務面板" onClick={() => setObjectiveExpanded(true)}><ChevronDown aria-hidden="true"/></button></div>}
       </section>
 
       <section id="inn-zone" className="forced-inn" hidden={game.hero.status!=='客棧中' || !innPanelExpanded} aria-live="polite">
@@ -1174,18 +1291,18 @@ export default function GameV15() {
         </section>
       </footer>
 
-      <Tabs value={activeTab} onValueChange={(value) => { if (tutorialMapLocked && value !== "map") return; if ((tutorialBattleLocked || tutorialTrialLocked) && value !== "battle") return; if (tutorialCityLocked && value !== "city") return; if (hanyangLockedTab && value !== hanyangLockedTab) return; setActiveTab(value); }} className="game-tabs">
+      <Tabs value={activeTab} onValueChange={(value) => { if (!visibleTabs.includes(value)) return; if (tutorialMapLocked && value !== "map") return; if ((tutorialBattleLocked || tutorialTrialLocked) && value !== "battle") return; if (tutorialCityLocked && value !== "city") return; if (hanyangLockedTab && value !== hanyangLockedTab) return; setActiveTab(value); }} className="game-tabs">
         <TabsList className="nav-list v15-nav">
           <TabsTrigger value="map"><Map />斜角城鎮</TabsTrigger>
-          <TabsTrigger value="trade"><Ship />東海商路</TabsTrigger>
           <TabsTrigger value="battle"><Map />世界地圖</TabsTrigger>
-          <TabsTrigger value="raid"><Crown />雷霆祭壇</TabsTrigger>
-          <TabsTrigger value="relic"><Castle />遺跡地下城</TabsTrigger>
           <TabsTrigger value="squad"><Users />主角與隊伍</TabsTrigger>
           <TabsTrigger value="city"><Castle />四國城市</TabsTrigger>
-          <TabsTrigger value="contracts"><BookOpen />冒險委託</TabsTrigger>
-          <TabsTrigger value="hall"><Building2 />市政廳</TabsTrigger>
-          <TabsTrigger value="archive"><BookOpen />裝備圖鑑</TabsTrigger>
+          {progressiveUnlocks.trade && <TabsTrigger value="trade"><Ship />東海商路</TabsTrigger>}
+          {progressiveUnlocks.relic && <TabsTrigger value="relic"><Castle />遺跡地下城</TabsTrigger>}
+          {progressiveUnlocks.collection && <TabsTrigger value="archive"><BookOpen />裝備圖鑑</TabsTrigger>}
+          {progressiveUnlocks.contracts && <TabsTrigger value="contracts"><BookOpen />冒險委託</TabsTrigger>}
+          {progressiveUnlocks.hall && <TabsTrigger value="hall"><Building2 />市政廳</TabsTrigger>}
+          {progressiveUnlocks.raid && <TabsTrigger value="raid"><Crown />雷霆祭壇</TabsTrigger>}
         </TabsList>
 
         {activeTab !== "map" && game.hanyangPrologueStep === "completed" && (tutorialTrialLocked || tutorialCityLocked) && <aside className="village-onboarding-buddy" aria-live="polite"><span className="village-onboarding-avatar" aria-hidden="true">🧭</span><div><strong>小嚮導・米米</strong><p>{tutorialTrialLocked ? "不好！黑巾山賊正在搶奪貨物，任務已自動接受，請立即迎戰！" : "一個人守不住商路，請立刻前往傭兵公會招募普通傭兵。"}</p><small>{tutorialTrialLocked ? "前往新手村郊外・黑巾山賊" : "傭兵公會已開放・招募第一名普通傭兵"}</small></div></aside>}
@@ -1193,14 +1310,14 @@ export default function GameV15() {
         {game.hanyangPrologueStep !== "completed" && <aside className="village-onboarding-buddy hanyang-prologue-buddy" aria-live="polite"><span className="village-onboarding-avatar" aria-hidden="true">🧭</span><div><strong>小嚮導・米米</strong><p>{game.hanyangPrologueStep === "arrival" ? (game.npcProgress.activeQuests.includes(FIRST_CARAVAN_QUEST_ID) && game.starterDeliveryKills >= FIRST_CARAVAN_TARGET ? "驛路已清出來了，先回村長處回報並領取裝備。" : "村長正在村口等你，先去聽聽他的緊急委託。") : game.hanyangPrologueStep === "outskirts" ? "先到新手村郊外擊敗狸貓，取得第一批可以出售的戰利品。" : game.hanyangPrologueStep === "first-sale" ? ((game.npcProgress.activeQuests.includes(FIRST_CARAVAN_QUEST_ID) && game.starterDeliveryKills >= FIRST_CARAVAN_TARGET && !game.inventory.some(item => item.name === "商路短劍") && !Object.values(game.hero.equip).some(item => item?.name === "商路短劍")) ? "驛路已清出來了，先回村長處回報並領取裝備。" : "狸貓戰利品帶回來了，先穿戴剛取得的裝備，再把材料賣掉。") : game.hanyangPrologueStep === "journey-fund" ? "老商人準備了一筆啟程資金，回漢陽找他領取。" : game.hanyangPrologueStep === "medicine" ? "啟程資金已備妥，前往藥店實際購買一瓶金創藥。" : game.hanyangPrologueStep === "guild" ? "一個人守不住商路，前往傭兵公會招募一名夥伴。" : game.hanyangPrologueStep === "formation" ? "傭兵已加入商團，打開隊伍介面確認他在出戰名單中。" : game.hanyangPrologueStep === "caravan-crisis" ? "北邊商路出事了，先找老商人了解貨物被搶的經過。" : game.hanyangPrologueStep === "bandit-trial" ? "精英黑巾山賊就在新手村郊外；他不是 Boss，和第一名夥伴一起把他擊退。" : "商路已恢復，回到漢陽看看老商人怎麼說。"}</p><small>序章引導・{hanyangStep.title}</small></div></aside>}
 
         <TabsContent value="map" className="tab-panel isometric-map-tab">
-          <IsometricWorldMap cityName={displayCityName} locationLabel={mapLocationLabel} objectiveExpanded={objectiveExpanded} npcLabelsVisible={npcLabelsVisible} onNpcLabelsVisibleChange={setNpcLabelsVisible} onNpcTalk={openNpcDialogue} tutorialLocked={tutorialMapLocked} tutorialNpcIds={tutorialNpcIds} npcVisible={npcId => npcId !== "mysterious-traveler" || mysteryNpcVisible} onEnter={(destination) => {
+          {activeTab === "map" && <IsometricWorldMap cityName={displayCityName} locationLabel={mapLocationLabel} objectiveExpanded={objectiveExpanded} npcLabelsVisible={npcLabelsVisible} onNpcLabelsVisibleChange={setNpcLabelsVisible} onNpcTalk={openNpcDialogue} tutorialLocked={tutorialMapLocked} tutorialNpcIds={tutorialNpcIds} npcVisible={npcId => npcId !== "mysterious-traveler" || mysteryNpcVisible} destinationVisible={destination => destination === "city" || destination === "battle" || destination === "trade" && progressiveUnlocks.trade || destination === "hall" && progressiveUnlocks.hall || destination === "raid" && progressiveUnlocks.raid} onEnter={(destination) => {
             if (destination === "city") { setCityService("mercenary"); setActiveTab("city"); }
             else if (destination === "trade") setActiveTab("trade");
             else if (destination === "raid") setActiveTab("raid");
             else if (destination === "hall") setActiveTab("hall");
             else if (destination === "battle") setActiveTab("battle");
             else setActiveTab("squad");
-          }} />
+          }} />}
           {game.hanyangPrologueStep === "completed" && (tutorialMapLocked || tutorialTrialLocked || tutorialCityLocked) && <aside className="village-onboarding-buddy" aria-live="polite"><span className="village-onboarding-avatar" aria-hidden="true">🧭</span><div><strong>小嚮導・米米</strong><p>{game.onboardingStep === "return-village-chief" ? "驛路已清出來了，村長應該等急了，快回去向他報告！" : game.onboardingStep === "mercenary-trial" ? "不好！黑巾山賊正在搶奪貨物，這是村長強制交給你的緊急任務，請立即迎戰！" : game.onboardingStep === "hire-first-merc" ? "一個人守不住商路，請立刻前往傭兵公會招募普通傭兵。" : "村長似乎有急事找你，請先移動至村長處。"}</p><small>{game.onboardingStep === "return-village-chief" ? "點擊村長，交付第一份商隊委託" : game.onboardingStep === "mercenary-trial" ? "任務已自動接受・前往新手村郊外" : game.onboardingStep === "hire-first-merc" ? "傭兵公會已開放・招募第一名普通傭兵" : "目前只有村長可以互動"}</small></div></aside>}
           {activeNpcId && npcById(activeNpcId) && <NpcDialoguePanel npc={npcById(activeNpcId)!} game={game} initialLine={npcOpeningLine} onAction={handleNpcAction} onClose={() => setActiveNpcId(null)} />}
         </TabsContent>
@@ -1361,7 +1478,7 @@ export default function GameV15() {
 
             {cityService === "pharmacy" && <div className="city-service-body"><div className="panel-title"><Pill /><h2>{currentCity.name}藥店</h2><span>可設定每次購買數量</span></div><div className="medicine-grid">{medicineCatalog.filter(medicine => (medicine as { shop?: boolean }).shop !== false).map((medicine) => {const amount=medicineAmounts[medicine.id]||1;const unitPrice=Math.floor(medicine.price * currentCity.priceFactor);return <article key={medicine.id} className={shopPurchaseFeedback === `medicine:${medicine.id}` ? "shop-purchase-flash" : undefined}><Pill /><div><strong>{medicine.name}</strong><small>{medicine.effect}</small><em>持有 {game.medicines[medicine.id] || 0} ・單價 {format(unitPrice)} 兩</em></div><div className="medicine-purchase"><label>數量<input aria-label={`${medicine.name}購買數量`} type="number" min="1" max="999" value={amount} onChange={event=>setMedicineAmounts(previous=>({...previous,[medicine.id]:Math.min(999,Math.max(1,Math.floor(Number(event.target.value)||1)))}))}/></label><Button size="sm" onClick={() => buyMedicine(medicine.id,amount)}>購買 {format(unitPrice*amount)} 兩</Button></div><Button size="sm" variant="outline" disabled={!game.medicines[medicine.id]} onClick={() => consumeMedicine(medicine.id)}>使用</Button></article>;})}</div></div>}
 
-            {cityService === "exchange" && <div className="city-service-body village-exchange"><div className="panel-title"><PackageOpen /><h2>全東亞材料交易所</h2><span>永久攻擊 +{exchangeAttackBonus(game.exchangePurchases)}</span></div><div className="exchange-layout"><div className="exchange-weapons"><div className="exchange-subtitle"><strong>{currentCity.name}鍛造所</strong><small>可重複購買，每次漲價 30%</small></div><div className="weapon-upgrade-grid">{VILLAGE_WEAPONS.map(good=>{const cost=weaponCost(good.id,game.exchangePurchases),bought=game.exchangePurchases[good.id]||0;return <article key={good.id} className={good.id==='immortal-great-blade'?'divine':''}><div><strong>{good.name}</strong><small>主角永久攻擊 +{good.atkBonus}｜已鍛造 {bought} 次</small></div><button onClick={()=>buyExchangeUpgrade(good.id)} disabled={game.gold<cost}>🪙 {format(cost)} 兩</button></article>;})}</div></div><div className="exchange-market"><div className="exchange-subtitle"><strong>本地材料櫃檯</strong><small>{currentWorldZone.name}・可買回本地怪物材料</small><small>材料請至商隊背包出售。</small></div><div className="material-market-grid">{currentWorldZone.dropTable.map(item=>{const price=MATERIAL_BUY_PRICES[item.item]||0;return <article key={item.item} className={shopPurchaseFeedback === `material:${item.item}` ? "shop-purchase-flash" : undefined}><div><strong>{item.item}</strong><small>持有 ×{game.materials[item.item]||0}・買價 {format(price)} 兩</small></div><button type="button" disabled={!price||game.gold<price} onClick={()=>buyLootMaterial(item.item)}>買入 1 件</button></article>;})}</div></div></div></div>}
+            {cityService === "exchange" && <div className="city-service-body village-exchange"><div className="panel-title"><PackageOpen /><h2>全東亞材料交易所</h2><span>永久攻擊 +{exchangeAttackBonus(game.exchangePurchases)}</span></div><div className="exchange-layout"><div className="exchange-weapons"><div className="exchange-subtitle"><strong>{currentCity.name}鍛造所</strong><small>可重複購買，每次漲價 30%</small></div><div className="weapon-upgrade-grid">{VILLAGE_WEAPONS.map(good=>{const cost=weaponCost(good.id,game.exchangePurchases),bought=game.exchangePurchases[good.id]||0;return <article key={good.id} className={good.id==='immortal-great-blade'?'divine':''}><div><strong>{good.name}</strong><small>主角永久攻擊 +{good.atkBonus}｜已鍛造 {bought} 次</small></div><button onClick={()=>buyExchangeUpgrade(good.id)} disabled={game.gold<cost}>🪙 {format(cost)} 兩</button></article>;})}</div></div><div className="exchange-market"><div className="exchange-subtitle"><strong>本地材料櫃檯</strong><small>{currentWorldZone.name}・可買回本地怪物材料</small><small>材料請至商隊背包出售。</small></div><div className="material-market-grid">{currentWorldZone.dropTable.map(item=>{const price=MATERIAL_BUY_PRICES[item.item]||0;return <article key={item.item} className={shopPurchaseFeedback === `material:${item.item}` ? "shop-purchase-flash" : undefined}><div><strong>{item.item}</strong><small>持有 ×{game.materials[item.item]||0}・買價 {format(price)} 兩</small></div><button type="button" disabled={!price||game.gold<price} onClick={()=>buyLootMaterial(item.item)}>買入 1 件</button></article>;})}</div></div></div><section className="relic-forge-card"><div><strong>遺跡鍛造台</strong><p>消耗遺跡材料與碎片，鍛造一件保底稀有度的特殊裝備。</p><small>費用：15,000 兩・遺跡材料 {game.materials["遺跡材料"] || 0}/12・遺跡碎片 {game.materials["遺跡碎片"] || 0}/2</small></div><button type="button" disabled={game.gold < 15000 || (game.materials["遺跡材料"] || 0) < 12 || (game.materials["遺跡碎片"] || 0) < 2} onClick={craftRelicEquipment}>鍛造特殊裝備</button></section></div>}
           </section>
 
           <div className="city-auxiliary">
@@ -1416,10 +1533,15 @@ export default function GameV15() {
         </TabsContent>
 
         <TabsContent value="relic" className="tab-panel relic-dungeon-tab">
-          <RelicDispatchPanel
+          {activeTab === "relic" && <RelicDispatchPanel
+            onPrepare={destination => {
+              if (destination === "mercenary") { setCityService("mercenary"); setActiveTab("city"); }
+              else if (destination === "equipment") { setSquadDestination(previous => ({ key: previous.key + 1, window: "inventory" })); setActiveTab("squad"); }
+              else setActiveTab(destination === "battle" ? "battle" : "squad");
+            }}
             state={game.relicDungeon || freshRelicDungeon(vitalStats(game.hero).maxHp)}
             power={Math.floor(displayedPower(game.hero) + game.mercs.filter(unit => game.active.includes(unit.uid)).reduce((sum, unit) => sum + displayedPower(unit), 0))}
-            dispatchParty={game.restingMercs.map(unit => ({ uid: unit.uid, name: unit.name, role: unit.role, level: unit.level, image: unit.image, hp: unit.hp, maxHp: vitalStats(unit).maxHp, power: displayedPower(unit) }))}
+            dispatchParty={game.restingMercs.map(unit => ({ uid: unit.uid, name: unit.name, role: unit.role, level: unit.level, image: unit.image, hp: unit.hp, maxHp: vitalStats(unit).maxHp, power: displayedPower(unit), equipmentScore: relicEquipmentScore(unit) }))}
             onAction={(action: RelicDungeonAction, selectedPartyUids?: string[]) => setGame(previous => {
               const current = previous.relicDungeon || freshRelicDungeon(vitalStats(previous.hero).maxHp);
               const activeParty = [previous.hero, ...previous.mercs.filter(unit => previous.active.includes(unit.uid)).slice(0, ACTIVE_MERCENARY_LIMIT)];
@@ -1429,17 +1551,18 @@ export default function GameV15() {
               const dispatchParty = current.status === 'cleared' || current.status === 'defeated' ? previous.restingMercs.filter(unit => !selectedPartyUids?.length || selectedPartyUids.includes(unit.uid)) : previous.restingMercs.filter(unit => !reservedUids.includes(unit.uid) && (!selectedPartyUids?.length || selectedPartyUids.includes(unit.uid)));
               const party = action === 'dispatch' ? dispatchParty : (['claim', 'challenge-boss', 'attack-boss', 'retreat'].includes(action) && reservedParty.length ? reservedParty : activeParty);
               const partyPower = Math.floor(party.reduce((sum, unit) => sum + displayedPower(unit), 0));
+              const partyEquipmentScore = party.reduce((sum, unit) => sum + relicEquipmentScore(unit), 0);
               const partyMaxHp = party.reduce((sum, unit) => sum + vitalStats(unit).maxHp, 0);
               const partyCurrentHp = party.reduce((sum, unit) => sum + Math.max(0, vitalStats(unit).hp), 0);
               const partyReady = action === 'dispatch' ? dispatchParty.length > 0 : party.some(unit => vitalStats(unit).hp > 0);
-              const next = relicDungeonAction(current, action, partyPower, { maxHp: partyMaxHp, currentHp: partyCurrentHp, partyPower, partyNames: party.map(unit => unit.name), partyUids: party.map(unit => unit.uid), partyReady, now: Date.now(), dispatchDurationMs: import.meta.env.DEV ? 30_000 : 30 * 60 * 1000 });
+              const next = relicDungeonAction(current, action, partyPower, { maxHp: partyMaxHp, currentHp: partyCurrentHp, partyPower, partyEquipmentScore, partyNames: party.map(unit => unit.name), partyUids: party.map(unit => unit.uid), partyReady, now: Date.now(), dispatchDurationMs: import.meta.env.DEV ? 30_000 : 30 * 60 * 1000 });
               const reward = next.lastReward;
               const gained = reward.gold ? `獲得 ${reward.gold.toLocaleString()} 兩；` : "";
               const relicItems = reward.equipment ? Array.from({ length: reward.equipment }, () => rollRelicEquipment(Math.max(1, Math.floor((next.progress || previous.stage) / 10)), Math.random, next.status === "cleared")) : [];
               const rewardLog = reward.gold || reward.shards || reward.materials || reward.equipment ? addLog(previous.logs, `遺跡遠征結算：${gained}${reward.materials ? `遺跡材料 +${reward.materials}；` : ""}${reward.equipment ? `古代裝備 +${reward.equipment}；` : ""}${reward.shards ? `遺跡碎片 +${reward.shards}。` : ""}`) : previous.logs;
               return { ...previous, gold: previous.gold + reward.gold, inventory: relicItems.length ? positionInventory([...previous.inventory, ...relicItems]) : previous.inventory, materials: reward.shards || reward.materials || reward.equipment ? { ...previous.materials, "遺跡碎片": (previous.materials["遺跡碎片"] || 0) + reward.shards, "遺跡材料": (previous.materials["遺跡材料"] || 0) + reward.materials, "古代裝備": (previous.materials["古代裝備"] || 0) + reward.equipment } : previous.materials, relicDungeon: next, logs: rewardLog };
             })}
-          />
+          />}
         </TabsContent>
 
         <TabsContent value="archive" className="tab-panel">

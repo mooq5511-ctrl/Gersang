@@ -48,7 +48,7 @@ type DungeonActionDependencies = {
   leaveInn: (state: GameState) => GameState;
 };
 
-export type DungeonAction = "tick" | "start" | "normal" | "skill" | "retreat" | "stop" | "toggle-auto-hunt";
+export type DungeonAction = "tick" | "start" | "start-auto-hunt" | "normal" | "skill" | "retreat" | "stop" | "toggle-auto-hunt";
 
 /** Runs a single deterministic dungeon transition, including victory rewards. */
 export function runDungeonAction(
@@ -96,7 +96,6 @@ export function runDungeonAction(
     const equipmentXpPercent = Math.round((equipmentExperienceMultiplier(fighters) - 1) * 100);
     const equipmentLabel = equipmentXpPercent ? `、求知契印 +${equipmentXpPercent}%` : "";
     next = { ...next, hero: grantTerritoryXp(next, next.hero, shareXp), mercs: next.mercs.map((unit) => activeIds.has(unit.uid) ? grantTerritoryXp(next, unit, shareXp) : unit), kills: next.kills + result.killsEarned, starterDeliveryKills: deliveryKills, logs: deps.addLog(next.logs, `擊敗 ${result.killsEarned} 隻怪物，獲得 ${result.xpEarned} 基礎經驗；${battleMembers} 名出戰角色均分，每人 ${Number(perMemberXp.toFixed(2)).toLocaleString("zh-TW")} 經驗（含領地加成${newbieLabel}${mercenaryLabel}${equipmentLabel}）。`) };
-    next = { ...next, hero: grantTerritoryXp(next, next.hero, shareXp), mercs: next.mercs.map((unit) => activeIds.has(unit.uid) ? grantTerritoryXp(next, unit, shareXp) : unit), kills: next.kills + result.killsEarned, starterDeliveryKills: deliveryKills, logs: deps.addLog(next.logs, `擊敗 ${result.killsEarned} 隻怪物，獲得 ${result.xpEarned} 經驗；${battleMembers} 名出戰角色均分，每人 ${Number(perMemberXp.toFixed(2)).toLocaleString("zh-TW")} 經驗（含領地加成）。`) };
     next = addBattleLog(next, `擊敗怪物 ×${result.killsEarned}。`);
     next = addBattleLog(next, `EXP +${result.xpEarned.toLocaleString("zh-TW")}。`, "reward");
   }

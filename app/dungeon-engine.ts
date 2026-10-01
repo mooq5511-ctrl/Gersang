@@ -61,7 +61,7 @@ export function teleportDungeon(old:DungeonState,level:number,power:number,now:n
   pauseAt:dungeonBusy(old)?old.pauseAt:now,spawnAt:0,normalAt:Math.max(now,old.normalAt),
   logs:['已傳送至 '+zone.name+'！',...old.logs].slice(0,40)};
 }
-export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'start'|'normal'|'skill'|'retreat'|'stop'|'toggle-auto-hunt',now:number,key:DungeonKey=old.key,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0,party:DungeonPartyMember[]=[],passiveDamage=0,materialRolls:number[]=[1,1,1],autoSkill=false,encounterCountRoll=.999999,healInterval=2000):{state:DungeonState;hp:number;mp:number;party:DungeonPartyMember[];xpEarned:number;killsEarned:number;reward:null|{xp:number;gold:number;loot:string|null;materials:string[]}}{
+export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'start'|'start-auto-hunt'|'normal'|'skill'|'retreat'|'stop'|'toggle-auto-hunt',now:number,key:DungeonKey=old.key,roll=.99,choice=0,spawnRoll=0,retaliationRoll=0,party:DungeonPartyMember[]=[],passiveDamage=0,materialRolls:number[]=[1,1,1],autoSkill=false,encounterCountRoll=.999999,healInterval=2000):{state:DungeonState;hp:number;mp:number;party:DungeonPartyMember[];xpEarned:number;killsEarned:number;reward:null|{xp:number;gold:number;loot:string|null;materials:string[]}}{
  const state={...old,autoHunt:old.autoHunt===true,logs:[...old.logs]};let hp=hero.hp,mp=hero.mp;
  const members=(party.length?party:[{uid:'hero',name:'主角',hp,maxHp:hero.maxHp,position:'前排' as const}]).map(member=>({...member}));
  const heroMember=()=>members.find(member=>member.uid==='hero');
@@ -139,6 +139,8 @@ export function dungeonStep(old:DungeonState,hero:DungeonHero,action:'tick'|'sta
   const cursor=state.realtimeCursor||0;for(const entry of combat.events.filter(item=>item.id>cursor&&item.type==='attack'&&item.actorId?.startsWith('enemy-')&&item.targetId)){if(state.tigerRageActive&&retaliationRoll<.25){state.tigerBleeds[entry.targetId]={until:now+3000,next:now};log('🩸【撕裂】'+(members.find(member=>member.uid===entry.targetId)?.name||'角色')+' 持續流血 3 秒。')}}
   for(const [uid,bleed] of Object.entries(state.tigerBleeds)){const target=combat.players.find(unit=>unit.id===uid);if(!target||!target.alive||now>=bleed.until){delete state.tigerBleeds[uid];continue}if(now>=bleed.next){const damage=Math.max(1,Math.floor(e.atk*.15));target.hp=Math.max(0,target.hp-damage);bleed.next=now+1000;event('enemy',damage);}}
  };
+ const startAutoHunt=action==='start-auto-hunt';
+ if(startAutoHunt){state.autoHunt=true;action='start';if(state.status!=='idle')log('自動練功已開啟；本場結束後將自動接續下一場。')}
  if(action==='toggle-auto-hunt'){
   state.autoHunt=AutoHuntManager.toggle(state);
   if(!state.autoHunt&&state.status==='respawning')stopHunting();

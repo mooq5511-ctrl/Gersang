@@ -6,11 +6,13 @@ import type { TradeState } from "./trade-engine";
 import type { NationId } from "./v15-data";
 import type { ExchangePurchases } from "./village-exchange";
 import type { GuildTerritory } from "./guild-territory";
+import type { GuildSkills } from "./guild-skills";
 import type { NpcProgress } from "./npc-dialogue";
 import type { AutoPotionSettings } from "./auto-potion-manager";
 import type { BattleLogEntry } from "./battle-log-manager";
 import type { HanyangPrologueFlags, HanyangPrologueStep } from "./hanyang-prologue";
 import type { CityHallState } from "./city-hall-commissions";
+import type { QuestLedger } from "./adventure-quests";
 import type { RelicDungeonState } from "./relic-dungeon";
 
 /** Persistent save keys. These names are compatibility contracts with existing players. */
@@ -130,7 +132,7 @@ export type GameState = {
   /** 商團升階贈送、用於解鎖商團技能的技能點。 */
   guildSkillPoints: number;
   /** 六條商團技能線，各自最高 10 級。 */
-  guildSkills: Record<string, number>;
+  guildSkills: GuildSkills;
   idleStamp: number;
   gold: number;
   stage: number;
@@ -170,6 +172,8 @@ export type GameState = {
   /** Persisted newest-first battle and reward history, capped by BattleLogManager. */
   battleLogs: BattleLogEntry[];
   claimedContracts: string[];
+  /** 1–250 等系列任務與台灣時間每日任務；舊存檔可省略。 */
+  questLedger?: QuestLedger;
   /** 村莊市政廳委託公告、進行中任務與刷新券。 */
   cityHall: CityHallState;
   /** Village NPC dialogue, affinity, and quest state; persisted with the character. */

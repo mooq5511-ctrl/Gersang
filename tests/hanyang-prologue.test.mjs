@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { claimHanyangJourneyFund, completeHanyangPrologue, freshHanyangPrologueFlags, hanyangJourneyFund, markHanyangCaravanDelivered, markHanyangLootSold, markHanyangMysteryNpcSeen, markHanyangReturnReported, normalizeHanyangPrologueFlags, syncHanyangPrologue } from '../app/hanyang-prologue.ts';
 import { isBossMonster } from '../app/dungeon-engine.ts';
 import { sourceEnemies } from '../app/v17-content.ts';
+import { readFileSync } from 'node:fs';
 
 const state = (overrides = {}) => ({ gold: 0, logs: [], hanyangPrologueStep: 'first-sale', hanyangPrologueFlags: freshHanyangPrologueFlags(), medicines: {}, mercs: [], restingMercs: [], active: [], ...overrides });
 
@@ -28,6 +29,18 @@ test('recruitment keeps the formation teaching step for one explicit confirmatio
   const deployed = syncHanyangPrologue({ ...formation, active: [unit.uid] }, 6000);
   assert.equal(deployed.hanyangPrologueStep, 'caravan-crisis');
   assert.equal(deployed.hanyangPrologueFlags.firstMercenaryDeployed, true);
+});
+
+test('viewing the squad confirms automatically deployed recruits without withdrawing them', () => {
+  const source = readFileSync(new URL('../app/game-v15.tsx', import.meta.url), 'utf8');
+  assert.match(source, /activeTab !== "squad" \|\| game.hanyangPrologueStep !== "formation"/);
+  assert.match(source, /previous.hanyangPrologueStep === "formation" \? syncHanyangPrologue\(previous, 6000\)/);
+  const unit = { uid: 'recruit' };
+  const original = state({ hanyangPrologueStep: 'formation', mercs: [unit], active: [unit.uid], hanyangPrologueFlags: { ...freshHanyangPrologueFlags(), firstMercenaryContract: true } });
+  const confirmed = syncHanyangPrologue(original, 6000);
+  assert.equal(confirmed.hanyangPrologueStep, 'caravan-crisis');
+  assert.deepEqual(confirmed.active, original.active);
+  assert.equal(syncHanyangPrologue(state({ ...original, active: [] }), 6000).hanyangPrologueStep, 'formation');
 });
 
 test('black bandit is an elite encounter, while bandit chief remains the Hanyang boss', () => {

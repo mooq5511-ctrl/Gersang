@@ -1,0 +1,118 @@
+{
+  "date": "2026-10-01",
+  "mode": "built-in image_gen",
+  "reference": "spear.png",
+  "status": "integrated as optimized JPG card portraits; original PNG retained; battle sprites unchanged",
+  "background": "opaque warm-dark matching approved reference; not transparent",
+  "basePrompt": "Use case: stylized-concept. Asset type: individual HALF-BODY mercenary portrait for Oriental merchant-caravan RPG. Image 1 is STYLE REFERENCE ONLY, not the subject to duplicate. Match its mature semi-realistic hand-painted realism, believable adult proportions, detailed tactile worn cloth/leather/metal, restrained antique brass highlights, soft warm key light, dark smoky warm-neutral backdrop. Different character with distinct face, clothing, and instantly recognizable professional equipment. Single portrait from head to waist, large readable face and upper torso, three-quarter view, both hands anatomically coherent where shown, profession prop clearly visible. Not chibi, not cute anime, not photograph, not modern clothing. No legs, full-body, scene, text, labels, watermark, UI, frame, collage, extra characters. Subject: ",
+  "portraits": [
+    {
+      "id": "shield",
+      "name": "山城盾衛",
+      "file": "shield.png",
+      "subject": "Sturdy adult Korean-inspired male shield guard, broad shoulders and square face, heavy dark iron lamellar armor, muted indigo cloth and ochre sash, helmet, large reinforced rectangular wooden shield held defensively across lower torso, visible boss and aged brass edges, protective grounded posture. Tank and caravan guardian, no spear."
+    },
+    {
+      "id": "archer",
+      "name": "虎獵弓手",
+      "file": "archer.png",
+      "subject": "Lean adult Korean-inspired male beast hunter archer, keen eyes, tied hair and cloth headband instead of helmet, weathered green-brown hunting jacket, restrained tiger-pattern hide shoulder panel, leather bracer, clearly visible curved wooden hunting bow and one arrow held ready, quiver over shoulder, calm alert hunter posture, no spear."
+    },
+    {
+      "id": "shaman",
+      "name": "朝鮮巫女",
+      "file": "shaman.png",
+      "subject": "Adult Korean-inspired female spirit shaman, dignified mature face, dark hair neatly pinned, layered ivory and muted indigo traditional robes with restrained red ribbon, brass ritual bells in one hand and folded ritual fan in the other, composed purposeful spell-binding gesture, practical cloth texture, no armor, no spear, no floating writing."
+    },
+    {
+      "id": "samurai",
+      "name": "倭國武士",
+      "file": "samurai.png",
+      "subject": "Adult Japanese-inspired male duelist, resolute face with subtle stubble, tied black hair, dark lacquered lamellar shoulder armor over indigo robe, katana drawn partially from scabbard with coherent hands in poised iaido stance at waist, restrained bronze hardware and dark red sash, common veteran swordsman not royal general."
+    },
+    {
+      "id": "ninja",
+      "name": "伊賀忍者",
+      "file": "ninja.png",
+      "subject": "Adult Japanese-inspired male ninja assassin, narrow focused eyes, fitted charcoal layered shinobi cloth with deep muted blue wraps, lower face cloth mask, modest leather protection, visible short blade held low across torso and one small throwing dart in other hand, compact stealth-ready pose, no giant armor, no spear."
+    },
+    {
+      "id": "gunner",
+      "name": "鐵砲足輕",
+      "file": "gunner.png",
+      "subject": "Adult Japanese-inspired matchlock infantry male, practical low conical infantry helmet, weathered dark iron cuirass and indigo cloth, hold period-inspired long wooden matchlock musket angled upright across body with distinctive barrel and side match cord, powder pouch at waist, alert measured expression, no modern gun, no spear."
+    },
+    {
+      "id": "onmyoji",
+      "name": "陰陽術士",
+      "file": "onmyoji.png",
+      "subject": "Adult Japanese-inspired male ritual caster, refined mature face, tall dark eboshi cap, layered ivory and desaturated blue ritual robes with antique-gold trim, one hand holding folded paper talisman and other holding ceremonial fan with abstract ink strokes not readable words, restrained subtle cool ritual glow around fingers, no armor, no spear."
+    },
+    {
+      "id": "blade",
+      "name": "中原刀客",
+      "file": "blade.png",
+      "subject": "Adult Chinese-inspired male broad-saber swordsman, rugged face and short beard, tied long black hair, travel-worn brown and charcoal robe, modest worn leather shoulder reinforcement, wide single-edged dao saber visibly held across lower chest, brass guard and muted red cloth sash, powerful grounded martial posture."
+    },
+    {
+      "id": "monk",
+      "name": "少林武僧",
+      "file": "monk.png",
+      "subject": "Adult Chinese-inspired male Shaolin martial monk, shaved head, strong calm face, practical ochre monk robe with dark brown wrapped forearms, wooden prayer beads, one open palm extended and other hand in defensive martial guard at chest, muscular but realistic, no armor, no spear, no oversized magical effects."
+    },
+    {
+      "id": "healer",
+      "name": "行腳郎中",
+      "file": "healer.png",
+      "subject": "Middle-aged Chinese-inspired travelling male healer with gentle observant eyes and neat short beard, tied hair, weathered teal-gray scholar's travel robe, medicine satchel with herb packets at waist, hold small ceramic medicine vessel and bundle of medicinal herbs, reassuring careful professional posture, no weapons, no armor."
+    },
+    {
+      "id": "cannon",
+      "name": "火器砲手",
+      "file": "cannon.png",
+      "subject": "Adult Chinese-inspired male artillery mercenary, broad weathered face, cloth cap, charcoal practical padded jacket with leather apron and brass fittings, one compact bronze-and-iron hand cannon cradled horizontally at waist, barrel mouth clearly visible, fuse and powder satchel, practical artillery specialist, no modern gun, no huge battlefield cannon."
+    },
+    {
+      "id": "escort",
+      "name": "東海鏢師",
+      "file": "escort.png",
+      "subject": "Adult East Asian male maritime-route caravan escort, experienced vigilant face, tied hair, travel-worn navy long coat with ochre edging, restrained leather-and-iron torso protection, broad saber angled beside shoulder and strong guarding hand on scabbard, compact travelling belt kit, reliable professional caravan bodyguard not royal warrior."
+    },
+    {
+      "id": "hunter",
+      "name": "山林獵手",
+      "file": "hunter.png",
+      "subject": "Adult East Asian female woodland trapper, mature determined face with sun-worn skin, braided dark hair, olive and brown layered woodland travel clothing, leather shoulder guard, visible coiled capture rope and wooden crossbow held at waist, pouch of trap tools, agile practical trail expert distinct from tiger archer, no spear."
+    },
+    {
+      "id": "elephant",
+      "name": "天竺戰象兵",
+      "file": "elephant.png",
+      "subject": "Adult South-Asian male war-elephant handler and armored heavy guard, broad sturdy build, dark eyes and neat beard, layered muted ochre turban, practical dark iron scale vest with restrained brass, hold recognizable short elephant-goad tool with hooked tip and reinforced protective round shield at lower torso, elephant relief on shield signals war-elephant profession; human half-body only, no extra animal, no spear."
+    },
+    {
+      "id": "priest",
+      "name": "天竺梵僧",
+      "file": "priest.png",
+      "subject": "Adult South-Asian male protective chanting monk, serene mature face, shaved head, layered ivory and muted saffron robes with restrained indigo shawl, prayer bead mala, one hand holding small brass ritual bowl and other raised in protective blessing gesture, gentle subtle warm aura confined to hand, no armor, no spear."
+    },
+    {
+      "id": "swordmaster",
+      "name": "劍豪",
+      "file": "swordmaster.png",
+      "subject": "Mature Japanese-inspired master swordsman around 45, controlled penetrating gaze, tied long hair with subtle gray at temples, elegant yet worn charcoal-and-indigo kimono with ochre sash, minimal armor, beautifully forged katana held upright beside shoulder, restrained aged-gold sword fittings, calm mastery and superior veteran presence distinct from ordinary samurai."
+    },
+    {
+      "id": "sanada",
+      "name": "軍神真田信綱",
+      "file": "sanada.png",
+      "subject": "Mature Japanese-inspired legendary male war commander, powerful resolute face with neatly trimmed moustache, richly layered RED lacquered samurai armor with antique brass accents, red kabuto helmet with understated antler-like crest, small six-coin motif on chest, long commanding blade held across lower torso, authority and disciplined battlefield leadership, not ordinary spear soldier."
+    },
+    {
+      "id": "mazu",
+      "name": "媽祖娘娘",
+      "file": "mazu.png",
+      "subject": "Adult East Asian female sea guardian deity Mazu, compassionate dignified mature face, elegant dark updo beneath traditional ornate imperial-style gold headdress with small hanging pearl strands, rich muted red and navy ceremonial robe with aged-gold wave embroidery, hold refined ceremonial tablet and small subtle sea-blue protective glow in other hand, serene guardian authority, tasteful divine detail, no spear, no weapon."
+    }
+  ]
+}

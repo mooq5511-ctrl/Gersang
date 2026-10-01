@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { BookOpen, Heart, LockKeyhole, Store, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_NPC_PORTRAIT, hasNpcAffinityReward, npcGreeting, npcPortraitSprite, npcQuestProgress, npcQuestState, type NpcOption, type VillageNpc } from "./npc-dialogue";
@@ -52,7 +53,9 @@ export function NpcDialoguePanel({
     onAction({ option, npc });
   }
 
-  return (
+  // Render outside the tab's stacking context so the navigation cannot cover the dialog.
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <section className="npc-dialogue" role="dialog" aria-modal="true" aria-label={`${npc.name}對話`}>
       <button className="npc-dialogue-backdrop" type="button" aria-label="關閉對話" onClick={onClose} />
       <article className="npc-dialogue-card">
@@ -80,6 +83,7 @@ export function NpcDialoguePanel({
           {showHistory && <div className="npc-history">{history.length ? history.map((entry, index) => <p key={`${entry.at}-${index}`}>{entry.text}</p>) : <p>尚無對話紀錄。</p>}</div>}
         </div>
       </article>
-    </section>
+    </section>,
+    document.body,
   );
 }

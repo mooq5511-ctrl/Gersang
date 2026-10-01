@@ -14,6 +14,7 @@ import { applyGersangVisuals, sanitizeEquip } from "./game-save-normalizers";
 import { freshGame, heroPortrait, isNationId, makeHero } from "./game-hero-factory";
 import { normalizeNpcProgress } from "./npc-dialogue";
 import { normalizeCityHallState } from "./city-hall-commissions";
+import { normalizeQuestLedger } from "./adventure-quests";
 import { normalizeHanyangPrologueFlags, normalizeHanyangPrologueStep, type HanyangPrologueStep } from "./hanyang-prologue";
 import { worldCities } from "./v15-data";
 import { restoreTerritory } from "./guild-territory";
@@ -127,7 +128,7 @@ export function restoreGame(raw: unknown): GameState {
   const parsed = raw as Partial<GameState> & { version?: number; hero?: Partial<Hero> };
   const heroNation = isNationId(parsed.hero?.nation) ? parsed.hero.nation : next.hero.nation;
   const heroDefaults = makeHero(heroNation, String(parsed.hero?.name || next.hero.name));
-  const restoredHeroMaxHp = Number(parsed.hero?.maxHp) > 0 ? Number(parsed.hero.maxHp) : 100 + (Math.max(1, Number(parsed.hero?.level) || 1) - 1) * 20;
+  const restoredHeroMaxHp = Number(parsed.hero?.maxHp) > 0 ? Number(parsed.hero?.maxHp) : 100 + (Math.max(1, Number(parsed.hero?.level) || 1) - 1) * 20;
   const relicDefaults = freshRelicDungeon(restoredHeroMaxHp);
   const restoredCity = typeof parsed.city === "string" && worldCities.some((city) => city.id === parsed.city)
     ? parsed.city
@@ -170,6 +171,7 @@ export function restoreGame(raw: unknown): GameState {
     hanyangPrologueFlags: normalizeHanyangPrologueFlags((parsed as Partial<GameState>).hanyangPrologueFlags),
     battleLogs: BattleLogManager.getLogs(Array.isArray(parsed.battleLogs) ? parsed.battleLogs : []),
     claimedContracts: Array.isArray(parsed.claimedContracts) ? parsed.claimedContracts : [],
+    questLedger: normalizeQuestLedger(parsed.questLedger, Date.now(), Number(parsed.hero?.level) || 1),
     cityHall: normalizeCityHallState((parsed as Partial<GameState>).cityHall),
     npcProgress: normalizeNpcProgress(parsed.npcProgress),
     relicDungeon: parsed.relicDungeon && typeof parsed.relicDungeon === "object" ? { ...relicDefaults, ...parsed.relicDungeon, bossMonsterId: typeof parsed.relicDungeon.bossMonsterId === "string" ? parsed.relicDungeon.bossMonsterId : relicDefaults.bossMonsterId, encounterMonsterId: typeof parsed.relicDungeon.encounterMonsterId === "string" ? parsed.relicDungeon.encounterMonsterId : relicDefaults.encounterMonsterId, bossRage: parsed.relicDungeon.bossRage === true, bossTurn: Math.max(0, Math.floor(Number(parsed.relicDungeon.bossTurn) || 0)), partyPower: Number(parsed.relicDungeon.partyPower) || 0, partyNames: Array.isArray(parsed.relicDungeon.partyNames) ? parsed.relicDungeon.partyNames.filter(name => typeof name === "string") : [], partyCount: Number(parsed.relicDungeon.partyCount) || 0, progress: Math.max(0, Math.min(100, Number.isFinite(Number(parsed.relicDungeon.progress)) ? Number(parsed.relicDungeon.progress) : parsed.relicDungeon.status === "cleared" ? 100 : 0)), dispatchPartyNames: Array.isArray(parsed.relicDungeon.dispatchPartyNames) ? parsed.relicDungeon.dispatchPartyNames.filter(name => typeof name === "string") : [], dispatchPartyUids: Array.isArray(parsed.relicDungeon.dispatchPartyUids) ? parsed.relicDungeon.dispatchPartyUids.filter(uid => typeof uid === "string") : [], dispatchPower: Number(parsed.relicDungeon.dispatchPower) || 0, materialsFound: Number(parsed.relicDungeon.materialsFound) || 0, equipmentFound: Number(parsed.relicDungeon.equipmentFound) || 0, bossUnlocked: parsed.relicDungeon.bossUnlocked === true || parsed.relicDungeon.status === "cleared", bossLogs: Array.isArray(parsed.relicDungeon.bossLogs) ? parsed.relicDungeon.bossLogs.filter(log => typeof log === "string") : [], lastReward: { gold: Number(parsed.relicDungeon.lastReward?.gold) || 0, shards: Number(parsed.relicDungeon.lastReward?.shards) || 0, materials: Number(parsed.relicDungeon.lastReward?.materials) || 0, equipment: Number(parsed.relicDungeon.lastReward?.equipment) || 0 }, rooms: Array.isArray(parsed.relicDungeon.rooms) && parsed.relicDungeon.rooms.length === relicDefaults.rooms.length ? parsed.relicDungeon.rooms : relicDefaults.rooms } : relicDefaults,

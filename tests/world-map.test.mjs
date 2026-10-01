@@ -44,7 +44,8 @@ test('stage drop rates are evaluated and returned with the victory reward',()=>{
  const started=dungeonStep(s,h,'tick',1001,undefined,.5,0,0,0,party,0,[0,0,0],false,0);
  const hit=dungeonStep(started.state,h,'tick',1051,undefined,.5,0,0,0,party,0,[0,0,0],false,0);
  assert.deepEqual(hit.reward.materials,['舊斧頭','肉類']);
- assert.match(hit.state.logs[0],/噴寶/);
+ assert.ok(hit.state.logs.some(log => /噴寶/.test(log)), 'victory drop report must remain in battle history');
+ assert.match(hit.state.logs[0],/自動狩獵關閉/);
  assert.equal(dungeonStep(hit.state,h,'tick',1101,undefined,.5,0,0,0,party,0,[0,0,0],false,0).reward,null);
 });
 function demo(){
