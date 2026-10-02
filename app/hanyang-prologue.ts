@@ -62,7 +62,7 @@ export const HANYANG_PROLOGUE_STEPS: ReadonlyArray<{ step: HanyangPrologueStep; 
   { step: "first-sale", title: "第一場買賣", detail: "把剛取得的戰利品帶回漢陽，換成真正能用的銀兩。" },
   { step: "journey-fund", title: "啟程之資", detail: "老商人會依傭兵公會的實際價格補足一筆不重複的啟程資金。" },
   { step: "medicine", title: "備妥補給", detail: "前往藥店實際購買 1 瓶金創藥，學會在商路上準備補給。" },
-  { step: "guild", title: "人多好辦事", detail: "去傭兵公會，從公會推薦的人選中挑一名夥伴。" },
+  { step: "guild", title: "人多好辦事", detail: "前往傭兵公會，招募 1 位傭兵。" },
   { step: "formation", title: "並肩而行", detail: "確認第一名傭兵已加入出戰隊伍。" },
   { step: "caravan-crisis", title: "商路告急", detail: "黑巾山賊開始影響漢陽商路，前往事件區域調查。" },
   { step: "caravan-delivery", title: "交付失而復得的貨物", detail: "把從黑巾山賊手中找回的商隊貨物交給老商人，聽聽這箱貨真正的價值。" },

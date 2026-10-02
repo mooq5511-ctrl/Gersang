@@ -6,7 +6,7 @@ export function mercenaryCardArt(unit: { uid?: string; templateId?: string; imag
   const template = unit.templateId?.replace(/^merchant-/, '');
   const legacy = unit.image?.match(/\/cute-merc-([a-z]+)-0\.png(?:\?.*)?$/)?.[1];
   const id = template && portraitIds.has(template) ? template : !unit.templateId ? legacy : undefined;
-  if (id && portraitIds.has(id)) return `/assets/mercenary-portraits/semireal-v1/${id}.jpg`;
-  if (!unit.templateId && unit.image === '/assets/mercenary-portraits/mazu.webp') return '/assets/mercenary-portraits/semireal-v1/mazu.jpg';
+  if (id && portraitIds.has(id)) return `/assets/mercenary-portraits/semireal-v1/${id}-transparent-v2.png`;
+  if (!unit.templateId && unit.image === '/assets/mercenary-portraits/mazu.webp') return '/assets/mercenary-portraits/semireal-v1/mazu-transparent-v2.png';
   return undefined;
 }

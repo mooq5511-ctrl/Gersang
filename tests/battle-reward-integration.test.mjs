@@ -27,6 +27,30 @@ const { applyGersangVisuals } = require('../app/game-save-normalizers.ts');
 const deps = { addLog: (logs, text) => [text, ...logs], grantXp, enterInn: state => state, leaveInn: state => state };
 const rolls = { roll: .99, choice: 0, spawnRoll: 0, encounterCountRoll: 0, retaliationRoll: .99, materialRolls: [1, 1, 1], gearDropRoll: 1, fusionCoreRoll: 1 };
 
+test('continuous world hunting survives victories and ends permanently on defeat', () => {
+  const { freshDungeon } = require('../app/dungeon-engine.ts');
+  const makeState = hero => ({
+    hero, mercs: [], active: [], territory: freshTerritory(), kills: 0, starterDeliveryKills: 0,
+    logs: [], battleLogs: [], gold: 0, inventory: [], materials: {},
+    npcProgress: { activeQuests: [] }, dungeon: { ...freshDungeon(), autoHunt: true },
+  });
+  let winner = makeState({ ...makeUnit('hero'), str: 500, vit: 500, hp: 5000, maxHp: 5000 });
+  winner = runDungeonAction(winner, 'start', 1000, 'e_starter_raccoon', rolls, deps);
+  let now = 1000;
+  for (; now < 20000 && winner.kills < 3; now += 200) winner = runDungeonAction(winner, 'tick', now, undefined, rolls, deps);
+  assert(winner.kills >= 3, 'victory should automatically spawn more monsters');
+  assert.equal(winner.dungeon.autoHunt, true);
+
+  let loser = makeState({ ...makeUnit('hero'), hp: 1 });
+  loser = runDungeonAction(loser, 'start', 1000, 'e_white_tiger_fierce_tiger', rolls, deps);
+  for (now = 1200; now < 30000 && loser.dungeon.status !== 'recovering'; now += 200) loser = runDungeonAction(loser, 'tick', now, undefined, rolls, deps);
+  assert.equal(loser.dungeon.status, 'recovering');
+  assert.equal(loser.dungeon.autoHunt, false);
+  assert.equal(loser.dungeon.resumeAutoHuntAfterRecovery, false);
+  for (; now < 90000 && loser.dungeon.status === 'recovering'; now += 2000) loser = runDungeonAction(loser, 'tick', now, undefined, rolls, deps);
+  assert.equal(loser.dungeon.status, 'idle', 'healing must not restart defeated hunting');
+});
+
 test('visual normalization preserves already-normalized roster and equipment references', () => {
   const hero = { ...makeUnit('hero'), nation: 'korea', gender: 'male' };
   const merc = { ...makeUnit('merc'), templateId: 'merchant-spear', name: '朝鮮槍兵' };

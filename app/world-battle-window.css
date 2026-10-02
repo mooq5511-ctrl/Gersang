@@ -1,0 +1,71 @@
+.world-battle-window[data-slot="dialog-content"] {
+  z-index: 101;
+  width: min(1200px, calc(100vw - 40px));
+  max-width: min(1200px, calc(100vw - 40px));
+  height: min(900px, calc(100dvh - 40px));
+  max-height: calc(100dvh - 40px);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #171e24;
+  color: #f2e5c8;
+  border: 1px solid #a88a52;
+}
+.world-battle-window-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #65573e;
+  background: #202932;
+  flex-shrink: 0;
+}
+.world-battle-window-header [data-slot="dialog-description"] {
+  margin-top: 8px;
+  color: #c6c0b2;
+}
+.world-battle-window-header button { flex-shrink: 0; }
+.world-battle-window-body { overflow: auto; min-height: 0; padding: 16px; }
+.world-battle-window-body .dungeon-panel { margin: 0; width: 100%; }
+.world-battle-window-body .battle-viewport { height: min(580px, calc(100dvh - 230px)); min-height: 240px; margin: 12px 0; }
+.world-battle-reopen {
+  position: fixed;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  right: 172px;
+  z-index: 73;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+  padding: 12px 18px;
+  border: 1px solid #ba9758;
+  border-radius: 14px;
+  background: #202932;
+  color: #f2e5c8;
+  box-shadow: 0 8px 28px #0008;
+  cursor: pointer;
+  text-align: left;
+}
+.world-battle-reopen strong, .world-battle-reopen small { display: block; }
+.world-battle-reopen small { margin-top: 4px; color: #d5c9ae; }
+.world-battle-live-dot { width: 10px; height: 10px; border-radius: 50%; background: #82cb91; flex-shrink: 0; }
+.world-battle-overlay[data-slot="dialog-overlay"] { z-index: 100; }
+.world-battle-defeat[data-slot="dialog-content"] { z-index: 101; border: 1px solid #a88a52; }
+@media (max-width: 640px) {
+  .world-battle-window[data-slot="dialog-content"] {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+  .world-battle-window-header { padding: max(12px, env(safe-area-inset-top)) 12px 12px; gap: 8px; }
+  .world-battle-window-body { padding: 8px 8px max(8px, env(safe-area-inset-bottom)); }
+  .world-battle-window-body .dungeon-command-header { flex-direction: row; }
+  .world-battle-window-body .dungeon-command-controls { width: auto; }
+  .world-battle-window-body .battle-viewport { height: auto; min-height: 0; aspect-ratio: 9 / 7; }
+  .world-battle-reopen { right: 16px; bottom: max(100px, env(safe-area-inset-bottom)); }
+}

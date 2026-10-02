@@ -2,6 +2,8 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { WorldBattleWindow } from "./world-battle-window";
+import "./world-battle-window.css";
 import { merchantMercenaries, type MercenarySpec } from './mercenary-roster';
 import { CaravanStatus } from './caravan-status';
 import {DungeonPanel,WorldMapNavigation} from './dungeon-panel';
@@ -44,7 +46,8 @@ import {
   Warehouse,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import './game-detail-dialog.css';
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -138,7 +141,7 @@ type SceneDisplayMode = "auto" | "mobile-916" | "pc-169" | "fullscreen";
 type GameUiSettings = { musicVolume: number; sceneMode: SceneDisplayMode };
 const DEFAULT_GAME_UI_SETTINGS: GameUiSettings = { musicVolume: 42, sceneMode: "auto" };
 const mapFeatureIcons: Record<string, string> = { field: "🌾", lake: "🌊", sea: "⚓", forest: "🌲", ice: "❄️", desert: "☀️", sumeru: "⛰️", shambhala: "🏯" };
-const DEFAULT_BATTLE_PANEL_VISIBILITY = { partyVitals: true, mapNavigation: true, monsterSelection: true, battlefield: true, battleLogs: true };
+const DEFAULT_BATTLE_PANEL_VISIBILITY = { partyVitals: true, mapNavigation: true, monsterSelection: true, battleLogs: true };
 type BattlePanelVisibility = typeof DEFAULT_BATTLE_PANEL_VISIBILITY;
 const WORLD_MAP_NODE_POSITIONS: Record<string, [number, number]> = {
   "starter-outskirts": [15, 58],
@@ -154,7 +157,6 @@ const BATTLE_PANEL_LABELS: Array<[keyof BattlePanelVisibility, string]> = [
   ["partyVitals", "出戰隊伍"],
   ["mapNavigation", "地圖瀏覽"],
   ["monsterSelection", "怪物選擇"],
-  ["battlefield", "戰鬥畫面"],
   ["battleLogs", "戰鬥紀錄"],
 ];
 
@@ -180,6 +182,7 @@ function currentTimestamp() {
 export default function GameV15() {
   const [game, rawSetGame] = useState<GameState>(() => { const initial = freshGame(); return { ...initial, questLedger: normalizeQuestLedger(undefined, Date.now(), initial.hero.level) }; });
   const [activeTab, setActiveTab] = useState("map");
+  const [battleWindowRequest, setBattleWindowRequest] = useState(0);
   const [quickDialog, setQuickDialog] = useState<"treasure" | "settings" | null>(null);
   const [treasureQuery, setTreasureQuery] = useState("");
   // 地圖是主要操作區；主線資訊先以一行摘要呈現，玩家需要時再展開，避免遮住地圖節點。
@@ -518,7 +521,7 @@ export default function GameV15() {
       if (game.hanyangPrologueStep === "arrival") {
         const firstQuestActive = game.npcProgress.activeQuests.includes(FIRST_CARAVAN_QUEST_ID);
         if (firstQuestActive && game.starterDeliveryKills >= FIRST_CARAVAN_TARGET) return { title: "回村長處領取戰利品", detail: "驛路已清出來了，回到金成浩身邊回報，領取白裝短劍後再進行穿戴。", tab: "map" as const, npcId: "kim-seongho" as NpcId };
-        return { title: "村長的緊急委託", detail: "小嚮導米米說村長正在找你；先前往村長處接下第一份商隊委託。", tab: "map" as const, npcId: "kim-seongho" as NpcId };
+        return { title: "村長的緊急委託", detail: "村長正在找你；先前往村長處接下第一份商隊委託。", tab: "map" as const, npcId: "kim-seongho" as NpcId };
       }
       if (game.hanyangPrologueStep === "outskirts") return { title: hanyangStep.title, detail: hanyangStep.detail, tab: "battle" as const, mapId: "starter-outskirts", monsterName: "狸貓" };
       if (game.hanyangPrologueStep === "first-sale") {
@@ -528,7 +531,7 @@ export default function GameV15() {
       }
       if (game.hanyangPrologueStep === "journey-fund") return { title: hanyangStep.title, detail: "回到老商人身邊，先聽完交易說明，再領取一次性的啟程資金。", tab: "map" as const, npcId: "wang-deokchang" as NpcId };
       if (game.hanyangPrologueStep === "medicine") return { title: hanyangStep.title, detail: "前往藥店，實際購買 1 瓶金創藥，為下一段商路準備補給。", tab: "city" as const, service: "pharmacy" as const };
-      if (game.hanyangPrologueStep === "guild") return { title: hanyangStep.title, detail: HANYANG_PROLOGUE_DIALOGUE.guild.join(" "), tab: "city" as const, service: "mercenary" as const };
+      if (game.hanyangPrologueStep === "guild") return { title: hanyangStep.title, detail: hanyangStep.detail, tab: "city" as const, service: "mercenary" as const };
       if (game.hanyangPrologueStep === "formation") return { title: hanyangStep.title, detail: "打開隊伍介面，確認第一名傭兵已處於出戰狀態。", tab: "squad" as const };
       if (game.hanyangPrologueStep === "caravan-crisis") return { title: hanyangStep.title, detail: "北邊商路出事了；先向老商人了解發生什麼事。", tab: "map" as const };
       if (game.hanyangPrologueStep === "caravan-delivery") return { title: hanyangStep.title, detail: "前往老商人王德昌處，親手交付找回的商隊貨物。", tab: "map" as const, npcId: "wang-deokchang" as NpcId };
@@ -1175,7 +1178,7 @@ export default function GameV15() {
   const treasureMedicineEntries = medicineCatalog.filter(medicine => !treasureTerm || medicine.name.includes(treasureTerm) || medicine.effect.includes(treasureTerm));
 
   return (
-    <main className="game-shell v15-shell classic-live-game" data-scene-mode={uiSettings.sceneMode} data-objective-collapsed={!objectiveExpanded} data-quicknav-collapsed={!quickNavExpanded} data-onboarding-locked={tutorialMapLocked ? "map" : tutorialBattleLocked || tutorialTrialLocked ? "battle" : tutorialCityLocked ? "city" : hanyangLockedTab}>
+    <main className="game-shell v15-shell classic-live-game" data-scene-mode={uiSettings.sceneMode} data-objective-collapsed={true} data-quicknav-collapsed={!quickNavExpanded} data-onboarding-locked={tutorialMapLocked ? "map" : tutorialBattleLocked || tutorialTrialLocked ? "battle" : tutorialCityLocked ? "city" : hanyangLockedTab}>
       <header className="topbar">
         <div className="brand">
           <div className="brand-seal">合</div>
@@ -1264,14 +1267,25 @@ export default function GameV15() {
         </DialogContent>
       </Dialog>
 
-      <section className={`main-objective${objectiveExpanded ? "" : " is-collapsed"}`} aria-label="目前主線目標">
-        {objectiveExpanded ? <QuestJournal game={game} current={mainObjective} stages={roadmapStages} contracts={gameplayContracts} onClaim={id => setGame(previous => claimAdventureQuest(previous, id, Date.now(), grantXp))} onClose={() => setObjectiveExpanded(false)} onNavigate={destination => {
+      <section className="main-objective is-collapsed" aria-label="目前主線目標">
+        <div className="objective-collapsed-row"><strong className="objective-collapsed-label" title={mainObjective.title}>任務・{mainObjective.title}</strong><button type="button" className="objective-collapse-toggle" aria-haspopup="dialog" aria-expanded={objectiveExpanded} aria-label="查看任務詳情" title="查看任務詳情" onClick={() => setObjectiveExpanded(true)}><ChevronDown aria-hidden="true"/></button></div>
+      </section>
+      <Dialog open={objectiveExpanded} onOpenChange={setObjectiveExpanded}>
+        <DialogContent className="game-detail-dialog quest-detail-dialog classic-live-game" overlayClassName="game-detail-overlay" showCloseButton={false}>
+          <header className="game-detail-heading"><DialogTitle>任務詳情</DialogTitle><DialogClose render={<button type="button" aria-label="關閉任務詳情"/>}>×</DialogClose></header>
+          <DialogDescription>查看目標、進度與獎勵；關閉視窗不會取消任務。</DialogDescription>
+          <div className="game-detail-body"><QuestJournal game={game} current={mainObjective} stages={roadmapStages} contracts={gameplayContracts} onClaim={id => setGame(previous => claimAdventureQuest(previous, id, Date.now(), grantXp))} onClose={() => setObjectiveExpanded(false)} onNavigate={destination => {
           setObjectiveExpanded(false);
           if (destination === "current") goToObjective();
           else if (["contracts", "hall", "battle", "squad", "trade", "relic"].includes(destination)) setActiveTab(destination);
           else { setActiveTab("map"); openNpcDialogue(destination as NpcId); }
-        }}/> : <div className="objective-collapsed-row"><strong className="objective-collapsed-label" title={mainObjective.title}>任務・{mainObjective.title}</strong><button type="button" className="objective-collapse-toggle" aria-expanded={false} aria-label="展開完整任務面板" title="展開完整任務面板" onClick={() => setObjectiveExpanded(true)}><ChevronDown aria-hidden="true"/></button></div>}
-      </section>
+        }}/></div>
+        </DialogContent>
+      </Dialog>
+
+      <WorldBattleWindow state={game.dungeon || freshDungeon()} request={battleWindowRequest} enabled={ready && activeSlot !== null}>
+        <DungeonPanel continuousHunt hero={game.hero} party={[game.hero,...game.mercs.filter(unit=>game.active.includes(unit.uid)).slice(0,11)]} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} autoSkill={game.autoSkill} toggleAutoSkill={()=>setGame(previous=>({...previous,autoSkill:!previous.autoSkill,logs:addLog(previous.logs,previous.autoSkill?'已關閉技能自動施放。':'已開啟技能自動施放。')}))} autoPotion={game.autoPotion} healingPotions={AutoPotionManager.available(game.medicines,medicineCatalog)} medicineStock={game.medicines} onAutoPotionChange={(change:Partial<AutoPotionSettings>)=>setGame(previous=>configureAutoPotionAction(previous,change,addLog))} battleLogs={BattleLogManager.getLogs(game.battleLogs)} clearBattleLogs={()=>setGame(previous=>({...previous,battleLogs:BattleLogManager.clear()}))} mapName={currentMap.name} mapRegion={currentMap.region} medicineQuickbar={<div className="battle-medicine-float" aria-label="隨身藥袋">{medicineCatalog.filter(medicine=>medicine.id==='healing'||medicine.id==='mana').map(medicine=><div className="battle-medicine-item" key={medicine.id}><button type="button" disabled={!game.medicines[medicine.id]} onClick={()=>consumeMedicine(medicine.id)} title={`${medicine.name}：${medicine.effect}`}><Pill /><span>{medicine.name}</span><b>{`×${game.medicines[medicine.id]||0}`}</b></button></div>)}</div>} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()],gearDropRoll=Math.random(),gearChoiceRoll=Math.random();setGame(previous=>{let next=runDungeonAction(previous,action,now,key,{roll,choice,spawnRoll:0,encounterCountRoll:Math.random(),retaliationRoll,materialRolls,gearDropRoll,gearChoiceRoll},{addLog,grantXp,enterInn:enterGameInn,leaveInn:leaveGameInn});if ((previous.hanyangPrologueStep==='outskirts'||previous.hanyangPrologueStep==='first-battle')&&next.kills>previous.kills) next={...next,hanyangPrologueStep:next.starterDeliveryKills>=FIRST_CARAVAN_TARGET?'arrival':'outskirts'};if(previous.hanyangPrologueStep==='bandit-trial'&&action!=='start'&&previous.dungeon?.status==='fighting'&&(next.dungeon?.status==='idle'||next.dungeon?.status==='respawning')) next={...next,hanyangPrologueStep:'return',hanyangPrologueFlags:{...next.hanyangPrologueFlags,caravanRestored:true},dungeon:next.dungeon?{...next.dungeon,status:'idle',autoHunt:false}:next.dungeon};const mercenaryTrial=previous.onboardingStep==='mercenary-trial'&&key==='e_starter_black_bandit'&&action!=='start';if(mercenaryTrial)return {...next,hero:previous.hero,mercs:previous.mercs,gold:previous.gold,inventory:previous.inventory,medicines:previous.medicines,onboardingStep:'hire-first-merc',dungeon:next.dungeon?{...next.dungeon,status:'idle',autoHunt:false,realtime:undefined,realtimeCursor:0}:next.dungeon,logs:addLog(next.logs,'黑巾山賊壓制了你的隊伍；這不是懲罰，而是提醒你需要傭兵。')};const firstDeliveryBattle=previous.onboardingStep==='travel-to-outskirts'||previous.onboardingStep==='first-battle';if(firstDeliveryBattle&&next.starterDeliveryKills>previous.starterDeliveryKills)return {...next,onboardingStep:next.starterDeliveryKills>=FIRST_CARAVAN_TARGET?'return-village-chief':'first-battle',dungeon:next.dungeon?{...next.dungeon,autoHunt:false}:next.dungeon};return next;});}}/>
+      </WorldBattleWindow>
 
       <section id="inn-zone" className="forced-inn" hidden={game.hero.status!=='客棧中' || !innPanelExpanded} aria-live="polite">
         <button type="button" className="forced-inn-collapse-toggle" aria-label="收起客棧療傷資訊" title="收起客棧療傷資訊" onClick={() => setInnPanelExpanded(false)}><ChevronUp aria-hidden="true"/></button>
@@ -1310,12 +1324,10 @@ export default function GameV15() {
           {progressiveUnlocks.raid && <TabsTrigger value="raid"><Crown />雷霆祭壇</TabsTrigger>}
         </TabsList>
 
-        {activeTab !== "map" && game.hanyangPrologueStep === "completed" && (tutorialTrialLocked || tutorialCityLocked) && <aside className="village-onboarding-buddy" aria-live="polite"><span className="village-onboarding-avatar" aria-hidden="true">🧭</span><div><strong>小嚮導・米米</strong><p>{tutorialTrialLocked ? "不好！黑巾山賊正在搶奪貨物，任務已自動接受，請立即迎戰！" : "一個人守不住商路，請立刻前往傭兵公會招募普通傭兵。"}</p><small>{tutorialTrialLocked ? "前往新手村郊外・黑巾山賊" : "傭兵公會已開放・招募第一名普通傭兵"}</small></div></aside>}
 
-        {game.hanyangPrologueStep !== "completed" && <aside className="village-onboarding-buddy hanyang-prologue-buddy" aria-live="polite"><span className="village-onboarding-avatar" aria-hidden="true">🧭</span><div><strong>小嚮導・米米</strong><p>{game.hanyangPrologueStep === "arrival" ? (game.npcProgress.activeQuests.includes(FIRST_CARAVAN_QUEST_ID) && game.starterDeliveryKills >= FIRST_CARAVAN_TARGET ? "驛路已清出來了，先回村長處回報並領取裝備。" : "村長正在村口等你，先去聽聽他的緊急委託。") : game.hanyangPrologueStep === "outskirts" ? "先到新手村郊外擊敗狸貓，取得第一批可以出售的戰利品。" : game.hanyangPrologueStep === "first-sale" ? ((game.npcProgress.activeQuests.includes(FIRST_CARAVAN_QUEST_ID) && game.starterDeliveryKills >= FIRST_CARAVAN_TARGET && !game.inventory.some(item => item.name === "商路短劍") && !Object.values(game.hero.equip).some(item => item?.name === "商路短劍")) ? "驛路已清出來了，先回村長處回報並領取裝備。" : "狸貓戰利品帶回來了，先穿戴剛取得的裝備，再把材料賣掉。") : game.hanyangPrologueStep === "journey-fund" ? "老商人準備了一筆啟程資金，回漢陽找他領取。" : game.hanyangPrologueStep === "medicine" ? "啟程資金已備妥，前往藥店實際購買一瓶金創藥。" : game.hanyangPrologueStep === "guild" ? "一個人守不住商路，前往傭兵公會招募一名夥伴。" : game.hanyangPrologueStep === "formation" ? "傭兵已加入商團，打開隊伍介面確認他在出戰名單中。" : game.hanyangPrologueStep === "caravan-crisis" ? "北邊商路出事了，先找老商人了解貨物被搶的經過。" : game.hanyangPrologueStep === "bandit-trial" ? "精英黑巾山賊就在新手村郊外；他不是 Boss，和第一名夥伴一起把他擊退。" : "商路已恢復，回到漢陽看看老商人怎麼說。"}</p><small>序章引導・{hanyangStep.title}</small></div></aside>}
 
         <TabsContent value="map" className="tab-panel isometric-map-tab">
-          {activeTab === "map" && <IsometricWorldMap cityName={displayCityName} locationLabel={mapLocationLabel} objectiveExpanded={objectiveExpanded} npcLabelsVisible={npcLabelsVisible} onNpcLabelsVisibleChange={setNpcLabelsVisible} onNpcTalk={openNpcDialogue} tutorialLocked={tutorialMapLocked} tutorialNpcIds={tutorialNpcIds} npcVisible={npcId => npcId !== "mysterious-traveler" || mysteryNpcVisible} destinationVisible={destination => destination === "city" || destination === "battle" || destination === "trade" && progressiveUnlocks.trade || destination === "hall" && progressiveUnlocks.hall || destination === "raid" && progressiveUnlocks.raid} onEnter={(destination) => {
+          {activeTab === "map" && <IsometricWorldMap cityName={displayCityName} locationLabel={mapLocationLabel} objectiveExpanded={false} npcLabelsVisible={npcLabelsVisible} onNpcLabelsVisibleChange={setNpcLabelsVisible} onNpcTalk={openNpcDialogue} tutorialLocked={tutorialMapLocked} tutorialNpcIds={tutorialNpcIds} npcVisible={npcId => npcId !== "mysterious-traveler" || mysteryNpcVisible} destinationVisible={destination => destination === "city" || destination === "battle" || destination === "trade" && progressiveUnlocks.trade || destination === "hall" && progressiveUnlocks.hall || destination === "raid" && progressiveUnlocks.raid} onEnter={(destination) => {
             if (destination === "city") { setCityService("mercenary"); setActiveTab("city"); }
             else if (destination === "trade") setActiveTab("trade");
             else if (destination === "raid") setActiveTab("raid");
@@ -1323,7 +1335,6 @@ export default function GameV15() {
             else if (destination === "battle") setActiveTab("battle");
             else setActiveTab("squad");
           }} />}
-          {game.hanyangPrologueStep === "completed" && (tutorialMapLocked || tutorialTrialLocked || tutorialCityLocked) && <aside className="village-onboarding-buddy" aria-live="polite"><span className="village-onboarding-avatar" aria-hidden="true">🧭</span><div><strong>小嚮導・米米</strong><p>{game.onboardingStep === "return-village-chief" ? "驛路已清出來了，村長應該等急了，快回去向他報告！" : game.onboardingStep === "mercenary-trial" ? "不好！黑巾山賊正在搶奪貨物，這是村長強制交給你的緊急任務，請立即迎戰！" : game.onboardingStep === "hire-first-merc" ? "一個人守不住商路，請立刻前往傭兵公會招募普通傭兵。" : "村長似乎有急事找你，請先移動至村長處。"}</p><small>{game.onboardingStep === "return-village-chief" ? "點擊村長，交付第一份商隊委託" : game.onboardingStep === "mercenary-trial" ? "任務已自動接受・前往新手村郊外" : game.onboardingStep === "hire-first-merc" ? "傭兵公會已開放・招募第一名普通傭兵" : "目前只有村長可以互動"}</small></div></aside>}
           {activeNpcId && npcById(activeNpcId) && <NpcDialoguePanel npc={npcById(activeNpcId)!} game={game} initialLine={npcOpeningLine} onAction={handleNpcAction} onClose={() => setActiveNpcId(null)} />}
         </TabsContent>
 
@@ -1387,8 +1398,7 @@ export default function GameV15() {
             <p className="battle-world-map-description">{currentMap.region}・{currentMap.description}　生命 ×{currentMap.hpMultiplier}・金錢 ×{currentMap.goldMultiplier}</p>
             {TIER_EQUIPMENT_DROP_REGIONS.filter(region => region.mapId === currentMap.id).map(region => <p key={region.id} className="battle-world-map-description">本區怪物掉落：Lv.{region.tiers.join('／Lv.')} 系列裝備（達到對應等級後可掉落；一般 4%、首領 12%）</p>)}
             {tutorialBattleLocked && <div className="onboarding-battle-guide" role="status"><strong>新手戰鬥教學・驛路清剿 {Math.min(game.starterDeliveryKills, FIRST_CARAVAN_TARGET)} / {FIRST_CARAVAN_TARGET}</strong><span>前往「新手村郊外」，點選狸貓開始戰鬥。擊敗怪物會獲得銀兩與經驗；完成 3 隻後，回去向村長報告。</span></div>}
-            {battlePanelVisibility.monsterSelection && sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・依關卡輪替"}</strong></div><span>點選卡片即可開始戰鬥；連戰由右側開關控制</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id).map(enemy => { const bossLocked = enemy.boss && !firstCaravanBossReady; const tutorialEnemyBlocked = tutorialBattleLocked && enemy.name !== "狸貓"; const monsterImage = battleMonsterImage(enemy.name, enemy.dungeonId); return <button type="button" key={enemy.name} disabled={bossLocked || tutorialEnemyBlocked} className={(game.selectedMonster === enemy.name ? "active " : "")+(enemy.boss ? "boss-target" : "")} onClick={() => setGame(previous => { const key=enemy.dungeonId; const base={...previous,selectedMonster:enemy.name,enemyHp:enemy.hp||previous.enemyHp,dungeon:key?{...freshDungeon(),autoHunt:previous.dungeon?.autoHunt===true,key,lockedEnemyKey:key,enemyHp:DUNGEONS[key].hp}:previous.dungeon,logs:addLog(previous.logs,`${enemy.boss?'首領挑戰：':'指定遭遇怪物：'}${enemy.name}，開始戰鬥。`)}; return key ? runDungeonAction(base,'start',Date.now(),key,{roll:Math.random(),choice:Math.random(),spawnRoll:0,encounterCountRoll:Math.random(),retaliationRoll:Math.random(),materialRolls:[Math.random(),Math.random(),Math.random()],fusionCoreRoll:Math.random()},{addLog,grantXp,enterInn:enterGameInn,leaveInn:leaveGameInn}) : base; })}><img className="monster-choice-art" src={monsterImage} alt={`${enemy.name}插圖`}/><div><strong>{enemy.name}</strong><em>{tutorialEnemyBlocked ? '新手教學・尚未開放' : bossLocked ? '完成第一輪成長後開放' : enemy.boss ? (game.newbieBossDefeated?"已討伐・可再戰":"首領挑戰") : game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>MP <b>{enemy.mp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>{tutorialEnemyBlocked ? (game.onboardingStep === "mercenary-trial" ? '請點選黑巾山賊，開始劇情試煉。' : '請先完成第一份委託。') : bossLocked ? '條件：完成第一份委託、Lv.20、驛站與第一件綠裝。' : `掉落：${enemy.drops.join("、")}`}</p></button>; })}</div></section>}
-             {battlePanelVisibility.battlefield && <DungeonPanel hero={game.hero} party={[game.hero,...game.mercs.filter(unit=>game.active.includes(unit.uid)).slice(0,11)]} state={game.dungeon||freshDungeon()} mp={vitalStats(game.hero).mp} autoSkill={game.autoSkill} toggleAutoSkill={()=>setGame(previous=>({...previous,autoSkill:!previous.autoSkill,logs:addLog(previous.logs,previous.autoSkill?'已關閉技能自動施放。':'已開啟技能自動施放。')}))} autoPotion={game.autoPotion} healingPotions={AutoPotionManager.available(game.medicines,medicineCatalog)} medicineStock={game.medicines} onAutoPotionChange={(change:Partial<AutoPotionSettings>)=>setGame(previous=>configureAutoPotionAction(previous,change,addLog))} battleLogs={BattleLogManager.getLogs(game.battleLogs)} clearBattleLogs={()=>setGame(previous=>({...previous,battleLogs:BattleLogManager.clear()}))} mapName={currentMap.name} mapRegion={currentMap.region} medicineQuickbar={<div className="battle-medicine-float" aria-label="隨身藥袋">{medicineCatalog.filter(medicine=>medicine.id==='healing'||medicine.id==='mana').map(medicine=><div className="battle-medicine-item" key={medicine.id}><button type="button" disabled={!game.medicines[medicine.id]} onClick={()=>consumeMedicine(medicine.id)} title={`${medicine.name}：${medicine.effect}`}><Pill /><span>{medicine.name}</span><b>{`×${game.medicines[medicine.id]||0}`}</b></button></div>)}</div>} dps={game.mercs.reduce((sum,unit)=>sum+(game.active.includes(unit.uid)?Math.max(0,Math.floor(combatStats(unit).attack*0.18)):0),0)} act={(action,key)=>{const now=Date.now(),roll=Math.random(),choice=Math.random(),retaliationRoll=Math.random(),materialRolls=[Math.random(),Math.random(),Math.random()],gearDropRoll=Math.random(),gearChoiceRoll=Math.random();setGame(previous=>{let next=runDungeonAction(previous,action,now,key,{roll,choice,spawnRoll:0,encounterCountRoll:Math.random(),retaliationRoll,materialRolls,gearDropRoll,gearChoiceRoll},{addLog,grantXp,enterInn:enterGameInn,leaveInn:leaveGameInn});if ((previous.hanyangPrologueStep==='outskirts'||previous.hanyangPrologueStep==='first-battle')&&next.kills>previous.kills) next={...next,hanyangPrologueStep:next.starterDeliveryKills>=FIRST_CARAVAN_TARGET?'arrival':'outskirts'};if(previous.hanyangPrologueStep==='bandit-trial'&&action!=='start'&&previous.dungeon?.status==='fighting'&&(next.dungeon?.status==='idle'||next.dungeon?.status==='respawning')) next={...next,hanyangPrologueStep:'return',hanyangPrologueFlags:{...next.hanyangPrologueFlags,caravanRestored:true},dungeon:next.dungeon?{...next.dungeon,status:'idle',autoHunt:false}:next.dungeon};const mercenaryTrial=previous.onboardingStep==='mercenary-trial'&&key==='e_starter_black_bandit'&&action!=='start';if(mercenaryTrial)return {...next,hero:previous.hero,mercs:previous.mercs,gold:previous.gold,inventory:previous.inventory,medicines:previous.medicines,onboardingStep:'hire-first-merc',dungeon:next.dungeon?{...next.dungeon,status:'idle',autoHunt:false,realtime:undefined,realtimeCursor:0}:next.dungeon,logs:addLog(next.logs,'黑巾山賊壓制了你的隊伍；這不是懲罰，而是提醒你需要傭兵。')};const firstDeliveryBattle=previous.onboardingStep==='travel-to-outskirts'||previous.onboardingStep==='first-battle';if(firstDeliveryBattle&&next.starterDeliveryKills>previous.starterDeliveryKills)return {...next,onboardingStep:next.starterDeliveryKills>=FIRST_CARAVAN_TARGET?'return-village-chief':'first-battle',dungeon:next.dungeon?{...next.dungeon,autoHunt:false}:next.dungeon};return next;});}}/>}
+            {battlePanelVisibility.monsterSelection && sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・依關卡輪替"}</strong></div><span>點選卡片即可開始戰鬥；收起視窗後仍會持續狩獵</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id).map(enemy => { const bossLocked = enemy.boss && !firstCaravanBossReady; const tutorialEnemyBlocked = tutorialBattleLocked && enemy.name !== "狸貓"; const monsterImage = battleMonsterImage(enemy.name, enemy.dungeonId); return <button type="button" key={enemy.name} disabled={bossLocked || tutorialEnemyBlocked || game.dungeon?.status === 'recovering'} className={(game.selectedMonster === enemy.name ? "active " : "")+(enemy.boss ? "boss-target" : "")} onClick={() => { setBattleWindowRequest(request => request + 1); setGame(previous => { const key=enemy.dungeonId; const base={...previous,selectedMonster:enemy.name,enemyHp:enemy.hp||previous.enemyHp,dungeon:key?{...freshDungeon(),autoHunt:true,key,lockedEnemyKey:key,enemyHp:DUNGEONS[key].hp}:previous.dungeon,logs:addLog(previous.logs,`${enemy.boss?'首領挑戰：':'指定遭遇怪物：'}${enemy.name}，開始戰鬥。`)}; return key ? runDungeonAction(base,'start',Date.now(),key,{roll:Math.random(),choice:Math.random(),spawnRoll:0,encounterCountRoll:Math.random(),retaliationRoll:Math.random(),materialRolls:[Math.random(),Math.random(),Math.random()],fusionCoreRoll:Math.random()},{addLog,grantXp,enterInn:enterGameInn,leaveInn:leaveGameInn}) : base; }); }}><img className="monster-choice-art" src={monsterImage} alt={`${enemy.name}插圖`}/><div><strong>{enemy.name}</strong><em>{tutorialEnemyBlocked ? '新手教學・尚未開放' : bossLocked ? '完成第一輪成長後開放' : enemy.boss ? (game.newbieBossDefeated?"已討伐・可再戰":"首領挑戰") : game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>MP <b>{enemy.mp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>{tutorialEnemyBlocked ? (game.onboardingStep === "mercenary-trial" ? '請點選黑巾山賊，開始劇情試煉。' : '請先完成第一份委託。') : bossLocked ? '條件：完成第一份委託、Lv.20、驛站與第一件綠裝。' : `掉落：${enemy.drops.join("、")}`}</p></button>; })}</div></section>}
           </section>
           {battlePanelVisibility.battleLogs && <div className="battle-grid">
             <section className="panel log-panel">
