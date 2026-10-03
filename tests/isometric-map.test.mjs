@@ -1,14 +1,15 @@
+import { readGameModules } from './game-module-source.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const game = readFileSync(new URL("../app/game-v15.tsx", import.meta.url), "utf8");
+const game = readGameModules("game-map-page.tsx", "game-tab-navigation.tsx", "use-game-controller.ts");
 const map = readFileSync(new URL("../app/isometric-world-map.tsx", import.meta.url), "utf8");
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 
 test("Phaser isometric map is the default live game scene", () => {
   assert.equal(pkg.dependencies.phaser, "3.90.0");
-  assert.match(game, /useState\("map"\)/);
+  assert.match(game, /useState\(['"]map['"]\)/);
   assert.match(game, /<IsometricWorldMap/);
   assert.match(game, /TabsTrigger value="map"/);
   assert.match(map, /audio: \{ noAudio: true \}/);

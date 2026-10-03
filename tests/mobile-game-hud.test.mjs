@@ -1,8 +1,9 @@
+import { readGameModules } from './game-module-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 
-const ui = readFileSync(new URL('../app/game-v15.tsx', import.meta.url), 'utf8');
+const ui = readGameModules("game-v15.tsx", "game-header.tsx", "game-navigation.tsx", "game-quest-panel.tsx", "game-inn-panel.tsx", "game-live-footer.tsx", "game-map-page.tsx", "game-dialogs.tsx", "game-ui-config.ts", "game-view-selector.ts", "use-game-preferences.ts", "game-battle-page.tsx");
 const styles = readFileSync(new URL('../app/classic-map-interface.css', import.meta.url), 'utf8');
 const mapConfig = readFileSync(new URL('../app/town-map-config.ts', import.meta.url), 'utf8');
 const townMap = readFileSync(new URL('../app/isometric-world-map.tsx', import.meta.url), 'utf8');
@@ -61,12 +62,12 @@ test('floating NPC markers and sidebar buttons use clear metal states and touch 
 });
 
 test('overlapping HUD regions can be collapsed and map NPC nameplates can be hidden', () => {
-  assert.match(ui, /data-objective-collapsed=\{!objectiveExpanded\}/);
+  assert.match(ui, /data-objective-collapsed=\{!view\.objectiveExpanded\}/);
   assert.match(ui, /aria-expanded=\{false\} aria-label="展開完整任務面板"/);
   assert.match(ui, /objective-collapsed-label" title=\{mainObjective\.title\}>任務・\{mainObjective\.title\}/);
   assert.match(journal, /onClick=\{onClose\} aria-label="收合任務面板"/);
   assert.match(ui, /aria-expanded=\{quickNavExpanded\}/);
-  assert.match(ui, /data-quicknav-collapsed=\{!quickNavExpanded\}/);
+  assert.match(ui, /data-quicknav-collapsed=\{!view\.quickNavExpanded\}/);
   assert.match(ui, /id="mobile-game-nav" className="classic-live-quicknav"[^>]*hidden=\{!quickNavExpanded\}/);
   assert.match(ui, /className="forced-inn" hidden=\{game\.hero\.status!==['"]客棧中['"] \|\| !innPanelExpanded\}/);
   assert.match(ui, /className="forced-inn-reopen" aria-controls="inn-zone"/);
@@ -84,7 +85,7 @@ test('overlapping HUD regions can be collapsed and map NPC nameplates can be hid
 test('settings expose a persistent live music-volume control', () => {
   assert.match(ui, /GAME_UI_SETTINGS_KEY = "gersang-ui-settings-v1"/);
   assert.match(ui, /aria-label="遊戲音樂音量" type="range" min="0" max="100"/);
-  assert.match(ui, /SceneMusic scene=\{musicScene\} volume=\{uiSettings\.musicVolume \/ 100\}/);
+  assert.match(ui, /SceneMusic\s+scene=\{view\.musicScene\}\s+volume=\{view\.uiSettings\.musicVolume \/ 100\}/);
   assert.match(ui, /localStorage\.setItem\(GAME_UI_SETTINGS_KEY, JSON\.stringify\(uiSettings\)\)/);
   assert.match(music, /audio\.volume=Math\.max\(0,Math\.min\(1,volumeRef\.current\)\)/);
   assert.match(music, /audioRef\.current\.volume=Math\.max\(0,Math\.min\(1,volume\)\)/);
@@ -99,7 +100,7 @@ test('Thunder Altar selects the dedicated BOSS track', () => {
 test('scene settings expose auto, mobile, desktop and browser-fullscreen layouts', () => {
   assert.match(ui, /sceneMode: "auto"/);
   for (const mode of ['auto', 'mobile-916', 'pc-169', 'fullscreen']) assert.ok(ui.includes(`setSceneMode("${mode}")`));
-  assert.match(ui, /data-scene-mode=\{uiSettings\.sceneMode\}/);
+  assert.match(ui, /data-scene-mode=\{view\.uiSettings\.sceneMode\}/);
   assert.match(ui, /document\.documentElement\.requestFullscreen\(\)/);
   assert.match(styles, /data-scene-mode="mobile-916"/);
   assert.match(styles, /data-scene-mode="pc-169"/);

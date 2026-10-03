@@ -583,7 +583,7 @@ body:has(.classic-live-game) #root { height:100%; overflow:hidden; }
 .village-city-hall-pin b { color:#ffe9a7;font-size:14px; }
 .village-city-hall-pin small { color:#d5c49d;font-size:10px; }
 @keyframes city-hall-pin-pulse { 0%,100% { filter:drop-shadow(0 0 3px #f1c85c); } 50% { filter:drop-shadow(0 0 11px #ffe9a0); } }
-.classic-live-game[data-onboarding-locked="map"] .classic-live-quicknav button:not([data-nav-key="map"]),.classic-live-game[data-onboarding-locked="battle"] .classic-live-quicknav button:not([data-nav-key="battle"]),.classic-live-game[data-onboarding-locked="city"] .classic-live-quicknav button:not([data-nav-key="city"]),.classic-live-game[data-onboarding-locked="map"] .character-switch,.classic-live-game[data-onboarding-locked="battle"] .character-switch,.classic-live-game[data-onboarding-locked="city"] .character-switch { pointer-events:none;opacity:.35;filter:grayscale(1); }
+.classic-live-game[data-onboarding-locked="map"] .classic-live-quicknav button:not([data-nav-key="map"]),.classic-live-game[data-onboarding-locked="battle"] .classic-live-quicknav button:not([data-nav-key="battle"]),.classic-live-game[data-onboarding-locked="city"] .classic-live-quicknav button:not([data-nav-key="city"]) { pointer-events:none;opacity:.35;filter:grayscale(1); }
 .onboarding-battle-guide { display:grid;gap:4px;margin:0 0 10px;padding:11px 14px;border:1px solid #e5bd60;border-radius:8px;background:linear-gradient(105deg,#fff0be,#d8a25d);box-shadow:0 4px 14px #24180a66;color:#382215; }
 .onboarding-battle-guide strong { font-family:serif;font-size:16px; }
 .onboarding-battle-guide span { font-size:12px;line-height:1.55; }

@@ -1,3 +1,4 @@
+import { readGameModules } from './game-module-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -6,8 +7,9 @@ import ts from 'typescript';
 import {dungeonBusy,freshDungeon} from '../app/dungeon-engine.ts';
 import {pauseHanyangTutorialBattle} from '../app/hanyang-prologue.ts';
 
-const source=readFileSync(new URL('../app/game-v15.tsx',import.meta.url),'utf8');
+const source=readGameModules("use-game-controller.ts");
 const loopSource=readFileSync(new URL('../app/game-loop.ts',import.meta.url),'utf8');
+const loopHookSource=readFileSync(new URL('../app/use-game-loop.ts',import.meta.url),'utf8');
 const actionsSource=readFileSync(new URL('../app/game-battle-actions.ts',import.meta.url),'utf8');
 const compile=(code,context)=>vm.runInContext(ts.transpileModule(code.replace(/^export /,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
 const recoveryContext=vm.createContext({dungeonBusy,pauseHanyangTutorialBattle,runDungeon:(state,action,now)=>({...state,dungeon:{...state.dungeon,status:'idle',stamp:now}})});
@@ -38,8 +40,9 @@ test('game tick samples deterministic inputs and clears its realtime interval',(
  assert.ok(Number.isFinite(rolls.now));
  for(const key of ['roll','choice','spawnRoll','encounterCountRoll','retaliationRoll','gearDropRoll','gearChoiceRoll'])assert.ok(Number.isFinite(rolls[key]));
  assert.equal(rolls.materialRolls.length,3);
- assert.match(source,/const timer = window\.setInterval\(\(\) => \{/);
- assert.match(source,/const rolls = createGameTickRolls\(\);/);
- assert.match(source,/settleCurrentGame\(previous,\s*rolls\)/);
- assert.match(source,/clearInterval\(timer\)/);
+ assert.match(source,/useGameLoop\(\{ ready, activeSlot, setGame \}\)/);
+ assert.match(loopHookSource,/const timer = window\.setInterval\(\(\) => \{/);
+ assert.match(loopHookSource,/const rolls = createGameTickRolls\(\);/);
+ assert.match(loopHookSource,/settleCurrentGame\(previous,\s*rolls\)/);
+ assert.match(loopHookSource,/clearInterval\(timer\)/);
 });

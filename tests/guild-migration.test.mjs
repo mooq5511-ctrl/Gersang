@@ -1,3 +1,4 @@
+import { readGameModules } from './game-module-source.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -50,13 +51,15 @@ test('failed backup aborts destructive migration',()=>{
   assert.throws(()=>backupBeforeGuildMigration(storage,'slot',JSON.stringify(state())),/storage full/);
 });
 test('game removes legacy recruitment and evolution entrypoints and migrates loaded saves',()=>{
-  const source=readFileSync(new URL('../app/game-v15.tsx',import.meta.url),'utf8');
+  const source=readGameModules("game-city-page.tsx", "use-game-controller.ts");
+  const session=readFileSync(new URL('../app/use-character-session.ts',import.meta.url),'utf8');
   const storage=readFileSync(new URL('../app/game-profile-storage.ts',import.meta.url),'utf8');
   const factory=readFileSync(new URL('../app/game-hero-factory.ts',import.meta.url),'utf8');
   assert.doesNotMatch(source,/value="fusion"|function promoteSelected|function specialFusion|function awakenSelected|function legendFusion|function recruit\(template|makeBaseUnit|currentGenerals|currentMercenaries|特約傭兵/);
   assert.match(source,/中央傭兵公會/);
   assert.match(storage,/return retainGuildRoster<Equipment, Unit, GameState>\(applyGersangVisuals\(next\)\)/);
-  assert.match(source,/backupBeforeGuildMigration\(localStorage/);
+  assert.match(source,/useCharacterSession\(/);
+  assert.match(session,/backupBeforeGuildMigration\(\s*localStorage/);
   assert.match(factory,/const starters: Unit\[\] = \[\]/);
   const recruitment=readFileSync(new URL('../app/mercenary-recruitment.tsx',import.meta.url),'utf8');
   assert.match(recruitment,/中央傭兵公會・\{merchantMercenaries\.length\} 種傭兵/);

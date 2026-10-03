@@ -1,3 +1,4 @@
+import { readGameModules } from './game-module-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -43,7 +44,7 @@ test('hero level-up adds twenty base max HP and immediately fills it',()=>{
 });
 
 test('published interface contains the requested HP and inn controls',()=>{
- const source=readFileSync(new URL('../app/game-v15.tsx',import.meta.url),'utf8');
+ const source=readGameModules("game-header.tsx", "game-inn-panel.tsx", "game-city-controller.ts");
  assert.match(source,/id="p-hp"/);assert.match(source,/id="inn-zone"/);assert.match(source,/付費快速治療/);assert.match(source,/setGame\(payGameInn\)/);
 });
 

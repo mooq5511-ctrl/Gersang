@@ -1,0 +1,37 @@
+{
+  "commit": "ae8da1b",
+  "functions": {
+    "readGameUiSettings": "77ecc5f51298acca73b4dd97c5aaf315dae581f4134955c1565c88d4fe5188af",
+    "goToObjective": "5f8d3b0bce3ce4cb01dff509650ce40443862ee17cf2339432c7766742eaafbf",
+    "selectBattleMap": "bb15b5c13740548e5e1a6a000a4631801284368b97bc40d19fb9cb06b812b155",
+    "upgradeCaravan": "29791d3fa852c365dc22157b44ba8375861d1f4172972480c1b392bf21240d36",
+    "upgradeTradePort": "c6ac494dc80ec21da8c5ceecaf9dcc3912fa0dd7eb268ce0f0ed7e5709d7b1cc",
+    "promoteGuildRank": "ccf952810ed456e6b92e2101c8e1177ac77326399fd575a4c6db39ee611d1f6f",
+    "upgradeGuildSkill": "24ac0ec0f16746a11dfeffae817e40cb3beea25e52842464f14c124cf40df872",
+    "travelToCity": "602c3aa07c5262fa71848bd0554ff6d633a4a8d6a38fcb8f5ae677ad741847e2",
+    "upgradeTerritoryBuilding": "a29bb5a61ababe6864e47f6292a159a9c733a2887c58822a465009595a74d1d5",
+    "restAtInn": "74ef6c79f7647784e69d5cbc246a4af7a258afd0d7df281968e324b089b38e2f",
+    "claimContract": "66c6cc6d2aeaadcee6fe391243c7d9825496c4bbed67d9922655d5331f0a210c",
+    "forgeThunderSet": "5b186f53208da30a5203fb6d11609b09ede67dadc7918318b51160a958b31a89",
+    "handleNpcAction": "a173450f77de42eb4c75bf3473547af587bbebf58a2b586ce2a4d70153e214fd",
+    "openNpcDialogue": "3556d31511501c3c3e14cfde44048eb4f55bccf923efa291ef9dd2e0c2b7f32a",
+    "redeemWandererSet": "5300f25349f9afa8c5dc1f9b52d869802333791c9dfbcb9408e2f20fa578d15c",
+    "craftTerritoryRestaurantFood": "57fbc8417ad1f30f9616e085b4f81392ec1ab559354676ed4c57e8af7e79e0a2",
+    "redeemWandererGinsengChickenSoup": "804068cb67c4bd4fc63b5820f7f91b514b23d0061ad0a0c52b204b3ad64920a7",
+    "redeemWandererBlackBoneChickenSoup": "5be949cf17f22a46ebb01df95cb5e2428c6148a337598abfa8e259584f0ddee9",
+    "redeemWandererSoup": "b9ff7dae997888c1a235f936f9878fde5a494fd95dd2a9ad89b059195dc8aa3f",
+    "redeemWandererChickenSoup": "8d52b2b85f10204e783d4e4f55da3434e4dcdf68085a403eaab26bfddffd99ba"
+  },
+  "pages": {
+    "map": "e1870c3be923cc4bf34a5bfde9593bf1edc5cdfdd1c0ccdaaef8a0311c91d95b",
+    "trade": "8cfe142842b3524da897d1ae66311a5a7af9cd3e692d449b3fb7787721ed4375",
+    "battle": "833a8e635f37b70975de906cfbef97f36d0ea20ea223a05ecd7bdc392fdc3c4e",
+    "raid": "a202ae606a65013273d9a2915ac6bcc4a5039fcf71aa1f56588ada234469e7b4",
+    "squad": "a3adfe1275a4c1fa381befa10bb389b82143798c3ce2b5bb3fd29e12168137a4",
+    "city": "01bfa5d0f203996a9a49903508efe73b72acbf7041a6fecf8280f2269940b9f5",
+    "contracts": "50f25c618c99138399ea46143ac30f86938c269a59b7966bc0f4857cc93d3094",
+    "hall": "9adc0ba78ccb75477bd98731124b192aab7e343eba8a53a402a657d4bc8e69b1",
+    "relic": "12822a70363717989bbfdb1dba8f4973f0f440641d32fe82a29a7a79b88d911a",
+    "archive": "2da74697c728784befa704dfc6c56b9ef0121d30d6705ce214d6aeb12e9d1f93"
+  }
+}

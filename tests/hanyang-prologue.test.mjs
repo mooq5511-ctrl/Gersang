@@ -1,3 +1,4 @@
+import { readGameModules } from './game-module-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { claimHanyangJourneyFund, completeHanyangPrologue, freshHanyangPrologueFlags, hanyangJourneyFund, markHanyangCaravanDelivered, markHanyangLootSold, markHanyangMysteryNpcSeen, markHanyangReturnReported, normalizeHanyangPrologueFlags, syncHanyangPrologue } from '../app/hanyang-prologue.ts';
@@ -32,7 +33,7 @@ test('recruitment keeps the formation teaching step for one explicit confirmatio
 });
 
 test('viewing the squad confirms automatically deployed recruits without withdrawing them', () => {
-  const source = readFileSync(new URL('../app/game-v15.tsx', import.meta.url), 'utf8');
+  const source = readGameModules("use-hanyang-navigation.ts");
   assert.match(source, /activeTab !== "squad" \|\| game.hanyangPrologueStep !== "formation"/);
   assert.match(source, /previous.hanyangPrologueStep === "formation" \? syncHanyangPrologue\(previous, 6000\)/);
   const unit = { uid: 'recruit' };

@@ -1,10 +1,11 @@
+import { readGameModules } from './game-module-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 const inventorySource=readFileSync(new URL('../app/inventory-panel.tsx',import.meta.url),'utf8');
 const caravanSource=readFileSync(new URL('../app/caravan-status.tsx',import.meta.url),'utf8');
-const gameSource=readFileSync(new URL('../app/game-v15.tsx',import.meta.url),'utf8');
+const gameSource=readGameModules("game-squad-page.tsx", "game-city-page.tsx");
 
 test('戰利品材料由遊戲狀態傳入無上限商隊背包',()=>{
   assert.match(gameSource,/materials=\{game\.materials\}/);
