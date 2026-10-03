@@ -16,7 +16,7 @@ function sessionFixture({corruptWarehouse=false}={}) {
     localStorage:storage,window:events({}),document:events({visibilityState:'visible'}),queueMicrotask:fn=>fn(),Date:{now:()=>now},
     PROFILE_INDEX:'profiles',SHARED_WAREHOUSE_SAVE:'warehouse',profileSaveKey:slot=>`slot-${slot}`,
     parseStoredArray,isNationId:n=>n==='korea',normalizeStoredItem:item=>item,itemKind:()=>'',gersangItemArt:()=>'',preserveCorruptStorage:()=>false,
-    createGameSaveScheduler,backupBeforeGuildMigration:()=>{},backupBeforeEquipmentMigration:()=>{},
+    createGameSaveScheduler,backupBeforeGuildMigration:()=>{},backupBeforeEquipmentMigration:()=>{},backupBeforePromotionMigration:()=>{},
     profileFromGame:(slot,value)=>({slot,nation:'korea',name:value.hero.name}),readCharacterSave:(store,slot)=>store.getItem(`slot-${slot}`),restoreGame:value=>value,freshGame:name=>({...game,hero:{level:1,name}}),createGameTickRolls:()=>({encounterCountRoll:0}),settleCurrentGame:value=>({...value}),
     writeCharacterSave:(store,slot,value)=>write(`slot-${slot}`,value),writeProfileIndex:(store,value)=>write('profiles',value),writeSharedWarehouse:(store,value)=>write('warehouse',value),
     saveCharacterProfile:(store,list,slot,value,profile)=>{write(`slot-${slot}`,value);const next=[...list];next[slot]=profile;write('profiles',next);return next;},

@@ -1,6 +1,8 @@
 /* eslint-disable next/no-img-element */
 import { combatStats, vitalStats, type VitalUnit } from './vitals-engine';
 import { HeroStatusPanel } from './hero-status-panel';
+import {MercenaryPromotionPanelV1} from './mercenary-promotion-panel-v1';
+import {usesPromotionV1} from './mercenary-growth-v1';
 import type {CSSProperties,ReactNode,PointerEvent as ReactPointerEvent} from 'react';
 import {useEffect,useState} from 'react';
 
@@ -11,7 +13,7 @@ import { AbilityPanel } from './ability-panel';
 import { GameDetailDialog } from './game-detail-dialog';
 import { mercenarySpec } from './mercenary-roster';
 import { LEVEL_CAP, progressForLevel } from './level-progression';
-import { MERCENARY_PROMOTION_TREES, type JobTier, type PromotionItemId } from './mercenary-promotions';
+import { MERCENARY_PROMOTION_TREES, type JobTier } from './mercenary-promotions';
 import { GuildTerritoryPanel } from './guild-territory-panel';
 import { enhancementPresentation, rarityPresentation } from './classic-presentation';
 import type { FusionSourceRarity } from './equipment-fusion';
@@ -38,7 +40,7 @@ type Props = {
   hero:CaravanMember; mercs:CaravanMember[]; restingMercs:CaravanMember[]; active:string[]; toggleActive:(uid:string)=>void; storeMercenary:(uid:string)=>void; withdrawRestingMercenary:(uid:string)=>void; gold:number; credit:number; creditXp:number; creditLevel:number; guildRank:number; promoteGuildRank:()=>void; guildSkillPoints:number; guildSkills:GuildSkills; upgradeGuildSkill:(id:GuildSkillId)=>void; newbieCoins:number; redeemWandererSet:(set:'azure'|'chiyou'|'amaterasu')=>void; redeemWandererChickenSoup:()=>void; redeemWandererGinsengChickenSoup:()=>void; redeemWandererBlackBoneChickenSoup:()=>void; weight:number; maxWeight:number;
   cost:number; power:(unit:CaravanMember)=>number; xpNeed:(level:number)=>number;
   select:(uid:string)=>void; cyclePosition:(uid:string)=>void; hire:()=>void; allocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void;
-  promote:(uid:string,targetTier?:JobTier)=>void; promotionItems:Readonly<Record<PromotionItemId,number>>;
+  promote:(uid:string,targetTier?:number,branch?:'spear'|'bow')=>void; promotionItems:Readonly<Record<string,number>>;
 
   inventory:Equipment[];materials:Record<string,number>;materialPrices:Record<string,number>;medicines:Record<string,number>;craftRestaurantFood:(recipeId:string)=>void;
   equipSelected:(uid:string,targetUid:string)=>void;sellInventory:(uid:string)=>void;sellAllInventory:()=>void;smeltLowRarityEquipment:()=>void;sellMaterial:(name:string)=>void;sellAllMaterials:()=>void;openAncientCoinBox:(amount:number)=>void;
@@ -157,7 +159,7 @@ function GuildSkillTree({rankInfo,guildSkillPoints,guildSkills,upgradeGuildSkill
   </section>;
 }
 
-function CharacterAdvancementPanel({unit,power,allocate,promotionItems,promote,heroAllocate}:{unit:CaravanMember;power:(unit:CaravanMember)=>number;allocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void;promotionItems:Readonly<Record<PromotionItemId,number>>;promote:(uid:string,targetTier?:JobTier)=>void;heroAllocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void}){
+function CharacterAdvancementPanel({unit,power,allocate,promotionItems,promote,heroAllocate}:{unit:CaravanMember;power:(unit:CaravanMember)=>number;allocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void;promotionItems:Readonly<Record<string,number>>;promote:(uid:string,targetTier?:number,branch?:'spear'|'bow')=>void;heroAllocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void}){
   if(unit.uid!=='hero') return <div className="character-detail-summary"><strong>{unit.name}・Lv. {unit.level}</strong><p>目前戰力 {power(unit).toLocaleString()}・可用能力點 {unit.points}</p><GameDetailDialog title={`${unit.name}・詳細能力`} description="查看角色能力、分配屬性點與進階條件。" trigger="查看能力"><MercenaryStatusWindow unit={unit} power={power} allocate={allocate} promotionItems={promotionItems} promote={promote}/></GameDetailDialog></div>;
   const levelData=progressForLevel(unit.level);
   const xpProgress=unit.level>=LEVEL_CAP?levelData.xpToNext:Math.min(levelData.xpToNext,unit.xp);
@@ -186,9 +188,9 @@ function CharacterSkillPanel({unit}:{unit:CaravanMember}){
   return <section className="character-skill-panel" aria-label={`${unit.name}技能`}><div className="character-skill-heading"><strong>{unit.name}・技能</strong><small>{unit.role}・戰鬥專精</small></div><div className="character-skill-grid">{skills.map((skill,index)=><GameDetailDialog key={skill.name} title={skill.name} description={`${unit.name}・${skill.subtitle}・${skill.state}`} triggerClassName={'character-skill-card'+(skill.state==='未解鎖'?' locked':'')} trigger={<><div className="character-skill-icon"><img src={skill.asset} alt=""/>{skill.state==='未解鎖'?<span aria-hidden="true">🔒</span>:<b>{index<2?'★':'◇'}</b>}</div><strong>{skill.name}</strong><small>{skill.subtitle}</small><em>查看詳情</em></>}><dl className="skill-detail-facts"><div><dt>效果</dt><dd>{index===0?spec?.activeEffect||'沿用目前角色的既有戰鬥技能；此視窗不新增技能效果。':index===1?spec?.passiveEffect||'沿用角色與裝備的既有加成；未提供獨立效果資料。':'此欄位為後續內容預覽，尚未提供獨立技能效果。'}</dd></div>{index===0&&spec&&<><div><dt>耗魔</dt><dd>{spec.mp} MP</dd></div><div><dt>冷卻</dt><dd>{spec.cooldown} 回合（依既有戰鬥系統結算）</dd></div></>}<div><dt>狀態／條件</dt><dd>{skill.state==='未解鎖'?skill.subtitle:skill.state}</dd></div></dl></GameDetailDialog>)}</div><p className="character-skill-note">點選技能查看詳情；實際技能效果仍由既有戰鬥系統判定。</p></section>;
 }
 
-function MercenaryStatusWindow({unit,power,allocate,promotionItems,promote}:{unit:CaravanMember;power:(unit:CaravanMember)=>number;allocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void;promotionItems:Readonly<Record<PromotionItemId,number>>;promote:(uid:string,targetTier?:JobTier)=>void}){
-  const vital=vitalStats(unit);
-  const combat=combatStats(unit),levelData=progressForLevel(unit.level);
+function MercenaryStatusWindow({unit,power,allocate,promotionItems,promote}:{unit:CaravanMember;power:(unit:CaravanMember)=>number;allocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void;promotionItems:Readonly<Record<string,number>>;promote:(uid:string,targetTier?:number,branch?:'spear'|'bow')=>void}){
+  if(usesPromotionV1(unit))return <MercenaryPromotionPanelV1 unit={unit} materials={promotionItems} promote={promote} allocate={allocate}/>;
+  const vital=vitalStats(unit); const combat=combatStats(unit),levelData=progressForLevel(unit.level);
   const currentTier=(unit.tier === 2 || unit.tier === 3 ? unit.tier : 1) as JobTier;
   const tree=unit.templateId ? MERCENARY_PROMOTION_TREES[unit.templateId as keyof typeof MERCENARY_PROMOTION_TREES] : undefined;
   const target=currentTier < 3 ? tree?.[currentTier === 1 ? 'tier2' : 'tier3'] : undefined;

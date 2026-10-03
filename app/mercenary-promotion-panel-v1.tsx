@@ -1,0 +1,17 @@
+import {getMercenaryStats,nextPromotion,promotionRank,promotionBranch,MERCENARY_STAGES,BOW_STAGE_NAMES,type PromotionBranch} from './mercenary-growth-v1';
+import './mercenary-promotion-tree.css';
+import {sealCount,sealForStage} from './war-seals';
+import {combatStats,vitalStats,type VitalUnit} from './vitals-engine';
+export function MercenaryPromotionPanelV1({unit,materials,promote,allocate}:{unit:VitalUnit & {uid:string;name:string;xp:number;points:number};materials:Readonly<Record<string,number>>;promote:(uid:string,rank?:number,branch?:PromotionBranch)=>void;allocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void}){
+ const rank=promotionRank(unit),branch=promotionBranch(unit),next=nextPromotion(unit),stats=getMercenaryStats(unit.level,rank,branch),combat=combatStats(unit),vital=vitalStats(unit);
+ return <section className="hero-personal iron-character compact mercenary-status" aria-label="傭兵轉職 V1.0">
+  <h2>{unit.name}・Lv.{unit.level}</h2><p>{rank} 階・{stats.stage_name}｜統御需求 {stats.required_leadership}</p>
+  <p>攻擊 {combat.attack.toLocaleString()}｜防禦 {combat.defense.toLocaleString()}</p>
+  <label className="hp-meter">HP {vital.hp.toLocaleString()} / {vital.maxHp.toLocaleString()}<progress className="hp" max={vital.maxHp} value={vital.hp}/></label>
+  <label className="hp-meter">MP {vital.mp.toLocaleString()} / {vital.maxMp.toLocaleString()}<progress className="mp" max={vital.maxMp} value={vital.mp}/></label>
+  <p>EXP {Math.floor(unit.xp).toLocaleString()}（門檻後經驗保留，轉職後繼續成長）</p>
+  <section className="mercenary-tree" aria-label="槍弓兵種樹"><h3>共同起點：新手槍兵・Lv.1–11</h3><p>Lv.12 選擇路線，成功後固定沿原路晉升，不可跨線。</p><div className="mercenary-tree-branches">{(['spear','bow'] as const).map(path=><article key={path} className={rank>1&&path===branch?'current':''}><h4>{path==='bow'?'弓兵路線・後排遠程':'槍兵路線・前排近戰'}</h4><p>{path==='bow'?'基準攻擊 +15%，防禦 −30%，HP −25%；重箭集火低血量敵人。':'維持原成長；突槍破甲，近戰普攻減傷 10%。'}</p><ol>{MERCENARY_STAGES.slice(1).map(stage=><li key={stage.stage}>{path==='bow'?BOW_STAGE_NAMES[stage.stage-1]:stage.name}・Lv.{stage.minLevel}{rank>1&&path===branch&&rank===stage.stage?'（目前）':''}{stage.stage>=7?'・來源未開放':''}</li>)}</ol></article>)}</div></section>
+  {next?<section className="mercenary-promotion" aria-label="完整兵符轉職"><h3>{rank===1?'選擇二階兵種':'下一階：'+next.name}</h3><p>需求 Lv.{next.minLevel}｜倍率 ×{next.multiplier}｜統御 {next.leadership}</p><div className="mercenary-tree-branches">{(rank===1?(['spear','bow'] as const):[branch]).map(path=>{const seal=sealForStage(next.stage,path);if(!seal)return null;const name=path==='bow'?BOW_STAGE_NAMES[next.stage-1]:next.name,eligible=unit.level>=next.minLevel&&sealCount(materials[seal.name])>=1;return <article key={path}><h4>{name}</h4><p>{seal.name}：持有 {sealCount(materials[seal.name])} / 1</p><p>來源：{seal.source}</p><button type="button" disabled={!eligible} onClick={()=>promote(unit.uid,next.stage,path)}>轉職為{name}</button></article>;})}</div><p>保留等級、經驗、裝備；成功才消耗對應兵符。戰鬥或派遣中不能轉職。</p></section>:<p>已達八階；Lv.213–250 每級 ×1.025 複利成長。</p>}
+  <section className="hp-allocation" aria-label="傭兵屬性分配"><p>剩餘屬性點 {unit.points}（額外加成，不改變成長基準）</p>{([['str','力量'],['agi','敏捷'],['vit','體質'],['intel','智力']] as const).map(([stat,label])=><div className="hp-stat" key={stat}><span>{label}</span><strong>{unit[stat]}</strong><button type="button" aria-label={`增加${label}`} disabled={unit.points<=0} onClick={()=>allocate(stat)}>＋</button><button type="button" aria-label={`增加100點${label}`} disabled={unit.points<=0} onClick={()=>allocate(stat,100)}>＋100</button></div>)}</section>
+ </section>;
+}

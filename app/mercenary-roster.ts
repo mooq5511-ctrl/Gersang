@@ -22,5 +22,7 @@ export const merchantMercenaries: MercenarySpec[] = [
   { id:'mazu',name:'媽祖娘娘',role:'作者測試／全能守護',ratings:[5000,5000,5000,5000,5000],intel:5000,baseHp:50000,baseMp:5000,passive:'天后庇護',passiveEffect:'作者測試傭兵：力量、敏捷、體質、智力固定為 5,000。',active:'海神護航',activeEffect:'對全體敵人造成 1000% 傷害，並使全體友軍恢復最大生命 50%。',cooldown:1,mp:0,ranged:true,recruitable:false },
 ];
 const byTemplate = new Map(merchantMercenaries.map(spec => ['merchant-'+spec.id, spec]));
+// Promotion-only branch; does not reopen the archived archer recruitment catalog.
+byTemplate.set('merchant-promotion-bow', {...merchantMercenaries.find(spec=>spec.id==='archer')!,name:'長弓兵',ratings:merchantMercenaries[0].ratings,recruitable:false});
 export const mercenarySpec = (templateId?: string) => templateId ? byTemplate.get(templateId) : undefined;
 export const ratingAccuracy = (rating: number) => Math.min(0.98, 0.7 + Math.max(1, Math.min(50, rating)) * 0.0056);

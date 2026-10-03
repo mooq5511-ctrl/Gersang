@@ -68,6 +68,8 @@ export type Unit = {
   tier: 0 | 1 | 2 | 3;
   /** Current mercenary class name; omitted on legacy saves and filled during migration. */
   jobClass?: string;
+  /** V1 eight-stage rank; separate from legacy tier to avoid changing other mercenaries. */
+  promotionStage?: 1|2|3|4|5|6|7|8;
   growthMultipliers?: { str: number; agi: number; intel: number; vit: number };
   special: boolean;
   awakened?: boolean;
@@ -155,6 +157,7 @@ export type GameState = {
   soulStones: number;
   awakeningStones: number;
   materials: Record<string, number>;
+  pendingWarSeals?: Record<string,number>;
   exchangePurchases: ExchangePurchases;
   medicines: Record<string, number>;
   autoSkill: boolean;

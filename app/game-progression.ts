@@ -2,6 +2,8 @@ import { EQUIPMENT_SLOTS } from "./equipment-slots";
 import { heroPersonalPower } from "./hero-rules";
 import { LEVEL_CAP, xpForNextLevel } from "./level-progression";
 import { vitalStats } from "./vitals-engine";
+import {combatStats} from './vitals-engine';
+import {nextPromotion,usesPromotionV1} from './mercenary-growth-v1';
 import type { Equipment, GameState, Hero, Unit } from "./game-state";
 import { territoryBonus } from "./guild-territory";
 
@@ -9,7 +11,8 @@ export const xpNeed = (level: number) => xpForNextLevel(level);
 
 export function grantXp<T extends Unit | Hero>(unit: T, amount: number): T {
   let xp = unit.xp + amount, level = unit.level, points = unit.points;
-  while (level < LEVEL_CAP && xp >= xpNeed(level)) { xp -= xpNeed(level); level += 1; points += unit.uid === "hero" ? 5 : 3; }
+  const cap=usesPromotionV1(unit)?(nextPromotion(unit)?.minLevel||250):LEVEL_CAP;
+  while (level < cap && xp >= xpNeed(level)) { xp -= xpNeed(level); level += 1; points += unit.uid === "hero" ? 5 : 3; }
   const levelGain = level - unit.level;
   if (unit.uid === "hero" && levelGain > 0) {
     const baseMax = Number(unit.maxHp) || 100 + (unit.level - 1) * 20;
@@ -39,6 +42,7 @@ function equipmentPower(item: Equipment | null) {
 
 export function unitPower(unit: Unit | Hero) {
   if (unit.uid === "hero") return heroPersonalPower(unit);
+  if(usesPromotionV1(unit)){const combat=combatStats(unit),vital=vitalStats(unit);return Math.floor(combat.attack*2.2+combat.defense*1.6+vital.maxHp*.22);}
   const flat = EQUIPMENT_SLOTS.reduce((sum, slot) => { const bonus = unit.equip[slot]?.bonus; return { str: sum.str + (bonus?.str || 0), agi: sum.agi + (bonus?.agi || 0), intel: sum.intel + (bonus?.intel || 0), vit: sum.vit + (bonus?.vit || 0) }; }, { str: 0, agi: 0, intel: 0, vit: 0 });
   const affix = (stat: string) => EQUIPMENT_SLOTS.reduce((sum, slot) => sum + (unit.equip[slot]?.magic.filter((entry) => entry.stat === stat).reduce((value, entry) => value + entry.value, 0) || 0), 0);
   const base = (unit.str + flat.str) * (1 + affix("str") / 100) * 2.2 + (unit.agi + flat.agi) * (1 + affix("agi") / 100) * 1.8 + (unit.intel + flat.intel) * (1 + affix("intel") / 100) * 2 + (unit.vit + flat.vit) * (1 + affix("vit") / 100) * 2.1;

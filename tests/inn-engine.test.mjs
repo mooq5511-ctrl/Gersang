@@ -6,10 +6,11 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import {goToInn,leaveInn,recoverAtInn,payInn} from '../app/inn-engine.ts';
 import {vitalStats} from '../app/vitals-engine.ts';
+import {usesPromotionV1,nextPromotion} from '../app/mercenary-growth-v1.ts';
 
 const progressionSource=readFileSync(new URL('../app/game-progression.ts',import.meta.url),'utf8');
 const grantCode=progressionSource.slice(progressionSource.indexOf('export function grantXp'),progressionSource.indexOf('export function grantTerritoryXp')).replace(/^export /gm,'');
-const progression=vm.createContext({vitalStats,xpNeed:()=>100,LEVEL_CAP:300});
+const progression=vm.createContext({vitalStats,xpNeed:()=>100,LEVEL_CAP:300,usesPromotionV1,nextPromotion});
 vm.runInContext(ts.transpileModule(grantCode,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,progression);
 const runtimeSource=readFileSync(new URL('../app/game-runtime-actions.ts',import.meta.url),'utf8');
 const runtimeCode=runtimeSource.slice(runtimeSource.indexOf('export function appendGameLog'),runtimeSource.indexOf('export function enemyMaxForStage'))+runtimeSource.slice(runtimeSource.indexOf('export function leaveGameInnAction'));

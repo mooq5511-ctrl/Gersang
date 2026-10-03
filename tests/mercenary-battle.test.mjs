@@ -17,8 +17,8 @@ test('all nineteen designs have stable IDs and level-one stats',()=>{
   for(const s of merchantMercenaries){
     assert.ok(s.ratings.every(n=>n>=1&&(s.id==='mazu'?5000:50)));
     const u=rosterUnit(s.id);
-    assert.equal(u.maxHp,s.baseHp??s.ratings[0]*20); assert.equal(u.maxMp,s.baseMp??40);
-    assert.equal(u.attack,s.ratings[1]*2); assert.equal(u.defense,s.ratings[2]*2);
+    assert.equal(u.maxHp,s.id==='spear'?100:s.baseHp??s.ratings[0]*20); assert.equal(u.maxMp,s.baseMp??40);
+    assert.equal(u.attack,s.id==='spear'?10:s.ratings[1]*2); assert.equal(u.defense,s.id==='spear'?5:s.ratings[2]*2);
     assert.equal(u.speed,s.ratings[3]); assert.equal(u.accuracy,ratingAccuracy(s.ratings[4]));
     assert.equal(spellCost(u),s.mp);
     const saved=normalizeVitals(JSON.parse(JSON.stringify({...u,hp:0,mp:0})));

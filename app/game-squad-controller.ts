@@ -1,4 +1,5 @@
 import { type MercenarySpec } from './mercenary-roster';
+import { isMercenaryAvailable, MERCENARY_CATALOG_NOTICE } from './mercenary-availability';
 import { mercenaryPortrait } from './mercenary-recruitment';
 import { type MercenaryDef } from './game-data';
 import { normalizeVitals } from './vitals-engine';
@@ -37,6 +38,7 @@ export function createSquadController({
   selectedUid,
 }: Context) {
   function recruitMerchant(spec: MercenarySpec, index: number) {
+    if (!isMercenaryAvailable(spec.id)) { setNotice(MERCENARY_CATALOG_NOTICE); return; }
     const cost = hanyangRecruitmentCost(
       game,
       Math.floor(6000 * currentCity.priceFactor),
@@ -51,6 +53,7 @@ export function createSquadController({
           normalizeVitals<Unit>({
             uid: uid('merchant-' + entry.id),
             templateId: 'merchant-' + entry.id,
+            ...(entry.id==='spear'?{promotionStage:1 as const}:{}),
             nation: 'legacy',
             tier: 1,
             jobClass: entry.name,
@@ -102,6 +105,7 @@ export function createSquadController({
   }
 
   function recruitGeneral(general: MercenaryDef) {
+    if (!isMercenaryAvailable(`general-${general.id}`)) { setNotice(MERCENARY_CATALOG_NOTICE); return; }
     setGame((previous) =>
       recruitGeneralAction(
         previous,

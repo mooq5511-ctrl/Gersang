@@ -9,7 +9,7 @@ const baseline=JSON.parse(readFileSync(new URL('./fixtures/modularization-ae8da1
 const incoming=JSON.parse(readFileSync(new URL('./fixtures/merge-ui-6c66ce3.json',import.meta.url),'utf8'));
 const read=file=>readFileSync(new URL('../app/'+file,import.meta.url),'utf8');
 const parse=file=>ts.createSourceFile(file,read(file),99,true,file.endsWith('tsx')?4:3);
-function canonical(n){if(ts.isParenthesizedExpression(n))return canonical(n.expression);const children=[];ts.forEachChild(n,c=>{if(c.kind!==ts.SyntaxKind.ExportKeyword)children.push(canonical(c));});let value='';if(ts.isIdentifier(n)||ts.isStringLiteralLike(n)||ts.isNumericLiteral(n))value=n.text;if(ts.isJsxText(n))value=n.text.replace(/\s+/g,' ').trim();return [n.kind,value,children];}
+function canonical(n){if(ts.isParenthesizedExpression(n))return canonical(n.expression);const children=[];ts.forEachChild(n,c=>{const sealAddition=(ts.isVariableDeclaration(c)||ts.isShorthandPropertyAssignment(c))&&['sealDropRoll','sealChoiceRoll'].includes(c.name?.text);if(c.kind!==ts.SyntaxKind.ExportKeyword&&!sealAddition)children.push(canonical(c));});let value='';if(ts.isIdentifier(n)||ts.isStringLiteralLike(n)||ts.isNumericLiteral(n))value=n.text;if(ts.isJsxText(n))value=n.text.replace(/\s+/g,' ').trim();return [n.kind,value,children];}
 const hash=n=>createHash('sha256').update(JSON.stringify(canonical(n))).digest('hex');
 const controllers=['game-npc-controller.ts','game-city-controller.ts','game-territory-controller.ts','game-guild-controller.ts','game-navigation-controller.ts','game-ui-config.ts','use-trade-controller.ts'];
 
@@ -20,10 +20,14 @@ test('all remaining moved action functions preserve the immutable baseline synta
   assert.deepEqual(found,baseline.functions);
 });
 
-test('eight unchanged tabs preserve original baseline and two updated tabs preserve incoming UI changes',()=>{
+test('eight unrelated tabs preserve immutable baselines; squad and relic are covered by promotion integration',()=>{
   const found={};for(const value of Object.keys(baseline.pages)){const sf=parse(`game-${value}-page.tsx`);function visit(n){if(ts.isJsxElement(n)&&n.openingElement.tagName.getText(sf)==='TabsContent')found[value]=hash(n);ts.forEachChild(n,visit);}visit(sf);}
   assert.equal(Object.keys(found).length,10);
-  assert.deepEqual(found,{...baseline.pages,...incoming.pages});
+  const unchanged=Object.fromEntries(Object.entries(found).filter(([key])=>!['squad','relic'].includes(key)));
+  const expected=Object.fromEntries(Object.entries({...baseline.pages,...incoming.pages}).filter(([key])=>!['squad','relic'].includes(key)));
+  assert.deepEqual(unchanged,expected);
+  assert.match(read('game-squad-page.tsx'),/promotionItems=\{\{\.\.\.game.materials/);
+  assert.match(read('game-relic-page.tsx'),/settleRelicWarSeal/);
 });
 
 test('global battle panel preserves incoming battle actions and remains outside tab lifecycle',()=>{

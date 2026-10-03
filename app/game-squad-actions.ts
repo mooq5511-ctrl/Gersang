@@ -6,6 +6,8 @@ import type { GameState, Unit } from "./game-state";
 import { calculateLevelBasedBonus, canPromoteMercenary, MERCENARY_PROMOTION_TREES, type JobTier, type PromotionItemId } from "./mercenary-promotions";
 import { normalizeVitals } from "./vitals-engine";
 import { syncHanyangPrologue } from "./hanyang-prologue";
+import {promoteMercenaryV1} from './mercenary-promotion-v1';
+import {usesPromotionV1,type PromotionBranch} from './mercenary-growth-v1';
 
 type Log = (logs: string[], message: string) => string[];
 type Attribute = "str" | "agi" | "intel" | "vit";
@@ -17,15 +19,20 @@ const defaultLog: Log = (logs, message) => [...logs, message];
 export function promoteMercenary(
   state: GameState,
   mercenaryId: string,
-  targetTier?: JobTier,
+  targetTier?: number,
   addLog: Log = defaultLog,
+  branch?: PromotionBranch,
 ): GameState {
+  const candidate=[...state.mercs,...state.restingMercs].find(unit=>unit.uid===mercenaryId);
+  if(candidate&&usesPromotionV1(candidate))return promoteMercenaryV1(state,mercenaryId,targetTier,branch);
   const locations: Array<"mercs" | "restingMercs"> = ["mercs", "restingMercs"];
   for (const location of locations) {
     const index = state[location].findIndex((unit) => unit.uid === mercenaryId);
     if (index < 0) continue;
     const unit = state[location][index];
-    const nextTier = targetTier ?? (unit.tier + 1 as JobTier);
+    const requestedTier = targetTier ?? unit.tier + 1;
+    if(requestedTier!==2&&requestedTier!==3)return {...state,logs:addLog(state.logs,'沒有可進行的轉職。')};
+    const nextTier:JobTier = requestedTier;
     if (nextTier < 2 || nextTier > 3) return { ...state, logs: addLog(state.logs, `「${unit.name}」沒有可進行的轉職。`) };
     const tree = MERCENARY_PROMOTION_TREES[unit.templateId as keyof typeof MERCENARY_PROMOTION_TREES];
     if (!tree) return { ...state, logs: addLog(state.logs, `「${unit.name}」尚未設定轉職資料。`) };

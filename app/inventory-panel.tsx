@@ -9,8 +9,10 @@ import {EquipmentTooltipCard} from './equipment-tooltip-card';
 import {EQUIPMENT_LABELS,itemKind,type EquipmentKind} from './equipment-slots';
 import {sourceEnemies} from './v17-content';
 import {useState} from 'react';
+import {createPortal} from 'react-dom';
+import {warSeal} from './war-seals';
 export type BagItem=TooltipGear & {uid:string;name:string;slot:EquipmentKind;image:string;bagSlot?:number};
-const materialArtKind=(name:string)=>/草|黃|藥|花|種子|牛黃|桂皮|甘草|熟地黃/.test(name)?'herb':/精氣石|屬性石|千年石|玉|石$/.test(name)?'crystal':/咒術秘訣|密號符|力量碎片/.test(name)?'scroll':/劍|斧|弓|槍|刀|投石索|佛珠|木棒|三叉戟/.test(name)?'weapon':/精髓/.test(name)?'essence':'rare';
+const materialArtKind=(name:string)=>/兵符/.test(name)?'scroll':/草|黃|藥|花|種子|牛黃|桂皮|甘草|熟地黃/.test(name)?'herb':/精氣石|屬性石|千年石|玉|石$/.test(name)?'crystal':/咒術秘訣|密號符|力量碎片/.test(name)?'scroll':/劍|斧|弓|槍|刀|投石索|佛珠|木棒|三叉戟/.test(name)?'weapon':/精髓/.test(name)?'essence':'rare';
 type InventoryPanelProps={
   inventory:BagItem[];
   materials:Record<string,number>;
@@ -66,12 +68,12 @@ export function InventoryPanel({inventory,materials,materialPrices,medicines={},
       <div className="merchant-bag-subhead"><div><strong>戰利品材料</strong><small>怪物掉落會自動收入背包・顯示 {filteredMaterialEntries.length}/{materialEntries.length} 種</small></div><span className="merchant-material-header-actions"><button type="button" aria-expanded={materialsOpen} onClick={()=>setMaterialsOpen(open=>!open)}>{materialsOpen?'關閉':'開啟'}材料</button><button type="button" onClick={sellAllMaterials} disabled={!materialCount}>全部出售</button></span></div>
       {materialsOpen&&<><label className="merchant-material-search">搜尋材料<input type="search" value={materialQuery} onChange={event=>setMaterialQuery(event.target.value)} placeholder="輸入材料名稱" aria-label="搜尋戰利品材料"/></label><ul className="merchant-material-list merchant-material-detailed-list">{materialEntries.length?filteredMaterialEntries.map(([name,count])=>{
         const price=materialPrices[name]||0;
-        const detail=materialSources.get(name);
-        const sourceLabel=detail?.enemies.length?detail.enemies.slice(0,3).join('、')+(detail.enemies.length>3?` 等 ${detail.enemies.length} 種`:""):'其他戰利品';
+        const detail=materialSources.get(name); const seal=warSeal(name);
+        const sourceLabel=seal?.source||(detail?.enemies.length?detail.enemies.slice(0,3).join('、')+(detail.enemies.length>3?` 等 ${detail.enemies.length} 種`:""):'其他戰利品');
         const artKind=materialArtKind(name);
         const isAncientCoinBox=name==='古錢箱';
         const openAmount=Math.min(count,Math.max(1,Math.floor(coinBoxAmount)||1));
-       return <li className="merchant-material-row merchant-material-detailed-row" key={name}><span className={'merchant-material-icon material-art material-art-'+artKind} aria-label={`${name}圖示`}><img src={`/assets/sprites/loot-${artKind}-cute-v1.png`} alt=""/></span><div className="merchant-material-copy"><strong>{name}</strong><small>持有 ×{count}・{isAncientCoinBox?'開啟可獲得 1–10 枚新手兌換銅錢・售價 1 兩':`單價 ${price.toLocaleString()} 兩`}</small><small>來源：{sourceLabel}</small><small>地區：{detail?.maps.join('、')||'—'}・用途：{isAncientCoinBox?'開啟寶箱（大吉(作／者／好／帥) 各 0.01%）':'鍛造／交易'}</small></div>{isAncientCoinBox?<span className="merchant-material-actions"><label>開啟數量<input aria-label="古錢箱開啟數量" type="number" min="1" max={count} value={openAmount} onChange={event=>setCoinBoxAmount(Math.min(count,Math.max(1,Math.floor(Number(event.target.value)||1))) )}/></label><button type="button" onClick={()=>openAncientCoinBox(openAmount)}>開啟 ×{openAmount}</button><button type="button" onClick={()=>{if(window.confirm('確定以 1 兩出售「古錢箱」？此操作不會開啟寶箱。'))sellMaterial(name)}}>出售 1 兩</button></span>:<button type="button" onClick={()=>sellMaterial(name)} disabled={price===undefined}>出售 1 件</button>}</li>;
+       return <li className="merchant-material-row merchant-material-detailed-row" key={name} onPointerEnter={event=>showTooltip(ItemTooltipManager.material(name,count,price,sourceEnemies),event)} onPointerLeave={hideTooltip}><span className={'merchant-material-icon material-art material-art-'+artKind} aria-label={`${name}圖示`}><img src={`/assets/sprites/loot-${artKind}-cute-v1.png`} alt=""/></span><div className="merchant-material-copy"><strong>{name}</strong><small>持有 ×{count}・{isAncientCoinBox?'開啟可獲得 1–10 枚新手兌換銅錢・售價 1 兩':`單價 ${price.toLocaleString()} 兩`}</small><small>來源：{sourceLabel}</small><small>地區：{detail?.maps.join('、')||'—'}・用途：{isAncientCoinBox?'開啟寶箱（大吉(作／者／好／帥) 各 0.01%）':seal?`${seal.stage} 階轉職／需求 Lv.${seal.level}`:'鍛造／交易'}</small></div>{isAncientCoinBox?<span className="merchant-material-actions"><label>開啟數量<input aria-label="古錢箱開啟數量" type="number" min="1" max={count} value={openAmount} onChange={event=>setCoinBoxAmount(Math.min(count,Math.max(1,Math.floor(Number(event.target.value)||1))) )}/></label><button type="button" onClick={()=>openAncientCoinBox(openAmount)}>開啟 ×{openAmount}</button><button type="button" onClick={()=>{if(window.confirm('確定以 1 兩出售「古錢箱」？此操作不會開啟寶箱。'))sellMaterial(name)}}>出售 1 兩</button></span>:<button type="button" onClick={()=>sellMaterial(name)} disabled={!!seal||price===undefined}>出售 1 件</button>}</li>;
      }):<li className="merchant-material-empty">尚無材料；在四國掛機地圖擊敗怪物後，戰利品會直接放入此處。</li>}{materialEntries.length>0&&!filteredMaterialEntries.length&&<li className="merchant-material-empty">找不到符合「{materialQuery}」的材料。</li>}</ul></>}
     </section>
     <div className="merchant-bag-subhead relic-smelt-toolbar"><div><strong>遺跡熔煉爐</strong><small>普通與稀有裝備會轉化為遺跡魔晶，累積5件有機會觸發神兵共鳴。</small></div><button type="button" onClick={()=>{hideTooltip();smeltLowRarityEquipment()}} disabled={!items.some(item=>item.rarity==='普通'||item.rarity==='稀有')}>低階熔煉</button></div>
@@ -80,6 +82,6 @@ export function InventoryPanel({inventory,materials,materialPrices,medicines={},
     <div className="rarity-legend" aria-label="裝備品階">{["普通","稀有","史詩","傳說","金色"].map(rarity=><span key={rarity} className={rarityPresentation(rarity).className}>{rarity}</span>)}</div>
     <p>材料與裝備共用無上限行囊。穿戴中的裝備必須先卸下，因此不會被誤賣。</p>
     <output className="merchant-bag-message">{message||'行囊尚空，出發尋覓戰利品。'}</output><footer className="merchant-bag-bottom"><span>負重</span><strong>{weight.toFixed(1)} / {maxWeight}</strong></footer>
-    {tooltip&&<EquipmentTooltipCard data={tooltip.data} left={tooltip.left} top={tooltip.top} rarityClass={rarityPresentation(tooltip.data.quality).className}/>}{/* compact tooltip */}
+    {tooltip&&typeof document!=='undefined'&&createPortal(<EquipmentTooltipCard data={tooltip.data} left={tooltip.left} top={tooltip.top} rarityClass={rarityPresentation(tooltip.data.quality).className}/>,document.body)}
   </section>;
 }

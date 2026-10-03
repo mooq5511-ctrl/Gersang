@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { backupBeforeGuildMigration } from './guild-migration';
+import {backupBeforePromotionMigration} from './mercenary-promotion-v1';
 import {
   itemKind,
   normalizeStoredItem,
@@ -203,8 +204,10 @@ export function useCharacterSession({
     if (!profile) return;
     try {
       const raw = readCharacterSave(localStorage, slot);
-      if (raw)
+      if (raw) {
+        backupBeforePromotionMigration(localStorage, profileSaveKey(slot), raw);
         backupBeforeGuildMigration(localStorage, profileSaveKey(slot), raw);
+      }
       if (raw)
         backupBeforeEquipmentMigration(localStorage, profileSaveKey(slot), raw);
       let next = raw

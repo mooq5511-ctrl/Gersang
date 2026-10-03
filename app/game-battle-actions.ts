@@ -15,6 +15,7 @@ import { hasFullAmaterasuSet } from "./equipment-set-effects";
 import { battleExperienceMultiplier, equipmentExperienceMultiplier, sharedBattleExperience } from "./dungeon-kill-xp";
 import { BattleLogManager, type BattleLogCategory } from "./battle-log-manager";
 import { guildSkillTradeBonuses } from "./guild-skills";
+import {awardWarSeal,rollWarSeal} from './war-seals';
 
 type BattleActionDependencies = {
   notify: (message: string) => void;
@@ -56,7 +57,7 @@ export function runDungeonAction(
   action: DungeonAction,
   now: number,
   key: DungeonKey | undefined,
-  rolls: { roll?: number; choice?: number; spawnRoll?: number; encounterCountRoll?: number; retaliationRoll?: number; materialRolls?: number[]; fusionCoreRoll?: number; gearDropRoll?: number; gearChoiceRoll?: number },
+  rolls: { roll?: number; choice?: number; spawnRoll?: number; encounterCountRoll?: number; retaliationRoll?: number; materialRolls?: number[]; fusionCoreRoll?: number; gearDropRoll?: number; gearChoiceRoll?: number; sealDropRoll?:number;sealChoiceRoll?:number },
   deps: DungeonActionDependencies,
 ): GameState {
   const addBattleLog = (state: GameState, message: string, category: BattleLogCategory = "battle") => ({ ...state, battleLogs: BattleLogManager.addLog(state.battleLogs, message, category, now) });
@@ -109,6 +110,8 @@ export function runDungeonAction(
 
   const reward = result.reward;
   const sourceEnemy = sourceEnemyForDungeonKey(result.state.key);
+  const seal=rollWarSeal(result.state.key,rolls.sealDropRoll??1,'world',rolls.sealChoiceRoll??0);
+  if(seal)next=awardWarSeal(next,seal.name);
   const sourceDrop = sourceEnemy?.drops || [], specialCoinDrop = sourceDrop.includes("[新手]兌換銅錢"), materialDrops = sourceDrop.filter((item) => item !== "[新手]兌換銅錢" && item !== "古錢箱");
   const selectedDrop = materialDrops.length ? materialDrops[Math.min(materialDrops.length - 1, Math.floor(Math.max(0, Math.min(.999999, choice)) * materialDrops.length))] : null;
   const ancientCoinBox = sourceEnemy?.mapId === "starter-outskirts" ? ["古錢箱"] : [];

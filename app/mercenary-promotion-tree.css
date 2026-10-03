@@ -1,0 +1,6 @@
+.mercenary-tree-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px;margin:12px 0}
+.mercenary-tree-branches article{border:1px solid #ad864b;border-radius:8px;padding:14px;background:rgba(25,20,13,.08);min-width:0}
+.mercenary-tree-branches article.current{border-width:2px;border-color:#d5a94b}
+.mercenary-tree-branches h4{font-size:18px;margin:0 0 8px}
+.mercenary-tree-branches li{margin:7px 0;line-height:1.5}
+.mercenary-tree-branches button{min-height:44px;width:100%}

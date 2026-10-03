@@ -1,4 +1,5 @@
 import { effectiveEquipmentStats } from './equipment-stats.ts';
+import {warSeal} from './war-seals.ts';
 
 export type TooltipField = { label: string; value: string };
 export type ItemTooltipData = {
@@ -148,22 +149,23 @@ export const ItemTooltipManager = Object.freeze({
     image?: string,
   ): ItemTooltipData {
     const metadata = materialMetadata[name];
+    const seal=warSeal(name);
     const sources = enemies
       .filter((enemy) => enemy.drops.includes(name))
       .map((enemy) => enemy.name);
     const data = {
       name,
       image: image || metadata?.image,
-      quality: '普通',
-      kind: '材料',
+      quality: seal?'稀有':'普通',
+      kind: seal?'完整兵符':'材料',
       description:
-        metadata?.description || '怪物掉落的材料，可用於交易、鍛造或兌換。',
+        seal?`${['長弓兵符','強弓兵符'].includes(name)?'弓兵路線':['長槍兵符','鐵騎兵符'].includes(name)?'槍兵路線':'槍／弓兵路線共用'}轉職至 ${seal.stage} 階，成功時消耗 1 枚完整兵符；不含碎片或合成。`:metadata?.description || '怪物掉落的材料，可用於交易、鍛造或兌換。',
       sellPrice,
       stack: quantity,
       owned: quantity,
-      source: sources.length ? sources.join('、') : '未記錄',
+      source: seal?.source || (sources.length ? sources.join('、') : '未記錄'),
     };
-    return { ...data, sections: base(data) };
+    return { ...data, sections: [...base(data),...(seal?[{title:'轉職需求',fields:[{label:'需求等級',value:`Lv.${seal.level}`},{label:'用途',value:`${seal.stage} 階轉職，消耗 1 枚`}]}]:[])] };
   },
 
   consumable(item: TooltipMedicine, quantity: number): ItemTooltipData {

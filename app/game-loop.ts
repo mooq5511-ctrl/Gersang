@@ -15,7 +15,7 @@ import { pauseHanyangTutorialBattle } from "./hanyang-prologue";
 export function createGameTickRolls() {
   return {
     now: Date.now(), roll: Math.random(), choice: Math.random(), spawnRoll: Math.random(), encounterCountRoll: Math.random(),
-    retaliationRoll: Math.random(), materialRolls: [Math.random(), Math.random(), Math.random()], gearDropRoll: Math.random(), gearChoiceRoll: Math.random(),
+    retaliationRoll: Math.random(), materialRolls: [Math.random(), Math.random(), Math.random()], gearDropRoll: Math.random(), gearChoiceRoll: Math.random(), sealDropRoll: Math.random(), sealChoiceRoll: Math.random(),
   };
 }
 
@@ -28,19 +28,19 @@ type LoopDependencies = {
 };
 
 export type GameTickRolls = {
-  now: number; roll: number; choice: number; spawnRoll: number; encounterCountRoll: number; retaliationRoll: number; materialRolls: number[]; gearDropRoll?: number; gearChoiceRoll?: number;
+  now: number; roll: number; choice: number; spawnRoll: number; encounterCountRoll: number; retaliationRoll: number; materialRolls: number[]; gearDropRoll?: number; gearChoiceRoll?: number; sealDropRoll?:number;sealChoiceRoll?:number;
 };
 
 /** Settles the shared idle timer, dungeon state and caravan completion exactly once. */
 export function settleGameLoop(previous: GameState, rolls: GameTickRolls, deps: LoopDependencies): GameState {
-  const { now, roll, choice, spawnRoll, encounterCountRoll, retaliationRoll, materialRolls, gearDropRoll, gearChoiceRoll } = rolls;
+  const { now, roll, choice, spawnRoll, encounterCountRoll, retaliationRoll, materialRolls, gearDropRoll, gearChoiceRoll, sealDropRoll, sealChoiceRoll } = rolls;
   previous = pauseHanyangTutorialBattle(previous);
   if (dungeonBusy(previous.dungeon)) {
     const battle = previous.dungeon!;
     const due = battle.status === "respawning" ? battle.spawnAt : battle.status === "recovering" ? (battle.innHealAt || battle.stamp + 2000) : battle.stamp + 50;
     if (now < due) return previous;
     const pause = Math.max(0, now - (previous.dungeon!.pauseAt || previous.dungeon!.stamp || now));
-    let next = deps.runDungeon(previous, "tick", now, undefined, { now, roll, choice, spawnRoll, encounterCountRoll, retaliationRoll, materialRolls, gearDropRoll, gearChoiceRoll });
+    let next = deps.runDungeon(previous, "tick", now, undefined, { now, roll, choice, spawnRoll, encounterCountRoll, retaliationRoll, materialRolls, gearDropRoll, gearChoiceRoll, sealDropRoll, sealChoiceRoll });
     next = { ...next, dungeon: { ...next.dungeon!, pauseAt: now } };
     if (next.trade.caravan) next = { ...next, trade: { ...next.trade, caravan: { ...next.trade.caravan, startedAt: next.trade.caravan.startedAt + pause } } };
     if (previous.dungeon!.status === "recovering") return { ...next, idleStamp: now };

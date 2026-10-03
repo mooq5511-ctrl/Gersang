@@ -1,5 +1,7 @@
 import { profileSaveKey, serializeGameForStorage, type CharacterProfile, type Equipment, type GameState, SHARED_WAREHOUSE_SAVE } from "./game-state";
 import { restoreTrade } from "./trade-engine";
+import {normalizePromotionV1} from './mercenary-promotion-v1';
+import {claimPendingWarSeals,sealCount,ALL_WAR_SEALS as WAR_SEALS} from './war-seals';
 import { DUNGEONS, dungeonBusy, freshDungeon } from "./dungeon-engine";
 import { migrateSevenSlotSave, normalizeStoredItem } from "./equipment-slots";
 import { retainGuildRoster } from "./guild-migration";
@@ -152,13 +154,14 @@ export function restoreGame(raw: unknown): GameState {
     idleStamp: Number.isFinite(parsed.idleStamp) && parsed.idleStamp! > 0 ? parsed.idleStamp : Date.now(),
     city: restoredCity,
     hero: { ...heroDefaults, ...parsed.hero, level: Math.min(LEVEL_CAP, Math.max(1, Number(parsed.hero?.level) || heroDefaults.level)), nation: heroNation, job: parsed.hero?.job || heroDefaults.job, skill: parsed.hero?.skill || heroDefaults.skill, image: heroPortrait(heroNation, parsed.hero?.gender === "female" ? "female" : "male"), gender: parsed.hero?.gender === "female" ? "female" : "male", maxHp: Number.isFinite(parsed.hero?.maxHp) && Number(parsed.hero?.maxHp) > 0 ? Math.max(100, Number(parsed.hero?.maxHp)) : 100 + (Math.max(1, Number(parsed.hero?.level) || heroDefaults.level) - 1) * 20, status: parsed.hero?.status === "客棧中" ? "客棧中" : "正常", position: normalizeBattlePosition(parsed.hero?.position, String(parsed.hero?.name || heroDefaults.name), String(parsed.hero?.role || heroDefaults.role), true), equip: sanitizeEquip(parsed.hero?.equip) },
-    mercs: Array.isArray(parsed.mercs) ? parsed.mercs.map((unit, index) => normalizeStoredMercenary(unit as Unit,index)) : next.mercs,
-    restingMercs: Array.isArray(parsed.restingMercs) ? parsed.restingMercs.slice(0, 10).map((unit, index) => normalizeStoredMercenary(unit as Unit,index)) : next.restingMercs,
+    mercs: Array.isArray(parsed.mercs) ? parsed.mercs.map((unit, index) => normalizePromotionV1(normalizeStoredMercenary(unit as Unit,index))) : next.mercs,
+    restingMercs: Array.isArray(parsed.restingMercs) ? parsed.restingMercs.slice(0, 10).map((unit, index) => normalizePromotionV1(normalizeStoredMercenary(unit as Unit,index))) : next.restingMercs,
     inventory: Array.isArray(parsed.inventory) ? parsed.inventory.map((item) => ({ ...normalizeStoredItem(item), bonus: item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }, resist: item.resist || { physical: 0, magic: 0 } })) : next.inventory,
     fusionCores: Number.isFinite(parsed.fusionCores) ? Math.max(0, Math.floor(parsed.fusionCores!)) : next.fusionCores,
     soulStones: Number.isFinite(parsed.soulStones) ? Math.max(0, Number(parsed.soulStones)) : next.soulStones,
     awakeningStones: Number.isFinite(parsed.awakeningStones) ? Math.max(0, Number(parsed.awakeningStones)) : next.awakeningStones,
-    materials: parsed.materials && typeof parsed.materials === "object" ? parsed.materials : {},
+    materials: parsed.materials && typeof parsed.materials === "object" ? { ...parsed.materials } : {},
+    pendingWarSeals: Object.fromEntries(WAR_SEALS.map(seal=>[seal.name,sealCount(parsed.pendingWarSeals?.[seal.name])])),
     exchangePurchases: parsed.exchangePurchases && typeof parsed.exchangePurchases === "object" ? parsed.exchangePurchases : {},
     medicines: parsed.medicines && typeof parsed.medicines === "object" ? parsed.medicines : {},
     autoSkill: parsed.autoSkill !== false,
@@ -198,7 +201,8 @@ export function restoreGame(raw: unknown): GameState {
     next.hero = { ...next.hero, status: "正常" };
   }
   next.hero = normalizeVitals({ ...next.hero, flatAttackBonus: exchangeAttackBonus(next.exchangePurchases) });
+  for(const seal of WAR_SEALS)next.materials[seal.name]=sealCount(next.materials[seal.name]);
   next.mercs = next.mercs.map(normalizeVitals);
   next.restingMercs = next.restingMercs.map(normalizeVitals);
-  return retainGuildRoster<Equipment, Unit, GameState>(applyGersangVisuals(next));
+  return claimPendingWarSeals(retainGuildRoster<Equipment, Unit, GameState>(applyGersangVisuals(next)));
 }

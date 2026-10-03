@@ -1,9 +1,11 @@
 import { mercenarySpec, ratingAccuracy } from './mercenary-roster.ts';
+import {getMercenaryStats,promotionRank,promotionBranch,usesPromotionV1} from './mercenary-growth-v1.ts';
 import {formationTarget,rearDodge,type BattlePosition} from './formation-position.ts';
 import { resistanceMultiplier } from './combat-damage.js';
 import { effectiveEquipmentStats } from './equipment-stats.ts';
 export type VitalUnit = {
   templateId?: string; physicalResist?: number; magicResist?: number;
+  promotionStage?: number;
   level: number; vit: number; intel: number; str?: number; agi?: number; tier?: number; hp?: number; mp?: number; maxHp?:number; flatAttackBonus?:number;
   equip: Record<string, { hp?: number; atk?: number; def?: number; enhance?: number; enhanceBonuses?: { stat: string; value: number }[]; bonus?: { str?: number; agi?: number; vit?: number; intel?: number }; resist?: { physical?: number; magic?: number }; magic?: { stat: string; value: number }[] } | null>;
 };
@@ -36,7 +38,8 @@ export function vitalStats(unit: VitalUnit) {
   const mercenaryHp = spec ? (spec.baseHp ?? spec.ratings[0] * 20 + (unit.level - 1) * 12) + Math.max(0, vitality - spec.ratings[0]) * 8 + equipmentHp : 100 + vitality * 8 + unit.level * 12 + equipmentHp;
   const mercenaryIntelligence = spec?.intel ?? (spec?.mp ? 20 : 10);
   const mercenaryMp = spec ? (spec.baseMp ?? 40 + (unit.level - 1) * 4) + Math.max(0, intelligence - mercenaryIntelligence) * 3 : 40 + intelligence * 3 + unit.level * 4;
-  const maxHp = Math.max(1, Math.floor((unit.templateId==='hero' ? heroHp : mercenaryHp) * (1 + hpPercent / 100)));
+  const v1Hp=usesPromotionV1(unit)?getMercenaryStats(unit.level,promotionRank(unit),promotionBranch(unit)).hp+Math.max(0,vitality-(spec?.ratings[0]||0))*8+equipmentHp:mercenaryHp;
+  const maxHp = Math.max(1, Math.floor((unit.templateId==='hero' ? heroHp : v1Hp) * (1 + hpPercent / 100)));
   const maxMp = Math.max(1, Math.floor(unit.templateId==='hero' ? intelligence*4 : mercenaryMp));
   const clamp = (value: number | undefined, max: number) => typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(max, Math.floor(value))) : max;
   return { maxHp, maxMp, hp: clamp(unit.hp, maxHp), mp: clamp(unit.mp, maxMp), defense, intelligence, physicalResist, magicResist };
@@ -72,6 +75,10 @@ export function combatStats(unit: VitalUnit) {
     }
   }
   const tier = 1 + (unit.tier || 0) * 0.35;
+  if(usesPromotionV1(unit)){
+    const stats=getMercenaryStats(unit.level,promotionRank(unit),promotionBranch(unit));
+    return {attack:Math.max(1,Math.floor((stats.atk+equipmentAttack+Math.max(0,unit.flatAttackBonus||0)+Math.max(0,flat.str*(1+percent.str/100)-(spec?.ratings[1]||0))*.5)*(1+percent.atk/100))),defense:Math.max(0,Math.floor((stats.def+equipmentDefense+Math.max(0,flat.vit*(1+percent.vit/100)-(spec?.ratings[0]||0))*.6)*(1+percent.def/100))),speed:spec?.ratings[3]||24,accuracy:ratingAccuracy(spec?.ratings[4]||36)};
+  }
   const permanentAttack = Math.max(0, unit.flatAttackBonus || 0);
   const attack = Math.max(1, Math.floor((12 + flat.str * (1 + percent.str / 100) * 0.5 + flat.agi * (1 + percent.agi / 100) * 0.2 + unit.level * 2 + equipmentAttack + permanentAttack) * tier * (1 + percent.atk / 100)));
   const defense = Math.max(0, Math.floor((8 + flat.vit * (1 + percent.vit / 100) * 0.6 + unit.level * 2 + equipmentDefense) * tier * (1 + percent.def / 100)));

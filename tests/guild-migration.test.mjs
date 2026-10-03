@@ -57,11 +57,11 @@ test('game removes legacy recruitment and evolution entrypoints and migrates loa
   const factory=readFileSync(new URL('../app/game-hero-factory.ts',import.meta.url),'utf8');
   assert.doesNotMatch(source,/value="fusion"|function promoteSelected|function specialFusion|function awakenSelected|function legendFusion|function recruit\(template|makeBaseUnit|currentGenerals|currentMercenaries|特約傭兵/);
   assert.match(source,/中央傭兵公會/);
-  assert.match(storage,/return retainGuildRoster<Equipment, Unit, GameState>\(applyGersangVisuals\(next\)\)/);
+  assert.match(storage,/return claimPendingWarSeals\(retainGuildRoster<Equipment, Unit, GameState>\(applyGersangVisuals\(next\)\)\)/);
   assert.match(source,/useCharacterSession\(/);
   assert.match(session,/backupBeforeGuildMigration\(\s*localStorage/);
   assert.match(factory,/const starters: Unit\[\] = \[\]/);
   const recruitment=readFileSync(new URL('../app/mercenary-recruitment.tsx',import.meta.url),'utf8');
-  assert.match(recruitment,/中央傭兵公會・\{merchantMercenaries\.length\} 種傭兵/);
+  assert.match(recruitment,/中央傭兵公會・\{availableMercenaries\.length\} 種傭兵/);
   assert.doesNotMatch(recruitment,/特約|原有傭兵保留/);
 });

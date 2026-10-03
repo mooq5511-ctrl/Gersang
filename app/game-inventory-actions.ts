@@ -1,4 +1,5 @@
 import { buyMarketMaterial, sellAllMaterials, sellMaterial } from "./village-exchange";
+import {warSeal} from './war-seals';
 import { VILLAGE_WEAPONS, buyVillageWeapon, exchangeAttackBonus, type VillageWeaponId } from "./village-exchange";
 import { sellAllEquipmentFromInventory, sellEquipmentFromInventory } from "./equipment-market";
 import { addInventoryItem } from "./inventory-layout";
@@ -68,6 +69,7 @@ export function smeltLowRarityEquipmentAction(state: GameState, roll: () => numb
 }
 
 export function sellMaterialAction(state: GameState, itemName: string, addLog: Log, format: Format): GameState {
+  if(warSeal(itemName))return {...state,logs:addLog(state.logs,'完整兵符保留供轉職使用，不可出售。')};
   const result = sellMaterial(state.materials, state.gold, itemName);
   return result.error ? { ...state, logs: addLog(state.logs, result.error) } : markHanyangLootSold({ ...state, materials: result.materials, gold: result.gold, logs: addLog(state.logs, `交易所售出「${itemName}」×1，獲得 ${format(result.earned)} 兩。`) });
 }

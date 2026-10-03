@@ -34,8 +34,8 @@ return (<TabsContent value="squad" className="tab-panel">
             weight={[...game.inventory,...Object.values(game.hero.equip)].reduce((sum,item)=>sum+(item?({weapon:5,helm:3,armor:12,boots:3,ring:0.2,gloves:2,amulet:1,accessory:1}[itemKind(item.slot)]||1):0),0)}
             maxWeight={heroWeightLimit(game.hero)} cost={Math.floor(6000*currentCity.priceFactor)} power={unit=>displayedPower(unit as Unit)} xpNeed={xpNeed} select={setSelectedUid}
             cyclePosition={cycleUnitPosition}
-            promote={(uid,targetTier)=>setGame(previous=>promoteMercenary(previous,uid,targetTier))}
-            promotionItems={{fusionCores:game.fusionCores,soulStones:game.soulStones,awakeningStones:game.awakeningStones}}
+            promote={(uid,targetTier,branch)=>setGame(previous=>promoteMercenary(previous,uid,targetTier,undefined,branch))}
+            promotionItems={{...game.materials,fusionCores:game.fusionCores,soulStones:game.soulStones,awakeningStones:game.awakeningStones}}
             hire={()=>{ const index=Math.floor(Math.random()*merchantMercenaries.length); recruitMerchant(merchantMercenaries[index],index); }}
             allocate={addStat} />
         </TabsContent>);

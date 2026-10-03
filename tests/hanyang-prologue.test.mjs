@@ -48,6 +48,8 @@ test('black bandit is an elite encounter, while bandit chief remains the Hanyang
   const blackBandit = sourceEnemies.find((enemy) => enemy.id === 'e_starter_black_bandit');
   const pirateKing = sourceEnemies.find((enemy) => enemy.name === '山賊首領');
   assert.equal(blackBandit?.elite, true);
+  assert.equal(blackBandit?.hp, 52);
+  assert.equal(blackBandit?.attack, 5);
   assert.equal(blackBandit?.boss, undefined);
   assert.equal(isBossMonster('黑巾山賊'), false);
   assert.equal(pirateKing?.boss, true);

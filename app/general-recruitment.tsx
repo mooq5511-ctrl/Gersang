@@ -1,8 +1,11 @@
 /* eslint-disable next/no-img-element */
 import { Button } from '@/components/ui/button';
 import type { MercenaryDef } from './game-data';
+import { isMercenaryAvailable } from './mercenary-availability';
 
 export function GeneralRecruitment({ generals, gold, recruit }: { generals: MercenaryDef[]; gold: number; recruit: (general: MercenaryDef) => void }) {
+  generals = generals.filter(general => isMercenaryAvailable(`general-${general.id}`));
+  if (!generals.length) return null;
   if (!generals.length) return <p className="section-copy">本城暫無可招募將帥；可前往其他城市尋找名將。</p>;
   return <section className="merchant-recruits general-recruits" aria-labelledby="general-recruits-title">
     <h2 id="general-recruits-title">本城將帥府・{generals.length} 位可招募將帥</h2>

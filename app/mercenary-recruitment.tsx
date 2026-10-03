@@ -1,15 +1,17 @@
 /* eslint-disable next/no-img-element */
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { isMercenaryAvailable } from './mercenary-availability';
 import { merchantMercenaries, ratingAccuracy, type MercenarySpec } from './mercenary-roster';
 import { gersangMercenaryArt, gersangUnitArt } from './gersang-visuals';
 export const mercenaryPortrait = (id: string, index: number) => gersangUnitArt('merchant-'+id, id, index) || gersangMercenaryArt(index);
 export function MercenaryRecruitment({ gold, cost, recruit, recommendedIds = [] }: { gold: number; cost: number; recruit: (spec: MercenarySpec, index: number) => void; recommendedIds?: readonly string[] }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const availableMercenaries = merchantMercenaries.map((spec, index) => ({spec,index})).filter(({spec}) => isMercenaryAvailable(spec.id));
   return <section className="merchant-recruits" aria-labelledby="merchant-recruits-title">
-    <h2 id="merchant-recruits-title">中央傭兵公會・{merchantMercenaries.length} 種傭兵</h2>
+    <h2 id="merchant-recruits-title">中央傭兵公會・{availableMercenaries.length} 種傭兵</h2>
     <p>點選名稱可開啟或關閉介紹；各城皆可招募，招募後至角色能力值配置隊伍。</p>
-    <div className="merchant-recruit-list">{merchantMercenaries.map((spec, index) => {
+    <div className="merchant-recruit-list">{availableMercenaries.map(({spec,index}) => {
       const expanded = expandedId === spec.id;
       const recruitable = spec.recruitable !== false;
       const recommended = recommendedIds.includes(spec.id);
