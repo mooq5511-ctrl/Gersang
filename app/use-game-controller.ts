@@ -32,6 +32,7 @@ export function useGameController() {
   const { game, setGame } = useGameState();
 
   const [activeTab, setActiveTab] = useState('map');
+  const [battleWindowRequest, setBattleWindowRequest] = useState(0);
 
   const [quickDialog, setQuickDialog] = useState<
     'treasure' | 'settings' | null
@@ -316,6 +317,8 @@ export function useGameController() {
     amaterasuSetPieces,
     availableRestingMercs,
     azureSetPieces,
+    battleWindowRequest,
+    setBattleWindowRequest,
     battlePanelVisibility,
     buyCityHallTicket,
     buyExchangeUpgrade,

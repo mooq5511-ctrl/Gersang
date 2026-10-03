@@ -1,4 +1,4 @@
-/* Card portraits are opaque paintings; battle sprites retain their own assets. */
+/* Card portraits are transparent cutouts; battle sprites retain their own assets. */
 .caravan-status img.mercenary-semireal-portrait,
 .relic-boss-party-avatar img.mercenary-semireal-portrait {
   object-fit: cover;

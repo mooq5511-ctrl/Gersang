@@ -1,0 +1,45 @@
+.game-detail-overlay { z-index: 110; }
+.game-detail-dialog[data-slot="dialog-content"] {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  z-index: 111;
+  width: min(720px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 2px solid #b58a42;
+  border-radius: 6px;
+  background: #21180f;
+  color: #f3dfad;
+  font-family: "Microsoft JhengHei", "PMingLiU", serif;
+  overflow: hidden;
+}
+.game-detail-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
+.game-detail-heading button { width: 32px; height: 32px; border: 1px solid #b58a42; background: #573517; color: #ffe8ae; cursor: pointer; }
+.game-detail-dialog [data-slot="dialog-description"] { color: #cdbb98; }
+.game-detail-body { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.game-detail-body .hero-personal { width: 100%; max-width: none; }
+.game-detail-entry { padding: 10px 16px; border: 1px solid #a97935; border-radius: 4px; background: linear-gradient(#75511f, #38240e); color: #ffe8ae; cursor: pointer; }
+.game-detail-entry:focus-visible, .game-detail-heading button:focus-visible { outline: 3px solid #ffe8ae; outline-offset: 2px; }
+.character-detail-summary { display: grid; gap: 10px; padding: 14px; }
+.character-detail-summary p { margin: 0; }
+.game-detail-body .skill-detail-facts { display: grid; gap: 12px; margin: 0; }
+.skill-detail-facts div { padding: 12px; border: 1px solid #98713d; background: #ffffff08; }
+.skill-detail-facts dt { color: #e8bf72; margin-bottom: 6px; }
+.skill-detail-facts dd { margin: 0; line-height: 1.7; }
+.game-detail-dialog.quest-detail-dialog { position: fixed; width: min(960px, calc(100vw - 24px)); height: auto; min-height: 0; margin: 0; }
+.game-detail-dialog.quest-detail-dialog::before { display: none; }
+.game-detail-dialog .game-detail-body { position: relative; }
+.game-detail-dialog.quest-detail-dialog .quest-journal { height: min(650px, calc(100dvh - 160px)); }
+.quest-detail-dialog .quest-journal-header button { display: none; }
+@media (max-width: 500px) {
+  .game-detail-dialog[data-slot="dialog-content"] { padding: 12px; }
+  .game-detail-body .ability-actions { flex-wrap: wrap; gap: 8px; }
+  .game-detail-body .ability-actions small { width: 100%; }
+  .game-detail-body .ability-actions button { flex: 1; min-width: 100px; }
+}

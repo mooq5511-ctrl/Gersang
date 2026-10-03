@@ -8,6 +8,8 @@ import {EQUIPMENT_SLOTS,EQUIPMENT_LABELS,type EquipmentSlot} from './equipment-s
 import {InventoryPanel} from './inventory-panel';
 import {type BattlePosition} from './formation-position';
 import { AbilityPanel } from './ability-panel';
+import { GameDetailDialog } from './game-detail-dialog';
+import { mercenarySpec } from './mercenary-roster';
 import { LEVEL_CAP, progressForLevel } from './level-progression';
 import { MERCENARY_PROMOTION_TREES, type JobTier, type PromotionItemId } from './mercenary-promotions';
 import { GuildTerritoryPanel } from './guild-territory-panel';
@@ -156,10 +158,10 @@ function GuildSkillTree({rankInfo,guildSkillPoints,guildSkills,upgradeGuildSkill
 }
 
 function CharacterAdvancementPanel({unit,power,allocate,promotionItems,promote,heroAllocate}:{unit:CaravanMember;power:(unit:CaravanMember)=>number;allocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void;promotionItems:Readonly<Record<PromotionItemId,number>>;promote:(uid:string,targetTier?:JobTier)=>void;heroAllocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void}){
-  if(unit.uid!=='hero') return <MercenaryStatusWindow unit={unit} power={power} allocate={allocate} promotionItems={promotionItems} promote={promote}/>;
+  if(unit.uid!=='hero') return <div className="character-detail-summary"><strong>{unit.name}・Lv. {unit.level}</strong><p>目前戰力 {power(unit).toLocaleString()}・可用能力點 {unit.points}</p><GameDetailDialog title={`${unit.name}・詳細能力`} description="查看角色能力、分配屬性點與進階條件。" trigger="查看能力"><MercenaryStatusWindow unit={unit} power={power} allocate={allocate} promotionItems={promotionItems} promote={promote}/></GameDetailDialog></div>;
   const levelData=progressForLevel(unit.level);
   const xpProgress=unit.level>=LEVEL_CAP?levelData.xpToNext:Math.min(levelData.xpToNext,unit.xp);
-  return <section className="character-advancement-panel" aria-label="主角進階"><div className="character-advancement-heading"><strong>主角成長</strong><span>Lv. {unit.level}／{LEVEL_CAP}</span></div><div className="character-advancement-power"><span>目前戰力</span><strong>{power(unit).toLocaleString()}</strong></div><label className="hp-meter hp-exp">經驗值<span>{unit.level>=LEVEL_CAP?'已達最高等級':`${unit.xp.toLocaleString()} / ${levelData.xpToNext.toLocaleString()}`}</span>{unit.level<LEVEL_CAP&&<progress max={levelData.xpToNext} value={xpProgress}/>}</label><div className="character-advancement-note"><strong>商隊領袖</strong><p>主角經驗值獨立成長；完成委託、主線與戰鬥可獲得主角經驗。</p></div><div className="character-advancement-locks"><span>技能欄位<em>依序解鎖</em></span><span>高階職業<em>後續開放</em></span></div><AbilityPanel hero={unit} allocate={heroAllocate}/></section>;
+  return <section className="character-advancement-panel" aria-label="主角進階"><div className="character-advancement-heading"><strong>主角成長</strong><span>Lv. {unit.level}／{LEVEL_CAP}</span></div><div className="character-advancement-power"><span>目前戰力</span><strong>{power(unit).toLocaleString()}</strong></div><label className="hp-meter hp-exp">經驗值<span>{unit.level>=LEVEL_CAP?'已達最高等級':`${unit.xp.toLocaleString()} / ${levelData.xpToNext.toLocaleString()}`}</span>{unit.level<LEVEL_CAP&&<progress max={levelData.xpToNext} value={xpProgress}/>}</label><div className="character-advancement-note"><strong>商隊領袖</strong><p>主角經驗值獨立成長；完成委託、主線與戰鬥可獲得主角經驗。</p></div><div className="character-advancement-locks"><span>技能欄位<em>依序解鎖</em></span><span>高階職業<em>後續開放</em></span></div><div className="character-detail-summary"><p>可用能力點：{unit.points}</p><GameDetailDialog title={`${unit.name}・詳細能力`} description="查看完整屬性；配點會依原有規則即時套用。" trigger="查看能力"><AbilityPanel hero={unit} allocate={heroAllocate}/></GameDetailDialog></div></section>;
 }
 
 function CharacterEquipmentLayout({unit,power,unequip}:{unit:CaravanMember;power:(unit:CaravanMember)=>number;unequip:(slot:EquipmentSlot)=>void}){
@@ -173,14 +175,15 @@ function CharacterEquipmentLayout({unit,power,unequip}:{unit:CaravanMember;power
 }
 
 function CharacterSkillPanel({unit}:{unit:CaravanMember}){
+  const spec=mercenarySpec(unit.templateId);
   const primarySkill=unit.skill?.trim()||`${unit.role}專技`;
   const skills=[
-    {name:primarySkill,subtitle:'主動技能・Lv.1',asset:'/game-assets/ability/SkillSlot-0.png',state:'已解鎖'},
-    {name:`${unit.role}訓練`,subtitle:'角色專精・Lv.1',asset:'/game-assets/ability/AbilitySlot1-0.png',state:'已解鎖'},
+    {name:spec?.active||primarySkill,subtitle:'主動技能',asset:'/game-assets/ability/SkillSlot-0.png',state:'已解鎖'},
+    {name:spec?.passive||`${unit.role}訓練`,subtitle:'角色專精',asset:'/game-assets/ability/AbilitySlot1-0.png',state:'已解鎖'},
     {name:'裝備共鳴',subtitle:'穿戴指定套裝後解鎖',asset:'/game-assets/ability/AbilitySlot2-0.png',state:'未解鎖'},
     {name:'隊伍協同',subtitle:'商團等級提升後解鎖',asset:'/game-assets/ability/CommonAbilitySlot-0.png',state:'未解鎖'},
   ];
-  return <section className="character-skill-panel" aria-label={`${unit.name}技能`}><div className="character-skill-heading"><strong>{unit.name}・技能</strong><small>{unit.role}・戰鬥專精</small></div><div className="character-skill-grid">{skills.map((skill,index)=><article className={'character-skill-card'+(skill.state==='未解鎖'?' locked':'')} key={skill.name}><div className="character-skill-icon"><img src={skill.asset} alt=""/>{skill.state==='未解鎖'?<span aria-hidden="true">🔒</span>:<b>{index<2?'★':'◇'}</b>}</div><strong>{skill.name}</strong><small>{skill.subtitle}</small><em>{skill.state}</em></article>)}</div><p className="character-skill-note">技能展示沿用目前角色資料；實際技能效果仍由既有戰鬥系統判定。</p></section>;
+  return <section className="character-skill-panel" aria-label={`${unit.name}技能`}><div className="character-skill-heading"><strong>{unit.name}・技能</strong><small>{unit.role}・戰鬥專精</small></div><div className="character-skill-grid">{skills.map((skill,index)=><GameDetailDialog key={skill.name} title={skill.name} description={`${unit.name}・${skill.subtitle}・${skill.state}`} triggerClassName={'character-skill-card'+(skill.state==='未解鎖'?' locked':'')} trigger={<><div className="character-skill-icon"><img src={skill.asset} alt=""/>{skill.state==='未解鎖'?<span aria-hidden="true">🔒</span>:<b>{index<2?'★':'◇'}</b>}</div><strong>{skill.name}</strong><small>{skill.subtitle}</small><em>查看詳情</em></>}><dl className="skill-detail-facts"><div><dt>效果</dt><dd>{index===0?spec?.activeEffect||'沿用目前角色的既有戰鬥技能；此視窗不新增技能效果。':index===1?spec?.passiveEffect||'沿用角色與裝備的既有加成；未提供獨立效果資料。':'此欄位為後續內容預覽，尚未提供獨立技能效果。'}</dd></div>{index===0&&spec&&<><div><dt>耗魔</dt><dd>{spec.mp} MP</dd></div><div><dt>冷卻</dt><dd>{spec.cooldown} 回合（依既有戰鬥系統結算）</dd></div></>}<div><dt>狀態／條件</dt><dd>{skill.state==='未解鎖'?skill.subtitle:skill.state}</dd></div></dl></GameDetailDialog>)}</div><p className="character-skill-note">點選技能查看詳情；實際技能效果仍由既有戰鬥系統判定。</p></section>;
 }
 
 function MercenaryStatusWindow({unit,power,allocate,promotionItems,promote}:{unit:CaravanMember;power:(unit:CaravanMember)=>number;allocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void;promotionItems:Readonly<Record<PromotionItemId,number>>;promote:(uid:string,targetTier?:JobTier)=>void}){

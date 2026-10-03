@@ -8,7 +8,6 @@ import { unitPower } from './game-progression';
 import { newcomerUnlocks } from './newcomer-unlocks';
 import {
   HANYANG_PROLOGUE_STEPS,
-  HANYANG_PROLOGUE_DIALOGUE,
 } from './hanyang-prologue';
 import { getStarterWeaponObjective } from './starter-equipment-objective';
 import { getFirstMercenaryObjective } from './first-mercenary-objective';
@@ -165,7 +164,7 @@ export function getProgressionView(game: GameState) {
           };
         return {
           title: '村長的緊急委託',
-          detail: '小嚮導米米說村長正在找你；先前往村長處接下第一份商隊委託。',
+          detail: '村長正在找你；先前往村長處接下第一份商隊委託。',
           tab: 'map' as const,
           npcId: 'kim-seongho' as NpcId,
         };
@@ -224,7 +223,7 @@ export function getProgressionView(game: GameState) {
       if (game.hanyangPrologueStep === 'guild')
         return {
           title: hanyangStep.title,
-          detail: HANYANG_PROLOGUE_DIALOGUE.guild.join(' '),
+          detail: hanyangStep.detail,
           tab: 'city' as const,
           service: 'mercenary' as const,
         };

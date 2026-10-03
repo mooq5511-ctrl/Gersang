@@ -62,8 +62,8 @@ test('floating NPC markers and sidebar buttons use clear metal states and touch 
 });
 
 test('overlapping HUD regions can be collapsed and map NPC nameplates can be hidden', () => {
-  assert.match(ui, /data-objective-collapsed=\{!view\.objectiveExpanded\}/);
-  assert.match(ui, /aria-expanded=\{false\} aria-label="展開完整任務面板"/);
+  assert.match(ui, /data-objective-collapsed=\{true\}/);
+  assert.match(ui, /aria-expanded=\{objectiveExpanded\} aria-label="查看任務詳情"/);
   assert.match(ui, /objective-collapsed-label" title=\{mainObjective\.title\}>任務・\{mainObjective\.title\}/);
   assert.match(journal, /onClick=\{onClose\} aria-label="收合任務面板"/);
   assert.match(ui, /aria-expanded=\{quickNavExpanded\}/);

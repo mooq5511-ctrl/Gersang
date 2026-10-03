@@ -99,7 +99,11 @@ export function runDungeonAction(
     next = addBattleLog(next, `擊敗怪物 ×${result.killsEarned}。`);
     next = addBattleLog(next, `EXP +${result.xpEarned.toLocaleString("zh-TW")}。`, "reward");
   }
-  if (result.state.status === "recovering" && previous.hero.status !== "客棧中") next = deps.enterInn(next, now, result.state.logs[0], result.state);
+  if (result.state.status === "recovering") {
+    // A defeat ends this hunt; recovery must not silently restart it.
+    next = { ...next, dungeon: { ...next.dungeon!, autoHunt: false, resumeAutoHuntAfterRecovery: false } };
+    if (previous.hero.status !== "客棧中") next = deps.enterInn(next, now, result.state.logs[0], next.dungeon!);
+  }
   else if (result.state.status === "idle" && previous.hero.status === "客棧中") next = deps.leaveInn(next);
   if (!result.reward) return next;
 

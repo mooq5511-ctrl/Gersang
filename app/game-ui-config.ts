@@ -22,7 +22,7 @@ export const DEFAULT_GAME_UI_SETTINGS: GameUiSettings = { musicVolume: 42, scene
 
 export const mapFeatureIcons: Record<string, string> = { field: "🌾", lake: "🌊", sea: "⚓", forest: "🌲", ice: "❄️", desert: "☀️", sumeru: "⛰️", shambhala: "🏯" };
 
-export const DEFAULT_BATTLE_PANEL_VISIBILITY = { partyVitals: true, mapNavigation: true, monsterSelection: true, battlefield: true, battleLogs: true };
+export const DEFAULT_BATTLE_PANEL_VISIBILITY = { partyVitals: true, mapNavigation: true, monsterSelection: true, battleLogs: true };
 
 export type BattlePanelVisibility = typeof DEFAULT_BATTLE_PANEL_VISIBILITY;
 
@@ -41,7 +41,6 @@ export const BATTLE_PANEL_LABELS: Array<[keyof BattlePanelVisibility, string]> =
   ["partyVitals", "出戰隊伍"],
   ["mapNavigation", "地圖瀏覽"],
   ["monsterSelection", "怪物選擇"],
-  ["battlefield", "戰鬥畫面"],
   ["battleLogs", "戰鬥紀錄"],
 ];
 

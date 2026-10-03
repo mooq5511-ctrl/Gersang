@@ -6,6 +6,7 @@ import ts from 'typescript';
 import vm from 'node:vm';
 
 const baseline=JSON.parse(readFileSync(new URL('./fixtures/modularization-ae8da1b.json',import.meta.url),'utf8'));
+const incoming=JSON.parse(readFileSync(new URL('./fixtures/merge-ui-6c66ce3.json',import.meta.url),'utf8'));
 const read=file=>readFileSync(new URL('../app/'+file,import.meta.url),'utf8');
 const parse=file=>ts.createSourceFile(file,read(file),99,true,file.endsWith('tsx')?4:3);
 function canonical(n){if(ts.isParenthesizedExpression(n))return canonical(n.expression);const children=[];ts.forEachChild(n,c=>{if(c.kind!==ts.SyntaxKind.ExportKeyword)children.push(canonical(c));});let value='';if(ts.isIdentifier(n)||ts.isStringLiteralLike(n)||ts.isNumericLiteral(n))value=n.text;if(ts.isJsxText(n))value=n.text.replace(/\s+/g,' ').trim();return [n.kind,value,children];}
@@ -19,10 +20,19 @@ test('all remaining moved action functions preserve the immutable baseline synta
   assert.deepEqual(found,baseline.functions);
 });
 
-test('all ten tab surfaces preserve baseline markup, callbacks, gates and mount conditions',()=>{
+test('eight unchanged tabs preserve original baseline and two updated tabs preserve incoming UI changes',()=>{
   const found={};for(const value of Object.keys(baseline.pages)){const sf=parse(`game-${value}-page.tsx`);function visit(n){if(ts.isJsxElement(n)&&n.openingElement.tagName.getText(sf)==='TabsContent')found[value]=hash(n);ts.forEachChild(n,visit);}visit(sf);}
   assert.equal(Object.keys(found).length,10);
-  assert.deepEqual(found,baseline.pages);
+  assert.deepEqual(found,{...baseline.pages,...incoming.pages});
+});
+
+test('global battle panel preserves incoming battle actions and remains outside tab lifecycle',()=>{
+  const sf=parse('game-world-battle-panel.tsx');let arena;
+  function visit(n){if(ts.isJsxElement(n)&&n.openingElement.tagName.getText(sf)==='WorldBattleWindow')arena=hash(n);ts.forEachChild(n,visit);}visit(sf);
+  assert.equal(arena,incoming.arena);
+  const root=read('game-v15.tsx');
+  assert.ok(root.indexOf('<GameWorldBattlePanel')<root.search(/<Tabs\s/));
+  assert.doesNotMatch(root,/<GameOnboarding/);
 });
 
 test('entry is composition only and every tab remains connected to the typed controller',()=>{

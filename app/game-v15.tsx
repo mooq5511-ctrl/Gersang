@@ -13,7 +13,7 @@ import { GameInnPanel } from './game-inn-panel';
 import { GameLiveFooter } from './game-live-footer';
 import { GameMapPage } from './game-map-page';
 import { GameNavigation } from './game-navigation';
-import { GameOnboarding } from './game-onboarding';
+import { GameWorldBattlePanel } from './game-world-battle-panel';
 import { GameQuestPanel } from './game-quest-panel';
 import { GameRaidPage } from './game-raid-page';
 import { GameRelicPage } from './game-relic-page';
@@ -60,7 +60,7 @@ export default function GameV15() {
     <main
       className="game-shell v15-shell classic-live-game"
       data-scene-mode={view.uiSettings.sceneMode}
-      data-objective-collapsed={!view.objectiveExpanded}
+      data-objective-collapsed={true}
       data-quicknav-collapsed={!view.quickNavExpanded}
       data-onboarding-locked={
         view.tutorialMapLocked
@@ -140,6 +140,8 @@ export default function GameV15() {
         ])}
       />
 
+      <GameWorldBattlePanel {...selectGameView(view, ['game', 'ready', 'activeSlot', 'battleWindowRequest', 'currentMap', 'consumeMedicine', 'setGame'])} />
+
       <GameInnPanel
         {...selectGameView(view, [
           'game',
@@ -179,16 +181,6 @@ export default function GameV15() {
       >
         <GameTabNavigation {...selectGameView(view, ['progressiveUnlocks'])} />
 
-        <GameOnboarding
-          {...selectGameView(view, [
-            'activeTab',
-            'game',
-            'hanyangStep',
-            'tutorialCityLocked',
-            'tutorialTrialLocked',
-          ])}
-        />
-
         <GameMapPage
           {...selectGameView(view, [
             'activeNpcId',
@@ -200,7 +192,6 @@ export default function GameV15() {
             'mysteryNpcVisible',
             'npcLabelsVisible',
             'npcOpeningLine',
-            'objectiveExpanded',
             'openNpcDialogue',
             'progressiveUnlocks',
             'setActiveNpcId',
@@ -228,6 +219,7 @@ export default function GameV15() {
 
         <GameBattlePage
           {...selectGameView(view, [
+            'setBattleWindowRequest',
             'activeUnits',
             'battlePanelVisibility',
             'consumeMedicine',
