@@ -4,7 +4,8 @@
  * 數值與掉落率依使用者提供的「元老級地圖復刻」表實裝；這些資料可能與
  * 不同營運地區、年代的官方版本有差異，因此以 source 明確標示來源。
  */
-export const gersangWorldMap = {
+import { MONSTER_REDESIGN } from '../monsters/monster-redesign.ts';
+const ORIGINAL_WORLD_MAP = {
   korea: {
     id: "korea",
     name: "朝鮮",
@@ -94,6 +95,21 @@ export const gersangWorldMap = {
     ],
   },
 } as const;
+
+const zoneKeys: Record<string, string> = {
+  'hanyang-outskirts': 'e_raccoon', daegwallyeong: 'e_mad_cow', hallasan: 'e_yellow_dragon', 'datun-mountain': 'e_big_eye',
+  alishan: 'e_boar', 'qin-taiwan': 'e_tomb_raider', 'japan-netherworld': 'e_ghost_cat', 'iwami-silver-mine': 'e_kappa',
+  'black-forest': 'e_amakusa', 'nanjing-outskirts': 'e_poison_moth', 'great-wall': 'e_xiongnu', 'yellow-emperor-mausoleum': 'e_undersea_king',
+};
+export const RETIRED_WORLD_MATERIAL_PRICES = Object.fromEntries(Object.values(ORIGINAL_WORLD_MAP).flatMap(region =>
+  region.stages.flatMap(stage => stage.monster.drops.map(drop => [drop.item, drop.price])),
+));
+export const gersangWorldMap = Object.fromEntries(Object.entries(ORIGINAL_WORLD_MAP).map(([id, region]) => [id, {
+  ...region, stages: region.stages.map(stage => {
+    const design = MONSTER_REDESIGN[zoneKeys[stage.id]];
+    return { ...stage, monster: { ...stage.monster, name: design.name, hp: design.hp, drops: design.materialDrops, source: '商旅怪物重製資料' } };
+  }),
+}])) as unknown as typeof ORIGINAL_WORLD_MAP;
 
 export type GersangNationId = keyof typeof gersangWorldMap;
 export type GersangRegion = (typeof gersangWorldMap)[GersangNationId];

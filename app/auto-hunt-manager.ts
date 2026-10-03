@@ -8,6 +8,7 @@ export type AutoHuntLifecycle = {
 };
 
 export const AUTO_HUNT_RESPAWN_DELAY_MS = 500;
+export const BOSS_RESPAWN_DELAY_MS = 5000;
 
 export const AutoHuntManager = Object.freeze({
   isEnabled(state: Pick<AutoHuntLifecycle, "autoHunt">): boolean {
@@ -18,12 +19,12 @@ export const AutoHuntManager = Object.freeze({
     return !AutoHuntManager.isEnabled(state);
   },
 
-  afterVictory(state: AutoHuntLifecycle, now: number) {
+  afterVictory(state: AutoHuntLifecycle, now: number, boss = false) {
     const continueHunting = AutoHuntManager.isEnabled(state);
     return {
       autoHunt: continueHunting,
       status: continueHunting ? ("respawning" as const) : ("idle" as const),
-      spawnAt: continueHunting ? now + AUTO_HUNT_RESPAWN_DELAY_MS : 0,
+      spawnAt: continueHunting ? now + (boss ? BOSS_RESPAWN_DELAY_MS : AUTO_HUNT_RESPAWN_DELAY_MS) : 0,
     };
   },
 

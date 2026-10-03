@@ -388,3 +388,9 @@
 .realtime-battle-theater.realtime-battle-theme-forest { background-image: url('/assets/backgrounds/battle-forest.png'); background-position: center 55%; }
 .realtime-battle-theater.realtime-battle-theme-default { background-image: linear-gradient(180deg,#24100d 0 42%,#0d1517 42% 52%,#16281e 52% 100%); }
 .realtime-portrait-injured { filter: saturate(1.12) drop-shadow(0 0 10px #ff5b35aa); }
+.boss-respawn-countdown { position:absolute; z-index:30; top:50%; left:50%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-width:230px; padding:16px 28px; border:1px solid #e4b957; border-radius:16px; background:radial-gradient(ellipse,#35210cf5,#0c1013f0); box-shadow:0 8px 36px #000b,0 0 24px #e4b95733; color:#ffe7a3; text-align:center; pointer-events:none; }
+.boss-respawn-countdown > span { font-size:20px; font-weight:700; letter-spacing:2px; }
+.boss-respawn-countdown > strong { display:block; font-size:88px; line-height:1.1; font-weight:900; font-variant-numeric:tabular-nums; text-shadow:0 0 24px #e4b95799; animation:boss-countdown-pulse .25s ease-out; }
+.boss-respawn-countdown > small { font-size:14px; color:#d9c59b; }
+@keyframes boss-countdown-pulse { from { opacity:.5; transform:scale(1.2); } to { opacity:1; transform:scale(1); } }
+@media (prefers-reduced-motion:reduce) { .boss-respawn-countdown > strong { animation:none; } }

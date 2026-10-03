@@ -22,7 +22,7 @@ useEffect(() => { pauseTutorialBattle(); }, [game.hanyangPrologueStep]);
 
 useEffect(() => {
     if (game.hanyangPrologueStep !== "bandit-trial" || game.dungeon?.status === "fighting") return;
-    const banditVictoryLogged = game.dungeon?.logs.some((entry) => entry.includes("成功擊敗") && entry.includes("黑巾山賊"));
+    const banditVictoryLogged = game.dungeon?.logs.some((entry) => entry.includes("成功擊敗") && (entry.includes("黑巾斥候") || entry.includes("黑巾山賊")));
     if (!banditVictoryLogged) return;
     setGame((previous) => ({ ...previous, hanyangPrologueStep: "caravan-delivery", hanyangPrologueFlags: { ...previous.hanyangPrologueFlags, caravanRestored: true }, dungeon: previous.dungeon ? { ...previous.dungeon, status: "idle", autoHunt: false } : previous.dungeon }));
   }, [game.dungeon, game.hanyangPrologueStep, setGame]);

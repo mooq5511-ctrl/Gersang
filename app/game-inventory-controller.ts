@@ -4,7 +4,7 @@ import { type WearableBase } from './wearable-catalog';
 import { OfficialEquipment } from './v17-content';
 import { combatStats } from './vitals-engine';
 import { MATERIAL_BUY_PRICES, type VillageWeaponId } from './village-exchange';
-import { medicineCatalog, SHOP_QUALITY } from './game-config';
+import { medicineCatalog, SHOP_QUALITY, WEAPON_SHOP_QUALITY } from './game-config';
 import { grantXp, unitPower } from './game-progression';
 import { formatGameNumber as format } from './game-display';
 import { appendGameLog as addLog } from './game-runtime-actions';
@@ -14,6 +14,7 @@ import {
   makeUid as uid,
   rollEquipment,
   rollRelicEquipment,
+  rollShopQuality,
 } from './game-equipment-factory';
 import {
   buyMaterialAction,
@@ -25,6 +26,7 @@ import {
   fuseAllInventoryEquipmentAction,
   openAncientCoinBoxAction,
   purchaseEquipmentAction,
+  purchaseEquipmentBatchAction,
   purchaseTierEquipmentAction,
   sellAllInventoryEquipmentAction,
   sellAllMaterialsAction,
@@ -219,33 +221,23 @@ export function createInventoryController({
     );
   }
 
-  function buyWearable(base: WearableBase) {
+  function buyWearable(base: WearableBase, quantity = 1) {
     const price = Math.floor(base.price * currentCity.priceFactor);
-    if (game.gold >= price) flashShopPurchase(`wearable:${base.id}`);
+    if (game.gold >= price * quantity) flashShopPurchase(`wearable:${base.id}`);
     setGame((previous) => {
-      const baseItem: Equipment = {
-        ...base,
-        uid: uid(base.id),
-        enhance: 0,
-        rarity: '普通',
-        magic: [],
-        requiredLevel: 1,
-        bonus: { str: 0, agi: 0, intel: 0, vit: 0 },
-        resist: { physical: 0, magic: 0 },
-      };
-      const item = applyShopQuality(baseItem);
-      return purchaseEquipmentAction(
-        previous,
-        item,
-        price,
-        '購入「' +
-          item.name +
-          '」・品質倍率 x' +
-          SHOP_QUALITY[item.rarity].multiplier +
-          '。',
-        addLog,
-        setNotice,
-      );
+      return purchaseEquipmentBatchAction(previous, quantity, price, base.name, () => {
+        const baseItem: Equipment = {
+          ...base,
+          uid: uid(base.id),
+          enhance: 0,
+          rarity: '普通',
+          magic: [],
+          requiredLevel: 1,
+          bonus: { str: 0, agi: 0, intel: 0, vit: 0 },
+          resist: { physical: 0, magic: 0 },
+        };
+        return applyShopQuality(baseItem, rollShopQuality(WEAPON_SHOP_QUALITY));
+      }, addLog, setNotice);
     });
   }
 
@@ -269,25 +261,10 @@ export function createInventoryController({
     });
   }
 
-  function buyOfficialItem(record: OfficialEquipment, price = record.price) {
-    if (game.gold >= price) flashShopPurchase(`official:${record.id}`);
+  function buyOfficialItem(record: OfficialEquipment, price = record.price, quantity = 1) {
+    if (game.gold >= price * quantity) flashShopPurchase(`official:${record.id}`);
     setGame((previous) => {
-      const item = makeOfficialEquipment(record);
-      return purchaseEquipmentAction(
-        previous,
-        item,
-        price,
-        '從' +
-          currentCity.name +
-          (record.kind === 'weapon' ? '武器商店' : '防具商店') +
-          '購入「' +
-          item.name +
-          '」・品質倍率 x' +
-          SHOP_QUALITY[item.rarity].multiplier +
-          '。',
-        addLog,
-        setNotice,
-      );
+      return purchaseEquipmentBatchAction(previous, quantity, price, record.name, () => makeOfficialEquipment(record), addLog, setNotice);
     });
   }
 
@@ -320,12 +297,12 @@ export function createInventoryController({
     setSharedWarehouse(result.warehouse);
   }
 
-  function buyTierEquipment(spec: TierEquipment) {
+  function buyTierEquipment(spec: TierEquipment, quantity = 1) {
     const itemUid = uid(spec.id);
     const price = Math.floor(
       tierEquipmentPrice(spec) * currentCity.priceFactor,
     );
-    if (game.hero.level >= spec.requiredLevel && game.gold >= price)
+    if (game.hero.level >= spec.requiredLevel && game.gold >= price * quantity)
       flashShopPurchase(`tier:${spec.id}`);
     setGame((previous) =>
       purchaseTierEquipmentAction(
@@ -336,6 +313,7 @@ export function createInventoryController({
         itemUid,
         addLog,
         setNotice,
+        quantity,
       ),
     );
   }

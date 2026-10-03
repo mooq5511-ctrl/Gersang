@@ -50,7 +50,7 @@ test('black bandit is an elite encounter, while bandit chief remains the Hanyang
   assert.equal(blackBandit?.elite, true);
   assert.equal(blackBandit?.hp, 52);
   assert.equal(blackBandit?.attack, 5);
-  assert.equal(blackBandit?.boss, undefined);
+  assert.equal(Boolean(blackBandit?.boss), false);
   assert.equal(isBossMonster('黑巾山賊'), false);
   assert.equal(pirateKing?.boss, true);
   assert.equal(isBossMonster('山賊首領'), true);

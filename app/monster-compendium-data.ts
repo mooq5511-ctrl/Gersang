@@ -1,85 +1,56 @@
-import { isBossMonster } from "./dungeon-engine";
-import { battleMaps } from "./reference-data";
-import { sourceEnemies } from "./v17-content";
-import { RELIC_MONSTER_LIST } from "../data/monsters/relic-dungeon-monsters";
+import { DUNGEONS, isBossMonster } from './dungeon-engine';
+import { DIVINE_EQUIPMENT } from './divine-equipment';
+import { sourceEnemies } from './v17-content';
+import { MONSTER_REDESIGN, MONSTER_REGION_LABELS, type MonsterDrop } from '../data/monsters/monster-redesign';
+import { RELIC_DUNGEON_MONSTERS } from '../data/monsters/relic-dungeon-monsters';
+import { MATERIAL_PRICES } from './village-exchange';
+import { equipmentSellPrice } from './equipment-market';
+import { battleMaps } from './reference-data';
 
-export const COMPENDIUM_MAP_IDS = [
-  "starter-outskirts", "millennium-lake", "japan-sea", "miasma-forest", "sumeru", "sunken-relic",
-] as const;
-
-export type CompendiumMapId = (typeof COMPENDIUM_MAP_IDS)[number];
-export type MonsterKind = "一般" | "菁英" | "首領";
-
+// The world-map codex uses exactly the same destinations and order as the map.
+export const COMPENDIUM_MAP_IDS = battleMaps.map(map => map.id);
+export type CompendiumMapId = string;
+export type MonsterKind = '一般' | '菁英' | '首領';
 export interface MonsterCompendiumEntry {
-  id: string;
-  name: string;
-  mapId: CompendiumMapId;
-  region: string;
-  kind: MonsterKind;
-  hp: number;
-  mp: number;
-  atk: number;
-  exp: number;
-  drops: string[];
-  isBoss: boolean;
-  prerequisite: string | null;
-  skill: string | null;
+  id: string; name: string; mapId: CompendiumMapId; region: string; kind: MonsterKind;
+  level: number; hp: number; mp: number; atk: number; exp: number; gold: number;
+  physicalDefense: number; magicDefense: number; role: string;
+  encounterTier: string;
+  drops: string[]; dropDetails: MonsterDrop[]; equipmentDrops: MonsterDrop[]; isBoss: boolean; prerequisite: string | null; skill: string | null;
 }
 
-const prerequisites: Record<CompendiumMapId, string | null> = {
-  "starter-outskirts": null,
-  "millennium-lake": "擊敗山賊首領",
-  "japan-sea": "擊敗狂風阿魯塔",
-  "miasma-forest": "擊敗黃金海星",
-  sumeru: "世界地圖達到第 40 關",
-  "sunken-relic": "遺跡探索進度達到 100%",
-};
-
-function monsterKind(name: string, boss: boolean, elite = false): MonsterKind {
-  if (boss) return "首領";
-  if (elite || /\(強\)|詭異|頭目|金剛|神獸|強力|神漢|邪靈/.test(name) || name === "海星") return "菁英";
-  return "一般";
-}
-
-/** JSON payload built from the same numerical and drop sources as the battle map. */
-export const monsterCompendiumJson = JSON.stringify(
-  [
-    ...sourceEnemies
-    .filter((enemy): enemy is typeof enemy & { mapId: CompendiumMapId } =>
-      COMPENDIUM_MAP_IDS.includes(enemy.mapId as CompendiumMapId))
-    .map((enemy): MonsterCompendiumEntry => {
-      const map = battleMaps.find((entry) => entry.id === enemy.mapId);
-      const boss = isBossMonster(enemy.name);
-      return {
-        id: enemy.dungeonId ?? `${enemy.mapId}:${enemy.name}`,
-        name: enemy.name,
-        mapId: enemy.mapId,
-        region: map?.name ?? enemy.mapId,
-        kind: monsterKind(enemy.name, boss, enemy.elite),
-        hp: enemy.hp ?? 0,
-        mp: enemy.mp ?? 0,
-        atk: enemy.attack ?? 0,
-        exp: enemy.xp,
-        drops: enemy.drops,
-        isBoss: boss,
-        prerequisite: prerequisites[enemy.mapId],
-        skill: enemy.skill ?? null,
-      };
-    }),
-    ...RELIC_MONSTER_LIST.map((monster): MonsterCompendiumEntry => ({
-      id: monster.id,
-      name: monster.name,
-      mapId: "sunken-relic",
-      region: "沉沒王朝遺跡",
-      kind: monster.kind === "Boss" ? "首領" : monster.kind === "菁英" ? "菁英" : "一般",
-      hp: monster.hp,
-      mp: monster.mp,
-      atk: monster.atk,
-      exp: monster.xp,
-      drops: monster.loot,
-      isBoss: monster.kind === "Boss",
-      prerequisite: prerequisites["sunken-relic"],
-      skill: monster.skill,
-    })),
-  ],
+/** Every live dungeon ID is represented once, including legacy saves and all twelve national zones. */
+export const monsterCatalogEntries: MonsterCompendiumEntry[] = Object.entries(DUNGEONS).map(([id, monster]) => {
+  const design = MONSTER_REDESIGN[id];
+  const source = sourceEnemies.find(enemy => enemy.dungeonId === id);
+  const relic = RELIC_DUNGEON_MONSTERS[id as keyof typeof RELIC_DUNGEON_MONSTERS];
+  const boss = isBossMonster(monster.name);
+  const mapId = design?.region ?? (relic ? 'sunken-relic' : source?.mapId ?? 'legacy-dungeon');
+  const drops = design ? [...design.materialDrops.map(drop => drop.item), ...(source?.mapId === 'starter-outskirts' ? ['古錢箱'] : [])] : source?.drops ?? relic?.loot ?? [];
+  const regularDrops = drops.filter(item => item !== '[新手]兌換銅錢' && item !== '古錢箱');
+  const dropDetails = design ? [...design.materialDrops, ...(source?.mapId === 'starter-outskirts' ? [{ item: '古錢箱', rate: 100, price: MATERIAL_PRICES['古錢箱'] }] : [])] : drops.map(item => ({
+    item, price: item === '[新手]兌換銅錢' ? 0 : MATERIAL_PRICES[item] ?? 0,
+    rate: item === '[新手]兌換銅錢' || item === '古錢箱' ? 100 : relic ? monster.drop * 100 / Math.max(1, drops.length) : 100 / Math.max(1, regularDrops.length),
+  }));
+  const equipmentDrops = [...new Set(monster.loot)].flatMap(key => {
+    const spec = DIVINE_EQUIPMENT[key as keyof typeof DIVINE_EQUIPMENT];
+    return spec ? [{ item: spec.name, rate: .01, price: equipmentSellPrice({ uid: 'codex', name: spec.name, bonus: spec.bonus, def: spec.def, atk: 0, hp: 0, enhance: 0, rarity: '傳說', magic: [], requiredLevel: 1 }) }] : [];
+  });
+  return {
+    id, name: monster.name, mapId, region: MONSTER_REGION_LABELS[mapId],
+    kind: boss ? '首領' : design?.elite || relic?.kind === '菁英' ? '菁英' : '一般',
+    level: monster.level, hp: monster.hp, mp: monster.mp, atk: monster.atk, exp: monster.xp, gold: monster.gold,
+    physicalDefense: 'physicalDefense' in monster ? monster.physicalDefense ?? 0 : 0,
+    magicDefense: 'magicDefense' in monster ? monster.magicDefense ?? 0 : 0,
+    role: design?.role ?? (boss ? '首領' : '均衡'), encounterTier: boss ? '首領' : design?.encounterTier ?? '主力怪', drops, dropDetails, equipmentDrops, isBoss: boss,
+    prerequisite: null, skill: design?.description ?? source?.skill ?? relic?.skill ?? null,
+  };
+});
+const catalogById = new Map(monsterCatalogEntries.map(entry => [entry.id, entry]));
+export const monsterCompendiumEntries: MonsterCompendiumEntry[] = battleMaps.flatMap(map =>
+  sourceEnemies.filter(enemy => enemy.mapId === map.id && enemy.dungeonId).flatMap(enemy => {
+    const entry = catalogById.get(enemy.dungeonId!);
+    return entry ? [{ ...entry, mapId: map.id, region: map.name }] : [];
+  }),
 );
+export const monsterCompendiumJson = JSON.stringify(monsterCompendiumEntries);

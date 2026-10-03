@@ -3,6 +3,7 @@ import { itemKind, type EquipmentSlot } from "./equipment-slots";
 import { gersangItemArt, gersangUnitArt } from "./gersang-visuals";
 import { MYTHIC_ART_BY_NAME, THUNDER_FORGE_ITEMS } from "./mythic-forge";
 import type { Equipment, EquipmentSet, GameState, MagicAffix } from "./game-state";
+import { MONSTER_REDESIGN } from '../data/monsters/monster-redesign';
 
 export function sanitizeEquip(value: unknown): EquipmentSet {
   const equip = emptyEquipment(); if (!value || typeof value !== "object") return equip;
@@ -21,5 +22,7 @@ export function applyGersangVisuals(state: GameState): GameState {
   const mercs = share(state.mercs, state.mercs.map(unitVisual));
   const restingMercs = share(state.restingMercs, state.restingMercs.map(unitVisual));
   const inventory = share(state.inventory, state.inventory.map(map));
-  return hero === state.hero && mercs === state.mercs && restingMercs === state.restingMercs && inventory === state.inventory ? state : { ...state, hero, mercs, restingMercs, inventory };
+  const key = state.dungeon?.lockedEnemyKey || state.dungeon?.key;
+  const selectedMonster = state.selectedMonster && key && MONSTER_REDESIGN[key] ? MONSTER_REDESIGN[key].name : state.selectedMonster;
+  return hero === state.hero && mercs === state.mercs && restingMercs === state.restingMercs && inventory === state.inventory && selectedMonster === state.selectedMonster ? state : { ...state, hero, mercs, restingMercs, inventory, selectedMonster };
 }

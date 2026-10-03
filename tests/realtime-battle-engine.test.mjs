@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RealtimeBattleSystem } from '../app/realtime-battle-engine.js';
-import { calculateDamage, dungeonStep, freshDungeon, normalEncounterCount } from '../app/dungeon-engine.ts';
+import { DUNGEONS, calculateDamage, dungeonStep, freshDungeon, normalEncounterCount } from '../app/dungeon-engine.ts';
 
 const testParty = (size, attack = 1) => Array.from({ length: size }, (_, index) => ({
   uid: index === 0 ? 'hero' : `merc-${index}`,
@@ -57,7 +57,7 @@ test('normal monster experience scales with defeated count and pays once', () =>
   assert.equal(started.state.enemyCount, 3);
   const settled = dungeonStep(started.state, hero, 'tick', 10000, undefined, .99, 0, 0, 0, testParty(12, 1e9));
   assert.equal(settled.state.status, 'respawning');
-  assert.equal(settled.reward.xp, 25 * 3);
+  assert.equal(settled.reward.xp, DUNGEONS.e_lake_red_thief.xp * 3);
   assert.equal(dungeonStep(settled.state, hero, 'tick', 10050, undefined, .99, 0, 0, 0, testParty(12, 1e9)).reward, null);
 });
 

@@ -1,7 +1,9 @@
 /** 副本怪物數值與地圖怪物池。舊 ID 保留，讓既有存檔可安全載入。 */
 import { RELIC_DUNGEON_MONSTERS } from "./relic-dungeon-monsters.ts";
+import { MONSTER_REDESIGN, redesignMonsterTable } from './monster-redesign.ts';
+const newRegionalMonster = (id: string, loot: string[]) => ({ ...MONSTER_REDESIGN[id], drop: .2, loot });
 
-export const ECOLOGY_MONSTERS={
+export const ORIGINAL_ECOLOGY_MONSTERS={
  ...RELIC_DUNGEON_MONSTERS,
  e_starter_raccoon:{name:'狸貓',level:1,hp:16,mp:0,atk:6,dex:10,xp:7,gold:7,drop:.06,loot:['boots']},
  e_starter_black_bandit:{name:'黑巾山賊',level:5,hp:52,mp:0,atk:5,dex:24,xp:0,gold:0,drop:0,loot:[]},
@@ -75,10 +77,26 @@ export const ECOLOGY_MONSTERS={
  e_ghost:{name:'冥界餓鬼',level:72,hp:11000,mp:200,atk:230,dex:55,xp:2400,gold:1600,drop:.6,loot:['armor']},
  e_snake:{name:'冥界大蛇',level:80,hp:17000,mp:350,atk:290,dex:60,xp:3500,gold:2200,drop:.7,loot:['armor']},
  e_king:{name:'終極 BOSS 閻王',level:100,hp:25000,mp:500,atk:350,dex:70,xp:5000,gold:3000,drop:.8,loot:['armor']},
+ e_korea_field_deer:{name:'鹿',level:3,hp:30,mp:0,atk:5,dex:10,xp:6,gold:6,drop:.06,loot:['boots']},
+ e_korea_field_small_bandit:{name:'小山賊',level:5,hp:50,mp:0,atk:7,dex:12,xp:7,gold:7,drop:.06,loot:['boots']},
+ e_korea_field_archer_bandit:{name:'弓手山賊',level:7,hp:70,mp:0,atk:8,dex:14,xp:8,gold:8,drop:.06,loot:['boots']},
+ e_korea_field_poison_moth:{name:'毒蛾',level:9,hp:80,mp:0,atk:10,dex:16,xp:20,gold:15,drop:.06,loot:['boots']},
+ e_korea_field_hammer_bandit:{name:'鐵鎚山賊',level:12,hp:120,mp:0,atk:15,dex:10,xp:15,gold:12,drop:.06,loot:['boots']},
+ e_korea_field_tiger:{name:'老虎',level:15,hp:180,mp:0,atk:18,dex:20,xp:18,gold:15,drop:.06,loot:['boots']},
+ e_korea_field_yaksha:{name:'夜叉',level:18,hp:300,mp:60,atk:30,dex:22,xp:45,gold:35,drop:.12,loot:['staff']},
+ e_korea_field_flying_tiger:{name:'飛虎',level:30,hp:24000,mp:1000,atk:400,dex:48,xp:9500,gold:5000,drop:.3,loot:['staff','armor']},
+ e_taj_scarab:newRegionalMonster('e_taj_scarab',['boots']),
+ e_taj_guard:newRegionalMonster('e_taj_guard',['armor']),
+ e_taj_dancer:newRegionalMonster('e_taj_dancer',['staff']),
+ e_taj_assassin:newRegionalMonster('e_taj_assassin',['boots']),
+ e_shambhala_jailer:newRegionalMonster('e_shambhala_jailer',['armor']),
+ e_shambhala_scribe:newRegionalMonster('e_shambhala_scribe',['staff']),
  thug:{name:'打手',level:1,hp:150,mp:0,atk:8,dex:8,xp:20,gold:15,drop:.05,loot:['boots']}
 } as const;
 
-export const LEGACY_DUNGEON_MONSTERS = {
+export const ECOLOGY_MONSTERS = redesignMonsterTable(ORIGINAL_ECOLOGY_MONSTERS);
+
+export const ORIGINAL_LEGACY_DUNGEON_MONSTERS = {
  thug:{name:'打手',level:1,hp:150,mp:0,atk:8,dex:8,xp:20,gold:15,drop:.05,loot:['boots']},
  pirate:{name:'海賊',level:15,hp:800,mp:40,atk:35,dex:20,xp:150,gold:120,drop:.25,loot:['boots']},
  snowWoman:{name:'雪女',level:40,hp:4000,mp:200,atk:120,dex:45,xp:800,gold:600,drop:.55,loot:['helmet','staff']},
@@ -87,6 +105,8 @@ export const LEGACY_DUNGEON_MONSTERS = {
  snake:{name:'冥界大蛇',level:40,hp:2500,mp:100,atk:65,dex:30,xp:500,gold:350,drop:.55,loot:['helmet','helmet','boots','boots','staff','armor']},
  king:{name:'閻王',level:80,hp:15000,mp:400,atk:220,dex:60,xp:2400,gold:2000,drop:.9,loot:['armor','armor','staff','staff','helmet','boots']}
 } as const;
+
+export const LEGACY_DUNGEON_MONSTERS = redesignMonsterTable(ORIGINAL_LEGACY_DUNGEON_MONSTERS);
 
 export const ECOLOGY_POOLS={
  hanyang:['e_raccoon'], daegwallyeong:['e_mad_cow'], hallasan:['e_yellow_dragon'], 'datun-mountain':['e_big_eye'], alishan:['e_boar'], 'qin-taiwan':['e_tomb_raider'], 'japan-netherworld':['e_ghost_cat'], 'iwami-silver-mine':['e_kappa'], 'black-forest':['e_amakusa'], 'nanjing-outskirts':['e_poison_moth'], 'great-wall':['e_xiongnu'], 'yellow-emperor-mausoleum':['e_undersea_king'],

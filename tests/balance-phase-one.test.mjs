@@ -32,7 +32,7 @@ test('cargo upgrade follows 1.15 growth and every route remains profitable', () 
 });
 
 test('experience progression is smooth and reaches exactly two billion', () => {
-  assert.equal(ECOLOGY_MONSTERS.e_starter_wako.xp, 9);
+  assert.equal(ECOLOGY_MONSTERS.e_starter_wako.xp, 34);
   assert.equal(LEVEL_PROGRESSION[0].xpToNext, 100);
   assert.equal(LEVEL_PROGRESSION[1].xpToNext, 500);
   assert.equal(LEVEL_PROGRESSION.at(-1).totalXp, LEVEL_CAP_TOTAL_XP);

@@ -72,7 +72,8 @@ test('direct rates and boundaries match the approved table without a second cond
 });
 test('unknown sources, early Bosses and unopened ranks cannot leak into the new drop pools',()=>{
  const {sourceEnemyDefinitions}=require('../data/monsters/world-map-enemies.ts'),{RELIC_MONSTER_LIST}=require('../data/monsters/relic-dungeon-monsters.ts');
- for(const id of ['normal','boss','relic-boss','future-final-boss','e_starter_pirate_king','e_korea_field_flying_tiger','e_korea_field_deer'])assert.equal(rollWarSeal(id,0),undefined,id);
+ for(const id of ['normal','boss','relic-boss','future-final-boss','e_starter_pirate_king','e_korea_field_flying_tiger'])assert.equal(rollWarSeal(id,0),undefined,id);
+ assert.equal(rollWarSeal('e_korea_field_deer',0).stage,2,'newly playable low-level field monsters use the existing early seal pool');
  for(const roll of [NaN,Infinity,-.01,1])assert.equal(rollWarSeal('e_starter_raccoon',roll),undefined);
  for(const enemy of sourceEnemyDefinitions){const seal=rollWarSeal(enemy.id,0);assert.ok(!seal||seal.stage<=5);assert.equal(rollWarSeal(enemy.id,0,'relic'),undefined);}
  for(const enemy of RELIC_MONSTER_LIST){assert.equal(rollWarSeal(enemy.id,0),undefined);if(enemy.kind!=='Boss')assert.equal(rollWarSeal(enemy.id,0,'relic'),undefined);}

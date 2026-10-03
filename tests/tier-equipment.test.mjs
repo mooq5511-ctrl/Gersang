@@ -19,23 +19,24 @@ test('ten equipment tiers each have seven unique wearable pieces', () => {
   assert.equal(equipmentAtTier(20).find(item => item.part === 'accessory').slot, 'ring');
 });
 
-test('only the first six tiers drop in their assigned regions', () => {
-  assert.deepEqual(TIER_EQUIPMENT_DROP_REGIONS.map(region => [...region.tiers]), [[1, 20], [40, 50], [70, 90]]);
-  const maps = ['starter-outskirts', 'millennium-lake', 'japan-sea'];
+test('all eight maps supply the equipment tiers for their progression bands', () => {
+  assert.deepEqual(TIER_EQUIPMENT_DROP_REGIONS.map(region => [...region.tiers]), [[1], [20], [40, 50], [50, 70], [90], [120], [150, 180], [200]]);
+  const maps = TIER_EQUIPMENT_DROP_REGIONS.map(region => region.mapId);
   for (let index = 0; index < maps.length; index++) {
-    const [lower, upper] = TIER_EQUIPMENT_DROP_REGIONS[index].tiers;
+    const tiers = TIER_EQUIPMENT_DROP_REGIONS[index].tiers;
+    const lower = tiers[0], upper = tiers.at(-1);
     assert.equal(pickTierEquipmentDrop(maps[index], lower, false, 0, 0)?.requiredLevel, lower);
     assert.equal(pickTierEquipmentDrop(maps[index], upper, false, 0, .99)?.requiredLevel, upper);
     assert.equal(pickTierEquipmentDrop(maps[index], upper, false, 0, 0)?.requiredLevel, lower);
     assert.equal(pickTierEquipmentDrop(maps[index], lower - 1, false, 0, 0), null);
   }
-  assert.equal(pickTierEquipmentDrop('miasma-forest', 200, true, 0, 0), null);
-  assert.equal(pickTierEquipmentDrop('sumeru', 200, true, 0, 0), null);
+  assert.equal(pickTierEquipmentDrop('missing-region', 200, true, 0, 0), null);
+  assert.equal(pickTierEquipmentDrop('shambhala', 250, true, 0, 0)?.requiredLevel, 200);
   assert.equal(pickTierEquipmentDrop('starter-outskirts', 200, false, .04, 0), null);
   assert.ok(pickTierEquipmentDrop('starter-outskirts', 200, true, .119, 0));
 });
 
-test('remaining four tiers belong only to the level-gated temporary shop', () => {
+test('high tiers remain available from the level-gated shop as an alternative to drops', () => {
   assert.deepEqual([...TIER_EQUIPMENT_SHOP_LEVELS], [120, 150, 180, 200]);
   assert.equal(tierEquipmentShopCatalog.length, 28);
   assert.ok(tierEquipmentShopCatalog.every(item => item.requiredLevel >= 120 && tierEquipmentPrice(item) > 0));

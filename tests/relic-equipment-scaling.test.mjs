@@ -17,6 +17,37 @@ const context = vm.createContext({
 vm.runInContext(ts.transpileModule(pureSource.replace(/^export /gm, ''), {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText, context);
 const {freshRelicDungeon,relicDungeonAction} = context;
 
+test('relic boss can be challenged at zero progress without a prior dispatch', () => {
+  const state = freshRelicDungeon(1000);
+  const result = relicDungeonAction(state, 'challenge-boss', 100, {
+    partyReady: true, partyNames: ['新夥伴'], partyUids: ['merc-new'],
+    maxHp: 500, currentHp: 300, partyEquipmentScore: 0,
+  });
+  assert.equal(result.status, 'boss');
+  assert.equal(result.progress, 0);
+  assert.equal(result.dispatchPower, 100);
+  assert.equal(result.hp, 300);
+  assert.equal(result.maxHp, 500);
+  assert.equal(result.partyCount, 1);
+  assert.equal(result.dispatchPartyUids[0], 'merc-new');
+  assert.equal(state.status, 'idle');
+  assert.equal(state.bossUnlocked, false);
+});
+
+test('direct relic challenge still requires a living party and cannot reset an active fight or expedition', () => {
+  const state = freshRelicDungeon(1000);
+  const empty = relicDungeonAction(state, 'challenge-boss', 100, { partyReady: false, partyNames: [], partyUids: [] });
+  assert.equal(empty.status, 'idle');
+  assert.match(empty.logs[0], /至少 1 名/);
+  for (const status of ['boss', 'dispatching']) {
+    const current = { ...state, status, bossHp: 123, bossTurn: 5 };
+    const result = relicDungeonAction(current, 'challenge-boss', 1000, { partyReady: true, partyNames: ['夥伴'] });
+    assert.equal(result.status, status);
+    assert.equal(result.bossHp, 123);
+    assert.equal(result.bossTurn, 5);
+  }
+});
+
 test('Boss preparation predicts the observed beginner defeat and matches actual combat', () => {
   for (const [power, hp, count, equipment] of [[280, 772, 1, 0], [140000, 6800, 6, 0], [250000, 20000, 6, 480]]) {
     const preview = context.relicBossReadiness(power, hp, count, equipment);

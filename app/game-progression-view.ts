@@ -54,16 +54,7 @@ export function getProgressionView(game: GameState) {
     HANYANG_PROLOGUE_STEPS.find(
       ({ step }) => step === game.hanyangPrologueStep,
     ) || HANYANG_PROLOGUE_STEPS[0];
-  const firstCaravanBossReady =
-    game.npcProgress.completedQuests.includes(FIRST_CARAVAN_QUEST_ID) &&
-    game.hero.level >= 20 &&
-    game.territory.buildings.waystation >= 1 &&
-    (game.firstGreenEquipped ||
-      [game.hero, ...game.mercs, ...game.restingMercs].some((unit) =>
-        Object.values(unit.equip).some(
-          (item) => item && item.rarity !== '普通',
-        ),
-      ));
+  const firstCaravanBossReady = true;
   const roadmapRelic = game.relicDungeon;
   const roadmapDone = {
     outskirts: game.npcProgress.completedQuests.includes(
@@ -76,7 +67,7 @@ export function getProgressionView(game: GameState) {
   };
   const roadmapUnlocked = {
     outskirts: true,
-    bandit: firstCaravanBossReady,
+    bandit: true,
     relicOne: progressiveUnlocks.relic,
     relicTwo: roadmapDone.relicOne,
     regionBoss: roadmapDone.relicTwo,
@@ -103,7 +94,7 @@ export function getProgressionView(game: GameState) {
     {
       id: 'bandit',
       label: '山賊首領',
-      condition: 'Lv.20・驛站 Lv.1・裝備一件非普通裝備',
+      condition: '可直接挑戰・不需等級或任務前置',
       reward: '開通千年湖',
       state: roadmapDone.bandit
         ? 'done'
@@ -114,7 +105,7 @@ export function getProgressionView(game: GameState) {
     {
       id: 'relicOne',
       label: '遺跡第一層',
-      condition: '完成首趟貿易・探索進度 100%',
+      condition: '選擇傭兵隊伍・可直接挑戰 Boss',
       reward: '沉沒王朝材料與第一位遺跡 Boss',
       state: roadmapDone.relicOne
         ? 'done'
@@ -175,7 +166,7 @@ export function getProgressionView(game: GameState) {
           detail: hanyangStep.detail,
           tab: 'battle' as const,
           mapId: 'starter-outskirts',
-          monsterName: '狸貓',
+          monsterName: '偷糧狸',
         };
       if (game.hanyangPrologueStep === 'first-sale') {
         const starterWeaponObtained =
@@ -252,7 +243,7 @@ export function getProgressionView(game: GameState) {
           detail: hanyangStep.detail,
           tab: 'battle' as const,
           mapId: 'starter-outskirts',
-          monsterName: '黑巾山賊',
+          monsterName: '黑巾斥候',
         };
       if (game.hanyangPrologueStep === 'return')
         return {
@@ -291,10 +282,10 @@ export function getProgressionView(game: GameState) {
       if (game.starterDeliveryKills < FIRST_CARAVAN_TARGET)
         return {
           title: '清出送貨驛路',
-          detail: `擊敗新手村郊外的狸貓 ${Math.min(game.starterDeliveryKills, FIRST_CARAVAN_TARGET)} / ${FIRST_CARAVAN_TARGET}。只計算委託期間的指定怪物。`,
+          detail: `擊敗新手村郊外的偷糧狸 ${Math.min(game.starterDeliveryKills, FIRST_CARAVAN_TARGET)} / ${FIRST_CARAVAN_TARGET}。只計算委託期間的指定怪物。`,
           tab: 'battle',
           mapId: 'starter-outskirts',
-          monsterName: '狸貓',
+          monsterName: '偷糧狸',
         };
       return {
         title: '回漢陽交付第一份商隊委託',
@@ -481,7 +472,7 @@ export function getProgressionView(game: GameState) {
     if (!game.newbieBossDefeated)
       return {
         title: '討伐山賊首領，開通千年湖',
-        detail: '第一輪成長已完成；挑戰新手村郊外的山賊首領，突破下一段商路。',
+        detail: '可直接挑戰新手村郊外的山賊首領；擊敗他即可開通千年湖。',
         tab: 'battle',
         mapId: 'starter-outskirts',
         monsterName: '山賊首領',

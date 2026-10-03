@@ -1,14 +1,17 @@
 import { gersangStages } from './gersang-world-map.ts';
-import { sourceEnemies } from './v17-content.ts';
+import { sourceEnemyDefinitions } from '../data/monsters/world-map-enemies.ts';
+import { RETIRED_WORLD_MATERIAL_PRICES } from '../data/maps/gersang-world-map.ts';
+import { REDESIGNED_MATERIAL_PRICES, BOSS_MATERIAL_PRICES } from '../data/monsters/monster-redesign.ts';
 
 /** Every declared monster drop remains tradable even before a bespoke price is tuned. */
 const SOURCE_DROP_FALLBACK_PRICES = Object.fromEntries(
-  sourceEnemies.flatMap((enemy) => enemy.drops.map((item) => [item, 100] as const)),
+  sourceEnemyDefinitions.flatMap((enemy) => enemy.drops.map((item) => [item, 100] as const)),
 );
 
 /** 地圖掉落物的村莊收購價，直接由同一份地圖資料推導，避免戰利品與商店價格脫節。 */
 export const MATERIAL_PRICES: Record<string, number> = {
   ...SOURCE_DROP_FALLBACK_PRICES,
+  ...RETIRED_WORLD_MATERIAL_PRICES,
   ...Object.fromEntries(gersangStages.flatMap(stage => stage.monster.drops.map(drop => [drop.item, drop.price]))),
   '[隨便的]咒術秘訣': 1200,
   '藍色精氣石': 30,
@@ -69,6 +72,8 @@ export const MATERIAL_PRICES: Record<string, number> = {
   '小型風之屬性石': 33,
   '蛇矛': 8000,
   '狂風花': 33,
+  ...REDESIGNED_MATERIAL_PRICES,
+  ...BOSS_MATERIAL_PRICES,
 };
 
 /** 村莊販售價固定為收購價的兩倍，避免來回買賣產生無限套利。 */

@@ -37,7 +37,8 @@ export function settleGameLoop(previous: GameState, rolls: GameTickRolls, deps: 
   previous = pauseHanyangTutorialBattle(previous);
   if (dungeonBusy(previous.dungeon)) {
     const battle = previous.dungeon!;
-    const due = battle.status === "respawning" ? battle.spawnAt : battle.status === "recovering" ? (battle.innHealAt || battle.stamp + 2000) : battle.stamp + 50;
+    // Keep the arena clock moving during respawn so its countdown updates before the next encounter.
+    const due = battle.status === "respawning" ? Math.min(battle.spawnAt, battle.stamp + 200) : battle.status === "recovering" ? (battle.innHealAt || battle.stamp + 2000) : battle.stamp + 50;
     if (now < due) return previous;
     const pause = Math.max(0, now - (previous.dungeon!.pauseAt || previous.dungeon!.stamp || now));
     let next = deps.runDungeon(previous, "tick", now, undefined, { now, roll, choice, spawnRoll, encounterCountRoll, retaliationRoll, materialRolls, gearDropRoll, gearChoiceRoll, sealDropRoll, sealChoiceRoll });

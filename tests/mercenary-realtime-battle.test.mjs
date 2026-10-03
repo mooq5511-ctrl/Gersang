@@ -2,10 +2,41 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { merchantMercenaries } from '../app/mercenary-roster.ts';
 import { MercenaryRealtimeBattleSystem } from '../app/mercenary-realtime-battle.js';
-import { dungeonStep, freshDungeon } from '../app/dungeon-engine.ts';
+import { DUNGEONS, dungeonStep, freshDungeon } from '../app/dungeon-engine.ts';
 
 const player = (id, overrides = {}) => ({ id, side: 'player', templateId: `merchant-${id}`, hp: 1000, maxHp: 1000, atk: 60, def: 0, accuracy: 1, mp: 40, maxMp: 40, attackInterval: 1, position: { row: 0, col: 3 }, ...overrides });
 const enemy = (id = 'enemy', overrides = {}) => ({ id, side: 'enemy', hp: 1e7, maxHp: 1e7, atk: 0, def: 0, attackInterval: 1, position: { row: 0, col: 0 }, ...overrides });
+
+test('high-rank pressure is mitigated by defense/resistance, bounded, and disabled for bosses and players', () => {
+  const damage = (def, resist = 0, overrides = {}) => {
+    const battle = new MercenaryRealtimeBattleSystem(
+      [player('tank', { templateId: '', hp: 4096631, maxHp: 4096631, atk: 0, def, physicalResist: resist })],
+      [enemy('pressure', { pressureRatio: .06, pressureDefense: 183236, ...overrides })], { autoSkill: false, seed: 1 });
+    battle.startBattle();
+    return battle.events.find(e => e.type === 'damage' && e.actorId === 'pressure').damage;
+  };
+  const ordinary = damage(183236), armored = damage(366472), resistant = damage(183236, 50);
+  assert.ok(ordinary > 100000 && ordinary < 150000);
+  assert.ok(armored < ordinary && resistant <= ordinary * .51);
+  assert.equal(damage(183236, 0, { boss: true }), 1);
+  assert.equal(damage(183236, 0, { pressureRatio: undefined }), 1);
+  assert.ok(damage(0, 0, { pressureRatio: Infinity }) <= 409664);
+  const battle = new MercenaryRealtimeBattleSystem([player('tank', { pressureRatio: .1 })], [enemy()], { autoSkill: false });
+  assert.equal(battle.players[0].pressureRatio, 0);
+});
+
+test('pressure stats persist through JSON storage and restored realtime ticks without replay damage', () => {
+  const battle = new MercenaryRealtimeBattleSystem(
+    [player('tank', { templateId: '', hp: 4096631, maxHp: 4096631, atk: 0, def: 183236 })],
+    [enemy('pressure', { pressureRatio: .06, pressureDefense: 183236 })], { autoSkill: false, seed: 2 });
+  battle.startBattle();
+  const saved = JSON.parse(JSON.stringify(battle.snapshot())), restored = MercenaryRealtimeBattleSystem.fromSnapshot(saved);
+  assert.equal(restored.enemies[0].pressureRatio, .06);
+  assert.equal(restored.enemies[0].pressureDefense, 183236);
+  assert.equal(restored.players[0].hp, battle.players[0].hp);
+  battle.update(5); restored.update(5);
+  assert.deepEqual(restored.snapshot(), battle.snapshot());
+});
 
 for (const spec of merchantMercenaries) test(`world-map realtime: ${spec.id} active fires and respects cooldown`, () => {
   const battle = new MercenaryRealtimeBattleSystem(
@@ -88,8 +119,9 @@ test('dungeon magical strikes use monster magic defense and keep it in snapshots
   const hero = { hp: 10000, maxHp: 10000, mp: 0, maxMp: 40, str: 1, dex: 1, mercenaryIntelligence: 0, attack: 1, defense: 10000, staff: false };
   const party=[{uid:'hero',name:'測試主角',hp:hero.hp,maxHp:hero.maxHp,mp:hero.mp,maxMp:hero.maxMp,position:'前排',attack:1,defense:hero.defense,attackInterval:1.5}];
   const dungeon = dungeonStep(freshDungeon(), hero, 'start', 1000, 'e_sumeru_training_plague_god', .99, 0, 0, 0, party, 0, [1, 1, 1], false, 0);
-  assert.equal(dungeon.state.realtime.enemies[0].def, 220);
-  assert.equal(dungeon.state.realtime.enemies[0].magicDef, 225);
+  assert.equal(dungeon.state.realtime.enemies[0].def, DUNGEONS.e_sumeru_training_plague_god.physicalDefense);
+  assert.equal(dungeon.state.realtime.enemies[0].magicDef, DUNGEONS.e_sumeru_training_plague_god.magicDefense);
+  assert.ok(dungeon.state.realtime.enemies[0].magicDef > dungeon.state.realtime.enemies[0].def);
 });
 
 test('world-map debuffs, sword energy and priest MP recovery take effect', () => {

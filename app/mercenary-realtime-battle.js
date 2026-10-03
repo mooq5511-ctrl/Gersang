@@ -28,6 +28,9 @@ export class MercenaryRealtimeBattleSystem extends RealtimeBattleSystem {
     unit.boss = Boolean(raw.boss);
     unit.poisonAttack = Boolean(raw.poisonAttack);
     unit.magicAttack = Boolean(raw.magicAttack);
+    const pressureRatio = Number(raw.pressureRatio), pressureDefense = Number(raw.pressureDefense);
+    unit.pressureRatio = unit.side === 'enemy' && !unit.boss && Number.isFinite(pressureRatio) ? Math.max(0, Math.min(.1, pressureRatio)) : 0;
+    unit.pressureDefense = Number.isFinite(pressureDefense) ? Math.max(0, pressureDefense) : 0;
     unit.ranged = raw.ranged !== false;
     unit.accuracy = Math.max(0.05, Math.min(1, Number(raw.accuracy ?? 1)));
     unit.amaterasuGaze = Boolean(raw.amaterasuGaze);
@@ -203,7 +206,12 @@ export class MercenaryRealtimeBattleSystem extends RealtimeBattleSystem {
     if (!magic && actor.spec?.id === 'cannon') raw *= 1.15;
     let pierce = id === 'gunner' ? 0.3 : 0;
     if (id === 'swordmaster' && actor.state.stacks >= 3) { raw *= 1.35; pierce = 0.15; actor.state.stacks = 0; }
-    let damage = mitigatedDamage(raw, this.defense(target, magic ? target.magicDef : target.def) * (1 - pierce));
+    const effectiveDefense = this.defense(target, magic ? target.magicDef : target.def) * (1 - pierce);
+    let damage = mitigatedDamage(raw, effectiveDefense);
+    if (actor.pressureRatio && target.side === 'player') {
+      const referenceArmor = 100 + actor.pressureDefense;
+      damage += target.maxHp * actor.pressureRatio * referenceArmor / (referenceArmor + Math.max(0, effectiveDefense));
+    }
     if (target.side === 'player') {
       const resistance = magic ? target.magicResist : target.physicalResist;
       damage *= resistanceMultiplier(resistance);
@@ -291,6 +299,7 @@ export class MercenaryRealtimeBattleSystem extends RealtimeBattleSystem {
     const enrich = (copies, units) => copies.map((copy, index) => ({ ...copy,
       templateId: units[index].templateId, maxMp: units[index].maxMp, kind: units[index].kind,
       boss: units[index].boss, poisonAttack: units[index].poisonAttack, magicAttack: units[index].magicAttack,
+      pressureRatio: units[index].pressureRatio, pressureDefense: units[index].pressureDefense,
       ranged: units[index].ranged, accuracy: units[index].accuracy,
       amaterasuGaze: units[index].amaterasuGaze,
       formationPosition: units[index].formationPosition,

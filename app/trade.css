@@ -254,3 +254,18 @@
 .trade-port-investment button { width: 100%; }
 @media (max-width: 800px) { .trade-hero { grid-template-columns: 1fr; } .trade-chart { border-left: 0; border-top: 1px solid #d3a95a4f; } .trade-sidebar { position: static; } }
 .trade-route footer span small{color:#91b3a3;font-size:9px;letter-spacing:.02em}
+.equipment-purchase-control { display:grid; gap:7px; margin-top:auto; width:100%; min-width:0; }
+.equipment-purchase-control > button { width:100%; height:auto; min-height:34px; white-space:normal; }
+.equipment-purchase-control > small { color:#aab5ad; font-size:11px; }
+.equipment-purchase-quantity { display:flex; gap:6px; align-items:center; }
+.equipment-purchase-quantity > span { margin-right:auto; font-size:12px; color:#cfceb9; }
+.equipment-purchase-quantity > button { width:30px; height:30px; border:1px solid #b69047; border-radius:5px; background:#30291a; color:#efd68e; cursor:pointer; }
+.equipment-purchase-quantity > input { width:58px; height:30px; border:1px solid #77633f; border-radius:5px; background:#11191b; color:#f3e6bd; text-align:center; }
+.equipment-purchase-quantity > button:disabled,.equipment-purchase-quantity > input:disabled { opacity:.45; cursor:default; }
+.recruitment-success { display:flex; align-items:center; gap:14px; margin:12px 0; padding:14px; border:1px solid #d9ba69; border-radius:10px; background:linear-gradient(135deg,#253d2b,#18251e); color:#f5e6b5; animation:recruitment-join .35s ease-out; }
+.recruitment-success img { width:64px; height:64px; object-fit:contain; flex:none; }
+.recruitment-success p { margin:5px 0; line-height:1.6; }
+.recruitment-success small { color:#b9c9ae; }
+.recruitment-row-success { grid-column:1 / -1; margin:0; padding:5px 8px; border-radius:5px; background:#294232; color:#cce7af; animation:recruitment-join .35s ease-out; }
+@keyframes recruitment-join { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+@media (prefers-reduced-motion:reduce) { .recruitment-success,.recruitment-row-success { animation:none; } }

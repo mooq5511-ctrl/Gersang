@@ -6,7 +6,7 @@ import {ECOLOGY_MONSTERS,ECOLOGY_POOLS} from '../data/monsters/dungeon-monsters.
 export const WAR_SEALS = [
  {stage:2,name:'長槍兵符',level:12,rate:.03,available:true,source:'新手村郊外，以及世界地圖 Lv.1–35 普通怪物；二階兵符合計 3%，槍／弓等機率（此符實際 1.5%）'},
  {stage:3,name:'鐵騎兵符',level:36,rate:.02,available:true,source:'千年湖／日本海底洞，以及世界地圖 Lv.36–55 普通怪物；三階兵符合計 2%，槍／弓等機率（此符實際 1%）'},
- {stage:4,name:'精銳兵符',level:56,rate:.01,available:true,source:'白虎林／須彌山普通怪物，或黑巾山賊 Elite；每次勝利 1%'},
+ {stage:4,name:'精銳兵符',level:56,rate:.01,available:true,source:'白虎林／須彌山普通怪物，或黑巾斥候 Elite；每次勝利 1%'},
  {stage:5,name:'修羅兵符',level:72,rate:.03,available:true,source:'狂風阿魯塔／黃金海星／狂虎／多聞天王／廣目天王，或現有四隻遺跡 Boss；每次勝利 3%'},
  {stage:6,name:'御皇兵符',level:112,rate:.02,available:true,source:'現有四隻遺跡地下城 Boss；每次勝利 2%'},
  {stage:7,name:'天魔兵符',level:162,rate:.01,available:false,source:'來源尚未開放：待高難度遺跡 Boss 實裝；預定每次勝利 1%（目前不掉落）'},

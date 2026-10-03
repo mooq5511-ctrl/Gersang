@@ -28,7 +28,7 @@ export function createNpcController({ currentCity, game, setActiveNpcId, setActi
 function handleNpcAction({ option, npc }: { option: NpcOption; npc: NonNullable<ReturnType<typeof npcById>> }) {
     setGame(previous => {
       let next = recordNpcLine(previous, npc.id, `${npc.name}：${option.reply}`);
-      if (next.hanyangPrologueStep === "arrival" && npc.id === "kim-seongho" && option.quest === "start") next = { ...next, hanyangPrologueStep: "outskirts", logs: addLog(next.logs, "村長：村外驛路就交給你了，先去處理狸貓。") };
+      if (next.hanyangPrologueStep === "arrival" && npc.id === "kim-seongho" && option.quest === "start") next = { ...next, hanyangPrologueStep: "outskirts", logs: addLog(next.logs, "村長：村外驛路就交給你了，先去處理偷糧狸。") };
       if (next.hanyangPrologueStep === "journey-fund" && npc.id === "wang-deokchang") next = claimHanyangJourneyFund(next, Math.floor(6000 * currentCity.priceFactor));
       if (next.hanyangPrologueStep === "caravan-crisis") next = { ...next, hanyangPrologueStep: "bandit-trial" };
       if (next.hanyangPrologueStep === "caravan-delivery" && npc.id === "wang-deokchang" && option.prologueStep === "caravan-delivery") next = markHanyangCaravanDelivered(next);
@@ -59,7 +59,7 @@ function handleNpcAction({ option, npc }: { option: NpcOption; npc: NonNullable<
     });
     if (option.quest === "start" && npc.id === "kim-seongho") {
       setActiveTab("battle");
-      setNotice("請前往世界地圖的新手村郊外，點選狸貓開始清除驛路。");
+      setNotice("請前往世界地圖的新手村郊外，點選偷糧狸開始清除驛路。");
     }
     if (option.service) { setCityService(option.service); setActiveTab("city"); setActiveNpcId(null); }
     if (option.openContracts) { setActiveTab("contracts"); setActiveNpcId(null); }
@@ -70,7 +70,7 @@ function openNpcDialogue(npcId: NpcId) {
     const npc = npcById(npcId);
     if (!npc) return;
     const greeting = game.hanyangPrologueStep === "caravan-delivery" && npcId === "wang-deokchang"
-      ? "這箱貨……你真的從黑巾山賊手裡帶回來了？先別急著高興，我有件事要讓你看清楚。"
+      ? "這箱貨……你真的從黑巾斥候手裡帶回來了？先別急著高興，我有件事要讓你看清楚。"
       : game.hanyangPrologueStep === "return" && npcId === "kim-seongho"
         ? "你回來了。王德昌已把貨物收妥？那麼，告訴我北邊商路究竟發生了什麼。"
         : game.hanyangPrologueStep === "departure" && npcId === "kim-seongho"

@@ -9,16 +9,12 @@ test('gersangWorldMap has four regions, eight cities and twelve playable stages'
   ['朝鮮',['漢陽','平壤']],['台灣',['台北','台南']],['日本',['江戶','京都']],['中國',['南京','北京']]
  ]);
  assert.equal(gersangStages.length,12);
- assert.deepEqual(WORLD_ZONES.map(z=>[z.name,DUNGEONS[z.enemy].name,DUNGEONS[z.enemy].hp]),[
-  ['漢陽近郊','狸貓',60],['大關嶺','狂牛',160],['漢拏山','黃龍',1200],
-  ['大屯山','大眼怪',70],['阿里山','山豬',150],['秦始皇陵(台)','盜墓者',450],
-  ['冥界','鬼貓',110],['石見銀山','河童',90],['黑森林','天草時貞',2000],
-  ['南京近郊','毒蛾',65],['萬里長城','匈奴騎兵',350],['黃帝陵','海底王',1200]
- ]);
+ assert.deepEqual(WORLD_ZONES.map(z=>DUNGEONS[z.enemy].name),['驛路花狸','裂角高原牛','金鱗山蜥','熔瞳石靈','霧鬃山豬','地宮盜燈客','冥火狸妖','銀砂河童','黑杉咒徒','丹粉毒蛾','斷旗掠騎','黃陵石衛']);
+ WORLD_ZONES.forEach((zone,index)=>{assert.equal(DUNGEONS[zone.enemy].name,gersangStages[index].monster.name);assert.equal(DUNGEONS[zone.enemy].hp,gersangStages[index].monster.hp)});
  assert.ok(gersangStages.every(stage=>stage.monster.drops.length>0));
  assert.ok(gersangStages.every(stage=>stage.monster.drops.every(drop=>drop.price>0)));
- assert.deepEqual(gersangWorldMap.korea.stages[0].monster.drops,[{item:'舊斧頭',rate:12,price:150},{item:'肉類',rate:45,price:25}]);
- assert.deepEqual(gersangWorldMap.china.stages[2].monster.drops,[{item:'高級旗槍',rate:2,price:8000},{item:'深海珍珠',rate:10,price:500}]);
+ assert.deepEqual(gersangWorldMap.korea.stages[0].monster.drops.map(drop=>drop.item),['花狸尾毛','驛路狸皮']);
+ assert.deepEqual(gersangWorldMap.china.stages[2].monster.drops.map(drop=>drop.item),['黃陵陶片','黃陵鎮墓玉']);
 });
 test('level AND power boundaries, including both just below threshold',()=>{
  for(const z of WORLD_ZONES){assert.equal(zoneUnlocked(z,z.level,z.power),true);assert.equal(zoneUnlocked(z,z.level-1,99999),false);if(z.power)assert.equal(zoneUnlocked(z,999,z.power-1),false)}
@@ -30,12 +26,12 @@ test('locked, invalid, recovering transfers are identity noops',()=>{
 test('switch cancels previous fight and pending spawn, retains cooldown and pause timestamp',()=>{
  const old={...freshDungeon(),status:'respawning',spawnAt:5000,normalAt:2300,skillAt:4000,pauseAt:1000,serial:2};
  const s=teleportDungeon(old,36,500,2000,'yellow-emperor-mausoleum',0);
- assert.equal(s.zone,'yellow-emperor-mausoleum');assert.equal(s.key,'e_undersea_king');assert.equal(s.enemyHp,1200);assert.equal(s.status,'fighting');assert.equal(s.spawnAt,0);assert.equal(s.skillAt,4000);assert.equal(s.normalAt,2300);assert.equal(s.pauseAt,1000);assert.equal(s.serial,2);assert.equal(s.logs[0],'已傳送至 黃帝陵！');
+ assert.equal(s.zone,'yellow-emperor-mausoleum');assert.equal(s.key,'e_undersea_king');assert.equal(s.enemyHp,DUNGEONS.e_undersea_king.hp);assert.equal(s.status,'fighting');assert.equal(s.spawnAt,0);assert.equal(s.skillAt,4000);assert.equal(s.normalAt,2300);assert.equal(s.pauseAt,1000);assert.equal(s.serial,2);assert.equal(s.logs[0],'已傳送至 黃帝陵！');
 });
 test('high-zone defeat returns to hanyang with no reward and blocks re-entry during healing',()=>{
  const h={hp:1,mp:40,maxHp:80,maxMp:40,str:20,dex:1,int:10,attack:0,defense:0,staff:false};
  const s=teleportDungeon(freshDungeon(),36,500,1000,'yellow-emperor-mausoleum');const r=dungeonStep(s,h,'tick',2000);
- assert.equal(r.state.zone,'hanyang');assert.equal(r.state.key,'e_raccoon');assert.equal(r.state.enemyHp,60);assert.equal(r.hp,0);assert.equal(r.reward,null);assert.equal(r.state.logs[0],'戰鬥失敗，已自動返回漢陽客棧療傷。');assert.ok(r.state.logs.some(log=>/商隊全員倒下/.test(log)));assert.equal(teleportDungeon(r.state,99,99999,2100,'datun-mountain'),r.state);
+ assert.equal(r.state.zone,'hanyang');assert.equal(r.state.key,'e_raccoon');assert.equal(r.state.enemyHp,DUNGEONS.e_raccoon.hp);assert.equal(r.hp,0);assert.equal(r.reward,null);assert.equal(r.state.logs[0],'戰鬥失敗，已自動返回漢陽客棧療傷。');assert.ok(r.state.logs.some(log=>/商隊全員倒下/.test(log)));assert.equal(teleportDungeon(r.state,99,99999,2100,'datun-mountain'),r.state);
 });
 test('stage drop rates are evaluated and returned with the victory reward',()=>{
  const h={hp:999,mp:40,maxHp:999,maxMp:40,str:999,dex:99,int:10,attack:0,defense:0,staff:false};
@@ -43,7 +39,7 @@ test('stage drop rates are evaluated and returned with the victory reward',()=>{
  const party=[{uid:'hero',name:'測試主角',hp:999,maxHp:999,mp:40,maxMp:40,position:'前排',attack:100000,defense:1000,attackInterval:1.5}];
  const started=dungeonStep(s,h,'tick',1001,undefined,.5,0,0,0,party,0,[0,0,0],false,0);
  const hit=dungeonStep(started.state,h,'tick',1051,undefined,.5,0,0,0,party,0,[0,0,0],false,0);
- assert.deepEqual(hit.reward.materials,['舊斧頭','肉類']);
+ assert.deepEqual(hit.reward.materials,['花狸尾毛','驛路狸皮']);
  assert.ok(hit.state.logs.some(log => /噴寶/.test(log)), 'victory drop report must remain in battle history');
  assert.match(hit.state.logs[0],/自動狩獵關閉/);
  assert.equal(dungeonStep(hit.state,h,'tick',1101,undefined,.5,0,0,0,party,0,[0,0,0],false,0).reward,null);

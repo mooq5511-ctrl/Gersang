@@ -19,10 +19,12 @@ test('every playable monster has one stable dungeon ID and one combat stat sourc
   }
 });
 
-test('legacy road-only monsters retain their own stats and have no dungeon ID', () => {
+test('former road-only monsters now have playable stable dungeon IDs and complete stats', () => {
   const roadOnly = sourceEnemies.filter(enemy => !enemy.dungeonId);
-  assert.equal(roadOnly.length, 8);
-  assert.equal(roadOnly.find(enemy => enemy.name === '鹿').xp, 6);
+  assert.equal(roadOnly.length, 0);
+  const deer = sourceEnemyForDungeonKey('e_korea_field_deer');
+  assert.equal(deer.name, '白尾藥鹿');
+  assert.equal(deer.xp, ECOLOGY_MONSTERS.e_korea_field_deer.xp);
   assert.equal(sourceEnemyForDungeonKey('e_raccoon'), undefined);
 });
 

@@ -10,7 +10,7 @@ test('twelve world-map stages expose their bound exclusive monsters',()=>{
  const pools=Object.values(ECOLOGY_POOLS);
  assert.ok(pools.every(pool=>pool.length===1));
  assert.equal(new Set(pools.flat()).size,12);
- assert.deepEqual(Object.values(ECOLOGY_POOLS).flat().map(key=>DUNGEONS[key].name),['狸貓','狂牛','黃龍','大眼怪','山豬','盜墓者','鬼貓','河童','天草時貞','毒蛾','匈奴騎兵','海底王']);
+ assert.deepEqual(Object.values(ECOLOGY_POOLS).flat().map(key=>DUNGEONS[key].name),['驛路花狸','裂角高原牛','金鱗山蜥','熔瞳石靈','霧鬃山豬','地宮盜燈客','冥火狸妖','銀砂河童','黑杉咒徒','丹粉毒蛾','斷旗掠騎','黃陵石衛']);
 });
 
 test('stage selection always resolves its bound monster and unknown maps fall back safely',()=>{
@@ -31,7 +31,7 @@ test('a realtime victory waits half a second before the next local wave',()=>{
  assert.equal(early.state.status,'respawning');assert.equal(early.state.key,'e_undersea_king');
  const weakParty=[{...party[0],attack:1}];
  const next=dungeonStep(win.state,hero,'tick',1550,undefined,.99,0,.999,0,weakParty,0,[0,0,0],false,0);
- assert.equal(next.state.status,'fighting');assert.equal(next.state.key,'e_undersea_king');assert.ok(next.state.enemyHp>0&&next.state.enemyHp<=1200);
+ assert.equal(next.state.status,'fighting');assert.equal(next.state.key,'e_undersea_king');assert.ok(next.state.enemyHp>0&&next.state.enemyHp<=DUNGEONS.e_undersea_king.hp);
 });
 
 test('realtime damage events identify attacker, target, amount and attack type',()=>{

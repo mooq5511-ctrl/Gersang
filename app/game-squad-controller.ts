@@ -20,6 +20,7 @@ import { hanyangRecruitmentCost } from './hanyang-prologue';
 import { type GameState, type Unit } from './game-state';
 import type { WorldCity } from './v15-data';
 import type { GameStateSetter } from './game-controller-types';
+import { ACTIVE_MERCENARY_LIMIT } from './guild-migration';
 
 type Context = {
   game: GameState;
@@ -43,6 +44,10 @@ export function createSquadController({
       game,
       Math.floor(6000 * currentCity.priceFactor),
     );
+    if (game.creditLevel < 2) { setNotice('商團 Lv.2 才能招募傭兵，請先完成新手任務。'); return; }
+    if (spec.recruitable === false) { setNotice(`「${spec.name}」暫未開放招募。`); return; }
+    if (game.mercs.length >= ACTIVE_MERCENARY_LIMIT) { setNotice('傭兵名冊已滿，請先撤下成員並安排至休息處。'); return; }
+    if (game.gold < cost) { setNotice(`資金不足，還差 ${(cost - game.gold).toLocaleString()} 兩。`); return; }
     setGame((previous) => {
       const next = recruitMerchantAction(
         previous,

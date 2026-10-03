@@ -1,6 +1,7 @@
 import { ECOLOGY_MONSTERS } from "./dungeon-monsters.ts";
+import { MONSTER_REDESIGN } from './monster-redesign.ts';
 
-export type WorldMapId = "starter-outskirts" | "korea-field" | "millennium-lake" | "japan-sea" | "miasma-forest" | "sumeru";
+export type WorldMapId = "starter-outskirts" | "korea-field" | "millennium-lake" | "japan-sea" | "miasma-forest" | "sumeru" | 'ice-temple' | 'taj-mahal' | 'shambhala';
 
 export type SourceEnemyDefinition = {
   id: string;
@@ -74,7 +75,17 @@ export const sourceEnemyDefinitions: SourceEnemyDefinition[] = [
   { name: "廣目天王", id: "e_sumeru_virupaksa", mapId: "sumeru", grade: 10, physicalResistance: 295, magicResistance: 299, drops: ["廣目天王的寶珠", "神獸之魂(白虎)", "須彌石", "小型憤怒精髓"], boss: true },
 ];
 
+sourceEnemyDefinitions.push(...Object.entries(MONSTER_REDESIGN)
+  .filter(([id, monster]) => ['starter-outskirts', 'korea-field', 'millennium-lake', 'japan-sea', 'miasma-forest', 'sumeru', 'ice-temple', 'taj-mahal', 'shambhala'].includes(monster.region) && !sourceEnemyDefinitions.some(enemy => enemy.id === id))
+  .map(([id, monster]): SourceEnemyDefinition => ({ id, name: monster.name, mapId: monster.region as WorldMapId,
+    physicalResistance: monster.physicalDefense, magicResistance: monster.magicDefense,
+    drops: monster.materialDrops.map(drop => drop.item), elite: monster.elite,
+  })));
+
 export const monsterDungeonKeys = sourceEnemyDefinitions.reduce<Record<string, keyof typeof ECOLOGY_MONSTERS>>((keys, enemy) => {
-  if (enemy.id in ECOLOGY_MONSTERS) keys[enemy.name] = enemy.id as keyof typeof ECOLOGY_MONSTERS;
+  if (enemy.id in ECOLOGY_MONSTERS) {
+    const id = enemy.id as keyof typeof ECOLOGY_MONSTERS;
+    keys[ECOLOGY_MONSTERS[id].name] = id;
+  }
   return keys;
 }, {});

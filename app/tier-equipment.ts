@@ -62,9 +62,14 @@ export function equipmentAtTier(level: EquipmentTierLevel): TierEquipment[] {
 
 /** Independent acquisition entries; later maps can replace shop sources without changing item IDs. */
 export const TIER_EQUIPMENT_DROP_REGIONS = [
-  { id: "gear-region-starter", mapId: "starter-outskirts", tiers: [1, 20] },
-  { id: "gear-region-lake", mapId: "millennium-lake", tiers: [40, 50] },
-  { id: "gear-region-sea", mapId: "japan-sea", tiers: [70, 90] },
+  { id: "gear-region-starter", mapId: "starter-outskirts", tiers: [1] },
+  { id: "gear-region-lake", mapId: "millennium-lake", tiers: [20] },
+  { id: "gear-region-sea", mapId: "japan-sea", tiers: [40, 50] },
+  { id: "gear-region-forest", mapId: "miasma-forest", tiers: [50, 70] },
+  { id: "gear-region-ice", mapId: "ice-temple", tiers: [90] },
+  { id: "gear-region-taj", mapId: "taj-mahal", tiers: [120] },
+  { id: "gear-region-sumeru", mapId: "sumeru", tiers: [150, 180] },
+  { id: "gear-region-shambhala", mapId: "shambhala", tiers: [200] },
 ] as const;
 
 export const TIER_EQUIPMENT_SHOP_ID = "gear-shop-future-regions";

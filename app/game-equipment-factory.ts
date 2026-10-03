@@ -2,18 +2,18 @@ import { gersangItemArt } from "./gersang-visuals.ts";
 import { wearableCatalog } from "./wearable-catalog.ts";
 import { magicAffixes } from "./v15-data.ts";
 import type { OfficialEquipment } from "./v17-content";
-import { SHOP_QUALITY } from "./game-config.ts";
+import { SHOP_QUALITY, WEAPON_SHOP_QUALITY, ARMOR_SHOP_QUALITY } from "./game-config.ts";
 import type { Equipment, MagicAffix } from "./game-state";
 
 export function makeUid(prefix: string) {
   return prefix + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
 }
 
-export function rollShopQuality(): Equipment["rarity"] {
+export function rollShopQuality(quality = SHOP_QUALITY): Equipment["rarity"] {
   const roll = Math.random() * 100;
-  if (roll < SHOP_QUALITY["傳說"].chance) return "傳說";
-  if (roll < SHOP_QUALITY["傳說"].chance + SHOP_QUALITY["史詩"].chance) return "史詩";
-  if (roll < SHOP_QUALITY["傳說"].chance + SHOP_QUALITY["史詩"].chance + SHOP_QUALITY["稀有"].chance) return "稀有";
+  if (roll < quality["傳說"].chance) return "傳說";
+  if (roll < quality["傳說"].chance + quality["史詩"].chance) return "史詩";
+  if (roll < quality["傳說"].chance + quality["史詩"].chance + quality["稀有"].chance) return "稀有";
   return "普通";
 }
 
@@ -85,7 +85,7 @@ export function rollRelicEquipment(layer: number, random: () => number = Math.ra
   };
 }
 
-export function makeOfficialEquipment(record: OfficialEquipment, rarity = rollShopQuality()): Equipment {
+export function makeOfficialEquipment(record: OfficialEquipment, rarity = rollShopQuality(record.kind === "weapon" ? WEAPON_SHOP_QUALITY : ARMOR_SHOP_QUALITY)): Equipment {
   const multiplier = SHOP_QUALITY[rarity].multiplier;
   const magic = [...magicAffixes].sort(() => Math.random() - .5).slice(0, record.level >= 130 ? 3 : record.level >= 50 ? 2 : 1);
   return { uid: makeUid(record.id), name: rarity + "・" + record.name, slot: record.kind, atk: scale(record.atk, multiplier), def: scale(record.def, multiplier), hp: 0, image: gersangItemArt(record.kind), enhance: 0, rarity, magic: scaleMagic(magic.map((affix) => ({ ...affix })), multiplier), requiredLevel: record.level, source: "四國城市商店・" + rarity + "品質 x" + multiplier, skill: record.skill, bonus: { str: scale(record.str, multiplier), agi: scale(record.agi, multiplier), intel: scale(record.intel, multiplier), vit: scale(record.vit, multiplier) }, resist: { physical: scale(record.physical, multiplier), magic: scale(record.magic, multiplier) } };

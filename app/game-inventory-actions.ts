@@ -3,11 +3,11 @@ import {warSeal} from './war-seals';
 import { VILLAGE_WEAPONS, buyVillageWeapon, exchangeAttackBonus, type VillageWeaponId } from "./village-exchange";
 import { sellAllEquipmentFromInventory, sellEquipmentFromInventory } from "./equipment-market";
 import { addInventoryItem } from "./inventory-layout";
-import { advanceEquipmentQuality, makeUid, rollRelicEquipment } from "./game-equipment-factory";
+import { advanceEquipmentQuality, applyShopQuality, makeUid, rollRelicEquipment, rollShopQuality } from "./game-equipment-factory";
 import { fusionBaseName, fusionItemKey, fusionRecipe, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
 import { THUNDER_FORGE_ITEMS, type ThunderForgeId } from "./mythic-forge";
 import { compatibleSlots, equipFromInventory, unequipToInventory, type EquipmentSlot } from "./equipment-slots";
-import { medicineCatalog } from "./game-config";
+import { medicineCatalog, WEAPON_SHOP_QUALITY } from "./game-config";
 import { officialGems } from "./v17-content";
 import { normalizeVitals, recoverVitals, vitalStats } from "./vitals-engine";
 import { AutoPotionManager, type AutoPotionSettings } from "./auto-potion-manager";
@@ -123,18 +123,31 @@ export function purchaseEquipmentAction(state: GameState, item: Equipment, price
   return { ...state, gold: state.gold - price, inventory: [item, ...state.inventory], logs: addLog(state.logs, message) };
 }
 
+/** Check the whole order before charging or generating any independently identified items. */
+export function purchaseEquipmentBatchAction(state: GameState, quantity: number, unitPrice: number, name: string, createItem: (index: number) => Equipment, addLog: Log, notify: (message: string) => void): GameState {
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100) { notify('購買數量請選擇 1～100 件。'); return state; }
+  const total = unitPrice * quantity;
+  if (!Number.isSafeInteger(total) || total < 0) { notify('購買金額無效。'); return state; }
+  if (state.gold < total) { notify(`資金不足：${quantity} 件共需 ${total.toLocaleString('zh-TW')} 兩，還差 ${(total - state.gold).toLocaleString('zh-TW')} 兩。`); return state; }
+  const items = Array.from({ length: quantity }, (_, index) => createItem(index));
+  const counts = new Map<Equipment['rarity'], number>();
+  for (const item of items) counts.set(item.rarity, (counts.get(item.rarity) ?? 0) + 1);
+  const quality = [...counts].map(([rarity, count]) => `${rarity} ${count} 件`).join('・');
+  const message = `購買成功：「${name}」×${quantity}，支付 ${total.toLocaleString('zh-TW')} 兩，已放入背包。鑑定結果：${quality}。`;
+  notify(message);
+  return { ...state, gold: state.gold - total, inventory: [...items, ...state.inventory], logs: addLog(state.logs, message) };
+}
+
 /** Validates the temporary high-tier shop source independently of the shop UI. */
-export function purchaseTierEquipmentAction(state: GameState, itemId: string, priceFactor: number, cityName: string, uid: string, addLog: Log, notify: (message: string) => void): GameState {
+export function purchaseTierEquipmentAction(state: GameState, itemId: string, priceFactor: number, cityName: string, uid: string, addLog: Log, notify: (message: string) => void, quantity = 1): GameState {
   const spec = tierEquipmentShopCatalog.find((item) => item.id === itemId);
   if (!spec) return state;
   if (state.hero.level < spec.requiredLevel) { notify(`需要 Lv.${spec.requiredLevel} 才能購買「${spec.name}」。`); return state; }
   const price = Math.floor(tierEquipmentPrice(spec) * priceFactor);
-  if (state.gold < price) { notify("裝備商店資金不足。"); return state; }
-  const item = makeTierEquipment(spec, uid, `${cityName}商店・過渡供應`);
-  const pickup = addInventoryItem(state.inventory, item);
-  if (pickup.error) { notify("背包已滿，無法購買裝備。"); return state; }
-  notify(`購買成功：「${item.name}」×1，支付 ${price.toLocaleString("zh-TW")} 兩，已放入背包。`);
-  return { ...state, gold: state.gold - price, inventory: pickup.inventory, logs: addLog(state.logs, `購入「${item.name}」（Lv.${spec.requiredLevel}），支付 ${price.toLocaleString("zh-TW")} 兩。`) };
+  return purchaseEquipmentBatchAction(state, quantity, price, spec.name, index => {
+    const item = makeTierEquipment(spec, index === 0 ? uid : `${uid}-${index}`, `${cityName}商店・過渡供應`);
+    return applyShopQuality(item, rollShopQuality(WEAPON_SHOP_QUALITY));
+  }, addLog, notify);
 }
 
 export function equipInventoryItemAction(state: GameState, itemUid: string, requestedSlot: EquipmentSlot | undefined, targetUid: string, addLog: Log): GameState {

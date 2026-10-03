@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dungeonStep,freshDungeon,DUNGEONS,WORLD_ZONES,normalEncounterCount} from '../app/dungeon-engine.ts';
+import {dungeonStep,freshDungeon,DUNGEONS,WORLD_ZONES,normalEncounterCount,isBossMonster} from '../app/dungeon-engine.ts';
 
 const hero={hp:100000,maxHp:100000,mp:40,maxMp:40,str:20,dex:15,mercenaryIntelligence:0,attack:10,defense:100,staff:false};
 const party=size=>Array.from({length:size},(_,index)=>({uid:index===0?'hero':`merc-${index}`,name:'測試隊員',hp:hero.hp,maxHp:hero.maxHp,mp:hero.mp,maxMp:hero.maxMp,position:'前排',attack:hero.attack,defense:hero.defense,attackInterval:1}));
@@ -119,6 +119,28 @@ test('a party defeat immediately turns auto hunt OFF',()=>{
  assert.equal(defeated.state.autoHunt,false);
  assert.equal(defeated.state.spawnAt,0);
 });
+
+for (const [key, monster] of Object.entries(DUNGEONS).filter(([, monster]) => isBossMonster(monster.name))) {
+ test(`${monster.name} waits a full five seconds before the next boss appears`,()=>{
+  const durableHero={...hero,hp:1e12,maxHp:1e12,defense:1e12};
+  const members=[{...party(1)[0],hp:1e12,maxHp:1e12,defense:1e12}];
+  const initial={...freshDungeon(),autoHunt:true,lockedEnemyKey:key};
+  const battle=dungeonStep(initial,durableHero,'start',1000,key,.99,0,0,0,members,0,[1,1,1],false,0);
+  const finished={...battle.state,realtime:{...battle.state.realtime,winner:'player'}};
+  const won=dungeonStep(finished,durableHero,'tick',1100,key,.99,0,0,0,battle.party,0,[1,1,1],false,0);
+  assert.equal(won.state.status,'respawning');
+  assert.equal(won.state.spawnAt,6100);
+  assert.ok(won.reward);
+  const waiting=dungeonStep(won.state,durableHero,'tick',6099,key,.99,0,0,0,won.party,0,[1,1,1],false,0);
+  assert.equal(waiting.state.status,'respawning');
+  assert.equal(waiting.reward,null);
+  assert.equal(waiting.killsEarned,0);
+  const next=dungeonStep(waiting.state,durableHero,'tick',6100,key,.99,0,0,0,waiting.party,0,[1,1,1],false,0);
+  assert.equal(next.state.status,'fighting');
+  assert.equal(next.state.key,key);
+  assert.equal(next.state.spawnSerial,(won.state.spawnSerial||0)+1);
+ });
+}
 
 test('dungeon transitions leave the saved input state unchanged',()=>{
  const battle=start('e_raccoon',0),before=structuredClone(battle.state),savedHero=structuredClone(hero);

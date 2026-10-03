@@ -27,10 +27,10 @@ export function buildQuestJournal(game: GameState, current: { title: string; det
   });
   entries.push({ id: "first-trade", category: "主線", title: "完成第一趟東海商路", detail: "派遣傭兵運送貨物，完成第一筆貿易。", status: unlocks.firstTradeComplete ? "已完成" : unlocks.trade ? "可進行" : "未解鎖", requirement: "完成漢陽序章，並備妥貿易隊伍。", reward: "商路收益；符合隊伍條件後開啟遺跡遠征。" });
   entries.push({ id: "first-relic-reward", category: "主線", title: "派遣傭兵探索沉沒遺跡", detail: "派遣休息中的傭兵，取得第一份遺跡材料或古代裝備。", status: unlocks.firstRelicReward ? "已完成" : unlocks.relic ? "可進行" : "未解鎖", requirement: "完成第一趟貿易並擁有傭兵；資深商團已開啟。", reward: "遺跡掉落；開啟圖鑑與委託功能。" });
-  entries.push({ id: "level-20", category: "成長", title: "提升主角至 Lv.20", detail: "持續戰鬥與培養隊伍，準備挑戰山賊首領。", status: game.hero.level >= 20 ? "已完成" : "可進行", requirement: "透過冒險累積角色經驗。", reward: "達成首領挑戰的等級條件。", progress: `${Math.min(game.hero.level, 20)} / 20` });
-  entries.push({ id: "waystation", category: "成長", title: "建設驛站 Lv.1", detail: "在商團領地建設驛站，整備商路。", status: game.territory.buildings.waystation >= 1 ? "已完成" : "可規劃", requirement: "備妥領地建設所需資源。", reward: "達成首領挑戰的驛站條件。" });
+  entries.push({ id: "level-20", category: "成長", title: "提升主角至 Lv.20", detail: "持續戰鬥與培養隊伍，提升挑戰首領的戰力。", status: game.hero.level >= 20 ? "已完成" : "可進行", requirement: "透過冒險累積角色經驗。", reward: "提升角色能力與可穿戴裝備的等級。", progress: `${Math.min(game.hero.level, 20)} / 20` });
+  entries.push({ id: "waystation", category: "成長", title: "建設驛站 Lv.1", detail: "在商團領地建設驛站，整備商路。", status: game.territory.buildings.waystation >= 1 ? "已完成" : "可規劃", requirement: "備妥領地建設所需資源。", reward: "改善商團領地與商路補給。" });
   const equippedGreen = game.firstGreenEquipped || [game.hero, ...game.mercs, ...game.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== "普通"));
-  entries.push({ id: "first-green", category: "成長", title: "合成並穿戴第一件綠裝", detail: "收集 5 件符合合成条件的同名、同部位白裝，合成後穿戴；已有非普通裝備也能完成穿戴條件。", status: equippedGreen ? "已完成" : "可規劃", requirement: "合成材料須未強化、未鑲嵌；穿戴須符合角色等級。", reward: "提升實際能力，達成首領挑戰的裝備條件。" });
+  entries.push({ id: "first-green", category: "成長", title: "合成並穿戴第一件綠裝", detail: "收集 5 件符合合成条件的同名、同部位白裝，合成後穿戴；已有非普通裝備也能完成穿戴條件。", status: equippedGreen ? "已完成" : "可規劃", requirement: "合成材料須未強化、未鑲嵌；穿戴須符合角色等級。", reward: "提升實際能力，增強首領戰的生存與輸出。" });
   entries.push({ id: "golden-starfish", category: "成長", title: "討伐黃金海星，開通白虎林", detail: "擊敗日本海底洞的黃金海星，取得前往白虎林的資格。", status: game.goldenStarfishDefeated ? "已完成" : game.lakeBossDefeated ? "可進行" : "未解鎖", requirement: "先擊敗千年湖首領，開通日本海底洞。", reward: "開通白虎林。" });
   stages.forEach(stage => entries.push({ id: `growth:${stage.id}`, category: "成長", title: stage.label, detail: stage.condition, status: stage.state === "done" ? "已完成" : stage.state === "current" ? "目前階段" : "未解鎖", requirement: stage.condition, reward: stage.reward }));
   VILLAGE_NPCS.forEach(npc => {

@@ -31,3 +31,13 @@ export const SHOP_QUALITY: Record<Equipment["rarity"], { chance: number; multipl
   "傳說": { chance: 0.05, multiplier: 150 },
   "金色": { chance: 0, multiplier: 1000 },
 };
+
+export const WEAPON_SHOP_QUALITY: typeof SHOP_QUALITY = {
+  ...SHOP_QUALITY,
+  "普通": { chance: 64.5, multiplier: 1 },
+  "稀有": { chance: 30, multiplier: 1.5 },
+  "史詩": { chance: 5, multiplier: 10 },
+  "傳說": { chance: 0.5, multiplier: 150 },
+};
+
+export const ARMOR_SHOP_QUALITY = WEAPON_SHOP_QUALITY;

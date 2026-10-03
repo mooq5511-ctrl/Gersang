@@ -4,6 +4,9 @@
  * touching combat or presentation logic.
  */
 export const MONSTER_PLACEHOLDER = "/assets/placeholders/monster-placeholder.svg";
+import { ORIGINAL_ECOLOGY_MONSTERS, ORIGINAL_LEGACY_DUNGEON_MONSTERS } from '../data/monsters/dungeon-monsters.ts';
+import { MONSTER_REDESIGN } from '../data/monsters/monster-redesign.ts';
+const previousMonsterNames: Record<string, string> = Object.fromEntries(Object.entries({ ...ORIGINAL_ECOLOGY_MONSTERS, ...ORIGINAL_LEGACY_DUNGEON_MONSTERS }).map(([id, monster]) => [id, monster.name]));
 
 export const BATTLE_MONSTER_ART: Record<string, string> = {
   狸貓: "/assets/sprites/newbie-raccoon-v1.png",
@@ -52,7 +55,8 @@ export const BATTLE_MONSTER_CROP: Record<string, { size: string; position: strin
 };
 
 export function battleMonsterImage(name: string, key?: string) {
-  return BATTLE_MONSTER_ART[name] || (key ? BATTLE_MONSTER_ART[key] : undefined) || MONSTER_PLACEHOLDER;
+  const stableKey = key || Object.keys(MONSTER_REDESIGN).find(id => MONSTER_REDESIGN[id].name === name);
+  return BATTLE_MONSTER_ART[name] || (stableKey ? BATTLE_MONSTER_ART[stableKey] || BATTLE_MONSTER_ART[previousMonsterNames[stableKey]] : undefined) || MONSTER_PLACEHOLDER;
 }
 
 export function battleMonsterInjuredImage(name: string, key?: string) {

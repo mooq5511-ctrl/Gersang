@@ -139,7 +139,7 @@ export type GameState = {
   gold: number;
   stage: number;
   kills: number;
-  /** Progress for the first caravan commission; only 新手村郊外的狸貓 counts. */
+  /** Progress for the first caravan commission; only 新手村郊外的偷糧狸 counts. */
   starterDeliveryKills: number;
   newbieBossDefeated: boolean;
   lakeBossDefeated: boolean;

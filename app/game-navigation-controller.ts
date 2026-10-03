@@ -38,7 +38,7 @@ function goToObjective() {
       return;
     }
     if (game.hanyangPrologueStep === "caravan-crisis") {
-      setGame(previous => ({ ...previous, hanyangPrologueStep: "bandit-trial", logs: addLog(previous.logs, "商隊夥計：不好了！北邊商路又出事了，黑巾山賊把路堵住了。") }));
+      setGame(previous => ({ ...previous, hanyangPrologueStep: "bandit-trial", logs: addLog(previous.logs, "商隊夥計：不好了！北邊商路又出事了，黑巾斥候把路堵住了。") }));
       setActiveTab("battle");
       return;
     }

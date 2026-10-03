@@ -1,4 +1,5 @@
 /** 遺跡地下城專用怪物池。數值可直接供派遣報告與即時戰鬥使用。 */
+import { MONSTER_REDESIGN, redesignMonsterTable } from './monster-redesign.ts';
 export type RelicMonsterKind = "普通" | "菁英" | "Boss";
 
 export type RelicMonsterDefinition = {
@@ -20,7 +21,7 @@ export type RelicMonsterDefinition = {
   magicDefense?: number;
 };
 
-export const RELIC_DUNGEON_MONSTERS = {
+export const ORIGINAL_RELIC_DUNGEON_MONSTERS = {
   relic_moss_warden: { id: "relic_moss_warden", name: "苔甲守衛", kind: "普通", level: 38, hp: 1800, mp: 60, atk: 92, dex: 24, xp: 520, gold: 420, drop: 0.3, loot: ["王朝苔甲", "遺跡鐵屑"], skill: "石甲", description: "吸收潮氣凝成護甲，第一層最常見的遺跡守衛。", physicalDefense: 90, magicDefense: 55 },
   relic_royal_skeleton: { id: "relic_royal_skeleton", name: "王陵骸骨兵", kind: "普通", level: 42, hp: 2200, mp: 90, atk: 108, dex: 28, xp: 640, gold: 480, drop: 0.32, loot: ["王陵骨片", "斷裂古劍"], skill: "骨刃", description: "千年王陵的守墓者，倒下後仍會握緊斷劍。" },
   relic_ash_wisp: { id: "relic_ash_wisp", name: "灰燼鬼火", kind: "普通", level: 45, hp: 1500, mp: 260, atk: 125, dex: 36, xp: 720, gold: 560, drop: 0.35, loot: ["王朝灰燼", "微光晶核"], skill: "灼燒", description: "盤旋在祭壇上方的殘火，會留下短暫灼燒。", magicDefense: 105 },
@@ -35,6 +36,12 @@ export const RELIC_DUNGEON_MONSTERS = {
   relic_void_colossus: { id: "relic_void_colossus", name: "虛空鎮墓巨像", kind: "Boss", level: 96, hp: 1480000, mp: 42000, atk: 2680, dex: 76, xp: 230000, gold: 220000, drop: 0.84, loot: ["鎮墓核心", "虛空巨鎧", "古代Boss裝備"], skill: "鎮墓重擊／虛空護壁", description: "以王陵萬骨鑄成的守門巨像，會在護壁破碎後發動沉重反擊。", physicalDefense: 690, magicDefense: 580 },
   relic_tide_empress: { id: "relic_tide_empress", name: "潮汐女皇・奈芙拉", kind: "Boss", level: 106, hp: 1920000, mp: 56000, atk: 3260, dex: 82, xp: 320000, gold: 320000, drop: 0.88, loot: ["女皇潮冠", "深海王印", "古代Boss裝備"], skill: "海嘯審判／潮汐輪迴", description: "統御地下海脈的王朝女皇，會以潮汐輪迴讓隊伍逐回合承受更強反噬。", physicalDefense: 760, magicDefense: 720 },
 } as const satisfies Record<string, RelicMonsterDefinition>;
+
+export const RELIC_DUNGEON_MONSTERS = redesignMonsterTable(Object.fromEntries(
+  Object.entries(ORIGINAL_RELIC_DUNGEON_MONSTERS).map(([id, monster]) => [id, {
+    ...monster, ...(MONSTER_REDESIGN[id] ? { loot: MONSTER_REDESIGN[id].materialDrops.map(drop => drop.item) } : {}),
+  }]),
+) as { [K in keyof typeof ORIGINAL_RELIC_DUNGEON_MONSTERS]: RelicMonsterDefinition & { id: K } });
 
 export type RelicMonsterId = keyof typeof RELIC_DUNGEON_MONSTERS;
 export const RELIC_MONSTER_LIST = Object.values(RELIC_DUNGEON_MONSTERS);

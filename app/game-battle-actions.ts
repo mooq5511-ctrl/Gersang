@@ -5,6 +5,8 @@ import { heroTotalAttributes } from "./hero-rules";
 import { addInventoryItem } from "./inventory-layout";
 import { battleMaps } from "./reference-data";
 import { sourceEnemyForDungeonKey } from "./v17-content";
+import { MONSTER_REDESIGN } from '../data/monsters/monster-redesign';
+import { WORLD_ENTRY_MONSTERS } from '../data/monsters/world-progression';
 import { combatStats, vitalStats } from "./vitals-engine";
 import type { Equipment, GameState, Hero, Unit } from "./game-state";
 import { awardFusionCores } from "./fusion-core-rewards";
@@ -31,12 +33,13 @@ export function selectBattleMapAction(state: GameState, mapId: string, deps: Bat
   if (map.id === "japan-sea" && !state.lakeBossDefeated) { deps.notify("請先在千年湖擊敗狂風阿魯塔，才能進入日本海底洞。"); return state; }
   if (map.id === "miasma-forest" && !state.goldenStarfishDefeated) { deps.notify("請先在日本海底洞擊敗黃金海星，才能進入白虎林。"); return state; }
   if (state.stage < map.unlockStage) { deps.notify("請依世界地圖完成前置區域，才能進入「" + map.name + "」。"); return state; }
-  const key = map.id === "starter-outskirts" ? "e_starter_raccoon" : map.id === "millennium-lake" ? "e_lake_red_thief" : map.id === "japan-sea" ? "e_japan_sea_kappa" : map.id === "miasma-forest" ? "e_white_tiger_soul_eater" : map.id === "sumeru" ? "e_sumeru_training_thunder_beast" : null;
+  if (state.dungeon?.status === 'recovering') { deps.notify('商隊正在客棧療傷，恢復後才能轉移地區。'); return state; }
+  const key = WORLD_ENTRY_MONSTERS[map.id] as DungeonKey | undefined;
   return {
     ...state,
     battleMap: map.id,
     selectedMonster: undefined,
-    dungeon: key ? { ...freshDungeon(), autoHunt: state.dungeon?.autoHunt === true, key, enemyHp: DUNGEONS[key].hp } : { ...(state.dungeon || freshDungeon()), lockedEnemyKey: undefined },
+    dungeon: key ? { ...freshDungeon(), autoHunt: state.dungeon?.autoHunt === true, key, lockedEnemyKey: key, enemyHp: DUNGEONS[key].hp } : { ...(state.dungeon || freshDungeon()), lockedEnemyKey: undefined },
     enemyHp: deps.enemyMax(state.stage, map.hpMultiplier),
     logs: deps.addLog(state.logs, "商團遠征轉移至「" + map.name + "」。"),
   };
@@ -61,13 +64,6 @@ export function runDungeonAction(
   deps: DungeonActionDependencies,
 ): GameState {
   const addBattleLog = (state: GameState, message: string, category: BattleLogCategory = "battle") => ({ ...state, battleLogs: BattleLogManager.addLog(state.battleLogs, message, category, now) });
-  if (action === "start" && key === "e_starter_pirate_king") {
-    const firstDeliveryComplete = previous.npcProgress.completedQuests.includes("npc-first-caravan-delivery");
-    const firstGreenEquipped = previous.firstGreenEquipped || [previous.hero, ...previous.mercs, ...previous.restingMercs].some(unit => Object.values(unit.equip).some(item => item && item.rarity !== "普通"));
-    if (!firstDeliveryComplete || previous.hero.level < 20 || previous.territory.buildings.waystation < 1 || !firstGreenEquipped) {
-      return { ...previous, logs: deps.addLog(previous.logs, "山賊首領挑戰尚未開放：請完成第一份商隊委託、升至 Lv.20、建立驛站並穿戴第一件綠裝。") };
-    }
-  }
   const roll = rolls.roll ?? .99, choice = rolls.choice ?? 0, spawnRoll = rolls.spawnRoll ?? 0, retaliationRoll = rolls.retaliationRoll ?? 0, materialRolls = rolls.materialRolls ?? [1, 1, 1];
   const total = heroTotalAttributes(previous.hero), vital = vitalStats(previous.hero);
   const activeIds = new Set(previous.active.slice(0, ACTIVE_MERCENARY_LIMIT));
@@ -113,9 +109,10 @@ export function runDungeonAction(
   const seal=rollWarSeal(result.state.key,rolls.sealDropRoll??1,'world',rolls.sealChoiceRoll??0);
   if(seal)next=awardWarSeal(next,seal.name);
   const sourceDrop = sourceEnemy?.drops || [], specialCoinDrop = sourceDrop.includes("[新手]兌換銅錢"), materialDrops = sourceDrop.filter((item) => item !== "[新手]兌換銅錢" && item !== "古錢箱");
-  const selectedDrop = materialDrops.length ? materialDrops[Math.min(materialDrops.length - 1, Math.floor(Math.max(0, Math.min(.999999, choice)) * materialDrops.length))] : null;
+  const selectedDrop = !MONSTER_REDESIGN[result.state.key] && materialDrops.length ? materialDrops[Math.min(materialDrops.length - 1, Math.floor(Math.max(0, Math.min(.999999, choice)) * materialDrops.length))] : null;
   const ancientCoinBox = sourceEnemy?.mapId === "starter-outskirts" ? ["古錢箱"] : [];
-  const droppedMaterials = [...reward.materials, ...(selectedDrop ? [selectedDrop] : []), ...ancientCoinBox];
+  const firstStoryLoot = result.state.key === 'e_starter_raccoon' && previous.kills === 0 && previous.hanyangPrologueStep !== 'completed' && !reward.materials.length ? [MONSTER_REDESIGN.e_starter_raccoon.materialDrops[0].item] : [];
+  const droppedMaterials = [...reward.materials, ...firstStoryLoot, ...(selectedDrop ? [selectedDrop] : []), ...ancientCoinBox];
   const defeatedNewbieBoss = result.state.key === "e_starter_pirate_king", defeatedLakeBoss = result.state.key === "e_lake_gale_altur", defeatedGoldenStarfish = result.state.key === "e_japan_sea_golden_starfish";
   next = { ...next, gold: next.gold + reward.gold, newbieBossDefeated: next.newbieBossDefeated || defeatedNewbieBoss, lakeBossDefeated: next.lakeBossDefeated || defeatedLakeBoss, goldenStarfishDefeated: next.goldenStarfishDefeated || defeatedGoldenStarfish, newbieCoins: next.newbieCoins + (specialCoinDrop ? 1 : 0), logs: deps.addLog(next.logs, `成功擊敗副本怪物，本場共擊敗 ${result.state.creditedKills || 1} 隻，累計獲得 ${reward.xp} 經驗。`) };
   next = addBattleLog(next, `Gold +${reward.gold.toLocaleString("zh-TW")}。`, "reward");
