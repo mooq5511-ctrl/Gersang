@@ -1732,7 +1732,7 @@ footer {
 
 /* The approved hand-painted atlas is the visual source of truth; interactive buttons remain transparent hotspots. */
 .world-map-voyage-layout{grid-template-columns:minmax(0,3fr) minmax(280px,1fr);gap:10px}
-.world-map-atlas{aspect-ratio:1280 / 939;min-height:0;background-image:url('/assets/world-map/world-map-voyage.png')!important;background-size:130.5% 100%!important;background-position:left top!important;background-repeat:no-repeat!important;background-color:#0b1b23!important}
+.world-map-atlas{aspect-ratio:1280 / 939;min-height:0;background-image:url('/assets/world-map/world-map-voyage.webp')!important;background-size:130.5% 100%!important;background-position:left top!important;background-repeat:no-repeat!important;background-color:#0b1b23!important}
 .world-map-atlas:before,.world-map-atlas:after,.world-map-atlas-title,.world-map-landmass,.world-map-atlas .world-route,.world-map-legend,.world-map-compass{display:none!important}
 .world-map-atlas .battle-map-node{width:188px!important;min-width:0!important;height:88px!important;padding:0!important;border:2px solid transparent!important;border-radius:18px!important;background:transparent!important;box-shadow:none!important;opacity:1!important;filter:none!important;transform:translate(-50%,-50%)!important}
 .world-map-atlas .battle-map-node:hover:not(:disabled){border-color:#ffe49b99!important;background:#ffe49b12!important;box-shadow:0 0 20px #ffe49b44!important;transform:translate(-50%,-50%) scale(1.03)!important}

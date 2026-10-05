@@ -2,12 +2,11 @@ import type { GameStateSetter } from './game-controller-types';
 import { makeUid as uid } from "./game-equipment-factory";
 import { forgeThunderItemAction } from "./game-inventory-actions";
 import { appendGameLog as addLog } from "./game-runtime-actions";
-import { type Equipment } from "./game-state";
 import './gersang-archive.css';
 import { gersangItemArt } from './gersang-visuals';
 import { craftRestaurantFood,upgradeBuilding,type BuildingId } from './guild-territory';
 import { addInventoryItem } from './inventory-layout';
-import { THUNDER_FORGE_ITEMS,type MythicSet,type ThunderForgeId } from './mythic-forge';
+import { THUNDER_FORGE_ITEMS,makeMythicEquipment,type MythicSet,type ThunderForgeId } from './mythic-forge';
 import './quest-journal.css';
 import './relic-dungeon.css';
 
@@ -32,7 +31,7 @@ function redeemWandererSet(set: Extract<MythicSet,'azure'|'chiyou'|'amaterasu'>)
       if(previous.newbieCoins<1000){setNotice('新手兌換銅錢不足，需要 1,000 枚。');return previous;}
       let inventory=previous.inventory;
       for(const recipe of pieces){
-        const item:Equipment={uid:`wanderer-${recipe.id}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,name:recipe.name,slot:recipe.slot,atk:recipe.atk,def:recipe.def,hp:recipe.hp,image:recipe.image||gersangItemArt(recipe.slot),enhance:0,rarity:'傳說',magic:recipe.magic.map(affix=>({...affix})),bonus:{...recipe.bonus},skill:recipe.skill,requiredLevel:1,source:'平行世界流浪商團'};
+        const item=makeMythicEquipment(recipe.id,uid(`wanderer-${recipe.id}`),gersangItemArt(recipe.slot),'平行世界流浪商團');
         inventory=addInventoryItem(inventory,item).inventory;
       }
       setNotice(`已兌換完整 T10 ${setName}套裝。`);

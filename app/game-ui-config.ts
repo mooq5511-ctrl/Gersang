@@ -3,8 +3,8 @@ import { EQUIPMENT_LABELS,EQUIPMENT_SLOTS } from './equipment-slots';
 export const slots = EQUIPMENT_SLOTS;
 
 export const bossMonsterArt:Record<string,string> = {
-  '山賊首領': '/assets/monsters/bandit-chief-normal.png',
-  '海賊王': '/assets/monsters/bandit-chief-normal.png',
+  '山賊首領': '/assets/monsters/bandit-chief-normal.webp',
+  '海賊王': '/assets/monsters/bandit-chief-normal.webp',
   '狂虎': '/assets/monsters/gale-tiger.jpg?v=20260910',
   '多聞天王': '/assets/monsters/sumeru/vaisravana-area.jpg',
   '廣目天王': '/assets/monsters/sumeru/virupaksa-area.jpg',

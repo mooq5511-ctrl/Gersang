@@ -6,9 +6,11 @@ import { getProgressionView } from "./game-progression-view";
 import { type CityService,type Equipment,type GameState,type Hero,type Unit } from "./game-state";
 import { guildSkillTradeBonuses } from "./guild-skills";
 import { HANYANG_PROLOGUE_STEPS } from "./hanyang-prologue";
+import {hanyangTutorialNpcIds} from './hanyang-town-visibility';
 import { mythicSetPieceCount } from './mythic-forge';
+import { equipmentBaseName } from './equipment-affix-semantics';
 import { newcomerUnlocks } from "./newcomer-unlocks";
-import { activeNpcQuests,type NpcId } from "./npc-dialogue";
+import { activeNpcQuests } from "./npc-dialogue";
 import { battleMaps } from "./reference-data";
 import { type SceneMusicKind } from './scene-music';
 import { nations,worldCities } from "./v15-data";
@@ -40,7 +42,7 @@ const relicReservedUids = relicReservationActive ? game.relicDungeon?.dispatchPa
 
 const availableRestingMercs = game.restingMercs.filter(unit => !relicReservedUids.includes(unit.uid));
 
-const equippedMythicNames = [game.hero, ...activeUnits].flatMap((unit) => Object.values(unit.equip).filter((item): item is Equipment => !!item).map(item => item.name));
+const equippedMythicNames = [game.hero, ...activeUnits].flatMap((unit) => Object.values(unit.equip).filter((item): item is Equipment => !!item).map(equipmentBaseName));
 
 const azureSetPieces = mythicSetPieceCount(equippedMythicNames,'azure');
 
@@ -84,7 +86,7 @@ const tutorialTrialLocked = false;
 
 const tutorialCityLocked = game.hanyangPrologueStep === "guild";
 
-const tutorialNpcIds = game.hanyangPrologueStep === "caravan-delivery" ? ["wang-deokchang" as NpcId] : ["kim-seongho" as NpcId];
+const tutorialNpcIds = hanyangTutorialNpcIds(game.hanyangPrologueStep);
 
 const mysteryNpcVisible = game.hanyangPrologueStep === "completed" && !game.hanyangPrologueFlags.mysteryNpcSeen;
 

@@ -1,14 +1,15 @@
 import { DUNGEONS, dungeonStep, freshDungeon, type DungeonKey } from "./dungeon-engine";
-import { DIVINE_EQUIPMENT } from "./divine-equipment";
+import { DIVINE_EQUIPMENT,makeDivineEquipment,type DivineKey } from "./divine-equipment";
 import { ACTIVE_MERCENARY_LIMIT } from "./guild-migration";
 import { heroTotalAttributes } from "./hero-rules";
+import {hasV1Equipment} from './equipment-special-policy';
 import { addInventoryItem } from "./inventory-layout";
 import { battleMaps } from "./reference-data";
 import { sourceEnemyForDungeonKey } from "./v17-content";
 import { MONSTER_REDESIGN } from '../data/monsters/monster-redesign';
 import { WORLD_ENTRY_MONSTERS } from '../data/monsters/world-progression';
 import { combatStats, vitalStats } from "./vitals-engine";
-import type { Equipment, GameState, Hero, Unit } from "./game-state";
+import type { GameState, Hero, Unit } from "./game-state";
 import { awardFusionCores } from "./fusion-core-rewards";
 import { territoryBonus, territoryHealInterval } from "./guild-territory";
 import { grantTerritoryXp } from "./game-progression";
@@ -18,6 +19,7 @@ import { battleExperienceMultiplier, equipmentExperienceMultiplier, sharedBattle
 import { BattleLogManager, type BattleLogCategory } from "./battle-log-manager";
 import { guildSkillTradeBonuses } from "./guild-skills";
 import {awardWarSeal,rollWarSeal} from './war-seals';
+import {HANYANG_BOSS_LOCK_MESSAGE,hanyangWorldBossBlocked} from './hanyang-boss-access';
 
 type BattleActionDependencies = {
   notify: (message: string) => void;
@@ -63,13 +65,21 @@ export function runDungeonAction(
   rolls: { roll?: number; choice?: number; spawnRoll?: number; encounterCountRoll?: number; retaliationRoll?: number; materialRolls?: number[]; fusionCoreRoll?: number; gearDropRoll?: number; gearChoiceRoll?: number; sealDropRoll?:number;sealChoiceRoll?:number },
   deps: DungeonActionDependencies,
 ): GameState {
+  const targetKey=key??previous.dungeon?.key;
+  const startsEncounter=action==='start'||action==='start-auto-hunt'||action==='toggle-auto-hunt';
+  const resumesEncounter=action==='tick'&&(previous.dungeon?.status==='fighting'||previous.dungeon?.status==='respawning');
+  if((startsEncounter||resumesEncounter)&&hanyangWorldBossBlocked(previous,targetKey)){
+    // Block direct calls and stale saved auto encounters without healing or charging the party.
+    const dungeon=previous.dungeon;
+    return {...previous,logs:deps.addLog(previous.logs,HANYANG_BOSS_LOCK_MESSAGE),dungeon:dungeon?{...dungeon,status:'idle',autoHunt:false,resumeAutoHuntAfterRecovery:false,spawnAt:0,realtime:undefined,events:[]}:dungeon};
+  }
   const addBattleLog = (state: GameState, message: string, category: BattleLogCategory = "battle") => ({ ...state, battleLogs: BattleLogManager.addLog(state.battleLogs, message, category, now) });
   const roll = rolls.roll ?? .99, choice = rolls.choice ?? 0, spawnRoll = rolls.spawnRoll ?? 0, retaliationRoll = rolls.retaliationRoll ?? 0, materialRolls = rolls.materialRolls ?? [1, 1, 1];
   const total = heroTotalAttributes(previous.hero), vital = vitalStats(previous.hero);
   const activeIds = new Set(previous.active.slice(0, ACTIVE_MERCENARY_LIMIT));
   const deployedMercs = previous.mercs.filter((unit) => activeIds.has(unit.uid));
   const fighters = [previous.hero, ...deployedMercs], living = fighters.filter((unit) => vitalStats(unit).hp > 0);
-  const mercenaryIntelligence = fighters.reduce((sum, unit) => sum + heroTotalAttributes(unit).intel, 0);
+  const mercenaryIntelligence = fighters.reduce((sum, unit) => sum + (hasV1Equipment(unit)?vitalStats(unit).intelligence:heroTotalAttributes(unit).intel), 0);
   const attack = living.reduce((sum, unit) => sum + combatStats(unit).attack * (unit.position === "前排" ? 1.2 : 1), 0);
   const guildSkillBonus = guildSkillTradeBonuses(previous.guildSkills);
   const party = fighters.map((unit) => { const stats = vitalStats(unit), combat = combatStats(unit), abilityBonus = 1 + (unit.uid === "hero" ? guildSkillBonus.heroPowerBonus : guildSkillBonus.mercenaryPowerBonus); return { uid: unit.uid, templateId: unit.templateId, name: unit.name, skill: unit.skill, hp: stats.hp, maxHp: stats.maxHp, mp: stats.mp, maxMp: stats.maxMp, position: unit.position, defense: Math.floor(combat.defense * abilityBonus), physicalResist: stats.physicalResist, magicResist: stats.magicResist, attack: Math.floor(combat.attack * abilityBonus), accuracy: combat.accuracy, attackInterval: Math.max(.6, 2.2 - combat.speed / 100) }; });
@@ -141,7 +151,7 @@ export function runDungeonAction(
   }
   const spec = reward.loot ? DIVINE_EQUIPMENT[reward.loot as keyof typeof DIVINE_EQUIPMENT] : null;
   if (!spec) return next;
-  const drop: Equipment = { uid: `dungeon-${now}-${result.state.serial}`, name: spec.name, slot: spec.slot, bonus: { ...spec.bonus }, def: spec.def, atk: 0, hp: 0, image: "", enhance: 0, rarity: "傳說", magic: [], requiredLevel: 1, source: "幽冥副本掉落" };
+  const drop = makeDivineEquipment(reward.loot as DivineKey,`dungeon-${now}-${result.state.serial}`);
   const pickup = addInventoryItem(next.inventory, drop), message = pickup.error ? "背包已滿，本次掉落無法拾取。" : `獲得「${drop.name}」！`;
   next = { ...next, inventory: pickup.inventory, logs: deps.addLog(next.logs, message), dungeon: { ...next.dungeon!, logs: [message, ...next.dungeon!.logs].slice(0, 40) } };
   return pickup.error ? next : addBattleLog(next, `掉落物品：${drop.name}。`, "reward");

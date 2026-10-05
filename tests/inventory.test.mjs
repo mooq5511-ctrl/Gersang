@@ -52,8 +52,8 @@ test('unlimited bag accepts unequip and incoming loot at any size',()=>{
 });
 test('wearing empties a slot then unequipping fills the hole and removes bonuses',()=>{
   const unit=hero(),staff={...DIVINE_EQUIPMENT.staff,uid:'staff',bagSlot:3};
-  const equipped=equipFromInventory(unit,[staff],'staff');assert.equal(heroPersonalPower(equipped.unit),265);assert.equal(equipped.inventory.length,0);
-  const off=unequipToInventory(equipped.unit,equipped.inventory,'weapon');assert.equal(heroPersonalPower(off.unit),145);assert.equal(off.inventory[0].bagSlot,0);
+  const equipped=equipFromInventory(unit,[staff],'staff');assert.equal(heroPersonalPower(equipped.unit),127);assert.equal(equipped.inventory.length,0);
+  const off=unequipToInventory(equipped.unit,equipped.inventory,'weapon');assert.equal(heroPersonalPower(off.unit),116);assert.equal(off.inventory[0].bagSlot,0);
 });
 test('two rings remain independent and no UID duplicates after many exchanges',()=>{
   const unit=hero();let current=unit,inventory=[item('r1',0,'ring'),item('r2',1,'ring')];

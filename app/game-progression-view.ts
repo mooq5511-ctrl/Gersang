@@ -13,25 +13,9 @@ import { getStarterWeaponObjective } from './starter-equipment-objective';
 import { getFirstMercenaryObjective } from './first-mercenary-objective';
 import { fusionItemKey, isFusionIngredient } from './equipment-fusion';
 import { relicBossReadiness } from './relic-dungeon';
+import {relicEquipmentScore} from './relic-party';
 
-const relicRarityScore: Record<Equipment['rarity'], number> = {
-  普通: 1,
-  稀有: 2,
-  史詩: 4,
-  傳說: 7,
-  金色: 10,
-};
-export const relicEquipmentScore = (unit: Unit | Hero) =>
-  Object.values(unit.equip).reduce(
-    (score, item) =>
-      item
-        ? score +
-          relicRarityScore[item.rarity] +
-          (item.enhance || 0) * 0.5 +
-          (item.socketGem ? 2 : 0)
-        : score,
-    0,
-  );
+export {relicEquipmentScore} from './relic-party';
 export const FIRST_CARAVAN_QUEST_ID = 'npc-first-caravan-delivery';
 export const FIRST_CARAVAN_TARGET = 3;
 

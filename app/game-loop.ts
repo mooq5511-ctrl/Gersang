@@ -10,6 +10,9 @@ import { appendGameLog, enterGameInnAction, leaveGameInnAction } from "./game-ru
 import { territoryBonus } from "./guild-territory";
 import { guildSkillTradeBonuses } from "./guild-skills";
 import { pauseHanyangTutorialBattle } from "./hanyang-prologue";
+import {settleDueRelicDispatch} from './relic-dispatch-tick';
+import {settleDueRelicBossBattle} from './relic-boss-automation';
+import {settleRelicAutoExplore} from './relic-auto-explore';
 
 /** Random values are sampled once per tick so React retries cannot change an outcome. */
 export function createGameTickRolls() {
@@ -71,6 +74,11 @@ export function settleGameLoop(previous: GameState, rolls: GameTickRolls, deps: 
 
 /** Public game-loop entry point with all battle and trade dependencies wired in one module. */
 export function settleCurrentGame(previous: GameState, rolls: GameTickRolls): GameState {
+  if(previous.relicDungeon?.autoExplore?.enabled)previous=settleRelicAutoExplore(previous,rolls.now);
+  else {
+    previous=settleDueRelicDispatch(previous,rolls.now,rolls.gearChoiceRoll??rolls.roll);
+    previous=settleDueRelicBossBattle(previous,rolls.now,rolls.gearChoiceRoll??rolls.roll);
+  }
   return settleGameLoop(previous, rolls, {
     runDungeon: (state, action, now, key, dungeonRolls) => runDungeonAction(state, action, now, key, dungeonRolls, {
       addLog: appendGameLog,

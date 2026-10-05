@@ -3,13 +3,15 @@ import {getMercenaryStats,promotionRank,promotionBranch,usesPromotionV1} from '.
 import {formationTarget,rearDodge,type BattlePosition} from './formation-position.ts';
 import { resistanceMultiplier } from './combat-damage.js';
 import { effectiveEquipmentStats } from './equipment-stats.ts';
+import { isSocketGemDisplayAffix } from './equipment-affix-semantics.ts';
+import {hasV1Equipment,coreEquipmentUnit,resolveSpecialStatBudget,resolveEquipmentResistance} from './equipment-special-policy.ts';
 export type VitalUnit = {
   templateId?: string; physicalResist?: number; magicResist?: number;
   promotionStage?: number;
   level: number; vit: number; intel: number; str?: number; agi?: number; tier?: number; hp?: number; mp?: number; maxHp?:number; flatAttackBonus?:number;
-  equip: Record<string, { hp?: number; atk?: number; def?: number; enhance?: number; enhanceBonuses?: { stat: string; value: number }[]; bonus?: { str?: number; agi?: number; vit?: number; intel?: number }; resist?: { physical?: number; magic?: number }; magic?: { stat: string; value: number }[] } | null>;
+  equip: Record<string, { definitionId?:string;balanceVersion?:string;hp?: number; atk?: number; def?: number; enhance?: number; socketGem?: { id: string }; enhanceBonuses?: { stat: string; value: number }[]; bonus?: { str?: number; agi?: number; vit?: number; intel?: number }; resist?: { physical?: number; magic?: number }; magic?: { id?: string; stat: string; value: number }[] } | null>;
 };
-export function vitalStats(unit: VitalUnit) {
+export function rawVitalStats(unit: VitalUnit) {
   const spec = mercenarySpec(unit.templateId);
   let vitality = unit.vit;
   let intelligence = unit.intel;
@@ -29,7 +31,7 @@ export function vitalStats(unit: VitalUnit) {
     physicalResist += item.resist?.physical || 0;
     magicResist += item.resist?.magic || 0;
     for (const bonus of item.enhanceBonuses || []) if (bonus.stat === "allStats") allStatsPercent += bonus.value;
-    for (const affix of item.magic || []) if (affix.stat === "hp") hpPercent += affix.value;
+    for (const affix of item.magic || []) if (!isSocketGemDisplayAffix(item, affix) && affix.stat === "hp") hpPercent += affix.value;
   }
   vitality *= 1 + allStatsPercent / 100;
   intelligence *= 1 + allStatsPercent / 100;
@@ -53,7 +55,7 @@ export function recoverVitals<T extends VitalUnit>(unit: T, hpFraction = 1, mpFr
   return { ...unit, hp: Math.min(stats.maxHp, stats.hp + Math.floor(stats.maxHp * Math.max(0, hpFraction))), mp: Math.min(stats.maxMp, stats.mp + Math.floor(stats.maxMp * Math.max(0, mpFraction))) };
 }
 export const spellCost = (unit: VitalUnit) => mercenarySpec(unit.templateId)?.mp ?? (12 + Math.floor(unit.level / 10) * 2 + (unit.tier || 0) * 4);
-export function combatStats(unit: VitalUnit) {
+export function rawCombatStats(unit: VitalUnit) {
   const spec = mercenarySpec(unit.templateId);
   const flat = { str: unit.str || 0, agi: unit.agi || 0, vit: unit.vit };
   const percent = { str: 0, agi: 0, vit: 0, intel: 0, atk: 0, def: 0 };
@@ -67,7 +69,7 @@ export function combatStats(unit: VitalUnit) {
     const effective = effectiveEquipmentStats(item);
     equipmentAttack += effective.atk;
     equipmentDefense += effective.def;
-    for (const affix of item.magic || []) if (Object.hasOwn(percent, affix.stat)) percent[affix.stat as keyof typeof percent] += affix.value;
+    for (const affix of item.magic || []) if (!isSocketGemDisplayAffix(item, affix) && Object.hasOwn(percent, affix.stat)) percent[affix.stat as keyof typeof percent] += affix.value;
     for (const bonus of item.enhanceBonuses || []) {
       if (bonus.stat === "allStats") { percent.str += bonus.value; percent.agi += bonus.value; percent.vit += bonus.value; percent.intel += bonus.value; }
       if (bonus.stat === "attackPercent") percent.atk += bonus.value;
@@ -88,6 +90,17 @@ export function combatStats(unit: VitalUnit) {
     speed: spec.ratings[3], accuracy: ratingAccuracy(spec.ratings[4]),
   } : { attack, defense, speed: 25, accuracy: 1 };
 }
+/** Shared resolved budget for both public stat readers; raw readers never recurse. */
+export function equipmentSpecialStats(unit:VitalUnit) {
+  const requestedVital=rawVitalStats(unit),requestedCombat=rawCombatStats(unit);
+  const baseline=coreEquipmentUnit(unit),coreVital=rawVitalStats(baseline),coreCombat=rawCombatStats(baseline);
+  const budget=resolveSpecialStatBudget({attack:coreCombat.attack,defense:coreCombat.defense,maxHp:coreVital.maxHp,maxMp:coreVital.maxMp},{attack:requestedCombat.attack,defense:requestedCombat.defense,maxHp:requestedVital.maxHp,maxMp:requestedVital.maxMp});
+  const mpGain=requestedVital.maxMp-coreVital.maxMp;
+  const intelligence=mpGain>0?coreVital.intelligence+Math.floor((requestedVital.intelligence-coreVital.intelligence)*(budget.effective.maxMp-coreVital.maxMp)/mpGain):requestedVital.intelligence;
+  return {budget,combat:{...requestedCombat,attack:budget.effective.attack,defense:budget.effective.defense},vital:{...requestedVital,maxHp:budget.effective.maxHp,maxMp:budget.effective.maxMp,hp:Math.min(requestedVital.hp,budget.effective.maxHp),mp:Math.min(requestedVital.mp,budget.effective.maxMp),intelligence,...resolveEquipmentResistance(coreVital,requestedVital)}};
+}
+export function vitalStats(unit:VitalUnit) {return hasV1Equipment(unit)?equipmentSpecialStats(unit).vital:rawVitalStats(unit);}
+export function combatStats(unit:VitalUnit) {return hasV1Equipment(unit)?equipmentSpecialStats(unit).combat:rawCombatStats(unit);}
 export function enemyCombatStats(stage: number, health: number, boss = false) {
   return { attack: Math.max(1, Math.floor((20 + stage * 5 + Math.sqrt(health) * 1.8) * (boss ? 1.2 : 1))), defense: Math.max(0, Math.floor((6 + stage * 2 + Math.sqrt(health) * 0.1) * (boss ? 1.4 : 1))) };
 }

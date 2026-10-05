@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { harness } from './hook-harness.mjs';
+import { syncHanyangReturnProgress } from '../app/hanyang-story-transitions.ts';
 
 test('preferences load after mount, persist only after loading, and cancel on unmount',async()=>{
   const microtasks=[],writes=[],listeners=new Map(),settings={musicVolume:64,sceneMode:'auto'};
@@ -21,7 +22,7 @@ test('preferences load after mount, persist only after loading, and cancel on un
 test('tutorial pause reads current state but triggers only on step changes',()=>{
   const notices=[];let pauses=0,state={hanyangPrologueStep:'outskirts',hanyangPrologueFlags:{caravanCargoDelivered:false},dungeon:{status:'idle',autoHunt:true,logs:[]}};
   const pause=s=>{pauses++;return s.dungeon.autoHunt?{...s,dungeon:{...s.dungeon,autoHunt:false}}:s;};
-  const hook=harness('use-hanyang-navigation.ts','useHanyangReturnEffects',{pauseHanyangTutorialBattle:pause});
+  const hook=harness('use-hanyang-navigation.ts','useHanyangReturnEffects',{pauseHanyangTutorialBattle:pause,syncHanyangReturnProgress});
   const setGame=updater=>{state=updater(state);},setNotice=notice=>notices.push(notice);
   hook.render({game:state,setGame,setNotice});assert.equal(pauses,2);assert.equal(state.dungeon.autoHunt,false);assert.equal(notices.length,1);
   state={...state,gold:20};hook.render({game:state,setGame,setNotice});assert.equal(pauses,2);assert.equal(notices.length,1);

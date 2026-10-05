@@ -1,0 +1,9 @@
+.tutorial-hunt-objective{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 12px;padding:16px 20px;border:1px solid #d7af5f;border-radius:10px;background:linear-gradient(120deg,#30271b,#121b1c);color:#f5e1b4}
+.tutorial-hunt-objective small{color:#ddbb77;font-size:13px}
+.tutorial-hunt-objective h2{margin:4px 0;font-size:22px;line-height:1.4}
+.tutorial-hunt-objective p{margin:4px 0 8px;color:#d6dbce;font-size:15px;line-height:1.5}
+.tutorial-hunt-objective strong{font-size:16px;color:#ffe49c}
+.tutorial-hunt-objective button{flex-shrink:0;min-height:48px;padding:12px 20px;border:1px solid #edc779;border-radius:8px;background:linear-gradient(#b88432,#79501e);color:#fff5d0;font:inherit;font-weight:700;cursor:pointer}
+.tutorial-hunt-objective button:disabled{background:#343831;color:#c5c8ba;cursor:default}
+.tutorial-hunt-objective button:focus-visible{outline:3px solid #81d4fa;outline-offset:3px}
+@media(max-width:639px){.tutorial-hunt-objective{align-items:stretch;flex-direction:column;gap:10px;padding:12px}.tutorial-hunt-objective h2{font-size:19px}.tutorial-hunt-objective button{width:100%}}

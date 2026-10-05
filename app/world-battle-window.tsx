@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { DUNGEONS, type DungeonState } from "./dungeon-engine";
+import {huntStatusPresentation} from './hunt-status-presentation';
 
 /** Display state only: hiding or unmounting the arena never sends a battle action. */
 export function WorldBattleWindow({ state, request, enabled, children }: {
@@ -18,6 +19,7 @@ export function WorldBattleWindow({ state, request, enabled, children }: {
   const setDefeat = (value: string | null) => setDisplay(previous => ({ ...previous, defeat: value }));
   const hunting = state.status === "fighting" || state.status === "respawning";
   const monster = DUNGEONS[state.key].name;
+  const huntStatus=huntStatusPresentation(state);
 
   // Reconcile changed battle props once; respawns never reopen a minimized window.
   if (display.status !== state.status || display.request !== request || display.enabled !== enabled) {
@@ -48,7 +50,7 @@ export function WorldBattleWindow({ state, request, enabled, children }: {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="world-battle-window" overlayClassName="world-battle-overlay" showCloseButton={false}>
         <header className="world-battle-window-header">
-          <div><DialogTitle>商隊戰鬥・{monster}</DialogTitle><DialogDescription>收起視窗後仍會持續打怪，戰敗後返回客棧療傷。</DialogDescription></div>
+          <div><DialogTitle>商隊戰鬥・{monster}</DialogTitle><DialogDescription>{huntStatus.detail}</DialogDescription></div>
           <Button variant="outline" onClick={() => setOpen(false)} aria-label="收起戰鬥視窗">收起戰鬥</Button>
         </header>
         <div className="world-battle-window-body">{children}</div>

@@ -16,9 +16,9 @@ test('six display slots and divine definitions match requested equipment',()=>{
 });
 test('staff and armor increase real resources totals weight power and defense',()=>{
   const hero=makeHero(),a=toggleDivineEquipment(hero,[],gear('staff')),b=toggleDivineEquipment(a.unit,a.inventory,gear('armor'));
-  assert.equal(heroPersonalPower(a.unit),265);assert.equal(heroWeightLimit(a.unit),350);assert.equal(vitalStats(a.unit).maxMp,240);
+  assert.equal(heroPersonalPower(a.unit),127);assert.equal(heroWeightLimit(a.unit),350);assert.equal(vitalStats(a.unit).maxMp,240);
   assert.deepEqual(heroTotalAttributes(b.unit),{str:30,agi:15,vit:100,intel:60});
-  assert.equal(heroPersonalPower(b.unit),545);assert.equal(vitalStats(b.unit).maxHp,420);
+  assert.equal(heroPersonalPower(b.unit),434);assert.equal(vitalStats(b.unit).maxHp,420);
   assert.ok(combatStats(b.unit).defense>=combatStats(hero).defense+100);
   assert.equal(hero.str,20);assert.equal(hero.vit,20);
 });
@@ -26,7 +26,7 @@ test('repeated toggles never stack bonuses or duplicate inventory',()=>{
   let hero=makeHero(),inventory=[];
   for(let i=0;i<20;i++){
     const result=toggleDivineEquipment(hero,inventory,gear('staff'));hero=result.unit;inventory=result.inventory;
-    assert.equal(heroPersonalPower(hero),i%2?145:265);
+    assert.equal(heroPersonalPower(hero),i%2?116:127);
     assert.equal([...inventory,...Object.values(hero.equip).filter(Boolean)].filter(item=>item.uid==='test-staff').length,1);
   }
   assert.equal(heroTotalAttributes(hero).intel,10);
@@ -36,9 +36,9 @@ test('replaced gear returns safely and save reload preserves bonuses exactly onc
   const next=toggleDivineEquipment(hero,[],gear('staff'));
   assert.equal(next.inventory[0].uid,'old-sword');
   const save=migrateSevenSlotSave(JSON.parse(JSON.stringify({hero:next.unit,inventory:next.inventory,mercs:[],logs:[]})));
-  assert.equal(heroPersonalPower(save.hero),265);
+  assert.equal(heroPersonalPower(save.hero),127);
   const off=toggleDivineEquipment(save.hero,save.inventory,gear('staff'));
-  assert.equal(off.inventory.length,2);assert.equal(heroPersonalPower(off.unit),145);
+  assert.equal(off.inventory.length,2);assert.equal(heroPersonalPower(off.unit),116);
 });
 test('unequipping clamps remaining health to reduced maximum without reviving',()=>{
   const hero=makeHero(),on=toggleDivineEquipment(hero,[],gear('armor'));

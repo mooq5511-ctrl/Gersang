@@ -1,5 +1,6 @@
 import type { Equipment, EnhancementBonus, GameState } from "./game-state";
 import { enhancementMultiplier as sharedEnhancementMultiplier } from "./equipment-stats.ts";
+import {v1Definition,v1EnhancementCost} from './equipment-v1-policy.ts';
 
 export const TERRITORY_ENTRY_ID = "guild-territory";
 export const TERRITORY_UNLOCK_LEVEL = 20;
@@ -136,6 +137,7 @@ export function upgradeBuilding(state: GameState, id: BuildingId): { game: GameS
 }
 
 export function enhancementChance(territory: GuildTerritory, item: Equipment): number {
+  if(v1Definition(item))return 1;
   return Math.min(1, Math.max(0.1, 1 - item.enhance * 0.08 + territoryBonus(territory, "smithy")));
 }
 
@@ -162,19 +164,22 @@ const ENHANCEMENT_MILESTONE_TABLE = {
   ],
 } as const;
 
-export function enhancementMilestoneOptions(level: 5 | 10 | 15) {
-  return ENHANCEMENT_MILESTONE_TABLE[level].map((entry) => ({ ...entry, chance: 1 / ENHANCEMENT_MILESTONE_TABLE[level].length }));
+export function enhancementMilestoneOptions(level: 5 | 10 | 15, item?:Equipment) {
+  const versioned=item && v1Definition(item),value=level===5?1:level===10?2:4;
+  return ENHANCEMENT_MILESTONE_TABLE[level].map((entry) => ({ ...entry, ...(versioned?{min:value,max:value}:{}), chance: 1 / ENHANCEMENT_MILESTONE_TABLE[level].length }));
 }
 
 /** 在里程碑等級隨機抽取一條全域百分比屬性。 */
-export function rollEnhancementMilestoneBonus(level: 5 | 10 | 15, random = Math.random): EnhancementBonus {
-  const options = ENHANCEMENT_MILESTONE_TABLE[level];
+export function rollEnhancementMilestoneBonus(level: 5 | 10 | 15, random = Math.random, item?:Equipment): EnhancementBonus {
+  const options = enhancementMilestoneOptions(level,item);
   const bonus = options[Math.floor(random() * options.length)];
   const value = bonus.min + Math.floor(random() * (bonus.max - bonus.min + 1));
   return { id: bonus.id, name: bonus.name, stat: bonus.stat, value, text: `${bonus.text} +${value}%` };
 }
 
 export function enhancementCost(item: Equipment): number {
+  const versioned=v1EnhancementCost(item);
+  if(versioned!==null)return versioned;
   return 1000 * (item.enhance + 1) ** 2;
 }
 
@@ -187,9 +192,10 @@ export function enhanceEquipment(state: GameState, itemUid: string, roll: number
   const cost = enhancementCost(item);
   if (state.gold < cost) return { game: state, error: `強化需要 ${cost.toLocaleString()} 兩。` };
   const pityReady = (item.luckyValue || 0) >= 100;
-  const success = pityReady || roll < enhancementChance(territory, item);
+  const versioned=!!v1Definition(item);
+  const success = versioned || pityReady || roll < enhancementChance(territory, item);
   const nextLevel = item.enhance + 1;
-  const milestoneBonus = success && [5, 10, 15].includes(nextLevel) ? rollEnhancementMilestoneBonus(nextLevel as 5 | 10 | 15, random) : undefined;
+  const milestoneBonus = success && [5, 10, 15].includes(nextLevel) ? rollEnhancementMilestoneBonus(nextLevel as 5 | 10 | 15, random,item) : undefined;
   const uniqueBonuses = Array.from(new Map((item.enhanceBonuses || []).map((bonus) => [bonus.id, bonus])).values());
   const nextBonuses = milestoneBonus ? [...uniqueBonuses.filter((bonus) => bonus.id !== milestoneBonus.id), milestoneBonus] : uniqueBonuses;
   return { game: {

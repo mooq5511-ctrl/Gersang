@@ -11,6 +11,8 @@ require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileMo
 const { purchaseEquipmentBatchAction, purchaseTierEquipmentAction } = require('../app/game-inventory-actions.ts');
 const { tierEquipmentShopCatalog, tierEquipmentPrice } = require('../app/tier-equipment.ts');
 const { makeOfficialEquipment } = require('../app/game-equipment-factory.ts');
+const {effectiveEquipmentStats} = require('../app/equipment-stats.ts');
+const {officialEquipment} = require('../data/items/official-equipment.ts');
 const addLog = (logs, message) => [...logs, message];
 const state = (gold = 1000) => ({ gold, inventory: [{ uid: 'existing' }], logs: [], hero: { level: 200 } });
 
@@ -48,7 +50,7 @@ test('invalid quantities never charge or generate equipment', () => {
 });
 
 test('high-tier weapons roll quality independently using the weapon shop odds', () => {
-  const spec = tierEquipmentShopCatalog.find(item => item.part === 'weapon');
+  const spec = tierEquipmentShopCatalog.find(item => item.part === 'weapon' && item.requiredLevel >= 120);
   const total = tierEquipmentPrice(spec) * 3;
   const originalRandom = Math.random;
   const rolls = [0.003, 0.03, 0.2];
@@ -57,13 +59,14 @@ test('high-tier weapons roll quality independently using the weapon shop odds', 
     const result = purchaseTierEquipmentAction(state(total), spec.id, 1, '漢陽', 'batch', addLog, () => {}, 3);
     assert.equal(result.gold, 0);
     assert.deepEqual(result.inventory.slice(0, 3).map(item => item.rarity), ['傳說', '史詩', '稀有']);
-    assert.deepEqual(result.inventory.slice(0, 3).map(item => item.atk), [150, 10, 1.5].map(multiplier => Math.floor(spec.atk * multiplier)));
+    assert.deepEqual(result.inventory.slice(0, 3).map(item => item.atk), [spec.atk, spec.atk, spec.atk]);
+    assert.deepEqual(result.inventory.slice(0, 3).map(item => effectiveEquipmentStats(item).atk), [2, 1.5, 1.2].map(multiplier => Math.floor(spec.atk * multiplier)));
     assert.equal(new Set(result.inventory.map(item => item.uid)).size, 4);
   } finally { Math.random = originalRandom; }
 });
 
 test('batch purchases keep high-tier level restrictions', () => {
-  const spec = tierEquipmentShopCatalog.find(item => item.part === 'weapon');
+  const spec = tierEquipmentShopCatalog.find(item => item.part === 'weapon' && item.requiredLevel >= 120);
   const original = { ...state(1e9), hero: { level: spec.requiredLevel - 1 } };
   const notices = [];
   assert.strictEqual(purchaseTierEquipmentAction(original, spec.id, 1, '漢陽', 'batch', addLog, message => notices.push(message), 10), original);
@@ -72,19 +75,20 @@ test('batch purchases keep high-tier level restrictions', () => {
 
 test('armor appraisal matches the new quality intervals and defense multipliers', () => {
   const originalRandom = Math.random;
-  const record = { id: 'armor-check', kind: 'armor', name: '測試甲', level: 1, atk: 0, def: 20 };
+  const record = officialEquipment.find(item=>item.id==='leather');
   try {
-    for (const [roll, rarity, multiplier] of [[0.003, '傳說', 150], [0.005, '史詩', 10], [0.055, '稀有', 1.5], [0.355, '普通', 1]]) {
+    for (const [roll, rarity, multiplier] of [[0.003, '傳說', 2], [0.005, '史詩', 1.5], [0.055, '稀有', 1.2], [0.355, '普通', 1]]) {
       Math.random = () => roll;
       const item = makeOfficialEquipment(record);
       assert.equal(item.rarity, rarity);
-      assert.equal(item.def, Math.floor(20 * multiplier));
+      assert.equal(item.def,record.def);
+      assert.equal(effectiveEquipmentStats(item).def, Math.floor(record.def * multiplier));
     }
   } finally { Math.random = originalRandom; }
 });
 
 test('high-tier armor batch independently identifies every piece and charges the displayed total', () => {
-  const spec = tierEquipmentShopCatalog.find(item => item.part === 'armor');
+  const spec = tierEquipmentShopCatalog.find(item => item.part === 'armor' && item.requiredLevel >= 120);
   const total = Math.floor(tierEquipmentPrice(spec) * 1.2) * 3;
   const originalRandom = Math.random;
   const rolls = [0.003, 0.03, 0.2];
@@ -93,7 +97,8 @@ test('high-tier armor batch independently identifies every piece and charges the
     const result = purchaseTierEquipmentAction(state(total), spec.id, 1.2, '漢陽', 'armor-batch', addLog, () => {}, 3);
     assert.equal(result.gold, 0);
     assert.deepEqual(result.inventory.slice(0, 3).map(item => item.rarity), ['傳說', '史詩', '稀有']);
-    assert.deepEqual(result.inventory.slice(0, 3).map(item => item.def), [150, 10, 1.5].map(multiplier => Math.floor(spec.def * multiplier)));
+    assert.deepEqual(result.inventory.slice(0, 3).map(item => item.def), [spec.def, spec.def, spec.def]);
+    assert.deepEqual(result.inventory.slice(0, 3).map(item => effectiveEquipmentStats(item).def), [2, 1.5, 1.2].map(multiplier => Math.floor(spec.def * multiplier)));
     assert.equal(new Set(result.inventory.map(item => item.uid)).size, 4);
   } finally { Math.random = originalRandom; }
 });

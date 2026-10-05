@@ -4,6 +4,7 @@ import type { GameStateSetter } from './game-controller-types';
 import { FIRST_CARAVAN_TARGET } from "./game-progression-view";
 import { type GameState } from "./game-state";
 import { pauseHanyangTutorialBattle,syncHanyangPrologue } from "./hanyang-prologue";
+import { syncHanyangDeliveryKills,syncHanyangReturnProgress } from './hanyang-story-transitions';
 
 type useHanyangReturnEffectsContext = {
 game: GameState;
@@ -24,12 +25,12 @@ useEffect(() => {
     if (game.hanyangPrologueStep !== "bandit-trial" || game.dungeon?.status === "fighting") return;
     const banditVictoryLogged = game.dungeon?.logs.some((entry) => entry.includes("成功擊敗") && (entry.includes("黑巾斥候") || entry.includes("黑巾山賊")));
     if (!banditVictoryLogged) return;
-    setGame((previous) => ({ ...previous, hanyangPrologueStep: "caravan-delivery", hanyangPrologueFlags: { ...previous.hanyangPrologueFlags, caravanRestored: true }, dungeon: previous.dungeon ? { ...previous.dungeon, status: "idle", autoHunt: false } : previous.dungeon }));
+    setGame(syncHanyangReturnProgress);
   }, [game.dungeon, game.hanyangPrologueStep, setGame]);
 
 useEffect(() => {
     if (game.hanyangPrologueStep !== "return" || game.hanyangPrologueFlags.caravanCargoDelivered) return;
-    setGame(previous => ({ ...previous, hanyangPrologueStep: "caravan-delivery" }));
+    setGame(syncHanyangReturnProgress);
   }, [game.hanyangPrologueStep, game.hanyangPrologueFlags.caravanCargoDelivered, setGame]);
 }
 
@@ -54,9 +55,9 @@ setGame: GameStateSetter;
 export function useHanyangKillEffect({ game, setGame }: useHanyangKillEffectContext) {
 useEffect(() => {
     if ((game.hanyangPrologueStep === "outskirts" || game.hanyangPrologueStep === "first-sale") && game.starterDeliveryKills < FIRST_CARAVAN_TARGET) {
-      if (game.hanyangPrologueStep !== "outskirts") setGame(previous => ({ ...previous, hanyangPrologueStep: "outskirts" }));
+      if (game.hanyangPrologueStep !== "outskirts") setGame(previous => syncHanyangDeliveryKills(previous, FIRST_CARAVAN_TARGET));
     } else if ((game.hanyangPrologueStep === "outskirts" || game.hanyangPrologueStep === "first-battle") && game.starterDeliveryKills >= FIRST_CARAVAN_TARGET) {
-      setGame(previous => ({ ...previous, hanyangPrologueStep: "first-sale" }));
+      setGame(previous => syncHanyangDeliveryKills(previous, FIRST_CARAVAN_TARGET));
     }
   }, [game.hanyangPrologueStep, game.starterDeliveryKills, setGame]);
 }

@@ -1,5 +1,6 @@
 import { effectiveEquipmentStats } from './equipment-stats.ts';
 import {warSeal} from './war-seals.ts';
+import {v1Definition,v1QualityMultiplier,v1EnhancementMultiplier} from './equipment-v1-policy.ts';
 
 export type TooltipField = { label: string; value: string };
 export type ItemTooltipData = {
@@ -16,6 +17,8 @@ export type ItemTooltipData = {
 };
 
 export type TooltipEquipment = {
+  definitionId?: string;
+  balanceVersion?: string;
   name: string;
   image?: string;
   rarity?: string;
@@ -137,6 +140,14 @@ export const ItemTooltipManager = Object.freeze({
         ] }] : []),
         ...(item.magic?.filter(affix => !affix.id?.startsWith('socket-')).length ? [{ title: '魔法詞條', fields: item.magic.filter(affix => !affix.id?.startsWith('socket-')).map(affix => ({ label: affix.name || affix.stat || '附加效果', value: affix.text || `+${format(affix.value || 0)}` })) }] : []),
         ...(item.skill ? [{ title: '裝備技能', fields: [{ label: '技能', value: item.skill }] }] : []),
+        ...(v1Definition(item) ? [{title:'新版系列規則',fields:[
+          {label:'品質倍率',value:`×${v1QualityMultiplier(item.rarity)}（已計入上方核心）`},
+          {label:'強化倍率',value:`×${Number(v1EnhancementMultiplier(item.enhance||0).toFixed(2))}（每級4%，最高+15）`},
+          {label:'品質合成',value:'3件同款同品質加銀兩，保證升階；強化或鑲嵌後不可投入'},
+          {label:'求知契印',value:'新版加成每人最高25%，再取出戰隊伍平均；舊裝加成另計'},
+          {label:'特殊加成',value:'新版穿戴總增幅：攻擊／防禦各35%、生命30%、魔力25%，四項共用80%；依角色結算，單件原值不代表實際增幅'},
+          {label:'裝備抗性',value:'新版额外物理／魔法抗性各最高25點，合計最高40點；天生抗性不占此額度'},
+        ]}] : []),
       ],
     };
   },

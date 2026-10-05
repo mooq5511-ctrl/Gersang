@@ -6,9 +6,9 @@ import {heroPersonalPower,heroWeightLimit,HERO_INITIAL_ATTRIBUTES} from '../app/
 import {vitalStats} from '../app/vitals-engine.ts';
 test('specified initial hero power weight HP and MP',()=>{
   const hero={...HERO_INITIAL_ATTRIBUTES,templateId:'hero',level:1,equip:{}};
-  assert.equal(heroPersonalPower(hero),145);assert.equal(heroWeightLimit(hero),300);
+  assert.equal(heroPersonalPower(hero),116);assert.equal(heroWeightLimit(hero),300);
   assert.equal(vitalStats(hero).maxHp,100);assert.equal(vitalStats(hero).maxMp,40);
-  assert.equal(heroPersonalPower({...hero,vit:21}),146.5);
+  assert.equal(heroPersonalPower({...hero,vit:21}),117);
   assert.equal(vitalStats({...hero,vit:21}).maxHp,104);
   assert.equal(vitalStats({...hero,intel:11}).maxMp,44);
   assert.equal(heroWeightLimit({...hero,str:21}),305);
@@ -17,7 +17,8 @@ test('hero power includes direct equipment combat values',()=>{
   const hero={...HERO_INITIAL_ATTRIBUTES,templateId:'hero',level:1,equip:{}};
   const geared={...hero,equip:{weapon:{atk:100,def:50,hp:200,enhance:2,magic:[{value:10}],resist:{physical:4,magic:6},bonus:{str:0,agi:0,vit:0,intel:0}}}};
   assert.ok(heroPersonalPower(geared)>heroPersonalPower(hero));
-  assert.equal(heroPersonalPower(geared),641);
+  // +2 uses rounded effective core stats (132/66/264), not the old linear score.
+  assert.equal(heroPersonalPower(geared),570);
 });
 test('existing hero health clamps to new max and equipment still contributes',()=>{
   const hero={...HERO_INITIAL_ATTRIBUTES,templateId:'hero',level:1,hp:1000,mp:1000,equip:{armor:{hp:30,bonus:{vit:2,intel:3}}}};

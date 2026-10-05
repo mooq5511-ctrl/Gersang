@@ -3,69 +3,95 @@ import {warSeal} from './war-seals';
 import { VILLAGE_WEAPONS, buyVillageWeapon, exchangeAttackBonus, type VillageWeaponId } from "./village-exchange";
 import { sellAllEquipmentFromInventory, sellEquipmentFromInventory } from "./equipment-market";
 import { addInventoryItem } from "./inventory-layout";
-import { advanceEquipmentQuality, applyShopQuality, makeUid, rollRelicEquipment, rollShopQuality } from "./game-equipment-factory";
-import { fusionBaseName, fusionItemKey, fusionRecipe, isFusionIngredient, type FusionSourceRarity } from "./equipment-fusion";
-import { THUNDER_FORGE_ITEMS, type ThunderForgeId } from "./mythic-forge";
+import { advanceEquipmentQuality, applyShopQuality, makeUid, rollEquipment, rollRelicEquipment, rollShopQuality } from "./game-equipment-factory";
+import {v1Definition,v1RandomEquipmentTier,v1MagicEquipmentPrice,v1QualityMultiplier} from './equipment-v1-policy';
+import { fusionBaseName, planEquipmentFusion, type FusionSourceRarity } from "./equipment-fusion";
+import { THUNDER_FORGE_ITEMS, makeMythicEquipment, type ThunderForgeId } from "./mythic-forge";
+import {hasEquipmentInvestment} from './equipment-processing';
+import {gemSocketResult} from './gem-socket-quote';
+import {relicCraftEquipmentLevel} from './relic-equipment-rewards';
 import { compatibleSlots, equipFromInventory, unequipToInventory, type EquipmentSlot } from "./equipment-slots";
 import { medicineCatalog, WEAPON_SHOP_QUALITY } from "./game-config";
 import { officialGems } from "./v17-content";
 import { normalizeVitals, recoverVitals, vitalStats } from "./vitals-engine";
 import { AutoPotionManager, type AutoPotionSettings } from "./auto-potion-manager";
 import { BattleLogManager } from "./battle-log-manager";
-import type { Equipment, GameState, Hero, MagicAffix, Unit } from "./game-state";
+import type { Equipment, GameState, Hero, Unit } from "./game-state";
 import { markHanyangEquipmentEquipped, markHanyangLootSold, markHanyangMedicinePurchased } from "./hanyang-prologue";
 import { makeTierEquipment, tierEquipmentPrice, tierEquipmentShopCatalog } from "./tier-equipment";
 
 type Log = (logs: string[], message: string) => string[];
 type Format = (value: number) => string;
 
+export const RELIC_CRAFT_COST=Object.freeze({gold:15000,materials:12,shards:2});
+
+/** Commit a pre-sampled offer against the latest state, never announce a rejected craft. */
+export function craftRelicEquipmentAction(state:GameState,item:Equipment,addLog:Log,notify:(message:string)=>void):GameState {
+  const cost=RELIC_CRAFT_COST;
+  const materials=state.materials['遺跡材料']||0,shards=state.materials['遺跡碎片']||0;
+  if(!Number.isFinite(state.gold)||state.gold<cost.gold||!Number.isFinite(materials)||materials<cost.materials||!Number.isFinite(shards)||shards<cost.shards){
+    notify(`遺跡鍛造需要 ${cost.gold.toLocaleString('zh-TW')} 兩、遺跡材料 ${cost.materials}、遺跡碎片 ${cost.shards}。`);
+    return state;
+  }
+  const definition=v1Definition(item),tier=v1RandomEquipmentTier(relicCraftEquipmentLevel(state.hero.level,state.relicDungeon?.clearedRuns||0));
+  if(!definition||!definition.id.startsWith('series-')||definition.level!==tier||item.requiredLevel!==tier||item.slot!==definition.slot||item.rarity==='普通'){
+    notify('鍛造條件已變更，請重新確認後再試；未扣除資源。');return state;
+  }
+  if(state.inventory.some(entry=>entry.uid===item.uid)){
+    notify('這件鍛造裝備已在背包中，未重複扣除資源。');return state;
+  }
+  const pickup=addInventoryItem(state.inventory,item);
+  if(pickup.error){notify(pickup.error);return state;}
+  const message=`遺跡鍛造完成：${item.name}。`;
+  notify(`遺跡鍛造完成：${item.name}，已放入背包。`);
+  return {...state,gold:state.gold-cost.gold,inventory:pickup.inventory,
+    materials:{...state.materials,遺跡材料:materials-cost.materials,遺跡碎片:shards-cost.shards},
+    logs:addLog(state.logs,message),battleLogs:BattleLogManager.addLog(state.battleLogs,message,'reward')};
+}
+
 export function fuseAllInventoryEquipmentAction(state: GameState, sourceRarity: FusionSourceRarity, roll: () => number, addLog: Log, notify: (message: string) => void): GameState {
   if (state.hero.level < 20) { notify('商團領地在主角 Lv.20 開放。'); return state; }
-  const recipe = fusionRecipe(sourceRarity);
-  if (!recipe) return state;
-  const candidatesByIdentity = new Map<string, Equipment[]>();
-  for (const item of state.inventory) if (isFusionIngredient(item, sourceRarity)) {
-    const key = fusionItemKey(item), items = candidatesByIdentity.get(key) || [];
-    items.push(item);
-    candidatesByIdentity.set(key, items);
-  }
-  const batchesByIdentity = [...candidatesByIdentity.values()].map((items) => ({ template: items[0], items: items.slice(0, Math.floor(items.length / recipe.ingredientCount) * recipe.ingredientCount) })).filter((entry) => entry.items.length);
-  const consumedCount = batchesByIdentity.reduce((total, entry) => total + entry.items.length, 0);
-  if (!consumedCount) { notify(`至少需要 5 件同名稱、同品質、同部位的${sourceRarity}裝備。`); return state; }
+  const {entries:batchesByIdentity, consumedCount, batches, fee} = planEquipmentFusion(state.inventory, sourceRarity);
+  if (!consumedCount) { notify(`新版需 3 件、舊版需 5 件同款、同品質、同部位的${sourceRarity}裝備；新舊版不可混合。`); return state; }
+  if (!Number.isSafeInteger(fee) || fee < 0 || state.gold < fee) { notify(`合成資金不足，共需 ${fee.toLocaleString('zh-TW')} 兩；未消耗任何裝備。`); return state; }
   const consumed = new Set(batchesByIdentity.flatMap((entry) => entry.items.map((item) => item.uid)));
   let inventory = state.inventory.filter((item) => !consumed.has(item.uid));
-  const batches = consumedCount / recipe.ingredientCount;
   let successes = 0;
-  for (const { template, items } of batchesByIdentity) for (let index = 0; index < items.length / recipe.ingredientCount; index += 1) {
-    if (roll() >= recipe.successRate) continue;
+  for (const { template, recipe, batches:groupBatches } of batchesByIdentity) for (let index = 0; index < groupBatches; index += 1) {
+    if (recipe.successRate < 1 && roll() >= recipe.successRate) continue;
     const result = { ...advanceEquipmentQuality({ ...template, uid: makeUid(`fusion-${template.slot}`), name: fusionBaseName(template.name), enhance: 0, socketGem: undefined }, recipe.targetRarity), source: `商團駐地・${fusionBaseName(template.name)}批次裝備合成` };
     inventory = addInventoryItem(inventory, result).inventory;
     successes += 1;
   }
   const failures = batches - successes;
-  notify(`批次合成完成：投入 ${consumedCount} 件${sourceRarity}裝備，共 ${batches} 組；成功 ${successes} 組、失敗 ${failures} 組。`);
-  return { ...state, inventory, logs: addLog(state.logs, `商團駐地批次合成所有${sourceRarity}裝備：投入 ${consumedCount} 件，成功 ${successes} 組、失敗 ${failures} 組。`) };
+  const message = `商團駐地批次合成${sourceRarity}裝備：投入 ${consumedCount} 件，共 ${batches} 組，支付 ${fee.toLocaleString('zh-TW')} 兩；成功 ${successes} 組、失敗 ${failures} 組。`;
+  notify(message);
+  return { ...state, gold:state.gold-fee, inventory, logs: addLog(state.logs, message) };
 }
 
 const RELIC_SMELT_VALUE: Partial<Record<Equipment["rarity"], number>> = { 普通: 5, 稀有: 15 };
 
 /** 對應遺跡原型的低階裝備熔煉，僅處理尚在背包內、尚未穿戴的裝備。 */
 export function smeltLowRarityEquipmentAction(state: GameState, roll: () => number, addLog: Log, notify: (message: string) => void): GameState {
-  const candidates = state.inventory.filter(item => item.rarity === "普通" || item.rarity === "稀有");
+  const lowRarity = state.inventory.filter(item => item.rarity === "普通" || item.rarity === "稀有");
+  const candidates = lowRarity.filter(item => !hasEquipmentInvestment(item));
+  const protectedCount = lowRarity.length-candidates.length;
   if (!candidates.length) {
-    notify("背包內沒有可熔煉的普通或稀有裝備。");
-    return { ...state, logs: addLog(state.logs, "熔煉爐沒有找到可處理的低階裝備。") };
+    const message = protectedCount ? `已保留 ${protectedCount} 件強化、鑲嵌或有淬鍊進度的裝備；沒有可熔煉的普通或稀有裝備。` : "背包內沒有可熔煉的普通或稀有裝備。";
+    notify(message);
+    return { ...state, logs: addLog(state.logs, message) };
   }
   const gained = candidates.reduce((sum, item) => sum + (RELIC_SMELT_VALUE[item.rarity] || 0), 0);
   let inventory = state.inventory.filter(item => !candidates.some(candidate => candidate.uid === item.uid));
   let bonusText = "";
   if (candidates.length >= 5 && roll() < 0.35) {
-    const bonus = rollRelicEquipment(Math.max(1, state.stage), roll, true);
+    const bonus = rollRelicEquipment(relicCraftEquipmentLevel(state.hero.level,state.relicDungeon?.clearedRuns||0), roll, true);
     inventory = addInventoryItem(inventory, bonus).inventory;
     bonusText = `熔煉共鳴取得「${bonus.name}」；`;
   }
-  notify(`熔煉 ${candidates.length} 件低階裝備，獲得遺跡魔晶 +${gained}。${bonusText}`);
-  return { ...state, inventory, materials: { ...state.materials, "遺跡魔晶": (state.materials["遺跡魔晶"] || 0) + gained }, logs: addLog(state.logs, `遺跡熔煉爐處理 ${candidates.length} 件低階裝備，獲得遺跡魔晶 +${gained}。${bonusText}`) };
+  const protectionText = protectedCount ? `已保留 ${protectedCount} 件投資裝備。` : "";
+  notify(`熔煉 ${candidates.length} 件低階裝備，獲得遺跡魔晶 +${gained}。${bonusText}${protectionText}`);
+  return { ...state, inventory, materials: { ...state.materials, "遺跡魔晶": (state.materials["遺跡魔晶"] || 0) + gained }, logs: addLog(state.logs, `遺跡熔煉爐處理 ${candidates.length} 件低階裝備，獲得遺跡魔晶 +${gained}。${bonusText}${protectionText}`) };
 }
 
 export function sellMaterialAction(state: GameState, itemName: string, addLog: Log, format: Format): GameState {
@@ -110,7 +136,7 @@ export function forgeThunderItemAction(state: GameState, id: ThunderForgeId, uid
   const recipe = THUNDER_FORGE_ITEMS[id];
   if (!Object.entries(recipe.needs).every(([name, amount]) => (state.materials[name] || 0) >= amount)) { notify("鍛造材料不足。"); return state; }
   const materials = { ...state.materials }; for (const [name, amount] of Object.entries(recipe.needs)) materials[name] -= amount;
-  const item: Equipment = { uid: uid(`t10-${id}`), name: recipe.name, slot: recipe.slot, atk: recipe.atk, def: recipe.def, hp: recipe.hp, image: recipe.image || itemImage(compatibleSlots(recipe.slot)[0]), enhance: 0, rarity: "傳說", magic: recipe.magic.map((affix) => ({ ...affix })), bonus: { ...recipe.bonus }, skill: recipe.skill, requiredLevel: recipe.set === "thunder" ? 150 : 1, source: "神仙谷・雷霆祭壇" };
+  const item = makeMythicEquipment(id,uid(`t10-${id}`),itemImage(compatibleSlots(recipe.slot)[0]),"神仙谷・雷霆祭壇");
   const pickup = addInventoryItem(state.inventory, item);
   if (pickup.error) { notify("背包已滿，無法完成鍛造。"); return state; }
   notify(`鍛造完成：${recipe.name}`);
@@ -121,6 +147,15 @@ export function purchaseEquipmentAction(state: GameState, item: Equipment, price
   if (state.gold < price) { notify("裝備商店資金不足。"); return state; }
   notify(`購買成功：「${item.name}」×1，支付 ${price.toLocaleString("zh-TW")} 兩，已放入背包。`);
   return { ...state, gold: state.gold - price, inventory: [item, ...state.inventory], logs: addLog(state.logs, message) };
+}
+
+/** Check the whole order before charging or generating any independently identified items. */
+export function purchaseMagicEquipmentAction(state:GameState,random:()=>number,addLog:Log,notify:(message:string)=>void):GameState {
+  const level=state.hero.level,price=v1MagicEquipmentPrice(level);
+  if(state.gold<price){notify(`附魔裝備需要 ${price.toLocaleString('zh-TW')} 兩。`);return state;}
+  const rarity=rollShopQuality(WEAPON_SHOP_QUALITY,random);
+  const item=applyShopQuality(rollEquipment(level,true,undefined,random),rarity);
+  return purchaseEquipmentAction(state,item,price,`購入附魔裝備「${item.name}」・${rarity}品質 ×${v1QualityMultiplier(rarity)}，支付 ${price.toLocaleString('zh-TW')} 兩。`,addLog,notify);
 }
 
 /** Check the whole order before charging or generating any independently identified items. */
@@ -237,17 +272,13 @@ export function socketGemAction(state: GameState, targetUid: string, slot: Equip
   const gem = officialGems.find((entry) => entry.id === gemId), target = targetUid === "hero" ? state.hero : state.mercs.find((unit) => unit.uid === targetUid);
   if (!gem || !target) return state;
   if (!target.equip[slot]) { notify(`請先在${slot}欄穿戴裝備。`); return state; }
-  const equip = { ...target.equip }, item = equip[slot]!, existing = item.socketGem, amount = Math.min(requestedAmount, 100 - (existing?.count || 0));
-  if (amount < 1 || (existing?.count || 0) >= 100) { notify("此裝備部位最多鑲嵌 100 顆寶石。"); return state; }
-  const cost = gem.costs[grade] * amount;
-  if (state.gold < cost) { notify("寶石加工資金不足。"); return state; }
-  if (existing && existing.id !== gem.id) { notify("每個裝備部位只能鑲嵌一種寶石。"); return state; }
-  const bonus = { ...(item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }) };
-  if (gem.stat === "all") { bonus.str += gem.values[grade] * amount; bonus.agi += gem.values[grade] * amount; bonus.intel += gem.values[grade] * amount; bonus.vit += gem.values[grade] * amount; } else bonus[gem.stat] += gem.values[grade] * amount;
-  const count = (existing?.count || 0) + amount, totalValue = (existing?.totalValue || 0) + gem.values[grade] * amount, baseName = existing?.baseName || item.name, gemTitle = `${gem.name.replace(/石$/, "")}的 ${baseName}`;
-  const gemAffix: MagicAffix = { id: `socket-${gem.id}`, name: gem.name, text: `${gem.label} +${totalValue}（${count} 顆）`, color: "#8ee7ff", stat: gem.stat, value: totalValue };
-  equip[slot] = { ...item, name: `+${count} ${gemTitle}`, bonus, socketGem: { id: gem.id, name: gem.name, count, totalValue, baseName }, magic: [...(item.magic || []).filter((affix) => affix.id !== `socket-${gem.id}`), gemAffix] };
-  const common = { ...state, gold: state.gold - cost, logs: addLog(state.logs, `${gem.name}已鑲嵌至「${item.name}」。`) };
+  const equip = { ...target.equip }, item = equip[slot]!;
+  const quote=gemSocketResult(item,gem,grade,requestedAmount);
+  if(!quote.ok){notify(quote.error);return state;}
+  const {cost}=quote;
+  if (!Number.isFinite(state.gold)||state.gold < cost) { notify("寶石加工資金不足。"); return state; }
+  equip[slot] = quote.item;
+  const common = { ...state, gold: state.gold - cost, logs: addLog(state.logs, `${gem.name}已鑲嵌至「${item.name}」，品級 ${grade+1}・${quote.amount} 顆，支付 ${cost.toLocaleString('en-US')} 兩。`) };
   return targetUid === "hero" ? { ...common, hero: { ...state.hero, equip } } : { ...common, mercs: state.mercs.map((unit) => unit.uid === targetUid ? { ...unit, equip } : unit) };
 }
 

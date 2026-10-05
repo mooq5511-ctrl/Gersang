@@ -1,4 +1,6 @@
-/** Live-engine calibration against unlocked promoted mercenaries (Lv.36+), skills ON. */
+/** Fixed HP calibrated against unlocked promoted mercenaries and V1 ordinary series gear, skills ON.
+ * Never scales with the player's currently equipped items. Tutorial and Boss HP are separate.
+ */
 export const WORLD_MONSTER_HP: Record<string, number> = {
   e_starter_gunner: 553,
   e_starter_bandit: 462,
@@ -27,7 +29,7 @@ export const WORLD_MONSTER_HP: Record<string, number> = {
   e_white_tiger_soul_eater: 11399,
   e_white_tiger_trainer: 43205,
   e_white_tiger_spider: 3143,
-  e_sumeru_training_thunder_beast: 38175,
+  e_sumeru_training_thunder_beast: 47719,
   e_sumeru_training_plague_god: 80546,
   e_sumeru_training_tiger_crane: 80912,
   e_sumeru_blue_yaksha_vajra: 164782,
@@ -37,15 +39,15 @@ export const WORLD_MONSTER_HP: Record<string, number> = {
   e_sumeru_black_tortoise: 242774,
   e_sumeru_white_tiger: 564409,
   e_sea_god: 10694,
-  e_yeti: 6544,
+  e_yeti: 8180,
   e_crystal: 25324,
   e_snow: 56584,
-  e_taj_scarab: 16547,
+  e_taj_scarab: 20684,
   e_taj_guard: 30342,
   e_taj_dancer: 64361,
   e_taj_assassin: 145513,
-  e_ghost: 161188,
-  e_snake: 289040,
+  e_ghost: 201485,
+  e_snake: 317944,
   e_shambhala_jailer: 428949,
   e_shambhala_scribe: 3356334,
 };

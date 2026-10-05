@@ -1,8 +1,10 @@
 import type { EquipmentKind } from "./equipment-slots";
 import type { Equipment } from "./game-state";
+import {EQUIPMENT_BALANCE_V1,V1_EQUIPMENT_DEFINITIONS,v1PartCore} from './equipment-v1-policy.ts';
+export {EQUIPMENT_TIER_LEVELS} from './equipment-series-levels.ts';
+import {EQUIPMENT_TIER_LEVELS} from './equipment-series-levels.ts';
 
 /** Stable content IDs: series-{requiredLevel}-{part}. Display names can change safely. */
-export const EQUIPMENT_TIER_LEVELS = [1, 20, 40, 50, 70, 90, 120, 150, 180, 200] as const;
 export type EquipmentTierLevel = typeof EQUIPMENT_TIER_LEVELS[number];
 export type SeriesPart = "weapon" | "helm" | "armor" | "gloves" | "waist" | "boots" | "accessory";
 
@@ -48,7 +50,7 @@ export const tierEquipmentCatalog: TierEquipment[] = series.flatMap((tier) => pa
   id: `series-${tier.level}-${part.id}`,
   name: tier.items[index],
   slot: part.slot,
-  ...stats(tier.level, part.id),
+  ...v1PartCore(tier.level,part.id),
   image: part.image,
   requiredLevel: tier.level,
   series: tier.name,
@@ -73,12 +75,15 @@ export const TIER_EQUIPMENT_DROP_REGIONS = [
 ] as const;
 
 export const TIER_EQUIPMENT_SHOP_ID = "gear-shop-future-regions";
-export const TIER_EQUIPMENT_SHOP_LEVELS = [120, 150, 180, 200] as const;
+// Existing chapter-one gear has a targeted source before its lake drop region unlocks.
+export const TIER_EQUIPMENT_SHOP_LEVELS = [20, 120, 150, 180, 200] as const;
 export const tierEquipmentShopCatalog = tierEquipmentCatalog.filter((item) =>
   TIER_EQUIPMENT_SHOP_LEVELS.some((level) => level === item.requiredLevel));
 
 export function tierEquipmentPrice(spec: TierEquipment): number {
-  return Math.round((1000 + spec.requiredLevel ** 2 * 2) * (spec.part === "weapon" ? 1.3 : spec.part === "armor" ? 1.15 : 1));
+  const definition=V1_EQUIPMENT_DEFINITIONS[spec.id];
+  if(!definition)throw new RangeError('Unknown equipment definition');
+  return definition.price;
 }
 
 export const TIER_EQUIPMENT_NORMAL_DROP_RATE = 0.04;
@@ -93,11 +98,18 @@ export function pickTierEquipmentDrop(mapId: string | undefined, heroLevel: numb
 }
 
 export function makeTierEquipment(spec: TierEquipment, uid: string, source: string): Equipment {
+  const definition=V1_EQUIPMENT_DEFINITIONS[spec.id];
+  if(!definition||definition.slot!==spec.slot||definition.level!==spec.requiredLevel)throw new RangeError('Invalid equipment definition');
   return {
-    uid, name: spec.name, slot: spec.slot, atk: spec.atk, def: spec.def, hp: spec.hp,
+    uid, definitionId:spec.id,balanceVersion:EQUIPMENT_BALANCE_V1,name: spec.name, slot: definition.slot, atk: definition.atk, def: definition.def, hp: definition.hp,
     image: spec.image, enhance: 0, rarity: "普通", magic: [], requiredLevel: spec.requiredLevel,
     source, bonus: { str: 0, agi: 0, intel: 0, vit: 0 }, resist: { physical: 0, magic: 0 },
   };
+}
+
+/** Frozen old series constructor for baseline audits, not live acquisition. */
+export function makeLegacyTierEquipment(spec:TierEquipment,uid:string,source:string):Equipment{
+  return {uid,name:spec.name,slot:spec.slot,...stats(spec.requiredLevel,spec.part),image:spec.image,enhance:0,rarity:'普通',magic:[],requiredLevel:spec.requiredLevel,source,bonus:{str:0,agi:0,intel:0,vit:0},resist:{physical:0,magic:0}};
 }
 
 export function makeTierEquipmentDrop(spec: TierEquipment, uid: string, monsterName: string): Equipment {

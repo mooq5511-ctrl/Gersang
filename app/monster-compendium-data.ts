@@ -1,5 +1,5 @@
 import { DUNGEONS, isBossMonster } from './dungeon-engine';
-import { DIVINE_EQUIPMENT } from './divine-equipment';
+import { DIVINE_EQUIPMENT,makeDivineEquipment,type DivineKey } from './divine-equipment';
 import { sourceEnemies } from './v17-content';
 import { MONSTER_REDESIGN, MONSTER_REGION_LABELS, type MonsterDrop } from '../data/monsters/monster-redesign';
 import { RELIC_DUNGEON_MONSTERS } from '../data/monsters/relic-dungeon-monsters';
@@ -34,7 +34,7 @@ export const monsterCatalogEntries: MonsterCompendiumEntry[] = Object.entries(DU
   }));
   const equipmentDrops = [...new Set(monster.loot)].flatMap(key => {
     const spec = DIVINE_EQUIPMENT[key as keyof typeof DIVINE_EQUIPMENT];
-    return spec ? [{ item: spec.name, rate: .01, price: equipmentSellPrice({ uid: 'codex', name: spec.name, bonus: spec.bonus, def: spec.def, atk: 0, hp: 0, enhance: 0, rarity: '傳說', magic: [], requiredLevel: 1 }) }] : [];
+    return spec ? [{ item: spec.name, rate: .01, price: equipmentSellPrice(makeDivineEquipment(key as DivineKey,'codex')) }] : [];
   });
   return {
     id, name: monster.name, mapId, region: MONSTER_REGION_LABELS[mapId],

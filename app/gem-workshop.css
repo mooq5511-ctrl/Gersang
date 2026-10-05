@@ -1,0 +1,39 @@
+/* Fit the actual content column, not the viewport remaining behind the sidebar. */
+.gem-workshop .gem-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+.gem-workshop .gem-grid article,
+.gem-workshop .gem-grid article > div,
+.gem-workshop .gem-grid article section {
+  min-width: 0;
+}
+.gem-workshop .gem-grid [data-slot="button"] {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 32px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding-block: 6px;
+}
+.gem-workshop .gem-grid section > small {
+  display: block;
+  margin-top: 4px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.gem-workshop .gem-amount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-block: 10px;
+}
+.gem-workshop .gem-amount input {
+  width: 80px;
+  padding: 5px 8px;
+  border: 1px solid #d9bd7270;
+  border-radius: 6px;
+  background: #0c1216;
+  color: #fff1c7;
+}

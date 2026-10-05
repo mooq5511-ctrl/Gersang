@@ -1,5 +1,7 @@
 import {equipFromInventory,unequipToInventory,type EquipmentSlot,type EquipmentKind} from './equipment-slots.ts';
 import {effectiveEquipmentStats} from './equipment-stats.ts';
+import {EQUIPMENT_BALANCE_V1,V1_EQUIPMENT_DEFINITIONS} from './equipment-v1-policy.ts';
+import type {Equipment} from './game-state';
 export const HERO_DISPLAY_SLOTS=['weapon','helm','armor','ring1','ring2','boots'] as const;
 export const DIVINE_EQUIPMENT={
   staff:{name:'高級神仙棒',slot:'weapon' as const,description:'仙人遺世之杖，凝聚天地靈氣。',bonus:{str:10,agi:0,vit:0,intel:50},def:0},
@@ -8,6 +10,12 @@ export const DIVINE_EQUIPMENT={
   boots:{name:'太皇鞋',slot:'boots' as const,description:'御風踏雲，千里商途亦如閒庭信步。',bonus:{str:15,agi:40,vit:0,intel:0},def:0},
 };
 export type DivineKey=keyof typeof DIVINE_EQUIPMENT;
+/** Live named loot uses canonical core; descriptive legacy specs do not determine core stats. */
+export function makeDivineEquipment(key:DivineKey,uid:string,source='幽冥副本掉落'):Equipment {
+  const spec=DIVINE_EQUIPMENT[key],definition=V1_EQUIPMENT_DEFINITIONS[`divine-${key}`];
+  if(!spec||!definition||definition.slot!==spec.slot)throw new RangeError('Unknown divine equipment definition');
+  return {uid,definitionId:definition.id,balanceVersion:EQUIPMENT_BALANCE_V1,name:spec.name,slot:spec.slot,atk:definition.atk,def:definition.def,hp:definition.hp,bonus:{...spec.bonus},image:'',enhance:0,rarity:'傳說',magic:[],requiredLevel:definition.level,source};
+}
 type Gear={uid:string;slot:EquipmentKind;requiredLevel?:number};
 /** 有穿則卸下；沒有穿則從背包取用。替換原裝備時退回背包，不會銷毀。 */
 export function toggleDivineEquipment<E extends Gear,U extends {level:number;equip:Record<EquipmentSlot,E|null>}>(hero:U,inventory:E[],item:E){
@@ -16,7 +24,7 @@ export function toggleDivineEquipment<E extends Gear,U extends {level:number;equ
   const available=inventory.some(entry=>entry.uid===item.uid)?inventory:[...inventory,item];
   return equipFromInventory(hero,available,item.uid,slot);
 }
-export type TooltipGear={rarity?:string;name?:string;source?:string;atk?:number;def?:number;hp?:number;enhance?:number;luckyValue?:number;enhanceBonuses?:{name?:string;text?:string;stat:string;value:number}[];requiredLevel?:number;skill?:string;bonus?:{str?:number;agi?:number;vit?:number;intel?:number};resist?:{physical:number;magic:number};magic?:{name?:string;text?:string;stat:string;value:number}[]};
+export type TooltipGear={definitionId?:string;balanceVersion?:string;rarity?:string;name?:string;source?:string;atk?:number;def?:number;hp?:number;enhance?:number;luckyValue?:number;enhanceBonuses?:{name?:string;text?:string;stat:string;value:number}[];requiredLevel?:number;skill?:string;bonus?:{str?:number;agi?:number;vit?:number;intel?:number};resist?:{physical:number;magic:number};magic?:{name?:string;text?:string;stat:string;value:number}[]};
 /** 所有欄位皆列出，包含非神裝的既有裝備加成與附魔。 */
 export function equipmentDetailLines(item:TooltipGear){
   const lines:string[]=[];

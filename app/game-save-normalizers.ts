@@ -5,9 +5,36 @@ import { MYTHIC_ART_BY_NAME, THUNDER_FORGE_ITEMS } from "./mythic-forge";
 import type { Equipment, EquipmentSet, GameState, MagicAffix } from "./game-state";
 import { MONSTER_REDESIGN } from '../data/monsters/monster-redesign';
 
+function restoreSocketGem(value: unknown): Equipment['socketGem'] {
+  if (!value || typeof value !== 'object') return undefined;
+  const gem = value as Partial<NonNullable<Equipment['socketGem']>>;
+  if (typeof gem.id !== 'string' || !gem.id || typeof gem.name !== 'string' || typeof gem.baseName !== 'string' ||
+    !Number.isSafeInteger(gem.count) || Number(gem.count) <= 0 || !Number.isFinite(gem.totalValue) || Number(gem.totalValue) < 0) return undefined;
+  // Gem bonuses are already baked into bonus/magic. Restore metadata, never reapply it.
+  return { id: gem.id, name: gem.name, baseName: gem.baseName, count: gem.count!, totalValue: gem.totalValue! };
+}
+
 export function sanitizeEquip(value: unknown): EquipmentSet {
   const equip = emptyEquipment(); if (!value || typeof value !== "object") return equip;
-  for (const slot of Object.keys(equip) as EquipmentSlot[]) { const candidate = (value as Record<string, unknown>)[slot]; if (candidate && typeof candidate === "object" && "name" in candidate) { const item = candidate as Partial<Equipment>; const enhanceBonuses = Array.isArray(item.enhanceBonuses) ? Array.from(new Map((item.enhanceBonuses as NonNullable<Equipment["enhanceBonuses"]>).map((bonus) => [bonus.id, bonus])).values()) : []; equip[slot] = { uid: item.uid || `migrated-${Date.now()}`, name: item.name || "傳承裝備", slot: itemKind(item.slot || slot), atk: Number(item.atk) || 0, def: Number(item.def) || 0, hp: Number(item.hp) || 0, image: gersangItemArt(itemKind(item.slot || slot)), enhance: Number(item.enhance) || 0, luckyValue: Math.max(0, Math.min(100, Number(item.luckyValue) || 0)), enhanceBonuses, rarity: item.rarity || "普通", magic: Array.isArray(item.magic) ? item.magic as MagicAffix[] : [], requiredLevel: Number(item.requiredLevel) || 0, source: item.source, skill: item.skill, bonus: item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }, resist: item.resist || { physical: 0, magic: 0 } }; } }
+  for (const slot of Object.keys(equip) as EquipmentSlot[]) {
+    const candidate = (value as Record<string, unknown>)[slot];
+    if (!candidate || typeof candidate !== 'object' || !('name' in candidate)) continue;
+    const item = candidate as Partial<Equipment>;
+    const enhanceBonuses = Array.isArray(item.enhanceBonuses) ? Array.from(new Map((item.enhanceBonuses as NonNullable<Equipment['enhanceBonuses']>).map(bonus => [bonus.id, bonus])).values()) : [];
+    const socketGem = restoreSocketGem(item.socketGem);
+    equip[slot] = {
+      uid: item.uid || `migrated-${Date.now()}`, name: item.name || '傳承裝備', slot: itemKind(item.slot || slot),
+      atk: Number(item.atk) || 0, def: Number(item.def) || 0, hp: Number(item.hp) || 0,
+      image: gersangItemArt(itemKind(item.slot || slot)), enhance: Number(item.enhance) || 0,
+      luckyValue: Math.max(0, Math.min(100, Number(item.luckyValue) || 0)), enhanceBonuses,
+      rarity: item.rarity || '普通', magic: Array.isArray(item.magic) ? item.magic as MagicAffix[] : [],
+      requiredLevel: Number(item.requiredLevel) || 0, source: item.source, skill: item.skill,
+      bonus: item.bonus || { str: 0, agi: 0, intel: 0, vit: 0 }, resist: item.resist || { physical: 0, magic: 0 },
+      ...(socketGem ? { socketGem } : {}),
+      ...(typeof item.definitionId==='string'?{definitionId:item.definitionId}:{}),
+      ...(typeof item.balanceVersion==='string'?{balanceVersion:item.balanceVersion}:{}),
+    };
+  }
   return equip;
 }
 

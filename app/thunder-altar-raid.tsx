@@ -5,6 +5,7 @@ import { BookOpen, Bolt, Crown, Shield, Sparkles, Swords, Users } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { THUNDER_FORGE_RECIPES, type ThunderForgeId } from './mythic-forge';
+import {effectiveEquipmentStats} from './equipment-stats';
 import "./thunder-altar-raid.css";
 
 type Status = "ready" | "fighting" | "failed" | "cleared";
@@ -139,6 +140,6 @@ export function ThunderAltarRaid({ credit, power, materials, azureSetPieces, chi
       </div>
     </section>
     <footer className="raid-loot"><strong>通關保底</strong><span>雷祭印記 ×6</span><span>小型雷之屬性石 ×20</span><span>精氣之珠碎片 ×12</span><span>鹿亞之角 ×1</span></footer>
-    <section className="raid-forge"><header><div><small>神仙谷鍛造</small><h3>T10 雷神／神獸套裝</h3><p>青龍 {azureSetPieces}/5：2／3／5 件祭壇傷害 +10／20／35%。蚩尤 {chiyouSetPieces}/5：+12／25／40%。天照 {amaterasuSetPieces}/5：+15／30／45%。</p></div></header><div className="raid-forge-grid">{THUNDER_FORGE_RECIPES.map(recipe => { const canForge = Object.entries(recipe.needs).every(([name, amount]) => (materials[name] || 0) >= amount); const effect=`ATK +${recipe.atk}／DEF +${recipe.def}／HP +${recipe.hp}${recipe.bonus.intel?`／智力 +${recipe.bonus.intel}`:''}${recipe.bonus.str?`／力量 +${recipe.bonus.str}`:''}${recipe.bonus.agi?`／敏捷 +${recipe.bonus.agi}`:''}${recipe.bonus.vit?`／體質 +${recipe.bonus.vit}`:''}`; return <article key={recipe.id}>{recipe.image&&<img className="raid-forge-art" src={recipe.image} alt=""/>}<strong>{recipe.name}</strong><small>{effect}</small><p>{Object.entries(recipe.needs).map(([name, amount]) => <span key={name} className={(materials[name] || 0) >= amount ? "ready" : ""}>{name} {materials[name] || 0}/{amount}</span>)}</p><Button size="sm" disabled={!canForge} onClick={() => onForge(recipe.id)}>鍛造</Button></article>; })}</div></section>
+    <section className="raid-forge"><header><div><small>神仙谷鍛造</small><h3>T10 雷神／神獸套裝</h3><p>青龍 {azureSetPieces}/5：2／3／5 件祭壇傷害 +10／20／35%。蚩尤 {chiyouSetPieces}/5：+12／25／40%。天照 {amaterasuSetPieces}/5：+15／30／45%。</p></div></header><div className="raid-forge-grid">{THUNDER_FORGE_RECIPES.map(recipe => { const canForge = Object.entries(recipe.needs).every(([name, amount]) => (materials[name] || 0) >= amount); const core=effectiveEquipmentStats({...recipe,rarity:"傳說",enhance:0}); const effect=`ATK +${core.atk}／DEF +${core.def}／HP +${core.hp}${recipe.bonus.intel?`／智力 +${recipe.bonus.intel}`:''}${recipe.bonus.str?`／力量 +${recipe.bonus.str}`:''}${recipe.bonus.agi?`／敏捷 +${recipe.bonus.agi}`:''}${recipe.bonus.vit?`／體質 +${recipe.bonus.vit}`:''}`; return <article key={recipe.id}>{recipe.image&&<img className="raid-forge-art" src={recipe.image} alt=""/>}<strong>{recipe.name}</strong><small>Lv.{recipe.requiredLevel}・傳說品質核心</small><small>{effect}</small><small>額外能力按角色共用上限結算</small><p>{Object.entries(recipe.needs).map(([name, amount]) => <span key={name} className={(materials[name] || 0) >= amount ? "ready" : ""}>{name} {materials[name] || 0}/{amount}</span>)}</p><Button size="sm" disabled={!canForge} onClick={() => onForge(recipe.id)}>鍛造</Button></article>; })}</div></section>
   </section>;
 }

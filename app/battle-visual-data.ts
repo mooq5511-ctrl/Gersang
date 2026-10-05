@@ -9,14 +9,14 @@ import { MONSTER_REDESIGN } from '../data/monsters/monster-redesign.ts';
 const previousMonsterNames: Record<string, string> = Object.fromEntries(Object.entries({ ...ORIGINAL_ECOLOGY_MONSTERS, ...ORIGINAL_LEGACY_DUNGEON_MONSTERS }).map(([id, monster]) => [id, monster.name]));
 
 export const BATTLE_MONSTER_ART: Record<string, string> = {
-  狸貓: "/assets/sprites/newbie-raccoon-v1.png",
+  狸貓: "/assets/sprites/newbie-raccoon-v1.webp",
   倭寇: "/assets/characters/char_049_pirate_skeleton_bow_R.png",
   鐵炮倭寇: "/assets/characters/char_053_pirate_skeleton_cannon_R.png",
   山賊: "/assets/characters/char_056_pirate_skeleton_captain_N.png",
   海賊: "/assets/characters/char_057_pirate_skeleton_captain_R.png",
   鐵鉤海賊: "/assets/characters/char_055_pirate_skeleton_captain_D.png",
-  山賊首領: "/assets/monsters/bandit-chief-normal.png",
-  海賊王: "/assets/monsters/bandit-chief-normal.png",
+  山賊首領: "/assets/monsters/bandit-chief-normal.webp",
+  海賊王: "/assets/monsters/bandit-chief-normal.webp",
   赤賊: "/assets/characters/char_054_pirate_skeleton_captain_A.png",
   巫女: "/assets/characters/char_052_pirate_skeleton_cannon_N.png",
   司令武女: "/assets/characters/char_052_pirate_skeleton_cannon_N.png",

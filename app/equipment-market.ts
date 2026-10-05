@@ -1,4 +1,7 @@
+import { enhancementMultiplier } from './equipment-stats.ts';
+import {v1SellPrice} from './equipment-v1-policy.ts';
 export type SellableEquipment = {
+  definitionId?:string;balanceVersion?:string;
   uid:string; name:string; atk?:number; def?:number; hp?:number; enhance?:number; requiredLevel?:number; rarity?:string;
   magic?:Array<{value?:number}>;
   bonus?:{str?:number;agi?:number;intel?:number;vit?:number};
@@ -9,12 +12,14 @@ const RARITY_MULTIPLIER:Record<string,number>={普通:1,稀有:1.35,史詩:1.8,�
 
 /** 裝備回收價只取決於裝備本身，確保所有背包入口顯示與實際入帳完全一致。 */
 export function equipmentSellPrice(item:SellableEquipment){
+  const versioned=v1SellPrice(item);
+  if(versioned!==null)return versioned;
   const magic=(item.magic||[]).reduce((sum,affix)=>sum+Math.max(0,Number(affix.value)||0),0);
   const bonus=Object.values(item.bonus||{}).reduce((sum,value)=>sum+Math.max(0,Number(value)||0),0);
   const resist=Object.values(item.resist||{}).reduce((sum,value)=>sum+Math.max(0,Number(value)||0),0);
   const base=40+Math.max(0,item.atk||0)*18+Math.max(0,item.def||0)*14+Math.max(0,item.hp||0)*1.5+
     magic*22+bonus*30+resist*18+Math.max(1,item.requiredLevel||1)*12;
-  const enhanced=base*(1.15 ** Math.max(0,Math.floor(item.enhance||0)));
+  const enhanced=base*enhancementMultiplier(item.enhance||0);
   return Math.max(10,Math.floor(enhanced*(RARITY_MULTIPLIER[item.rarity||'普通']||1)));
 }
 

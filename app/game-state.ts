@@ -36,6 +36,9 @@ export type MagicAffix = {
 export type EnhancementBonus = { id: "attackPercent" | "defensePercent" | "xpPercent" | "critRate" | "damageReduction" | "allStats"; name: string; text: string; stat: "attackPercent" | "defensePercent" | "xpPercent" | "critRate" | "damageReduction" | "allStats"; value: number };
 
 export type Equipment = {
+  /** Explicit opt-in; absent or unknown versions retain legacy rules. */
+  definitionId?: string;
+  balanceVersion?: string;
   bagSlot?: number;
   uid: string;
   name: string;

@@ -36,10 +36,10 @@ test('all eight maps supply the equipment tiers for their progression bands', ()
   assert.ok(pickTierEquipmentDrop('starter-outskirts', 200, true, .119, 0));
 });
 
-test('high tiers remain available from the level-gated shop as an alternative to drops', () => {
-  assert.deepEqual([...TIER_EQUIPMENT_SHOP_LEVELS], [120, 150, 180, 200]);
-  assert.equal(tierEquipmentShopCatalog.length, 28);
-  assert.ok(tierEquipmentShopCatalog.every(item => item.requiredLevel >= 120 && tierEquipmentPrice(item) > 0));
+test('chapter-one and high tiers remain available from the level-gated shop as alternatives to drops', () => {
+  assert.deepEqual([...TIER_EQUIPMENT_SHOP_LEVELS], [20, 120, 150, 180, 200]);
+  assert.equal(tierEquipmentShopCatalog.length, 35);
+  assert.ok(tierEquipmentShopCatalog.every(item => TIER_EQUIPMENT_SHOP_LEVELS.includes(item.requiredLevel) && tierEquipmentPrice(item) > 0));
   const spec = equipmentAtTier(90)[0];
   const item = makeTierEquipmentDrop(spec, 'test-drop', '海底怪');
   assert.equal(item.requiredLevel, 90);

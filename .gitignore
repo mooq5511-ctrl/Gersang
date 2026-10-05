@@ -50,3 +50,9 @@ next-env.d.ts
 
 # VS Code workspace settings
 .vscode/
+
+# Isolated local browser verification tools and test-only character state
+/.codex/browser-tool-cache/
+/.codex/browser-audit-config.json
+/.codex/phase33-*.png
+/.codex/phase33-browser-state.json

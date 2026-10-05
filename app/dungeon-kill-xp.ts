@@ -1,3 +1,5 @@
+import {v1Definition} from './equipment-v1-policy.ts';
+
 /** Credit newly defeated enemies once, even if the party later loses the encounter. */
 export function newlyDefeatedExperience(previousCredited: number, enemyHp: readonly number[], xpPerEnemy: number) {
   const defeated = enemyHp.filter((hp) => hp <= 0).length;
@@ -21,8 +23,26 @@ export function battleExperienceMultiplier(heroLevel: number, deployedMercenaryC
   return newbieMultiplier * (1 + mercenaryBonus);
 }
 
-/** 計算出戰角色穿戴的求知契印經驗加成。 */
-export function equipmentExperienceMultiplier(units: readonly { equip: Record<string, { enhanceBonuses?: readonly { stat: string; value: number }[] } | null> }[]) {
-  const percent = units.reduce((sum, unit) => sum + Object.values(unit.equip).reduce((total, item) => total + (item?.enhanceBonuses || []).filter((bonus) => bonus.stat === "xpPercent").reduce((value, bonus) => value + bonus.value, 0), 0), 0);
-  return 1 + percent / 100;
+type ExperienceEquipment = {definitionId?:string;balanceVersion?:string;enhanceBonuses?:readonly {stat:string;value:number}[]};
+/** New-series contribution is capped per person then averaged over the deployed party.
+ * Legacy contributions retain their previous additive rule until an explicit conversion.
+ * Empty companions are included in the denominator; duplicate party size cannot amplify V1.
+ */
+export function equipmentExperienceBreakdown(units:readonly {equip:Record<string,ExperienceEquipment|null>}[]) {
+  let legacyPercent=0, cappedPersonalSum=0;
+  for(const unit of units) {
+    let personal=0;
+    for(const item of Object.values(unit.equip)) {
+      if(!item)continue;
+      const percent=(item.enhanceBonuses||[]).reduce((sum,bonus)=>sum+(bonus.stat==='xpPercent'&&Number.isFinite(bonus.value)&&bonus.value>0?bonus.value:0),0);
+      if(v1Definition(item))personal+=percent;
+      else legacyPercent+=percent;
+    }
+    cappedPersonalSum+=Math.min(25,personal);
+  }
+  const versionedPercent=units.length?cappedPersonalSum/units.length:0;
+  return {legacyPercent,versionedPercent,multiplier:1+(legacyPercent+versionedPercent)/100};
+}
+export function equipmentExperienceMultiplier(units:readonly {equip:Record<string,ExperienceEquipment|null>}[]) {
+  return equipmentExperienceBreakdown(units).multiplier;
 }

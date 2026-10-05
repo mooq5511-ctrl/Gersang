@@ -1,22 +1,23 @@
-import { positionInventory } from './inventory-layout';
 import { type EquipmentSlot } from './equipment-slots';
 import { type WearableBase } from './wearable-catalog';
 import { OfficialEquipment } from './v17-content';
 import { combatStats } from './vitals-engine';
 import { MATERIAL_BUY_PRICES, type VillageWeaponId } from './village-exchange';
-import { medicineCatalog, SHOP_QUALITY, WEAPON_SHOP_QUALITY } from './game-config';
+import { medicineCatalog, WEAPON_SHOP_QUALITY } from './game-config';
 import { grantXp, unitPower } from './game-progression';
 import { formatGameNumber as format } from './game-display';
 import { appendGameLog as addLog } from './game-runtime-actions';
 import {
   applyShopQuality,
   makeOfficialEquipment,
+  makeWearableEquipment,
   makeUid as uid,
-  rollEquipment,
   rollRelicEquipment,
   rollShopQuality,
 } from './game-equipment-factory';
 import {
+  craftRelicEquipmentAction,
+  RELIC_CRAFT_COST,
   buyMaterialAction,
   buyMedicineAction,
   consumeMedicineAction,
@@ -25,7 +26,7 @@ import {
   forgeVillageWeaponAction,
   fuseAllInventoryEquipmentAction,
   openAncientCoinBoxAction,
-  purchaseEquipmentAction,
+  purchaseMagicEquipmentAction,
   purchaseEquipmentBatchAction,
   purchaseTierEquipmentAction,
   sellAllInventoryEquipmentAction,
@@ -38,7 +39,9 @@ import {
   withdrawWarehouseItemAction,
 } from './game-inventory-actions';
 import { fusionItemKey, type FusionSourceRarity } from './equipment-fusion';
+import { effectiveEquipmentStats } from './equipment-stats';
 import { tierEquipmentPrice, type TierEquipment } from './tier-equipment';
+import {relicCraftEquipmentLevel} from './relic-equipment-rewards';
 import { type Equipment, type GameState } from './game-state';
 import { enhanceEquipment, warehouseLimit } from './guild-territory';
 import type { WorldCity } from './v15-data';
@@ -153,9 +156,7 @@ export function createInventoryController({
   }
 
   function craftRelicEquipment() {
-    const materialCost = 12;
-    const shardCost = 2;
-    const goldCost = 15000;
+    const {materials:materialCost,shards:shardCost,gold:goldCost}=RELIC_CRAFT_COST;
     const materials = game.materials['遺跡材料'] || 0;
     const shards = game.materials['遺跡碎片'] || 0;
     if (
@@ -169,32 +170,11 @@ export function createInventoryController({
       return;
     }
     const item = rollRelicEquipment(
-      Math.max(1, game.relicDungeon?.floor || 1),
+      relicCraftEquipmentLevel(game.hero.level,game.relicDungeon?.clearedRuns||0),
       Math.random,
       true,
     );
-    setGame((previous) => {
-      const previousMaterials = previous.materials['遺跡材料'] || 0;
-      const previousShards = previous.materials['遺跡碎片'] || 0;
-      if (
-        previous.gold < goldCost ||
-        previousMaterials < materialCost ||
-        previousShards < shardCost
-      )
-        return previous;
-      return {
-        ...previous,
-        gold: previous.gold - goldCost,
-        inventory: positionInventory([...previous.inventory, item]),
-        materials: {
-          ...previous.materials,
-          遺跡材料: previousMaterials - materialCost,
-          遺跡碎片: previousShards - shardCost,
-        },
-        logs: addLog(previous.logs, `遺跡鍛造完成：${item.name}。`),
-      };
-    });
-    setNotice(`遺跡鍛造完成：${item.name}，已放入背包。`);
+    setGame(previous=>craftRelicEquipmentAction(previous,item,addLog,setNotice));
   }
 
   function sellInventoryEquipment(itemUid: string) {
@@ -226,39 +206,15 @@ export function createInventoryController({
     if (game.gold >= price * quantity) flashShopPurchase(`wearable:${base.id}`);
     setGame((previous) => {
       return purchaseEquipmentBatchAction(previous, quantity, price, base.name, () => {
-        const baseItem: Equipment = {
-          ...base,
-          uid: uid(base.id),
-          enhance: 0,
-          rarity: '普通',
-          magic: [],
-          requiredLevel: 1,
-          bonus: { str: 0, agi: 0, intel: 0, vit: 0 },
-          resist: { physical: 0, magic: 0 },
-        };
+        const baseItem = makeWearableEquipment(base);
         return applyShopQuality(baseItem, rollShopQuality(WEAPON_SHOP_QUALITY));
       }, addLog, setNotice);
     });
   }
 
   function buyMagicEquipment() {
-    const cost = 12000;
-    if (game.gold >= cost) flashShopPurchase('magic-equipment');
-    setGame((previous) => {
-      const item = applyShopQuality(rollEquipment(previous.stage, true));
-      return purchaseEquipmentAction(
-        previous,
-        item,
-        cost,
-        '購入附魔裝備「' +
-          item.name +
-          '」・品質倍率 x' +
-          SHOP_QUALITY[item.rarity].multiplier +
-          '。',
-        addLog,
-        setNotice,
-      );
-    });
+    flashShopPurchase('magic-equipment');
+    setGame(previous=>purchaseMagicEquipmentAction(previous,Math.random,addLog,setNotice));
   }
 
   function buyOfficialItem(record: OfficialEquipment, price = record.price, quantity = 1) {
@@ -363,10 +319,12 @@ export function createInventoryController({
         previous.inventory.find(
           (item) => fusionItemKey(item) === fusionItemKey(result),
         );
-      if (sourceRarity === '普通' && result && base)
+      if (sourceRarity === '普通' && result && base) {
+        const before = effectiveEquipmentStats(base), after = effectiveEquipmentStats(result);
         setNotice(
-          `白→綠合成成功：${result.name}｜基礎攻擊 ${base.atk} → ${result.atk}・防禦 ${base.def} → ${result.def}・生命 ${base.hp} → ${result.hp}。前往背包穿戴。`,
+          `白→綠合成成功：${result.name}｜攻擊 ${before.atk} → ${after.atk}・防禦 ${before.def} → ${after.def}・生命 ${before.hp} → ${after.hp}。前往背包穿戴。`,
         );
+      }
       return next;
     });
   }

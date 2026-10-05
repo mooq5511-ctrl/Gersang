@@ -15,6 +15,7 @@ const { vitalStats, combatStats } = require('../app/vitals-engine.ts');
 const { equipmentAtTier, EQUIPMENT_TIER_LEVELS, makeTierEquipment } = require('../app/tier-equipment.ts');
 const { mercenarySpec } = require('../app/mercenary-roster.ts');
 const { getMercenaryStats } = require('../app/mercenary-growth-v1.ts');
+const {advanceEquipmentQuality} = require('../app/game-equipment-factory.ts');
 
 test('eight real maps have bounded levels and all three encounter tiers', () => {
   assert.equal(Object.keys(WORLD_MONSTER_PROGRESSION).length, 8);
@@ -49,7 +50,7 @@ export function referenceParty(level, upgrade = false, size = 4, mixed = false, 
   return templates.map((templateId, i) => {
     const spec = mercenarySpec(templateId);
     const equip = Object.fromEntries(equipmentAtTier(tier).map(e => [e.slot, makeTierEquipment(e, e.id, 'benchmark')]));
-    if (upgrade) for (const e of Object.values(equip)) { e.atk *= 1.5; e.def *= 1.5; e.hp *= 1.5; }
+    if (upgrade) for (const slot of Object.keys(equip)) equip[slot] = advanceEquipmentQuality(equip[slot], '史詩');
     const unit = { templateId, level, str: spec?.ratings[1] ?? 20, agi: 15, vit: spec?.ratings[0] ?? 20,
       intel: 10, maxHp: 100 + (level - 1) * 20, equip,
       promotionStage: rankOverride ?? getMercenaryStats(level).stage };
@@ -85,11 +86,13 @@ test('four-member parties with appropriate promotion ranks can farm entry encoun
 });
 test('same-level promoted parties with skills meet entry/main/elite pacing targets', () => {
   const targets = { 入口怪: [5, 8.5], 主力怪: [8, 15], 菁英: [15, 25] };
+  const violations = [];
   for (const [id, monster] of Object.entries(MONSTER_REDESIGN)) {
     if (!WORLD_MONSTER_PROGRESSION[monster.region] || ['e_starter_raccoon', 'e_starter_wako', 'e_starter_black_bandit'].includes(id)) continue;
     const result = benchmark(id), [min, max] = targets[monster.encounterTier];
-    assert.ok(result.won && result.seconds >= min && result.seconds <= max, JSON.stringify(result));
+    if (!(result.won && result.seconds >= min && result.seconds <= max)) violations.push(result);
   }
+  assert.deepEqual(violations, [], JSON.stringify(violations));
 });
 test('the Lv.250 benchmark uses actual stage-eight stats, not a Lv.1 recruit polynomial', () => {
   const stats = getMercenaryStats(250), party = referenceParty(250);

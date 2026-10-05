@@ -169,7 +169,7 @@ function makeCityHallEquipmentReward(state: GameState, rarity: CityHallEquipment
   const base = rollEquipment(level, true);
   return {
     ...advanceEquipmentQuality(base, rarity),
-    requiredLevel: level,
+    requiredLevel: base.requiredLevel,
     source: `市政廳委託・${rarity === "傳說" ? "紫色" : "金色"}品階獎勵`,
   };
 }
