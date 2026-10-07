@@ -47,8 +47,9 @@ export function measureEquipment(level, key, variant, countRoll = 0, seed = 1, e
   const fixture = equipmentFixture(level, variant);
   return { level, variant, ...measureEquipmentFixture(fixture, key, countRoll, seed, encounters) };
 }
-export function measureEquipmentFixture(fixture, key, countRoll = 0, seed = 1, encounters = 1) {
+export function measureEquipmentFixture(fixture, key, countRoll = 0, seed = 1, encounters = 1, observationMs = 180000) {
   if (!DUNGEONS[key]) throw new RangeError('Unknown real monster');
+  if (!Number.isSafeInteger(observationMs) || observationMs < 50) throw new RangeError('Invalid observation time');
   // The live realtime engine seeds combat from its start timestamp, not drop rolls.
   let party = fixture.party.map(unit => ({ ...unit })), clock = 1000 + seed * 1000000, randomState = Math.imul(seed, 0x9e3779b1) >>> 0;
   const random = () => { randomState = (Math.imul(randomState, 1664525) + 1013904223) >>> 0; return randomState / 4294967296; };
@@ -74,12 +75,12 @@ export function measureEquipmentFixture(fixture, key, countRoll = 0, seed = 1, e
     let result = transition(freshDungeon(), 'start'), won = !!result.reward;
     observe(result);
     party = result.party;
-    while (!won && result.state.status === 'fighting' && clock - start < 180000) {
+    while (!won && result.state.status === 'fighting' && clock - start < observationMs) {
       clock += 50;
       vital.hp = result.hp; vital.mp = result.mp;
       result = transition(result.state, 'tick'); observe(result); party = result.party; won = !!result.reward;
     }
-    fights.push({ won, status: result.state.status, timedOut: !won && result.state.status === 'fighting' && clock - start >= 180000,
+    fights.push({ won, status: result.state.status, timedOut: !won && result.state.status === 'fighting' && clock - start >= observationMs,
       seconds: (clock - start) / 1000, enemyCount: result.state.enemyCount, gazeProcs, maxHeroHit,
       heroLost: starting[0] - party[0].hp, mercLost: starting.slice(1).reduce((sum, hp, index) => sum + hp - party[index + 1].hp, 0) });
     clock += 1000;

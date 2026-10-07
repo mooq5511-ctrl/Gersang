@@ -19,6 +19,8 @@ const {wearableCatalog}=require('../app/wearable-catalog.ts');
 const {makeWearableEquipment,makeOfficialEquipment,applyShopQuality,rollShopQuality}=require('../app/game-equipment-factory.ts');
 const {getGameView}=require('../app/game-view-selector.ts');
 const {WEAPON_SHOP_QUALITY}=require('../app/game-config.ts');
+const {medicineCatalog}=require('../app/game-config.ts');
+const {AUTO_POTION_THRESHOLDS}=require('../app/auto-potion-manager.ts');
 const {dispatchTradeAction}=require('../app/game-trade-actions.ts');
 const {equipmentAtTier,tierEquipmentPrice}=require('../app/tier-equipment.ts');
 const {vitalStats}=require('../app/vitals-engine.ts');
@@ -26,8 +28,9 @@ const {effectiveEquipmentStats}=require('../app/equipment-stats.ts');
 const noop=()=>{};
 const deps={addLog:appendGameLog,grantXp,enterInn:enterGameInnAction,leaveInn:leaveGameInnAction};
 
-export function auditFreshChapter({seed=1,branch='spear',tradeSeconds=0,seconds=1800,starterGear='core',cityUpgrades=false}={}){
-  if(!Number.isInteger(seed)||!['spear','bow'].includes(branch)||!['none','core','full'].includes(starterGear)||typeof cityUpgrades!=='boolean'||!Number.isInteger(tradeSeconds)||tradeSeconds<0||tradeSeconds>600||!Number.isInteger(seconds)||seconds<180||seconds>1800)throw new RangeError('Invalid chapter audit input');
+export function auditFreshChapter({seed=1,branch='spear',tradeSeconds=0,seconds=1800,starterGear='core',cityUpgrades=false,huntPolicy='level',potionThreshold=50}={}){
+  if(!AUTO_POTION_THRESHOLDS.includes(potionThreshold))throw new RangeError('Invalid potion threshold');
+  if(!Number.isInteger(seed)||!['level','entry'].includes(huntPolicy)||!['spear','bow'].includes(branch)||!['none','core','full'].includes(starterGear)||typeof cityUpgrades!=='boolean'||!Number.isInteger(tradeSeconds)||tradeSeconds<0||tradeSeconds>600||!Number.isInteger(seconds)||seconds<180||seconds>1800)throw new RangeError('Invalid chapter audit input');
   const prologue=auditFreshPrologue({seed,captureState:true});
   if(!prologue.completed)throw new Error('Cannot continue an unfinished prologue');
   let game=prologue.state,now=Date.UTC(2026,9,5)+seed*1000000+prologue.elapsedSeconds*1000;
@@ -42,7 +45,10 @@ export function auditFreshChapter({seed=1,branch='spear',tradeSeconds=0,seconds=
   const action=(name,key)=>{const before=game.gold;game=runDungeonAction(game,name,now,key,createGameTickRolls(),deps);battleActionNetGold+=game.gold-before;};
   const members=()=>[game.hero,...game.mercs];
   const score=item=>{if(!item)return 0;const stats=effectiveEquipmentStats(item);return stats.atk+stats.def+stats.hp/10;};
-  const target=()=>game.hero.level>=8?'e_starter_pirate':game.hero.level>=4?'e_starter_bandit':game.hero.level>=2?'e_starter_wako':'e_starter_raccoon';
+  // Compare earned-state policies, not supplied stats or a hidden player buff.
+  // Entry policy stays on the actual Lv.2 ordinary monster for seal farming.
+  const target=()=>huntPolicy==='entry'?(game.hero.level>=2?'e_starter_wako':'e_starter_raccoon'):
+    game.hero.level>=8?'e_starter_pirate':game.hero.level>=4?'e_starter_bandit':game.hero.level>=2?'e_starter_wako':'e_starter_raccoon';
   const begin=key=>{
     const enemy=sourceEnemyForDungeonKey(key);
     if(!enemy||enemy.mapId!=='starter-outskirts')throw new Error('Do not bypass other map gates');
@@ -109,14 +115,14 @@ export function auditFreshChapter({seed=1,branch='spear',tradeSeconds=0,seconds=
         cityPurchases.push({seconds:(now-start)/1000,unitUid:unit.uid,unitLevel:latest.level,cityId:city().id,id:record.id,requiredLevel:record.level,price,remainingGold:game.gold,rarity:generated.rarity,equipped});
       }
     }
-    const potionPrice=Math.floor(600*city().priceFactor);
+    const potionPrice=Math.floor(medicineCatalog.find(entry=>entry.id==='healing').price*city().priceFactor);
     if((game.medicines.healing||0)<5&&game.gold>=potionPrice+1000){
       const before=game.gold;
       const quantity=Math.min(5-(game.medicines.healing||0),Math.floor((game.gold-1000)/potionPrice));
       game=buyMedicineAction(game,'healing',quantity,city().priceFactor,city().name,appendGameLog,setNotice);
       potionSpent+=before-game.gold;
     }
-    game=configureAutoPotionAction(game,{enabled:true,medicineId:'healing',threshold:50},appendGameLog);
+    game=configureAutoPotionAction(game,{enabled:true,medicineId:'healing',threshold:potionThreshold},appendGameLog);
     if(game.hero.level>=20){
       level20At??=(now-start)/1000;
       for(const unit of [game.hero,game.mercs[0]].filter(unit=>unit?.level>=20))for(const spec of equipmentAtTier(20))for(const slot of spec.slot==='ring'?['ring1','ring2']:[spec.slot]){
@@ -159,13 +165,13 @@ export function auditFreshChapter({seed=1,branch='spear',tradeSeconds=0,seconds=
       if(now>=nextSnapshot){snapshots.push({seconds:(now-start)/1000,phase,gold:game.gold,kills:game.kills,levels:members().map(unit=>unit.level),ranks:game.mercs.map(unit=>unit.promotionStage),status:game.dungeon?.status});nextSnapshot+=60000;}
       if(game.newbieBossDefeated)break;
     }
-    return {seed,branch,tradeSeconds,starterGear,cityUpgrades,cityPurchases,elapsedSeconds:(now-start)/1000,prologueSeconds:prologue.elapsedSeconds,
+    return {seed,branch,tradeSeconds,starterGear,cityUpgrades,huntPolicy,potionThreshold,cityPurchases,elapsedSeconds:(now-start)/1000,prologueSeconds:prologue.elapsedSeconds,
       gold:game.gold,kills:game.kills,recoveries,potionsUsed,potionSpent,recruitSpent,gearSpent,trips:game.trade.trips,tradeProfit:game.trade.totalProfit,
       ledger:{initialGold:prologue.gold,loopNetGold,materialSales,tradeDispatchSpent,battleActionNetGold,
         calculatedEndingGold:prologue.gold+loopNetGold+materialSales+battleActionNetGold-tradeDispatchSpent-potionSpent-recruitSpent-gearSpent},
       promotedAt,level20At,bossAttempted,bossDefeated:game.newbieBossDefeated,materials:game.materials,notice,
       members:members().map(unit=>({level:unit.level,xp:unit.xp,promotionStage:unit.promotionStage||0,hp:unit.hp,maxHp:vitalStats(unit).maxHp,slots:Object.values(unit.equip).filter(Boolean).length,series20Slots:Object.values(unit.equip).filter(item=>item?.requiredLevel>=20).length})),snapshots,
-      caveat:'Earned formal prologue state, no supplied funds/XP/seals/gear/healing. Scripted choices: optional initial hanji window, up to three total paid recruits, balanced earned points, real material sale/owned-drop equip, optional paid starter core/full stock and single-roll upgrades from actual city view stock, 50% Auto Potion with paid resupply every minute and1000 liquid reserve, first merc branch only, then paid20 gear and one Boss attempt when equipped. Expenses shown are post-prologue only. Service stops a live fight and loses unfinished damage. Manual restart after actual inn recovery is scripted, not offline continuation. Phase RNG reseeded deterministically. Action/menu/travel times beyond prologue are NOT human/browser measurements; one policy is not all-player pacing.'};
+      caveat:`Earned formal prologue state, no supplied funds/XP/seals/gear/healing. Scripted choices: optional initial hanji window, up to three total paid recruits, balanced earned points, real material sale/owned-drop equip, optional paid starter core/full stock and single-roll upgrades from actual city view stock, ${potionThreshold}% Auto Potion with paid resupply every minute and1000 liquid reserve, first merc branch only, then paid20 gear and one Boss attempt when equipped. Expenses shown are post-prologue only. Service stops a live fight and loses unfinished damage. Manual restart after actual inn recovery is scripted, not offline continuation. Phase RNG reseeded deterministically. Action/menu/travel times beyond prologue are NOT human/browser measurements; one policy is not all-player pacing.`};
   }finally{Math.random=originalRandom;Date.now=originalDate;}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)console.log(JSON.stringify(['spear','bow'].flatMap(branch=>[0,240].map(tradeSeconds=>auditFreshChapter({branch,tradeSeconds}))),null,2));

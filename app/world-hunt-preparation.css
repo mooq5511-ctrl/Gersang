@@ -1,0 +1,17 @@
+.battle-world-map-description .world-hunt-preparation {
+  display: grid;
+  gap: 6px;
+  margin-block: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(213, 176, 91, .45);
+  border-radius: 10px;
+  background: rgba(13, 23, 26, .94);
+  color: #e8dfc9;
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.battle-world-map-description .world-hunt-preparation strong {
+  color: #f5d98a;
+  font-size: 16px;
+}

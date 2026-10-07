@@ -40,13 +40,12 @@ test('travel always selects and locks an entry monster from the destination with
   }
 });
 
-// Lv.36+: hero (rear) + three same-level, fully unlocked promoted spearmen (front).
-// Lv.1–35 retains the original ordinary roster to protect the established onboarding balance.
+// Use the live single-origin spear/bow roster at every level, not archived recruits.
+// Same-level ranks are manually unlocked: this is a combat fixture, not acquisition proof.
 // Tests drive the real dungeon engine, including defense, formation and enemy targeting.
 export function referenceParty(level, upgrade = false, size = 4, mixed = false, rankOverride) {
   const tier = [...EQUIPMENT_TIER_LEVELS].reverse().find(l => l <= level);
-  const templates = level < 36 ? ['hero', 'merchant-shield', 'merchant-archer', 'merchant-shaman'] :
-    Array.from({ length: size }, (_, i) => i === 0 ? 'hero' : mixed && i > 3 ? 'merchant-promotion-bow' : 'merchant-spear');
+  const templates = Array.from({ length: size }, (_, i) => i === 0 ? 'hero' : mixed && level >= 12 && i > 3 ? 'merchant-promotion-bow' : 'merchant-spear');
   return templates.map((templateId, i) => {
     const spec = mercenarySpec(templateId);
     const equip = Object.fromEntries(equipmentAtTier(tier).map(e => [e.slot, makeTierEquipment(e, e.id, 'benchmark')]));
@@ -57,14 +56,28 @@ export function referenceParty(level, upgrade = false, size = 4, mixed = false, 
     const v = vitalStats(unit), c = combatStats(unit);
     return { uid: i ? 'companion-' + i : 'hero', templateId, name: templateId,
       hp: v.maxHp, maxHp: v.maxHp, mp: v.maxMp, maxMp: v.maxMp,
-      position: level < 36 ? (i < 2 ? '前排' : '後排') : i && templateId === 'merchant-spear' ? '前排' : '後排',
+      position: i && templateId === 'merchant-spear' ? '前排' : '後排',
       attack: c.attack, defense: c.defense, accuracy: c.accuracy, attackInterval: 2.2 - c.speed / 100 };
   });
 }
+test('early reference parties contain only live recruits and respect the requested size', () => {
+  for (const level of [1, 5, 11, 12, 20, 35]) for (const size of [2, 4, 6]) {
+    const party = referenceParty(level, false, size, true);
+    assert.equal(party.length, size);
+    assert.equal(party[0].uid, 'hero');
+    assert.equal(party[0].position, '後排');
+    for (const unit of party.slice(1)) {
+      assert.ok(['merchant-spear', 'merchant-promotion-bow'].includes(unit.templateId));
+      if (level < 12) assert.equal(unit.templateId, 'merchant-spear');
+      assert.equal(unit.position, unit.templateId === 'merchant-spear' ? '前排' : '後排');
+    }
+  }
+});
 export function benchmark(id, upgrade = false, countRoll = .5, options = {}) {
   const design = MONSTER_REDESIGN[id], level = options.level ?? design.level;
   const party = referenceParty(level, upgrade, options.size ?? 4, options.mixed ?? false, options.rank);
-  const autoSkill = options.autoSkill ?? level >= 36;
+  // New characters default to autoSkill=true, including the first promotion ranks.
+  const autoSkill = options.autoSkill ?? true;
   const h = party[0], hero = { ...h, str: 20, dex: 15, attack: h.attack, defense: h.defense, mercenaryIntelligence: 0 };
   const start = options.start ?? 1000;
   let result = dungeonStep(freshDungeon(), hero, 'start', start, id, .99, 0, 0, .99, party, 0, [1, 1], autoSkill, countRoll);

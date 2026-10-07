@@ -28,6 +28,13 @@
 .game-detail-entry:focus-visible, .game-detail-heading button:focus-visible { outline: 3px solid #ffe8ae; outline-offset: 2px; }
 .character-detail-summary { display: grid; gap: 10px; padding: 14px; }
 .character-detail-summary p { margin: 0; }
+.caravan-status .character-detail-summary {
+  border: 1px solid #8b6b38;
+  background: #101a29;
+  color: #f3dfad;
+}
+.caravan-status .character-detail-summary > strong { color: #fff1c7; }
+.caravan-status .character-detail-summary > p { color: #e9d6a2; line-height: 1.6; }
 .game-detail-body .skill-detail-facts { display: grid; gap: 12px; margin: 0; }
 .skill-detail-facts div { padding: 12px; border: 1px solid #98713d; background: #ffffff08; }
 .skill-detail-facts dt { color: #e8bf72; margin-bottom: 6px; }

@@ -1,5 +1,7 @@
 /* Keep every guild facility in document flow instead of stacking absolute buttons. */
 .caravan-status .floating-guild-skills .guild-skill-grid {
+  margin: 0;
+  list-style: none;
   display: grid !important;
   grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
   grid-template-rows: 1fr !important;
@@ -84,6 +86,9 @@
 }
 .caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card.locked > .guild-skill-hotspot { filter: saturate(.45) brightness(.78) !important; }
 .caravan-status .floating-guild-skills .guild-skill-grid > .guild-skill-card.maxed > .guild-skill-hotspot { border-color: #f4c55f !important; }
+.caravan-status .party-context-menu[hidden] {
+  display: none;
+}
 .caravan-status .guild-facility-actions {
   position: relative;
   z-index: 2;

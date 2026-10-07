@@ -24,6 +24,7 @@ type Log = (logs: string[], message: string) => string[];
 type Format = (value: number) => string;
 
 export const RELIC_CRAFT_COST=Object.freeze({gold:15000,materials:12,shards:2});
+const AUTO_POTION_SHORTAGE_NOTICE = "補血藥不足，Auto Potion 已停止；購藥後需在戰鬥視窗重新勾選 Auto Potion。";
 
 /** Commit a pre-sampled offer against the latest state, never announce a rejected craft. */
 export function craftRelicEquipmentAction(state:GameState,item:Equipment,addLog:Log,notify:(message:string)=>void):GameState {
@@ -248,7 +249,7 @@ export function applyAutoMedicineAction(state: GameState, now: number, addLog: L
 export function configureAutoPotionAction(state: GameState, patch: Partial<AutoPotionSettings>, addLog: Log): GameState {
   const result = AutoPotionManager.configure(state.autoPotion, patch, state.medicines, medicineCatalog);
   return result.shortage
-    ? { ...state, autoPotion: result.settings, battleLogs: BattleLogManager.addLog(state.battleLogs, "補血藥不足，Auto Potion 已停止。", "warning"), logs: addLog(state.logs, "補血藥不足，Auto Potion 已停止。") }
+    ? { ...state, autoPotion: result.settings, battleLogs: BattleLogManager.addLog(state.battleLogs, AUTO_POTION_SHORTAGE_NOTICE, "warning"), logs: addLog(state.logs, AUTO_POTION_SHORTAGE_NOTICE) }
     : { ...state, autoPotion: result.settings };
 }
 
@@ -259,13 +260,13 @@ export function applyAutoPotionAction(state: GameState, now: number, addLog: Log
   const targets = [state.hero, ...state.mercs.filter(unit => state.active.includes(unit.uid))].map(unit => vitalStats(unit));
   const action = AutoPotionManager.nextAction(state.autoPotion, state.medicines, targets, medicineCatalog);
   if (action.type === "none") return state;
-  if (action.type === "shortage") return { ...state, autoPotion: action.settings, battleLogs: BattleLogManager.addLog(state.battleLogs, "補血藥不足，Auto Potion 已停止。", "warning"), logs: addLog(state.logs, "補血藥不足，Auto Potion 已停止。") };
+  if (action.type === "shortage") return { ...state, autoPotion: action.settings, battleLogs: BattleLogManager.addLog(state.battleLogs, AUTO_POTION_SHORTAGE_NOTICE, "warning"), logs: addLog(state.logs, AUTO_POTION_SHORTAGE_NOTICE) };
   const consumed = consumeMedicineAction(state, action.medicineId, true, addLog, grantXp);
   const medicine = medicineCatalog.find((entry) => entry.id === action.medicineId);
   const withBattleLog = { ...consumed, autoPotionAt: now, battleLogs: BattleLogManager.addLog(consumed.battleLogs, `Auto Potion 使用「${medicine?.name || action.medicineId}」。`, "auto-potion") };
   return (withBattleLog.medicines[action.medicineId] || 0) > 0
     ? withBattleLog
-    : { ...withBattleLog, autoPotion: { ...withBattleLog.autoPotion, enabled: false }, battleLogs: BattleLogManager.addLog(withBattleLog.battleLogs, "補血藥不足，Auto Potion 已停止。", "warning"), logs: addLog(withBattleLog.logs, "補血藥不足，Auto Potion 已停止。") };
+    : { ...withBattleLog, autoPotion: { ...withBattleLog.autoPotion, enabled: false }, battleLogs: BattleLogManager.addLog(withBattleLog.battleLogs, AUTO_POTION_SHORTAGE_NOTICE, "warning"), logs: addLog(withBattleLog.logs, AUTO_POTION_SHORTAGE_NOTICE) };
 }
 
 export function socketGemAction(state: GameState, targetUid: string, slot: EquipmentSlot, gemId: string, grade: number, requestedAmount: number, addLog: Log, notify: (message: string) => void): GameState {

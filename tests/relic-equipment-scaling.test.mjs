@@ -17,6 +17,14 @@ const context = vm.createContext({
 vm.runInContext(ts.transpileModule(pureSource.replace(/^export /gm, ''), {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText, context);
 const {freshRelicDungeon,relicDungeonAction} = context;
 
+test('dispatch guidance does not present exploration progress as a manual Boss gate', () => {
+  assert.match(source, /手動討伐不需等探索進度達100%/);
+  assert.match(source, /派遣中的隊伍須先等回報/);
+  assert.match(source, /自動探索仍會先探索再接續挑戰首領/);
+  assert.doesNotMatch(source, /探索進度達 100% 後，才能打開/);
+  assert.doesNotMatch(source, /探索進度達 100% 後，依通關次數解鎖下一位/);
+});
+
 test('relic boss can be challenged at zero progress without a prior dispatch', () => {
   const state = freshRelicDungeon(1000);
   const result = relicDungeonAction(state, 'challenge-boss', 100, {

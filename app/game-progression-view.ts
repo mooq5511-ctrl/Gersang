@@ -11,6 +11,7 @@ import {
 } from './hanyang-prologue';
 import { getStarterWeaponObjective } from './starter-equipment-objective';
 import { getFirstMercenaryObjective } from './first-mercenary-objective';
+import { getFirstPromotionObjective } from './first-promotion-objective';
 import { fusionItemKey, isFusionIngredient } from './equipment-fusion';
 import { relicBossReadiness } from './relic-dungeon';
 import {relicEquipmentScore} from './relic-party';
@@ -299,7 +300,7 @@ export function getProgressionView(game: GameState) {
       if (relicStatus === 'dispatching')
         return {
           title: '等待遺跡遠征回報',
-          detail: '傭兵正在探索沉沒王朝。完成後領取材料、古代裝備與遺跡碎片。',
+          detail: '本次遠征約需30分鐘，完成後會自動結算探索收益。等待時可用未派遣的隊伍在新手村郊外挑戰斷道刀客，培養傭兵至Lv.12並累積二階兵符；先配裝、檢查生命與自動補給。派遣中的傭兵不會參與世界戰鬥，探索進度可到遺跡頁查看。',
           tab: 'relic' as const,
         };
       return {
@@ -313,10 +314,15 @@ export function getProgressionView(game: GameState) {
       !progressiveUnlocks.firstRelicBossDefeated
     ) {
       const relic = game.relicDungeon;
+      // Do not interrupt a live expedition or Boss; guide growth between expeditions.
+      if (relic?.status !== 'dispatching' && relic?.status !== 'boss') {
+        const promotionObjective = getFirstPromotionObjective(game);
+        if (promotionObjective) return promotionObjective;
+      }
       if ((relic?.status || 'idle') === 'dispatching')
         return {
           title: '等待第一層遺跡回報',
-          detail: '遠征完成後會自動結算；探索進度達 100% 才能挑戰沉沒王。',
+          detail: '遠征完成後會自動結算並保留探索進度。等待時可用未派遣的隊伍練功、取得兵符或整備裝備，不必停留在遺跡頁；討伐首領前請先檢查傭兵轉職、裝備與生命。',
           tab: 'relic' as const,
         };
       if ((relic?.status || 'idle') === 'boss')
@@ -326,7 +332,9 @@ export function getProgressionView(game: GameState) {
             '依照隊伍戰力與裝備品質持續攻擊，注意遠征隊 HP 與 Boss 狂暴階段。',
           tab: 'relic' as const,
         };
-      if ((relic?.progress || 0) >= 100) {
+      // Manual Boss entry is independent of exploration progress; only live
+      // dispatch/Boss states above interrupt the preparation guidance.
+      {
         const reserved = relic?.status === 'ready';
         const power = reserved
           ? relic.dispatchPower
@@ -351,27 +359,22 @@ export function getProgressionView(game: GameState) {
         if (!preparation.ready && game.hero.level < 20)
           return {
             title: '討伐前整備・提升商隊等級',
-            detail: `王座進度已保留。主角 Lv.${game.hero.level} / 20；先將傭兵取出上陣練功，再回遺跡準備 Lv.${preparation.bossLevel} 首領。`,
+            detail: `手動討伐不需探索100%。主角 Lv.${game.hero.level} / 20（整備參考，非入場門檻）；先將傭兵取出上陣練功，再回遺跡準備 Lv.${preparation.bossLevel} 首領。`,
             tab: 'battle' as const,
           };
         if (!preparation.ready)
           return {
             title: '討伐前整備・壯大遠征隊',
-            detail: `目前戰力 ${Math.floor(power).toLocaleString()}、生命 ${Math.floor(hp).toLocaleString()}。整備參考：戰力 ${preparation.powerTarget.toLocaleString()}、生命 ${preparation.hpTarget.toLocaleString()}；補齊傭兵與裝備後重新派遣。`,
+            detail: `手動討伐不需探索100%。目前待命隊伍戰力 ${Math.floor(power).toLocaleString()}、生命 ${Math.floor(hp).toLocaleString()}。整備參考：戰力 ${preparation.powerTarget.toLocaleString()}、生命 ${preparation.hpTarget.toLocaleString()}；將已養成、配裝的傭兵調往休息，再選入討伐隊。`,
             tab: 'relic' as const,
           };
         return {
           title: '組織第一層 Boss 討伐',
           detail:
-            '目前編制已具備討伐能力；王座進度已保留，進入 Boss 戰取得第一枚遺跡核心。',
+            '目前編制已具備討伐能力；手動討伐不需探索100%，可直接進入 Boss 戰取得第一枚遺跡核心。',
           tab: 'relic' as const,
         };
       }
-      return {
-        title: '累積遺跡第一層探索進度',
-        detail: `目前進度 ${Math.round(relic?.progress || 0)} / 100；派遣裝備品質越高的傭兵，清剿效率與回報越好。`,
-        tab: 'relic' as const,
-      };
     }
     if (
       progressiveUnlocks.firstRelicBossDefeated &&
@@ -390,15 +393,9 @@ export function getProgressionView(game: GameState) {
           detail: '第二位首領已現身；更高品質裝備會提高傷害並降低反擊。',
           tab: 'relic' as const,
         };
-      if ((relic?.progress || 0) >= 100)
-        return {
-          title: '組織第二層 Boss 討伐',
-          detail: '再次遠征已抵達王座，擊敗第二位首領以取得區域 Boss 資格。',
-          tab: 'relic' as const,
-        };
       return {
-        title: '再次派遣，解鎖遺跡第二層',
-        detail: `目前進度 ${Math.round(relic?.progress || 0)} / 100；第二層會提高材料與古代裝備品質。`,
+        title: '組織第二層 Boss 討伐',
+        detail: `第一層通關後可直接挑戰第二位首領，不需再次探索100%。目前探索 ${Math.round(relic?.progress || 0)} / 100；也可選擇派遣傭兵累積第二層材料與古代裝備。`,
         tab: 'relic' as const,
       };
     }

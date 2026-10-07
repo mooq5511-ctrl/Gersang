@@ -14,16 +14,37 @@ import { MonsterCompendium } from './monster-compendium';
 import { battleMaps } from "./reference-data";
 import { TIER_EQUIPMENT_DROP_REGIONS } from "./tier-equipment";
 import type { GameViewModel } from './use-game-controller';
-import { sourceEnemies } from "./v17-content";
+import { sourceEnemies, type SourceEnemy } from "./v17-content";
 import { WORLD_MONSTER_PROGRESSION } from '../data/monsters/world-progression';
 import { MONSTER_REDESIGN } from '../data/monsters/monster-redesign';
 import {HANYANG_BOSS_LOCK_MESSAGE,hanyangWorldBossBlocked} from './hanyang-boss-access';
 import {startTutorialHuntAction,tutorialHuntReady} from './tutorial-hunt';
+import {worldHuntPreparation} from './world-hunt-preparation';
+import './world-hunt-preparation.css';
 import './tutorial-hunt.css';
 
 type Props = Pick<GameViewModel, "activeUnits" | "battlePanelVisibility" | "consumeMedicine" | "currentMap" | "currentMapEnemies" | "currentMapGate" | "firstCaravanBossReady" | "game" | "mapGate" | "selectBattleMap" | "setBattlePanelVisibility" | "setGame" | "setBattleWindowRequest" | "tutorialBattleLocked">;
 
+function handleMonsterHunt(enemy: SourceEnemy, {game,setGame,setBattleWindowRequest}: Pick<Props,'game'|'setGame'|'setBattleWindowRequest'>) {
+  if(hanyangWorldBossBlocked(game,enemy.dungeonId)||game.dungeon?.status==='recovering')return;
+  // A React updater can be replayed: sample encounter inputs only once per click.
+  const now=Date.now(),rolls={roll:Math.random(),choice:Math.random(),spawnRoll:0,
+    encounterCountRoll:Math.random(),retaliationRoll:Math.random(),
+    materialRolls:[Math.random(),Math.random(),Math.random()],fusionCoreRoll:Math.random()};
+  setBattleWindowRequest(request=>request+1);
+  setGame(previous=>{
+    const key=enemy.dungeonId;
+    if(hanyangWorldBossBlocked(previous,key)||previous.dungeon?.status==='recovering')return previous;
+    const base={...previous,selectedMonster:enemy.name,enemyHp:enemy.hp||previous.enemyHp,
+      dungeon:key?{...freshDungeon(),autoHunt:true,key,lockedEnemyKey:key,enemyHp:DUNGEONS[key].hp}:previous.dungeon,
+      logs:addLog(previous.logs,`${enemy.boss?'首領挑戰：':'指定遭遇怪物：'}${enemy.name}，開始戰鬥。`)};
+    return key?runDungeonAction(base,'start',now,key,rolls,
+      {addLog,grantXp,enterInn:enterGameInn,leaveInn:leaveGameInn}):base;
+  });
+}
 export function GameBattlePage({ activeUnits, battlePanelVisibility, currentMap, currentMapEnemies, currentMapGate, game, mapGate, selectBattleMap, setBattlePanelVisibility, setGame, setBattleWindowRequest, tutorialBattleLocked }: Props) {
+const startMonsterHunt=(enemy: SourceEnemy)=>handleMonsterHunt(enemy,{game,setGame,setBattleWindowRequest});
+const huntPreparation=tutorialBattleLocked?null:worldHuntPreparation(currentMap.id,game.hero,activeUnits,game);
 return (<TabsContent value="battle" className="tab-panel">
           {tutorialBattleLocked && <section className="tutorial-hunt-objective" aria-label="目前教學戰鬥目標">
             <div><small>現在要做的事</small><h2>清除驛路上的偷糧狸</h2><p>擊敗 {FIRST_CARAVAN_TARGET} 隻後，回城向村長回報。</p><strong>進度 {Math.min(game.starterDeliveryKills,FIRST_CARAVAN_TARGET)} / {FIRST_CARAVAN_TARGET}</strong></div>
@@ -82,10 +103,10 @@ return (<TabsContent value="battle" className="tab-panel">
                 <button type="button" className="world-map-detail-travel" disabled={!currentMapGate.unlocked || tutorialBattleLocked} onClick={() => selectBattleMap(currentMap.id)}>{currentMap.id === game.battleMap ? '目前正在此區域' : `前往・${currentMap.name}`}</button>
               </aside>
             </div>}
-            <p className="battle-world-map-description">{currentMap.region}・建議 Lv.{WORLD_MONSTER_PROGRESSION[currentMap.id]?.min}–{WORLD_MONSTER_PROGRESSION[currentMap.id]?.max}。{WORLD_MONSTER_PROGRESSION[currentMap.id]?.focus} 推薦等級不限制挑戰。</p>
+            <p className="battle-world-map-description">{currentMap.region}・建議 Lv.{WORLD_MONSTER_PROGRESSION[currentMap.id]?.min}–{WORLD_MONSTER_PROGRESSION[currentMap.id]?.max}。{WORLD_MONSTER_PROGRESSION[currentMap.id]?.focus} 推薦等級不限制挑戰。{huntPreparation&&<span className="world-hunt-preparation"><strong>{huntPreparation.title}</strong><span>{huntPreparation.detail}</span></span>}</p>
             {TIER_EQUIPMENT_DROP_REGIONS.filter(region => region.mapId === currentMap.id).map(region => <p key={region.id} className="battle-world-map-description">本區怪物掉落：Lv.{region.tiers.join('／Lv.')} 系列裝備（達到對應等級後可掉落；一般 4%、首領 12%）</p>)}
             {tutorialBattleLocked && <div className="onboarding-battle-guide" role="status"><strong>新手戰鬥教學・驛路清剿 {Math.min(game.starterDeliveryKills, FIRST_CARAVAN_TARGET)} / {FIRST_CARAVAN_TARGET}</strong><span>前往「新手村郊外」，點選偷糧狸開始戰鬥。擊敗怪物會獲得銀兩與經驗；完成 3 隻後，回去向村長報告。</span></div>}
-            {battlePanelVisibility.monsterSelection && sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・本區入口怪"}</strong></div><span>點選卡片即可開始戰鬥；收起視窗後仍會持續狩獵</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id).map(enemy => { const tutorialBossBlocked=hanyangWorldBossBlocked(game,enemy.dungeonId); const tutorialEnemyBlocked = tutorialBossBlocked || tutorialBattleLocked && !enemy.boss && enemy.name !== "偷糧狸"; const monsterImage = battleMonsterImage(enemy.name, enemy.dungeonId); return <button type="button" key={enemy.name} disabled={tutorialEnemyBlocked || game.dungeon?.status === 'recovering'} className={(game.selectedMonster === enemy.name ? "active " : "")+(enemy.boss ? "boss-target" : "")} onClick={() => { if(tutorialBossBlocked)return; setBattleWindowRequest(request => request + 1); setGame(previous => { const key=enemy.dungeonId; if(hanyangWorldBossBlocked(previous,key))return previous; const base={...previous,selectedMonster:enemy.name,enemyHp:enemy.hp||previous.enemyHp,dungeon:key?{...freshDungeon(),autoHunt:true,key,lockedEnemyKey:key,enemyHp:DUNGEONS[key].hp}:previous.dungeon,logs:addLog(previous.logs,`${enemy.boss?'首領挑戰：':'指定遭遇怪物：'}${enemy.name}，開始戰鬥。`)}; return key ? runDungeonAction(base,'start',Date.now(),key,{roll:Math.random(),choice:Math.random(),spawnRoll:0,encounterCountRoll:Math.random(),retaliationRoll:Math.random(),materialRolls:[Math.random(),Math.random(),Math.random()],fusionCoreRoll:Math.random()},{addLog,grantXp,enterInn:enterGameInn,leaveInn:leaveGameInn}) : base; }); }}><img className="monster-choice-art" src={monsterImage} alt={`${enemy.name}插圖`}/><div><strong>{enemy.name}{MONSTER_REDESIGN[enemy.id] ? '・Lv.' + MONSTER_REDESIGN[enemy.id].level + '・' + MONSTER_REDESIGN[enemy.id].encounterTier : ''}</strong><em>{tutorialEnemyBlocked ? '新手教學・尚未開放' : enemy.boss ? (game.newbieBossDefeated?"已討伐・可再戰":"首領挑戰") : game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>MP <b>{enemy.mp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>{tutorialBossBlocked ? HANYANG_BOSS_LOCK_MESSAGE : tutorialEnemyBlocked ? (game.onboardingStep === "mercenary-trial" ? '請點選黑巾斥候，開始劇情試煉。' : '請先完成第一份委託。') : `掉落：${enemy.drops.join("、")}`}</p></button>; })}</div></section>}
+            {battlePanelVisibility.monsterSelection && sourceEnemies.some(enemy => enemy.mapId === currentMap.id) && <section className="monster-choice-list" aria-label="選擇遭遇怪物"><header><div><small>本區域指定狩獵</small><strong>{game.selectedMonster ? `目前目標：${game.selectedMonster}` : "尚未指定・本區入口怪"}</strong></div><span>點選卡片即可開始戰鬥；收起視窗後仍會持續狩獵</span></header><div className="monster-choice-grid">{sourceEnemies.filter(enemy => enemy.mapId === currentMap.id).map(enemy => { const tutorialBossBlocked=hanyangWorldBossBlocked(game,enemy.dungeonId); const tutorialEnemyBlocked = tutorialBossBlocked || tutorialBattleLocked && !enemy.boss && enemy.name !== "偷糧狸"; const monsterImage = battleMonsterImage(enemy.name, enemy.dungeonId); return <button type="button" key={enemy.name} disabled={tutorialEnemyBlocked || game.dungeon?.status === 'recovering'} className={(game.selectedMonster === enemy.name ? "active " : "")+(enemy.boss ? "boss-target" : "")} onClick={() => startMonsterHunt(enemy)}><img className="monster-choice-art" src={monsterImage} alt={`${enemy.name}插圖`}/><div><strong>{enemy.name}{MONSTER_REDESIGN[enemy.id] ? '・Lv.' + MONSTER_REDESIGN[enemy.id].level + '・' + MONSTER_REDESIGN[enemy.id].encounterTier : ''}</strong><em>{tutorialEnemyBlocked ? '新手教學・尚未開放' : enemy.boss ? (game.newbieBossDefeated?"已討伐・可再戰":"首領挑戰") : game.selectedMonster === enemy.name ? "指定中" : "選擇目標"}</em></div><dl><span>HP <b>{enemy.hp ?? '—'}</b></span><span>MP <b>{enemy.mp ?? '—'}</b></span><span>ATK <b>{enemy.attack ?? '—'}</b></span><span>EXP <b>{enemy.xp}</b></span></dl><p>{tutorialBossBlocked ? HANYANG_BOSS_LOCK_MESSAGE : tutorialEnemyBlocked ? (game.onboardingStep === "mercenary-trial" ? '請點選黑巾斥候，開始劇情試煉。' : '請先完成第一份委託。') : `掉落：${enemy.drops.join("、")}`}</p></button>; })}</div></section>}
           </section>
           {battlePanelVisibility.battleLogs && <div className="battle-grid">
             <section className="panel log-panel">

@@ -30,6 +30,13 @@
 .world-battle-window-header button { flex-shrink: 0; }
 .world-battle-window-body { overflow: auto; min-height: 0; padding: 16px; }
 .world-battle-window-body .dungeon-panel { margin: 0; width: 100%; }
+/* Reserve the longest battle status so wave changes do not shift the header. */
+.world-battle-window-body .dungeon-command-controls .dungeon-status {
+  inline-size: 7em;
+  box-sizing: border-box;
+  text-align: center;
+  white-space: nowrap;
+}
 .world-battle-window-body .battle-viewport { height: min(580px, calc(100dvh - 230px)); min-height: 240px; margin: 12px 0; }
 .world-battle-reopen {
   position: fixed;

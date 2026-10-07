@@ -1,12 +1,11 @@
 /* eslint-disable next/no-img-element */
 import { combatStats, vitalStats, type VitalUnit } from './vitals-engine';
-import { HeroStatusPanel } from './hero-status-panel';
 import {MercenaryPromotionPanelV1} from './mercenary-promotion-panel-v1';
 import {usesPromotionV1} from './mercenary-growth-v1';
 import type {CSSProperties,ReactNode,PointerEvent as ReactPointerEvent} from 'react';
 import {useEffect,useState} from 'react';
 
-import {EQUIPMENT_SLOTS,EQUIPMENT_LABELS,type EquipmentSlot} from './equipment-slots';
+import {EQUIPMENT_LABELS,type EquipmentSlot} from './equipment-slots';
 import {InventoryPanel} from './inventory-panel';
 import {type BattlePosition} from './formation-position';
 import { AbilityPanel } from './ability-panel';
@@ -15,7 +14,7 @@ import { mercenarySpec } from './mercenary-roster';
 import { LEVEL_CAP, progressForLevel } from './level-progression';
 import { MERCENARY_PROMOTION_TREES, type JobTier } from './mercenary-promotions';
 import { GuildTerritoryPanel } from './guild-territory-panel';
-import { enhancementPresentation, rarityPresentation } from './classic-presentation';
+import { rarityPresentation } from './classic-presentation';
 import type { FusionSourceRarity } from './equipment-fusion';
 import { equipmentDescription } from './divine-equipment';
 import { equipmentSellPrice } from './equipment-market';
@@ -25,7 +24,6 @@ import { ItemTooltipManager, type ItemTooltipData } from './item-tooltip-manager
 import { EquipmentTooltipCard } from './equipment-tooltip-card';
 import { TERRITORY_ENTRY_ID, TERRITORY_UNLOCK_LEVEL, type BuildingId, type GuildTerritory } from './guild-territory';
 import type { Equipment } from './game-state';
-import { effectiveEquipmentStats } from './equipment-stats.ts';
 import './guild-territory.css';
 import './guild-territory-layout.css';
 
@@ -93,7 +91,7 @@ export function CaravanStatus(p:Props) {
   const windowStyle=(kind:'stats'|'inventory')=>windowPositions[kind]?{left:windowPositions[kind]!.left,top:windowPositions[kind]!.top,right:'auto',zIndex:draggingWindow?.kind===kind?80:60} as CSSProperties:undefined;
   return <section className="caravan-status" aria-label="主角與商隊狀態">
     <aside className="party-window-roster" aria-label="主角與傭兵"><strong>隊伍 {Math.min(12,1+p.mercs.length)}／12</strong>{rosterUnits.map(unit=><button type="button" className={selectedRoster.uid===unit.uid?'selected':''} key={unit.uid} onClick={()=>chooseRoster(unit)} aria-label={'選擇'+unit.name}><MercenaryPortrait unit={unit}/><span>{unit.uid==='hero'?'主':'傭'}</span></button>)}</aside>
-    <nav className="party-context-menu" style={characterWindowStyle} aria-label="角色功能"><strong>{selectedRoster.name}</strong>{selectedRoster.uid!=='hero'&&<button type="button" onClick={()=>p.toggleActive(selectedRoster.uid)}>{p.active.includes(selectedRoster.uid)?'撤下':'上陣'}</button>}<button type="button" disabled={selectedRoster.uid==='hero'||p.active.includes(selectedRoster.uid)} onClick={()=>p.storeMercenary(selectedRoster.uid)}>休息</button><button type="button" aria-pressed={activeWindow==='stats'} onClick={()=>setActiveWindow('stats')}>能力值</button><button type="button" aria-pressed={activeWindow==='inventory'} onClick={()=>setActiveWindow('inventory')}>背包</button></nav>
+    <nav className="party-context-menu" hidden={activeWindow==='formation'} style={characterWindowStyle} aria-label="角色功能"><strong>{selectedRoster.name}</strong>{selectedRoster.uid!=='hero'&&<button type="button" onClick={()=>p.toggleActive(selectedRoster.uid)}>{p.active.includes(selectedRoster.uid)?'撤下':'上陣'}</button>}<button type="button" disabled={selectedRoster.uid==='hero'||p.active.includes(selectedRoster.uid)} onClick={()=>p.storeMercenary(selectedRoster.uid)}>休息</button><CharacterAbilityShortcut unit={selectedRoster} power={p.power} allocate={p.allocate} promotionItems={p.promotionItems} promote={p.promote}/><button type="button" aria-pressed={activeWindow==='stats'} onClick={()=>setActiveWindow('stats')}>能力值</button><button type="button" aria-pressed={activeWindow==='inventory'} onClick={()=>setActiveWindow('inventory')}>背包</button></nav>
     <nav className="guild-facility-actions" aria-label="商團駐地設施">
       <button type="button" className={'guild-rank-entry'+(p.credit<rankCost&&!rankMax?' insufficient':'')} onClick={()=>setActiveWindow('rank')} aria-label="查看商團階位圖鑑"><span>商團階位</span><strong>{rankInfo.label}</strong><small>{rankMax?'已達最高階位':'查看階位與升階成本'}</small></button>
       <button type="button" className="guild-skill-entry" aria-pressed={activeWindow==='skills'} onClick={()=>setActiveWindow('skills')}><span>商團成長</span><strong>商團技能</strong><small>{guildSkillPoints} 點技能點可用</small></button>
@@ -105,7 +103,7 @@ export function CaravanStatus(p:Props) {
     {activeWindow==='rank'&&<section className="floating-game-window floating-guild-rank" aria-label="商團階位圖鑑"><header><strong>商團階位圖鑑</strong><button type="button" onClick={()=>setActiveWindow(null)} aria-label="關閉商團階位圖鑑">×</button></header><div className="guild-rank-summary"><div><small>目前階位</small><strong>{rankInfo.label}</strong><span>第 {rankInfo.rank}／{GUILD_RANK_CAP} 階</span></div><div><small>持有信用值</small><strong>{p.credit.toLocaleString('zh-TW')}</strong><span>{rankMax?'已達最高階位':`下一階：${nextRank.label}`}</span></div></div><div className="guild-rank-upgrade"><div><strong>{rankMax?'紫金十階・商團巔峰':`升至${nextRank.label}`}</strong><small>{rankMax?'所有商團階位均已解鎖':`需要 ${rankCost.toLocaleString('zh-TW')} 信用值・升階後不會自動再次扣款`}</small></div><button type="button" disabled={rankMax||p.credit<rankCost} onClick={p.promoteGuildRank}>{rankMax?'已達最高':p.credit<rankCost?'信用值不足':`升階至 ${nextRank.label}`}</button></div><div className="guild-rank-roadmap">{GUILD_RANK_TIERS.map((tier,tierIndex)=><section key={tier}><header><strong>{tier}</strong><small>{tierIndex===4?'最終品階':'第 '+(tierIndex+1)+' 品階・10 個階位'}</small></header><div>{Array.from({length:10},(_,stepIndex)=>{const rank=tierIndex*10+stepIndex+1;const info=guildRankInfo(rank);const unlocked=rank<=rankInfo.rank;const current=rank===rankInfo.rank;return <article className={(current?'current ':unlocked?'unlocked ':'locked ')+(rank===GUILD_RANK_CAP?'cap':'')} key={rank}><strong>{info.stepName}階</strong><small>{rank===GUILD_RANK_CAP?'最高階':`升階 ${guildRankCost(rank).toLocaleString('zh-TW')}`}</small>{current&&<b>目前</b>}</article>;})}</div></section>)}</div><p className="guild-rank-note">升階只消耗信用值，不會自動跳階；建議在完成航線、委託與投資後，再決定要不要把信用值投入商團成長。</p></section>}
     {activeWindow==='skills'&&<GuildSkillTree rankInfo={rankInfo} guildSkillPoints={guildSkillPoints} guildSkills={guildSkills} upgradeGuildSkill={p.upgradeGuildSkill} close={()=>setActiveWindow(null)}/>}
     {p.battle && <div className="hero-inventory-layout battle-only">{p.battle}</div>}
-    {activeWindow==='stats'&&<section data-draggable-window="stats" className={'floating-game-window floating-character'+(p.equipmentPulseUid===selectedRoster.uid?' equipment-equip-pulse':'')} style={{...characterWindowStyle,...(windowStyle('stats')||{})}} aria-label="角色能力值"><header className="draggable-window-header" onPointerDown={event=>startWindowDrag('stats',event)}><strong>{selectedRoster.name}・角色頁</strong><button type="button" onClick={()=>setActiveWindow(null)} aria-label="關閉角色頁">×</button></header><div className="character-panel-tabs" role="tablist" aria-label="角色頁面分頁">{([['equipment','裝備'],['advancement','進階'],['skills','技能']] as const).map(([tab,label])=><button type="button" role="tab" aria-selected={characterTab===tab} className={characterTab===tab?'selected':''} onClick={()=>setCharacterTab(tab)} key={tab}>{label}</button>)}</div>{characterTab==='skills'?<CharacterSkillPanel unit={selectedRoster}/>:characterTab==='advancement'?<CharacterAdvancementPanel unit={selectedRoster} power={p.power} allocate={p.allocate} promotionItems={p.promotionItems} promote={p.promote} heroAllocate={p.allocate}/>:<CharacterEquipmentLayout unit={selectedRoster} power={p.power} unequip={selectedRoster.uid==='hero'?slot=>p.unequipHero(slot):slot=>p.unequipEquipment(slot,selectedRoster.uid)}/>}</section>}
+    {activeWindow==='stats'&&<section data-draggable-window="stats" className={'floating-game-window floating-character'+(p.equipmentPulseUid===selectedRoster.uid?' equipment-equip-pulse':'')} style={{...characterWindowStyle,...windowStyle('stats')}} aria-label="角色能力值"><header className="draggable-window-header" onPointerDown={event=>startWindowDrag('stats',event)}><strong>{selectedRoster.name}・角色頁</strong><button type="button" onClick={()=>setActiveWindow(null)} aria-label="關閉角色頁">×</button></header><div className="character-panel-tabs" role="tablist" aria-label="角色頁面分頁">{([['equipment','裝備'],['advancement','進階'],['skills','技能']] as const).map(([tab,label])=><button type="button" role="tab" aria-selected={characterTab===tab} className={characterTab===tab?'selected':''} onClick={()=>setCharacterTab(tab)} key={tab}>{label}</button>)}</div>{characterTab==='skills'?<CharacterSkillPanel unit={selectedRoster}/>:characterTab==='advancement'?<CharacterAdvancementPanel unit={selectedRoster} power={p.power} allocate={p.allocate} promotionItems={p.promotionItems} promote={p.promote} heroAllocate={p.allocate}/>:<CharacterEquipmentLayout unit={selectedRoster} power={p.power} unequip={selectedRoster.uid==='hero'?slot=>p.unequipHero(slot):slot=>p.unequipEquipment(slot,selectedRoster.uid)}/>}</section>}
     {activeWindow==='inventory'&&<section data-draggable-window="inventory" className="floating-game-window floating-inventory" style={windowStyle('inventory')} aria-label="行囊窗"><header className="draggable-window-header" onPointerDown={event=>startWindowDrag('inventory',event)}><strong>{selectedRoster.name}・背包</strong><button type="button" onClick={()=>setActiveWindow(null)} aria-label="關閉背包">×</button></header><InventoryPanel inventory={p.inventory} materials={p.materials} materialPrices={p.materialPrices} equip={itemUid=>p.equipSelected(itemUid,selectedRoster.uid)} sell={p.sellInventory} sellAllEquipment={p.sellAllInventory} smeltLowRarityEquipment={p.smeltLowRarityEquipment} sellMaterial={p.sellMaterial} sellAllMaterials={p.sellAllMaterials} openAncientCoinBox={p.openAncientCoinBox} message={p.bagMessage} weight={p.weight} maxWeight={p.maxWeight} targetName={selectedRoster.name}/></section>}
     {activeWindow==='territory'&&<section className="floating-game-window floating-territory" aria-label="商團領地"><header><strong>商團領地・經營</strong><button type="button" onClick={()=>setActiveWindow(null)} aria-label="關閉商團領地">×</button></header><GuildTerritoryPanel territory={p.territory} heroLevel={p.hero.level} gold={p.gold} inventory={p.inventory} materials={p.materials} upgrade={p.upgradeBuilding} enhance={p.enhanceEquipment} enhanceFeedback={p.enhanceFeedback} fuseAll={p.fuseAllEquipment} craftRestaurantFood={p.craftRestaurantFood}/></section>}
     {activeWindow==='wanderer'&&<section className="floating-game-window floating-wanderer" aria-label="平行世界流浪商團"><header><strong>平行世界流浪商團</strong><button type="button" onClick={()=>setActiveWindow(null)} aria-label="關閉流浪商團">×</button></header><div className="wanderer-exchange"><small>商團駐地・異界旅人限定兌換</small><strong>新手兌換銅錢 {p.newbieCoins.toLocaleString()} 枚</strong><p>每次花費 1,000 枚，直接兌換一套完整 T10 神獸裝備（五件）。</p>{([['azure','青龍套裝','防禦・生命'],['chiyou','蚩尤套裝','力量・戰意'],['amaterasu','天照套裝','智力・法術']] as const).map(([set,name,focus])=><button key={set} type="button" disabled={p.newbieCoins<1000} onClick={()=>p.redeemWandererSet(set)}><span><b>{name}</b><small>{focus}・五件套</small></span><em>1,000 枚兌換</em></button>)}<button type="button" className="wanderer-consumable-exchange" disabled={p.newbieCoins<100} onClick={p.redeemWandererChickenSoup}><span><b>雞湯 ×100</b><small>每份恢復主角與出戰傭兵 10% 最大 HP</small></span><em>100 枚兌換</em></button><button type="button" className="wanderer-consumable-exchange" disabled={p.newbieCoins<100} onClick={p.redeemWandererGinsengChickenSoup}><span><b>蔘雞湯 ×50</b><small>每份恢復主角與出戰傭兵 30% 最大 HP</small></span><em>100 枚兌換</em></button><button type="button" className="wanderer-consumable-exchange" disabled={p.newbieCoins<100} onClick={p.redeemWandererBlackBoneChickenSoup}><span><b>烏骨雞湯 ×30</b><small>每份恢復主角與出戰傭兵 50% 最大 HP</small></span><em>100 枚兌換</em></button></div></section>}
@@ -137,7 +135,7 @@ function GuildSkillTree({rankInfo,guildSkillPoints,guildSkills,upgradeGuildSkill
     <header><strong>商團技能樹</strong><button type="button" onClick={close} aria-label="關閉商團技能">×</button></header>
     <div className="guild-skill-summary"><div><small>目前階位</small><strong>{rankInfo.label}</strong></div><div><small>可用技能點</small><strong>{guildSkillPoints.toLocaleString('zh-TW')} 點</strong></div><span>商團每升一階獲得 1 點；跨越黑鐵、青銅等大品階時額外獲得 5 點。點選地圖上的技能徽章查看效果，再從詳情面板升級。</span></div>
     <div className="guild-skill-stage">
-      <div className="guild-skill-grid" role="list" aria-label="商團技能節點">
+      <ul className="guild-skill-grid" aria-label="商團技能節點">
         {GUILD_SKILLS.map(skill=>{
           const level=Math.max(0,Math.min(GUILD_SKILL_MAX,Math.floor(Number(guildSkills[skill.id])||0)));
           const rankLocked=rankInfo.rank<skill.unlockRank;
@@ -145,9 +143,9 @@ function GuildSkillTree({rankInfo,guildSkillPoints,guildSkills,upgradeGuildSkill
           const locked=rankLocked||prerequisiteLocked;
           const maxed=level>=GUILD_SKILL_MAX;
           const branch=skill.id==='tradeProsperity'||skill.id==='battleSpoils'?'商業脈':skill.id==='expeditionWisdom'||skill.id==='mercenaryTraining'?'遠征脈':'領袖脈';
-          return <article data-branch={branch} data-level={level} className={'guild-skill-card'+(locked?' locked':'')+(maxed?' maxed':'')} key={skill.id} role="listitem"><button type="button" className={'guild-skill-hotspot'+(selectedId===skill.id?' selected':'')} aria-pressed={selectedId===skill.id} title={`${skill.name}・Lv.${level}/${GUILD_SKILL_MAX}`} onClick={()=>setSelectedId(skill.id)}><span className="guild-skill-node-art"><img src={skill.image} alt=""/></span><span className="guild-skill-node-copy"><b>{skill.name}</b><small>Lv.{level}／{GUILD_SKILL_MAX}</small><em>{locked?'尚未解鎖':maxed?'已滿級':'可升級'}</em></span><span className="sr-only">查看{skill.name}，目前 Lv.{level}</span></button></article>;
+          return <li data-branch={branch} data-level={level} className={'guild-skill-card'+(locked?' locked':'')+(maxed?' maxed':'')} key={skill.id}><button type="button" className={'guild-skill-hotspot'+(selectedId===skill.id?' selected':'')} aria-pressed={selectedId===skill.id} title={`${skill.name}・Lv.${level}/${GUILD_SKILL_MAX}`} onClick={()=>setSelectedId(skill.id)}><span className="guild-skill-node-art"><img src={skill.image} alt=""/></span><span className="guild-skill-node-copy"><b>{skill.name}</b><small>Lv.{level}／{GUILD_SKILL_MAX}</small><em>{locked?'尚未解鎖':maxed?'已滿級':'可升級'}</em></span><span className="sr-only">查看{skill.name}，目前 Lv.{level}</span></button></li>;
         })}
-      </div>
+      </ul>
       <aside className="guild-skill-detail" aria-live="polite">
         <div className="guild-skill-detail-heading"><span aria-hidden="true">{selectedSkill.icon}</span><div><strong>{selectedSkill.name}</strong><small>Lv.{selectedLevel}／{GUILD_SKILL_MAX}</small></div><b>{selectedStatus}</b></div>
         <p>{selectedSkill.description}</p>
@@ -157,6 +155,13 @@ function GuildSkillTree({rankInfo,guildSkillPoints,guildSkills,upgradeGuildSkill
     </div>
     <p className="guild-skill-note">技能點只用於商團技能，不會消耗信用值；特殊傭兵契約的實際名單將在後續版本逐步開放。</p>
   </section>;
+}
+
+export function CharacterAbilityShortcut({unit,power,allocate,promotionItems,promote}:{unit:CaravanMember;power:(unit:CaravanMember)=>number;allocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void;promotionItems:Readonly<Record<string,number>>;promote:(uid:string,targetTier?:number,branch?:'spear'|'bow')=>void}){
+  const promotion=unit.uid!=='hero'&&usesPromotionV1(unit);
+  if(!promotion&&!(unit.points>0))return null;
+  const points=Number.isFinite(unit.points)?Math.max(0,Math.floor(unit.points)):0;
+  return <GameDetailDialog title={`${unit.name}・${promotion?'兵種轉職與能力':'分配能力'}`} description={promotion?'查看槍／弓兵種樹、需求等級與持有兵符；成功轉職才扣兵符。能力點可在同一面板分配。':'升級獲得的能力點尚未使用；選擇屬性後投入，依既有規則提升角色能力。'} trigger={promotion?`兵種轉職／配點（${points} 點）`:`分配能力（${points} 點）`}>{unit.uid==='hero'?<AbilityPanel hero={unit} allocate={allocate}/>:<MercenaryStatusWindow unit={unit} power={power} allocate={allocate} promotionItems={promotionItems} promote={promote}/>}</GameDetailDialog>;
 }
 
 function CharacterAdvancementPanel({unit,power,allocate,promotionItems,promote,heroAllocate}:{unit:CaravanMember;power:(unit:CaravanMember)=>number;allocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void;promotionItems:Readonly<Record<string,number>>;promote:(uid:string,targetTier?:number,branch?:'spear'|'bow')=>void;heroAllocate:(stat:'str'|'agi'|'vit'|'intel',amount?:number)=>void}){
@@ -203,11 +208,5 @@ function MercenaryStatusWindow({unit,power,allocate,promotionItems,promote}:{uni
   </section>;
 }
 
-function EquipmentSummary({unit,unequip}:{unit:CaravanMember;unequip:(slot:EquipmentSlot,targetUid:string)=>void}){
-  const [tooltip,setTooltip]=useState<{data:ItemTooltipData;left:number;top:number}|null>(null);
-  const showTooltip=(item:Equipment,event:{clientX:number;clientY:number})=>setTooltip({...ItemTooltipManager.position({x:event.clientX,y:event.clientY},{width:window.innerWidth,height:window.innerHeight}),data:ItemTooltipManager.equipment(item,{kind:EQUIPMENT_LABELS[item.slot],description:equipmentDescription(item),sellPrice:equipmentSellPrice(item),owned:1})});
-  const hideTooltip=()=>setTooltip(null);
-  return <section className="window-equipment" aria-label="八格裝備與額外魔法屬性"><h3>八格裝備與額外魔法屬性</h3><div>{EQUIPMENT_SLOTS.map(slot=>{const item=unit.equip[slot] as Equipment|null;const enhance=enhancementPresentation(item?.enhance);const effective=item&&effectiveEquipmentStats(item);return <article key={slot} onPointerEnter={event=>{if(item)showTooltip(item,event)}} onPointerLeave={hideTooltip}><span className="window-equipment-icon">{item?.image?<img src={item.image} alt=""/>:EQUIPMENT_LABELS[slot].slice(0,1)}</span><p><small>{EQUIPMENT_LABELS[slot]}</small><strong className="equipment-name-line">{item?.name||'未裝備'}{enhance.label&&<b className={'enhancement-badge '+enhance.className} aria-label={`強化 ${enhance.label}`}>{enhance.label}</b>}</strong>{item&&effective&&<><em>攻 {effective.atk}・防 {effective.def}・生命 {effective.hp}</em>{item.socketGem&&<i style={{color:'#8ee7ff'}}>鑲嵌：{item.socketGem.name} ×{item.socketGem.count}（加成 {item.socketGem.totalValue}）</i>}{item.magic?.filter(affix=>!affix.id.startsWith('socket-')).map(affix=><i key={affix.id} style={{color:affix.color}}>{affix.name}：{affix.text}</i>)}<button type="button" className="window-equipment-unequip" onClick={()=>{hideTooltip();unequip(slot,unit.uid)}}>卸下</button></>}</p></article>;})}</div>{tooltip&&<EquipmentTooltipCard data={tooltip.data} left={tooltip.left} top={tooltip.top} rarityClass={rarityPresentation(tooltip.data.quality).className}/>}</section>;
-}
 import { MercenaryPortrait } from './mercenary-portrait';
 import './mercenary-portrait.css';

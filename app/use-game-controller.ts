@@ -6,6 +6,7 @@ import { createCommissionsController } from './game-commissions-controller';
 import { createGuildController } from './game-guild-controller';
 import { createInventoryController } from './game-inventory-controller';
 import { createNavigationController } from './game-navigation-controller';
+import { revealBattleObjective } from './battle-objective-focus';
 import { createNpcController } from './game-npc-controller';
 import { createSquadController } from './game-squad-controller';
 import { type CityService } from './game-state';
@@ -303,6 +304,10 @@ export function useGameController() {
     setNotice,
     setNpcOpeningLine,
     setSquadDestination,
+    revealBattleTarget: () => {
+      setBattlePanelVisibility(previous => ({ ...previous, monsterSelection: true }));
+      revealBattleObjective();
+    },
   });
   return {
     abandonCityHall,

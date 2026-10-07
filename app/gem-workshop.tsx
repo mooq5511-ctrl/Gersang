@@ -8,6 +8,7 @@ import {slotLabels,slots} from './game-ui-config';
 import {officialGems} from '../data/items/official-gems';
 import {GEM_SOCKET_LIMIT,gemSocketResult} from './gem-socket-quote';
 import {gemInvestmentPreview} from './gem-investment-preview';
+import {confirmGemInvestment} from './gem-investment-confirmation';
 import type {GameViewModel} from './use-game-controller';
 import './gem-workshop.css';
 
@@ -30,7 +31,10 @@ export function GemWorkshop({game,selected,gemSlot,gemAmount,setGemSlot,setGemAm
         const preview=quote.ok?gemInvestmentPreview(selected,gemSlot,quote.item):null;
         const affordable=quote.ok&&Number.isFinite(game.gold)&&game.gold>=quote.cost;
         const reason=quote.ok?(affordable?'': '銀兩不足'):quote.error;
-        return <section key={grade}><Button size="sm" variant="outline" disabled={!affordable} title={reason||`${gem.label}原始加值 +${quote.ok?quote.value:0}`} aria-label={`${gem.name}品級${grade+1}，${quote.ok?`${quote.amount}顆，總價${quote.cost}兩`:reason}`} onClick={()=>socketGem(gem.id,grade,gemAmount)}>
+        return <section key={grade}><Button size="sm" variant="outline" disabled={!affordable} title={reason||`${gem.label}原始加值 +${quote.ok?quote.value:0}`} aria-label={`${gem.name}品級${grade+1}，${quote.ok?`${quote.amount}顆，總價${quote.cost}兩`:reason}`} onClick={()=>{
+          if(!affordable || !quote.ok || !preview)return;
+          if(confirmGemInvestment(preview,quote,gem.name,message=>window.confirm(message)))socketGem(gem.id,grade,gemAmount);
+        }}>
           +{value}/顆・{quote.ok?`${quote.amount}顆 ${format(quote.cost)}兩`:reason}
         </Button>{preview&&<small>{preview.unchanged?'目前配裝無戰鬥能力增益（仍會扣款）':`實際：攻 ${preview.delta.attack>=0?'+':''}${preview.delta.attack}・防 ${preview.delta.defense>=0?'+':''}${preview.delta.defense}・HP ${preview.delta.maxHp>=0?'+':''}${preview.delta.maxHp}・MP ${preview.delta.maxMp>=0?'+':''}${preview.delta.maxMp}`}</small>}</section>;
       })}</div>

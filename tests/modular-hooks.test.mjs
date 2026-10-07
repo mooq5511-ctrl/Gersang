@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { harness } from './hook-harness.mjs';
-import { syncHanyangReturnProgress } from '../app/hanyang-story-transitions.ts';
+import {createRequire} from 'node:module';
+import '../scripts/measure-equipment-early.mjs';
+const require=createRequire(import.meta.url);
+const {syncHanyangReturnProgress}=require('../app/hanyang-story-transitions.ts');
+const {freshGame}=require('../app/game-hero-factory.ts');
 
 test('preferences load after mount, persist only after loading, and cancel on unmount',async()=>{
   const microtasks=[],writes=[],listeners=new Map(),settings={musicVolume:64,sceneMode:'auto'};
@@ -20,7 +24,7 @@ test('preferences load after mount, persist only after loading, and cancel on un
 });
 
 test('tutorial pause reads current state but triggers only on step changes',()=>{
-  const notices=[];let pauses=0,state={hanyangPrologueStep:'outskirts',hanyangPrologueFlags:{caravanCargoDelivered:false},dungeon:{status:'idle',autoHunt:true,logs:[]}};
+  const notices=[];let pauses=0,state={...freshGame('hook-trial'),hanyangPrologueStep:'outskirts',dungeon:{status:'idle',autoHunt:true,logs:[]}};
   const pause=s=>{pauses++;return s.dungeon.autoHunt?{...s,dungeon:{...s.dungeon,autoHunt:false}}:s;};
   const hook=harness('use-hanyang-navigation.ts','useHanyangReturnEffects',{pauseHanyangTutorialBattle:pause,syncHanyangReturnProgress});
   const setGame=updater=>{state=updater(state);},setNotice=notice=>notices.push(notice);

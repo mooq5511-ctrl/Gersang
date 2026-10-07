@@ -163,7 +163,9 @@ export const MONSTER_REDESIGN: Record<string, RedesignedMonster> = Object.fromEn
     if (design.pressureRatio) design.description += `高階壓迫：命中時附加目標最大 HP 的 ${Number((design.pressureRatio * 100).toFixed(1))}% 基準傷害，另受防禦、抗性與減傷影響。`;
   }
   // This scripted encounter must remain beatable by the first companion; its story uses the stable ID.
-  if (id === 'e_starter_black_bandit') Object.assign(design, { hp: 52, atk: 5, physicalDefense: 0, magicDefense: 0 });
+  // Keep the requested tutorial combat values, but do not retain an elite's
+  // XP reward on a one-hit, near-zero-pressure repeatable encounter.
+  if (id === 'e_starter_black_bandit') Object.assign(design, { hp: 52, atk: 5, xp: 40, physicalDefense: 0, magicDefense: 0 });
   return [id, design];
 }));
 

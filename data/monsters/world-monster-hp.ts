@@ -2,11 +2,12 @@
  * Never scales with the player's currently equipped items. Tutorial and Boss HP are separate.
  */
 export const WORLD_MONSTER_HP: Record<string, number> = {
-  e_starter_gunner: 553,
-  e_starter_bandit: 462,
-  e_starter_pirate: 512,
-  e_starter_hook_pirate: 1030,
-  e_lake_red_thief: 474,
+  // Calibrated against the live spear-origin roster, not archived shield/healer units.
+  e_starter_gunner: 250,
+  e_starter_bandit: 246,
+  e_starter_pirate: 302,
+  e_starter_hook_pirate: 850,
+  e_lake_red_thief: 400,
   e_lake_shamaness: 715,
   e_lake_commander: 808,
   e_lake_vendor: 1668,

@@ -21,3 +21,13 @@ test('empty or unsupported trace cannot be reported as a successful measurement'
   assert.equal(analyzeBrowserTrace({traceEvents:[]}).valid,false);
   assert.throws(()=>analyzeBrowserTrace({}),TypeError);
 });
+test('selected interaction excludes earlier clicks and clips work at the next click',()=>{
+  const click=ts=>event('EventDispatch',ts,5000,{args:{data:{type:'click'}}});
+  const trace={traceEvents:[click(100000),event('Layout',110000,50000),click(200000),
+    event('Layout',210000,30000),click(220000),event('Layout',230000,90000)]};
+  const before=structuredClone(trace),result=analyzeBrowserTrace(trace,{clickIndex:1});
+  assert.equal(result.recordedClicks,3);assert.equal(result.clickIndex,1);assert.equal(result.windowDurationMs,20);
+  assert.equal(result.layout.unionMs,10);assert.deepEqual(trace,before);
+  assert.equal(analyzeBrowserTrace(trace,{clickIndex:3}).valid,false);
+  assert.throws(()=>analyzeBrowserTrace(trace,{clickIndex:-1}),RangeError);
+});

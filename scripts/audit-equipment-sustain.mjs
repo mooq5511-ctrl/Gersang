@@ -2,8 +2,8 @@
 import { pathToFileURL } from 'node:url';
 import { curveFixture, CURVE_TARGETS } from './measure-equipment-curve.mjs';
 import { measureEquipmentFixture } from './measure-equipment-early.mjs';
-export function measureSustain(level, key, variant, seed, encounters = 10) {
-  return measureEquipmentFixture(curveFixture(level, 'mixed', variant), key, .999999, seed, encounters);
+export function measureSustain(level, key, variant, seed, encounters = 10, observationMs = 180000) {
+  return measureEquipmentFixture(curveFixture(level, 'mixed', variant), key, .999999, seed, encounters, observationMs);
 }
 export function auditSustain(seeds = 30) {
   const rows = [];

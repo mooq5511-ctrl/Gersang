@@ -4,6 +4,25 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import ts from 'typescript';
 import vm from 'node:vm';
+// Keep original fixture files immutable. These four functions and the global
+// arena were deliberately changed after extraction; execute their behavioral
+// coverage here instead of copying current hashes into historical fixtures.
+import './hanyang-objective-navigation.test.mjs';
+import './hanyang-npc-dialogue.test.mjs';
+import './mythic-equipment-v1.test.mjs';
+import './world-battle-panel-wiring.test.mjs';
+import './world-battle-action.test.mjs';
+import './page-extraction-unchanged.test.mjs';
+import './city-shop-wiring.test.mjs';
+import './world-monster-selection-wiring.test.mjs';
+import './battle-map-page-wiring.test.mjs';
+import './page-extraction-remainder.test.mjs';
+import './gem-workshop-wiring.test.mjs';
+import './gem-investment-confirmation.test.mjs';
+import './gem-socket-transaction.test.mjs';
+import './hanyang-boss-access.test.mjs';
+import './tutorial-hunt.test.mjs';
+import './relic-reward-settlement.test.mjs';
 
 const baseline=JSON.parse(readFileSync(new URL('./fixtures/modularization-ae8da1b.json',import.meta.url),'utf8'));
 const incoming=JSON.parse(readFileSync(new URL('./fixtures/merge-ui-6c66ce3.json',import.meta.url),'utf8'));
@@ -12,28 +31,38 @@ const parse=file=>ts.createSourceFile(file,read(file),99,true,file.endsWith('tsx
 function canonical(n){if(ts.isParenthesizedExpression(n))return canonical(n.expression);const children=[];ts.forEachChild(n,c=>{const sealAddition=(ts.isVariableDeclaration(c)||ts.isShorthandPropertyAssignment(c))&&['sealDropRoll','sealChoiceRoll'].includes(c.name?.text);if(c.kind!==ts.SyntaxKind.ExportKeyword&&!sealAddition)children.push(canonical(c));});let value='';if(ts.isIdentifier(n)||ts.isStringLiteralLike(n)||ts.isNumericLiteral(n))value=n.text;if(ts.isJsxText(n))value=n.text.replace(/\s+/g,' ').trim();return [n.kind,value,children];}
 const hash=n=>createHash('sha256').update(JSON.stringify(canonical(n))).digest('hex');
 const controllers=['game-npc-controller.ts','game-city-controller.ts','game-territory-controller.ts','game-guild-controller.ts','game-navigation-controller.ts','game-ui-config.ts','use-trade-controller.ts'];
+const behaviorCoveredFunctions=new Set(['goToObjective','handleNpcAction','openNpcDialogue','redeemWandererSet']);
+const unchangedFunctions=entries=>Object.fromEntries(Object.entries(entries).filter(([name])=>!behaviorCoveredFunctions.has(name)));
 
-test('all remaining moved action functions preserve the immutable baseline syntax tree',()=>{
+test('sixteen unchanged moved functions preserve baseline trees; four changed functions execute behavior coverage',()=>{
   const found={};function visit(n){if(ts.isFunctionDeclaration(n)&&n.name?.text in baseline.functions)found[n.name.text]=hash(n);ts.forEachChild(n,visit);}
   controllers.forEach(file=>visit(parse(file)));
   assert.equal(Object.keys(found).length,20);
-  assert.deepEqual(found,baseline.functions);
+  for(const name of behaviorCoveredFunctions)assert.ok(name in found,`missing behavior-covered function ${name}`);
+  assert.equal(Object.keys(unchangedFunctions(found)).length,16);
+  assert.deepEqual(unchangedFunctions(found),unchangedFunctions(baseline.functions));
 });
 
-test('eight unrelated tabs preserve immutable baselines; squad and relic are covered by promotion integration',()=>{
+test('six unchanged tabs preserve immutable baselines; evolved pages retain audited remainders and execute behavior coverage',()=>{
   const found={};for(const value of Object.keys(baseline.pages)){const sf=parse(`game-${value}-page.tsx`);function visit(n){if(ts.isJsxElement(n)&&n.openingElement.tagName.getText(sf)==='TabsContent')found[value]=hash(n);ts.forEachChild(n,visit);}visit(sf);}
   assert.equal(Object.keys(found).length,10);
-  const unchanged=Object.fromEntries(Object.entries(found).filter(([key])=>!['squad','relic'].includes(key)));
-  const expected=Object.fromEntries(Object.entries({...baseline.pages,...incoming.pages}).filter(([key])=>!['squad','relic'].includes(key)));
+  // city/battle are NOT simply exempted: page-extraction-remainder compares
+  // every unmodified subtree to git 6c66ce3 and asserts exact reviewed boundary
+  // counts; the imported suites execute those boundaries and failure paths.
+  // Original whole-page fixtures remain unchanged for historical reference.
+  const evolvedPages=new Set(['squad','relic','city','battle']);
+  const unchanged=Object.fromEntries(Object.entries(found).filter(([key])=>!evolvedPages.has(key)));
+  const expected=Object.fromEntries(Object.entries({...baseline.pages,...incoming.pages}).filter(([key])=>!evolvedPages.has(key)));
+  assert.equal(Object.keys(unchanged).length,6);
   assert.deepEqual(unchanged,expected);
   assert.match(read('game-squad-page.tsx'),/promotionItems=\{\{\.\.\.game.materials/);
-  assert.match(read('game-relic-page.tsx'),/settleRelicWarSeal/);
+  assert.match(read('game-relic-page.tsx'),/settleRelicRewards\(previous,current,next,action,relicRewardRandom\(rewardSeed\)\)/);
 });
 
-test('global battle panel preserves incoming battle actions and remains outside tab lifecycle',()=>{
-  const sf=parse('game-world-battle-panel.tsx');let arena;
-  function visit(n){if(ts.isJsxElement(n)&&n.openingElement.tagName.getText(sf)==='WorldBattleWindow')arena=hash(n);ts.forEachChild(n,visit);}visit(sf);
-  assert.equal(arena,incoming.arena);
+test('global battle panel has one arena outside tab lifecycle; updated actions execute behavior coverage',()=>{
+  const sf=parse('game-world-battle-panel.tsx');let arenas=0;
+  function visit(n){if(ts.isJsxElement(n)&&n.openingElement.tagName.getText(sf)==='WorldBattleWindow')arenas++;ts.forEachChild(n,visit);}visit(sf);
+  assert.equal(arenas,1);
   const root=read('game-v15.tsx');
   assert.ok(root.indexOf('<GameWorldBattlePanel')<root.search(/<Tabs\s/));
   assert.doesNotMatch(root,/<GameOnboarding/);

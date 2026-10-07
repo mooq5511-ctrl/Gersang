@@ -12,6 +12,7 @@ const { MONSTER_REDESIGN, MONSTER_REGION_LABELS, rollRedesignedMaterials } = req
 const { DUNGEONS, isBossMonster, dungeonStep, freshDungeon, WORLD_ZONES } = require('../app/dungeon-engine.ts');
 const { ORIGINAL_ECOLOGY_MONSTERS, ORIGINAL_LEGACY_DUNGEON_MONSTERS } = require('../data/monsters/dungeon-monsters.ts');
 const { ORIGINAL_RELIC_DUNGEON_MONSTERS } = require('../data/monsters/relic-dungeon-monsters.ts');
+const {RELIC_BOSS_BALANCE_V1} = require('../data/monsters/relic-boss-balance.ts');
 const { sourceEnemies } = require('../app/v17-content.ts');
 const { MATERIAL_PRICES, MATERIAL_BUY_PRICES, sellMaterial } = require('../app/village-exchange.ts');
 const { monsterCatalogEntries: monsterCompendiumEntries, monsterCompendiumEntries: worldCompendiumEntries, COMPENDIUM_MAP_IDS } = require('../app/monster-compendium-data.ts');
@@ -49,10 +50,11 @@ test('all current non-boss IDs are redesigned and every region has complete entr
   for (const map of battleMaps) assert.ok(sourceEnemies.some(enemy => enemy.mapId === map.id), `playable map: ${map.id}`);
 });
 
-test('every boss keeps its original name and battle values', () => {
+test('world bosses retain values; real relic bosses use the explicit V1 growth calibration', () => {
   const old = { ...ORIGINAL_ECOLOGY_MONSTERS, ...ORIGINAL_LEGACY_DUNGEON_MONSTERS, ...ORIGINAL_RELIC_DUNGEON_MONSTERS };
   for (const [id, monster] of Object.entries(DUNGEONS)) if (isBossMonster(monster.name)) {
-    for (const field of ['name','hp','mp','atk','dex','xp','gold']) assert.equal(monster[field], old[id][field], `${id}:${field}`);
+    const expected={...old[id],...RELIC_BOSS_BALANCE_V1[id]};
+    for (const field of ['name','level','hp','mp','atk','dex','xp','gold']) assert.equal(monster[field], expected[field], `${id}:${field}`);
     assert.equal(MONSTER_REDESIGN[id], undefined, id);
   }
 });

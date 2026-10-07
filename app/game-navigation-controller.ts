@@ -10,6 +10,7 @@ import { type NpcId } from "./npc-dialogue";
 import './quest-journal.css';
 import './relic-dungeon.css';
 import { sourceEnemies } from "./v17-content";
+import { syncHanyangReturnProgress } from './hanyang-story-transitions';
 
 type Context = {
   game: GameState;
@@ -22,9 +23,10 @@ type Context = {
   setNotice: (notice: string) => void;
   setNpcOpeningLine: (line: string) => void;
   setSquadDestination: Dispatch<SetStateAction<{ key: number; window?: "inventory" | "territory" }>>;
+  revealBattleTarget?: () => void;
 };
 
-export function createNavigationController({ game, mainObjective, openNpcDialogue, setActiveNpcId, setActiveTab, setCityService, setGame, setNotice, setNpcOpeningLine, setSquadDestination }: Context) {
+export function createNavigationController({ game, mainObjective, openNpcDialogue, setActiveNpcId, setActiveTab, setCityService, setGame, setNotice, setNpcOpeningLine, setSquadDestination, revealBattleTarget }: Context) {
 function goToObjective() {
     if (game.hanyangPrologueStep === "arrival") {
       setNpcOpeningLine("村長金成浩神色凝重地望向你：終於等到你了，村外驛路出事了，現在只有你能幫忙！");
@@ -32,8 +34,10 @@ function goToObjective() {
       setActiveTab("map");
       return;
     }
-    if (game.hanyangPrologueStep === "bandit-trial" && game.dungeon?.status === "respawning") {
-      setGame(previous => ({ ...previous, hanyangPrologueStep: "caravan-delivery", hanyangPrologueFlags: { ...previous.hanyangPrologueFlags, caravanRestored: true }, dungeon: previous.dungeon ? { ...previous.dungeon, status: "idle", autoHunt: false } : previous.dungeon }));
+    if (game.hanyangPrologueStep === "bandit-trial" && syncHanyangReturnProgress(game) !== game) {
+      // Recheck the latest state inside the updater; a stale UI snapshot is not
+      // evidence that the current encounter was won.
+      setGame(syncHanyangReturnProgress);
       setActiveTab("map");
       return;
     }
@@ -58,6 +62,7 @@ function goToObjective() {
         return { ...moved, selectedMonster: target.name, enemyHp: target.hp || moved.enemyHp, dungeon: { ...freshDungeon(), autoHunt: moved.dungeon?.autoHunt === true, key, lockedEnemyKey: key, enemyHp: DUNGEONS[key].hp }, logs: addLog(moved.logs, `主線目標已指向：${target.name}。`) };
       });
       setActiveTab('battle');
+      revealBattleTarget?.();
       return;
     }
     if (mainObjective.tab === 'city') setCityService(('service' in mainObjective ? mainObjective.service : undefined) || 'inn');

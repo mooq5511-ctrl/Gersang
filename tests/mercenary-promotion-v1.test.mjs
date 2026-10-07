@@ -49,6 +49,29 @@ test('failed promotions never consume seals or skip ranks, including busy and re
  const idle=state(unit(12));idle.restingMercs=idle.mercs;idle.mercs=[];assert.equal(promoteMercenaryV1(idle,'spear-test',2).restingMercs[0].promotionStage,2);
  assert.equal(promoteMercenaryV1(state(unit(250,8)),'spear-test',8).mercs[0].promotionStage,8);
 });
+
+test('banked first-promotion XP resumes on the next normal award without losing or duplicating XP',()=>{
+ for(const branch of ['spear','bow']){
+  const seal=branch==='bow'?'長弓兵符':'長槍兵符';
+  const before=state({...unit(12),xp:9209.2,points:3});
+  before.materials[seal]=2;
+  const snapshot=JSON.stringify(before),promoted=promoteMercenaryV1(before,'spear-test',2,branch);
+  assert.equal(promoted.materials[seal],1);
+  const grown=grantXp(promoted.mercs[0],188.5);
+  assert.ok(grown.level>12);
+  let spent=0;
+  for(let level=12;level<grown.level;level++)spent+=xpNeed(level);
+  assert.ok(Math.abs(grown.xp+spent-(9209.2+188.5))<1e-8);
+  assert.equal(grown.points,3+(grown.level-12)*3);
+  assert.equal(grown.promotionStage,2);
+  const stable=grantXp(grown,0);
+  assert.equal(stable.level,grown.level);
+  assert.equal(stable.xp,grown.xp);
+  assert.equal(stable.points,grown.points);
+  assert.equal(promoted.materials[seal],1);
+  assert.equal(JSON.stringify(before),snapshot);
+ }
+});
 test('sources award only complete seals, preserve full-bag overflow and retain unsellable tokens',()=>{
  assert.equal(rollWarSeal('e_starter_raccoon',0).stage,2);assert.equal(rollWarSeal('e_lake_red_thief',0).stage,3);
  assert.equal(rollWarSeal('e_starter_black_bandit',0).stage,4);assert.equal(rollWarSeal('e_lake_gale_altur',0).stage,5);

@@ -22,6 +22,22 @@ const {settleDueRelicDispatch}=require('../app/relic-dispatch-tick.ts');
 const {settleCurrentGame}=require('../app/game-loop.ts');
 const party={partyReady:true,partyNames:['遠征槍兵'],partyUids:['merc-1'],maxHp:10_000_000,currentHp:10_000_000,partyEquipmentScore:480,now:1,dispatchDurationMs:30_000};
 
+test('dispatch report distinguishes boss floor from exploration segment without changing settlement',()=>{
+  for(const clearedRuns of [0,1,3]) {
+    const initial={...freshRelicDungeon(party.maxHp),progress:18,clearedRuns};
+    const before=relicDungeonAction(initial,'dispatch',1_000_000,party);
+    const after=relicDungeonAction(before,'claim',1_000_000,{...party,now:30_001});
+    assert.ok(after.logs.some(log=>log.startsWith(`第 ${clearedRuns+1} 層・探索區段 2 遠征戰報：`)));
+    assert.equal(after.clearedRuns,clearedRuns);
+    assert.ok(after.progress>18);
+    assert.ok(after.lastReward.gold>0);
+    assert.equal(after.dispatchEndsAt,0);
+    const replay=relicDungeonAction(after,'claim',1_000_000,{...party,now:30_001});
+    assert.equal(replay.progress,after.progress);
+    assert.equal(replay.materialsFound,after.materialsFound);
+  }
+});
+
 test('actual expedition settles once after deadline and retains all 240 existing inventory items through reload',()=>{
   const inventory=Array.from({length:240},(_,i)=>({...rollEquipment(20,false,'weapon',()=>0),uid:`existing-${i}`}));
   const before=relicDungeonAction(freshRelicDungeon(party.maxHp),'dispatch',1_000_000,party);

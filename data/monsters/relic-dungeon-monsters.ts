@@ -1,5 +1,6 @@
 /** 遺跡地下城專用怪物池。數值可直接供派遣報告與即時戰鬥使用。 */
 import { MONSTER_REDESIGN, redesignMonsterTable } from './monster-redesign.ts';
+import {RELIC_BOSS_BALANCE_V1} from './relic-boss-balance.ts';
 export type RelicMonsterKind = "普通" | "菁英" | "Boss";
 
 export type RelicMonsterDefinition = {
@@ -37,11 +38,17 @@ export const ORIGINAL_RELIC_DUNGEON_MONSTERS = {
   relic_tide_empress: { id: "relic_tide_empress", name: "潮汐女皇・奈芙拉", kind: "Boss", level: 106, hp: 1920000, mp: 56000, atk: 3260, dex: 82, xp: 320000, gold: 320000, drop: 0.88, loot: ["女皇潮冠", "深海王印", "古代Boss裝備"], skill: "海嘯審判／潮汐輪迴", description: "統御地下海脈的王朝女皇，會以潮汐輪迴讓隊伍逐回合承受更強反噬。", physicalDefense: 760, magicDefense: 720 },
 } as const satisfies Record<string, RelicMonsterDefinition>;
 
-export const RELIC_DUNGEON_MONSTERS = redesignMonsterTable(Object.fromEntries(
+const redesignedRelicMonsters = redesignMonsterTable(Object.fromEntries(
   Object.entries(ORIGINAL_RELIC_DUNGEON_MONSTERS).map(([id, monster]) => [id, {
     ...monster, ...(MONSTER_REDESIGN[id] ? { loot: MONSTER_REDESIGN[id].materialDrops.map(drop => drop.item) } : {}),
   }]),
 ) as { [K in keyof typeof ORIGINAL_RELIC_DUNGEON_MONSTERS]: RelicMonsterDefinition & { id: K } });
+
+export const RELIC_DUNGEON_MONSTERS = Object.fromEntries(
+  Object.entries(redesignedRelicMonsters).map(([id, monster]) => [id, {
+    ...monster, ...RELIC_BOSS_BALANCE_V1[id as keyof typeof RELIC_BOSS_BALANCE_V1],
+  }]),
+) as typeof redesignedRelicMonsters;
 
 export type RelicMonsterId = keyof typeof RELIC_DUNGEON_MONSTERS;
 export const RELIC_MONSTER_LIST = Object.values(RELIC_DUNGEON_MONSTERS);

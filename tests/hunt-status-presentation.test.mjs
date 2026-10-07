@@ -16,11 +16,11 @@ test('battle text follows real auto state including tutorial stops and defeat',(
     if(autoHunt&&['fighting','respawning'].includes(status))assert.match(view.label,/持續狩獵/);
   }
 });
-test('global window and continuous panel share display policy without issuing actions',()=>{
+test('global window and continuous panel share state-derived display policy',()=>{
   const window=readFileSync(new URL('../app/world-battle-window.tsx',import.meta.url),'utf8');
   const panel=readFileSync(new URL('../app/dungeon-panel.tsx',import.meta.url),'utf8');
   for(const source of [window,panel])assert.match(source,/huntStatusPresentation\(state\)/);
   assert.match(window,/<DialogDescription>\{huntStatus.detail\}<\/DialogDescription>/);
-  assert.match(panel,/\{huntStatus.label\}/);
+  assert.match(panel,/<span>\{continuousHunt\?huntStatus.label:'自動練功'\}<\/span>/);
   assert.doesNotMatch(window,/收起視窗後仍會持續打怪/);
 });

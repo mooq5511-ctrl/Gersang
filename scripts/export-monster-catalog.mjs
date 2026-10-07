@@ -13,7 +13,7 @@ const COMPENDIUM_MAP_IDS = Object.keys(MONSTER_REGION_LABELS);
 const lines = [
   '# 全區域怪物與戰利品數值表', '',
   `目前共 ${COMPENDIUM_MAP_IDS.length} 個區域分類、${entries.length} 個怪物 ID；${Object.keys(MONSTER_REDESIGN).length} 隻小怪重製。`, '',
-  'Boss 保留名稱與戰鬥數值。舊怪物 ID 保留，新手村長與小嚮導的任務流程保留。', '',
+  '世界 Boss 保留名稱與戰鬥數值；四層遺跡 Boss 使用 V1 成長校準。舊怪物 ID 保留，新手村長與小嚮導的任務流程保留。', '',
   'HP、MP、攻擊、速度、物防、魔防、經驗與銀兩為每隻怪物的基礎數值；白虎林大型隊伍倍率只保留於首領。一般怪依入口怪、主力怪、菁英分階。', '',
   '世界地圖 Lv.36 起以已晉升傭兵及自動技能校準，不使用未晉升新兵估算終盤強度；Lv.72 起小怪有受防禦、抗性及減傷影響的高階壓迫，完整計算規則見 world-monster-progression.md。', '',
   '素材以每場勝利抽取：一般材料 45%，稀有材料普通怪 4%、菁英 8%，兩格獨立判定。價格為每件交易所收購價，販售價為兩倍；新手首戰另保證一件一般戰利品。', '',
