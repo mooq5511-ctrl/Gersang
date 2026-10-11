@@ -127,7 +127,7 @@ export default function GameV15() {
         ])}
       />
 
-      <GameQuestPanel
+      {view.activeTab !== 'tang-prologue' && <GameQuestPanel
         {...selectGameView(view, [
           'game',
           'goToObjective',
@@ -137,9 +137,9 @@ export default function GameV15() {
           'roadmapStages',
           'setActiveTab',
           'setGame',
-          'setObjectiveExpanded',
+            'setObjectiveExpanded',
         ])}
-      />
+      />}
 
       <GameWorldBattlePanel {...selectGameView(view, ['game', 'ready', 'activeSlot', 'battleWindowRequest', 'currentMap', 'consumeMedicine', 'setGame'])} />
 
