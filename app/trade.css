@@ -269,3 +269,10 @@
 .recruitment-row-success { grid-column:1 / -1; margin:0; padding:5px 8px; border-radius:5px; background:#294232; color:#cce7af; animation:recruitment-join .35s ease-out; }
 @keyframes recruitment-join { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 @media (prefers-reduced-motion:reduce) { .recruitment-success,.recruitment-row-success { animation:none; } }
+
+.trade-v21 .dispatch-preparation-guide { margin:12px 0; padding:16px; border:1px solid #b9975b; border-radius:12px; background:#f3e8ca; color:#3f301d; line-height:1.7; }
+.dispatch-preparation-guide ol { margin:10px 0; padding-left:24px; }
+.dispatch-preparation-guide li { margin:6px 0; overflow-wrap:anywhere; }
+.dispatch-preparation-guide p { font-size:14px; }
+.dispatch-preparation-guide button { min-height:44px; width:100%; padding:10px 14px; border:1px solid #876733; border-radius:8px; background:#79603b; color:#fff8e9; white-space:normal; cursor:pointer; }
+.dispatch-preparation-guide button:focus-visible { outline:3px solid #279499; outline-offset:3px; }

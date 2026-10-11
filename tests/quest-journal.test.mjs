@@ -9,7 +9,10 @@ import { gameplayContracts } from '../data/contracts/gameplay-contracts.ts';
 // Load the pure catalog builder from the TSX module without a browser.
 const path = new URL('../app/quest-journal.tsx', import.meta.url);
 const compiled = ts.transpileModule(readFileSync(path, 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText;
-const resolved = compiled.replace(/from "([^"]+)"/g, (_, specifier) => `from "${specifier.startsWith('.') ? new URL(`${specifier}.ts`, path).href : import.meta.resolve(specifier)}"`);
+const chapterPath = new URL('../app/chapter-journey.tsx', import.meta.url);
+const chapterCompiled = ts.transpileModule(readFileSync(chapterPath, 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText.replace(/import ['"][^'"]+\.css['"];?/g, '').replace(/from "([^"]+)"/g, (_, specifier) => `from "${specifier.startsWith('.') ? new URL(`${specifier}.ts`, chapterPath).href : import.meta.resolve(specifier)}"`);
+const chapterModule = `data:text/javascript;base64,${Buffer.from(chapterCompiled).toString('base64')}`;
+const resolved = compiled.replace(/from "([^"]+)"/g, (_, specifier) => `from "${specifier === './chapter-journey' ? chapterModule : specifier.startsWith('.') ? new URL(`${specifier}.ts`, path).href : import.meta.resolve(specifier)}"`);
 const { buildQuestJournal, QuestJournal } = await import(`data:text/javascript;base64,${Buffer.from(resolved).toString('base64')}`);
 const state = (overrides = {}) => ({
   hanyangPrologueStep: 'arrival', trade: { trips: 0, totalProfit: 0 },
@@ -68,9 +71,20 @@ test('all 25 level bands render readable journal controls and current chapter ob
     assert.match(html, /完整旅程（Lv.1–250）/);
     assert.match(html, /每日任務/);
     assert.match(html, /隱藏已完成/);
-    assert.match(html, new RegExp(`抵達 Lv\\.${band * 10}`));
+    assert.match(html, /第一章・重開商路/);
+    assert.match(html, /現在只要做這一步/);
+    assert.match(html, /aria-pressed="true">主線/);
+    assert.ok(catalog(game).some(entry => entry.title.includes(`抵達 Lv.${band * 10}`)), 'growth goals remain in the full catalog, not the default main-story list');
     assert.match(html, /收合任務面板/);
   }
+});
+
+test('first trade navigation appears only when the real port is available', () => {
+  assert.equal(catalog(state()).find(entry => entry.id === 'first-trade').destination, undefined);
+  const game = state({ hanyangPrologueStep: 'completed' });
+  assert.equal(catalog(game).find(entry => entry.id === 'first-trade').destination, 'trade');
+  game.trade.trips = 1;
+  assert.equal(catalog(game).find(entry => entry.id === 'first-trade').destination, undefined);
 });
 
 test('future chapter data includes requirements, live progress, rewards and no bypass action', () => {

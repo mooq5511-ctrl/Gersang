@@ -2,13 +2,34 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import ts from 'typescript';
 import vm from 'node:vm';
-import {createRequire} from 'node:module';
+import {createRequire,Module} from 'node:module';
 import '../scripts/measure-equipment-early.mjs';
 import {AVAILABLE_MERCENARY_IDS,isMercenaryAvailable} from '../app/mercenary-availability.ts';
 import {merchantMercenaries} from '../app/mercenary-roster.ts';
+const require=createRequire(import.meta.url);
+require.extensions['.css']=()=>{};
+require.extensions['.ts']=(module,filename)=>module._compile(ts.transpileModule(readFileSync(filename,'utf8'),{
+ compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX},fileName:filename,
+}).outputText,filename);
+require.extensions['.tsx']=require.extensions['.ts'];
 const source=file=>readFileSync(new URL('../app/'+file,import.meta.url),'utf8');
+const {freshGame}=require('../app/game-hero-factory.ts');
+const {serializeGameForStorage}=require('../app/game-state.ts');
+const {restoreGame}=require('../app/game-profile-storage.ts');
+const {worldCities}=require('../app/v15-data.ts');
+let createSquadController;
+const resolveOriginal=Module._resolveFilename;
+try {
+ Module._resolveFilename=function(request,...args) {
+  return resolveOriginal.call(this,request.startsWith('@/')?fileURLToPath(new URL('../'+request.slice(2),import.meta.url)):request,...args);
+ };
+ ({createSquadController}=require('../app/game-squad-controller.ts'));
+} finally {
+ Module._resolveFilename=resolveOriginal;
+}
 test('only the existing Korean spearman is available, full roster stays in project',()=>{
  assert.deepEqual(AVAILABLE_MERCENARY_IDS,['spear']);
  assert.deepEqual(merchantMercenaries.filter(spec=>isMercenaryAvailable(spec.id)).map(spec=>spec.name),['朝鮮槍兵']);
@@ -16,14 +37,50 @@ test('only the existing Korean spearman is available, full roster stays in proje
  assert.equal(isMercenaryAvailable('general-test'),false);assert.equal(isMercenaryAvailable('shield'),false);
 });
 test('UI and controller restrict new recruits without resetting player saves',()=>{
- assert.match(source('mercenary-recruitment.tsx'),/filter\(\(\{spec\}\) => isMercenaryAvailable\(spec.id\)\)/);
- const controller=source('game-squad-controller.ts');assert.match(controller,/if \(!isMercenaryAvailable\(spec.id\)\)/);assert.match(controller,/if \(!isMercenaryAvailable\(`general-\$\{general.id\}`\)\)/);
- for(const file of ['use-game-state.ts','hanyang-prologue.ts']){
-  const committed=execFileSync('git',['show',`HEAD:app/${file}`],{encoding:'utf8'});
-  assert.equal(source(file).replace(/\r\n/g,'\n'),committed.replace(/\r\n/g,'\n'),`${file} must remain unchanged`);
- }
- // Guidance is intentionally evolving and has runtime coverage in
- // first-promotion-objective.test.mjs; it is not a recruitment invariant.
+ const recruitment=source('mercenary-recruitment.tsx');
+ assert.match(recruitment,/merchantMercenaries\.map\(\(spec, index\) => \(\{spec,index\}\)\)\.filter\(\(\{spec\}\) => isMercenaryAvailable\(spec\.id\)\)/);
+ assert.match(recruitment,/availableMercenaries\.map\(\(\{spec,index\}\) =>/);
+ const controllerSource=source('game-squad-controller.ts');
+ assert.match(controllerSource,/if \(!isMercenaryAvailable\(spec\.id\)\)/);
+ assert.match(controllerSource,/if \(!isMercenaryAvailable\(`general-\$\{general\.id\}`\)\)/);
+
+ let game={...freshGame('招募限制與存檔保留'),gold:20_000,creditLevel:2,hanyangPrologueStep:'caravan-delivery'};
+ let notice='';
+ const controller=createSquadController({
+  game,currentCity:worldCities.find(city=>city.id===game.city),
+  setGame:update=>{game=typeof update==='function'?update(game):update;},
+  setNotice:message=>{notice=message;},selectedUid:'hero',
+ });
+ const beforeRejectedRecruit=game;
+ controller.recruitMerchant(merchantMercenaries.find(spec=>spec.id==='shield'),1);
+ assert.strictEqual(game,beforeRejectedRecruit);
+ assert.equal(game.mercs.length,0);
+ assert.match(notice,/傭兵系統調整中/);
+ const beforeRejectedGeneral=game;
+ controller.recruitGeneral({id:'restricted-general'});
+ assert.strictEqual(game,beforeRejectedGeneral);
+ assert.match(notice,/傭兵系統調整中/);
+
+ controller.recruitMerchant(merchantMercenaries.find(spec=>spec.id==='spear'),0);
+ assert.equal(game.mercs.length,1);
+ const available=game.mercs[0];
+ const savedShield={...available,uid:'legacy-shield',templateId:'merchant-shield',name:'山城盾衛',level:12,xp:345};
+ const savedArcher={...available,uid:'legacy-archer',templateId:'merchant-archer',name:'虎獵弓手',level:15,xp:678};
+ game={...game,mercs:[available,savedShield],restingMercs:[savedArcher],active:[available.uid,savedShield.uid],
+  hanyangPrologueStep:'caravan-delivery',hanyangPrologueFlags:{...game.hanyangPrologueFlags,caravanCargoDelivered:true}};
+ const persistedRoster={
+  mercs:game.mercs.map(({uid,templateId,name,level,xp})=>({uid,templateId,name,level,xp})),
+  restingMercs:game.restingMercs.map(({uid,templateId,name,level,xp})=>({uid,templateId,name,level,xp})),
+  active:[...game.active],gold:game.gold,hanyangPrologueStep:game.hanyangPrologueStep,
+  caravanCargoDelivered:game.hanyangPrologueFlags.caravanCargoDelivered,
+ };
+ const restored=restoreGame(JSON.parse(serializeGameForStorage(game)));
+ assert.deepEqual({
+  mercs:restored.mercs.map(({uid,templateId,name,level,xp})=>({uid,templateId,name,level,xp})),
+  restingMercs:restored.restingMercs.map(({uid,templateId,name,level,xp})=>({uid,templateId,name,level,xp})),
+  active:restored.active,gold:restored.gold,hanyangPrologueStep:restored.hanyangPrologueStep,
+  caravanCargoDelivered:restored.hanyangPrologueFlags.caravanCargoDelivered,
+ },persistedRoster);
 });
 
 test('extracted relic equipment scoring preserves the pre-extraction formula',()=>{

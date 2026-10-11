@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Anchor, ArrowRight, ChevronDown, Coins, Compass, LockKeyhole, Package, Pause, Play, Ship, Shield, TrendingUp, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { DispatchPreparationGuide } from "./dispatch-preparation-guide";
 import { cargoCapacity, marketMultiplier, MAX_CARGO_LEVEL, portInvestmentBonus, portInvestmentCost, portInvestmentLevel, TRADE_CARGOES, TRADE_ROUTES, upgradeCost, voyageQuote, type TradeState } from "./trade-engine";
 
 type Props = {
@@ -11,6 +12,7 @@ type Props = {
   onDispatch: (id: string, escortIds: string[]) => void; onSelect: (id: string) => void;
   onUpgrade: () => void; onUpgradePort: () => void; onToggleAuto: () => void;
   onSelectCargo: (cargoId: string) => void; onToggleInsurance: () => void;
+  onPrepareEscorts?: () => void;
 };
 const fmt = (value: number) => Math.floor(value).toLocaleString("zh-TW");
 type CollapseKey = "hero" | "metrics" | "routes" | "dispatch" | "upgrade" | "port" | "ledger";
@@ -18,7 +20,7 @@ function CollapseButton({ label, collapsed, onToggle }: { label: string; collaps
   return <button type="button" className="trade-collapse-toggle" aria-label={`${collapsed ? "展開" : "收合"}${label}`} aria-expanded={!collapsed} onClick={onToggle}><span>{collapsed ? "展開" : "收合"}</span><ChevronDown aria-hidden="true" /></button>;
 }
 
-export function TradePanel({ trade, gold, stage, mercenaries, logs, lastEncounter, onDispatch, onSelect, onUpgrade, onUpgradePort, onToggleAuto, onSelectCargo, onToggleInsurance }: Props) {
+export function TradePanel({ trade, gold, stage, mercenaries, logs, lastEncounter, onDispatch, onSelect, onUpgrade, onUpgradePort, onToggleAuto, onSelectCargo, onToggleInsurance, onPrepareEscorts }: Props) {
   const [now, setNow] = useState(0);
   const [collapsed, setCollapsed] = useState<Record<CollapseKey, boolean>>({ hero: false, metrics: false, routes: false, dispatch: false, upgrade: false, port: false, ledger: false });
   const toggleSection = (key: CollapseKey) => setCollapsed((previous) => ({ ...previous, [key]: !previous[key] }));
@@ -90,6 +92,7 @@ export function TradePanel({ trade, gold, stage, mercenaries, logs, lastEncounte
           {!trade.caravan && <section className="trade-cargo-picker" aria-label="選擇貿易貨物"><div className="trade-cargo-heading"><strong>貨物策略</strong><small>市價 {Math.round(market * 100)}%</small></div><div className="trade-cargo-list">{TRADE_CARGOES.map((cargo) => <button key={cargo.id} type="button" className={trade.selectedCargoId === cargo.id ? "selected" : ""} onClick={() => onSelectCargo(cargo.id)}><span><b>{cargo.id === "standard" ? route.good : cargo.name}</b><small>{cargo.description}</small></span><em style={{ color: cargo.color }}>{cargo.saleMultiplier > 1 ? `收益 ×${cargo.saleMultiplier}` : cargo.saleMultiplier < 1 ? `收益 ×${cargo.saleMultiplier}` : "穩定"}</em></button>)}</div><label className="trade-insurance"><input type="checkbox" checked={trade.insurance} onChange={onToggleInsurance} /><span><strong>購買商路保險</strong><small>保費約為成本 12%，貨損時理賠 70%</small></span><em>{trade.insurance ? `+${fmt(quote.insuranceCost || 0)} 兩` : "未投保"}</em></label></section>}
           <Progress value={progress} aria-label="商隊航程" />
           <output className="trade-encounter-status">抵達時隨機觸發商路事件<br /><small>護衛戰力越高，越能防止搶劫與貨損。</small></output>
+          {onPrepareEscorts && <DispatchPreparationGuide availableCount={mercenaries.filter(unit => unit.available).length} sailing={!!trade.caravan} onPrepare={onPrepareEscorts} />}
           <section className="trade-escort-picker" aria-label="派遣傭兵護衛"><div className="trade-escort-heading"><strong>派遣傭兵護衛</strong><small>{trade.caravan ? "護衛航行中" : "僅限休息中的傭兵"}</small></div><div className="trade-escort-list">{mercenaries.map((unit) => <label key={unit.uid} className={!unit.available && !selectedEscorts.includes(unit.uid) ? "unavailable" : ""}><input type="checkbox" aria-label={`${unit.name} Lv.${unit.level} 護衛 ${fmt(unit.power)}`} checked={selectedEscorts.includes(unit.uid)} disabled={!!trade.caravan || !unit.available} onChange={(event) => setSelectedEscortIds((previous) => event.target.checked ? [...previous, unit.uid] : previous.filter((uid) => uid !== unit.uid))} /><span><strong>{unit.name}</strong><small>Lv.{unit.level}・護衛 {fmt(unit.power)}</small></span></label>)}</div>{!mercenaries.length && <small className="trade-escort-empty">目前沒有休息中的傭兵，請先將傭兵撤下並送往休息處。</small>}<p>本趟護衛戰力 <strong>{fmt(selectedPower)}</strong>；上陣隊伍不會受到影響。</p></section>
           <dl><div><dt>進貨成本</dt><dd>{fmt(quote.cost)} 兩</dd></div><div><dt>售出總額</dt><dd>{fmt(quote.revenue)} 兩</dd></div><div><dt>每趟淨利</dt><dd className="trade-profit">+{fmt(quote.revenue - quote.cost)} 兩</dd></div><div><dt>每分鐘收益</dt><dd className="trade-profit">+{fmt(Math.max(0, Math.floor((quote.revenue - quote.cost) / Math.max(0.01, route.seconds / 60))))} 兩</dd></div><div><dt>港口投資</dt><dd>Lv.{investmentLevel} · 收益 +{Math.round((portInvestmentBonus(investmentLevel) - 1) * 100)}%</dd></div><div><dt>養成收益</dt><dd>商譽 +{quote.reputation} · 經驗 +{quote.xp}</dd></div></dl>
           <Button className="trade-primary" disabled={!!trade.caravan || !unlocked || gold < quote.cost} onClick={() => onDispatch(route.id, selectedEscortIds)}><Ship />{trade.caravan ? "運送貨物中" : !unlocked ? "尚未解鎖此航線" : gold < quote.cost ? "進貨資金不足" : "裝貨並出航"}</Button>

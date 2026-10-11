@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChapterJourney } from "./chapter-journey";
 import type { GameState } from "./game-state";
 import type { GameplayContract } from "../data/contracts/gameplay-contracts";
 import { contractProgress } from "./game-contract-actions";
@@ -25,7 +26,7 @@ export function buildQuestJournal(game: GameState, current: { title: string; det
     const done = position < index || step === "completed";
     entries.push({ id: `story:${id}`, category: "主線", title: chapter.title, detail: chapter.detail, status: done ? "已完成" : position === index ? "進行中" : "未解鎖", requirement: position === 0 ? "抵達漢陽。" : `完成「${HANYANG_PROLOGUE_STEPS.find(item => item.step === prologueOrder[position - 1])?.title}」。`, reward: id === "completed" || id === "departure" ? "開啟世界地圖，自由探索商路。" : "推進漢陽序章。", destination: !done && position === index ? "current" : undefined });
   });
-  entries.push({ id: "first-trade", category: "主線", title: "完成第一趟東海商路", detail: "派遣傭兵運送貨物，完成第一筆貿易。", status: unlocks.firstTradeComplete ? "已完成" : unlocks.trade ? "可進行" : "未解鎖", requirement: "完成漢陽序章，並備妥貿易隊伍。", reward: "商路收益；符合隊伍條件後開啟遺跡遠征。" });
+  entries.push({ id: "first-trade", category: "主線", title: "完成第一趟東海商路", detail: "派遣傭兵運送貨物，完成第一筆貿易。", status: unlocks.firstTradeComplete ? "已完成" : unlocks.trade ? "可進行" : "未解鎖", requirement: "完成漢陽序章，並備妥貿易隊伍。", reward: "商路收益；符合隊伍條件後開啟遺跡遠征。", destination: unlocks.trade && !unlocks.firstTradeComplete ? 'trade' : undefined });
   entries.push({ id: "first-relic-reward", category: "主線", title: "派遣傭兵探索沉沒遺跡", detail: "派遣休息中的傭兵，取得第一份遺跡材料或古代裝備。", status: unlocks.firstRelicReward ? "已完成" : unlocks.relic ? "可進行" : "未解鎖", requirement: "完成第一趟貿易並擁有傭兵；資深商團已開啟。", reward: "遺跡掉落；開啟圖鑑與委託功能。" });
   entries.push({ id: "level-20", category: "成長", title: "提升主角至 Lv.20", detail: "持續戰鬥與培養隊伍，提升挑戰首領的戰力。", status: game.hero.level >= 20 ? "已完成" : "可進行", requirement: "透過冒險累積角色經驗。", reward: "提升角色能力與可穿戴裝備的等級。", progress: `${Math.min(game.hero.level, 20)} / 20` });
   entries.push({ id: "waystation", category: "成長", title: "建設驛站 Lv.1", detail: "在商團領地建設驛站，整備商路。", status: game.territory.buildings.waystation >= 1 ? "已完成" : "可規劃", requirement: "備妥領地建設所需資源。", reward: "改善商團領地與商路補給。" });
@@ -70,7 +71,7 @@ export function buildQuestJournal(game: GameState, current: { title: string; det
 }
 
 export function QuestJournal({ game, current, stages, contracts, onNavigate, onClaim, onClose }: { game: GameState; current: { title: string; detail: string }; stages: ProgressionRoadmapStage[]; contracts: GameplayContract[]; onNavigate: (destination: QuestDestination) => void; onClaim: (id: string) => void; onClose: () => void }) {
-  const [category, setCategory] = useState("全部");
+  const [category, setCategory] = useState("主線");
   const [selectedId, setSelectedId] = useState("current");
   const [levelRange, setLevelRange] = useState("recommended");
   const [hideCompleted, setHideCompleted] = useState(false);
@@ -79,11 +80,19 @@ export function QuestJournal({ game, current, stages, contracts, onNavigate, onC
   const visible = entries.filter(entry => (category === "全部" || entry.category === category) && (!hideCompleted || entry.status !== "已完成") && (!entry.minLevel || levelRange === "all" || entry.maxLevel === (levelRange === "recommended" ? bandEnd : Number(levelRange))));
   const selected = visible.find(entry => entry.id === selectedId) || visible[0];
   return <div className="quest-journal">
-    <header className="quest-journal-header"><div><small>商團指引</small><h2>任務日誌</h2><p>查看當前目標與後續旅程，不必一次完成所有任務。</p></div><button type="button" onClick={onClose} aria-label="收合任務面板">收合 ▴</button></header>
-    <nav className="quest-journal-filters" aria-label="任務分類">{["全部", "主線", "等級成長", "階段任務", "戰鬥任務", "經營任務", "每日任務", "成長", "村莊委託", "冒險委託", "市政廳", "資源"].map(label => <button type="button" key={label} aria-pressed={category === label} onClick={() => setCategory(label)}>{label}<small>{label === "全部" ? entries.length : entries.filter(entry => entry.category === label).length}</small></button>)}</nav>
-    <div className="quest-journal-tools"><label>等級章節 <select value={levelRange} onChange={event => setLevelRange(event.target.value)}><option value="recommended">目前階段（Lv.{bandEnd - 9}–{bandEnd}）</option><option value="all">完整旅程（Lv.1–250）</option>{Array.from({ length: 25 }, (_, index) => <option key={index} value={(index + 1) * 10}>Lv.{index * 10 + 1}–{(index + 1) * 10}</option>)}</select></label><label><input type="checkbox" checked={hideCompleted} onChange={event => setHideCompleted(event.target.checked)}/> 隱藏已完成</label><small>每日 00:00 台灣時間刷新</small></div>
+    <header className="quest-journal-header"><div><small>商團指引</small><h2>商路帳簿</h2><p>先走主線，再自由經營；其他委託不必一次完成。</p></div><button type="button" onClick={onClose} aria-label="收合任務面板">收合 ▴</button></header>
+    <details className="quest-catalog-options"><summary>任務分類・目前查看{category}（支線與每日任務可選）</summary><nav className="quest-journal-filters" aria-label="任務分類">{["全部", "主線", "等級成長", "階段任務", "戰鬥任務", "經營任務", "每日任務", "成長", "村莊委託", "冒險委託", "市政廳", "資源"].map(label => <button type="button" key={label} aria-pressed={category === label} onClick={() => setCategory(label)}>{label}<small>{label === "全部" ? entries.length : entries.filter(entry => entry.category === label).length}</small></button>)}</nav>
+    <div className="quest-journal-tools"><label>等級章節 <select value={levelRange} onChange={event => setLevelRange(event.target.value)}><option value="recommended">目前階段（Lv.{bandEnd - 9}–{bandEnd}）</option><option value="all">完整旅程（Lv.1–250）</option>{Array.from({ length: 25 }, (_, index) => <option key={index} value={(index + 1) * 10}>Lv.{index * 10 + 1}–{(index + 1) * 10}</option>)}</select></label><label><input type="checkbox" checked={hideCompleted} onChange={event => setHideCompleted(event.target.checked)}/> 隱藏已完成</label><small>每日 00:00 台灣時間刷新</small></div></details>
     <div className="quest-journal-body"><aside className="quest-journal-list" aria-label="完整任務列表">{visible.map(entry => <button type="button" key={entry.id} aria-pressed={selected?.id === entry.id} onClick={() => setSelectedId(entry.id)}><small>{entry.category}・{entry.status}</small><strong>{entry.title}</strong></button>)}</aside>
-      {selected ? <article className="quest-journal-detail"><small>{selected.category} / {selected.status}</small><h3>{selected.title}</h3><section><h4>任務目標</h4><p>{selected.detail}</p>{selected.progress ? <p className="quest-journal-progress">進度 {selected.progress}</p> : null}</section><section><h4>前置條件</h4><p>{selected.requirement}</p></section><section><h4>獎勵／階段成果</h4><p>{selected.reward}</p></section><footer>{selected.claimId ? <button type="button" onClick={() => onClaim(selected.claimId!)}>領取獎勵</button> : <button type="button" disabled={!selected.destination} onClick={() => { if (selected.destination) onNavigate(selected.destination); }}>{selected.destination ? selected.status === "可回報" ? "前往回報" : selected.status === "可領取" ? "前往領取" : "前往任務" : selected.status === "已完成" ? "已完成" : "任務預覽"}</button>}<p>{!selected.destination && selected.status !== "已完成" ? "可先查看後續內容；實際推進依目前主線與解鎖條件。" : "獎勵需依原本流程完成／回報，不會在預覽時自動發放。"}</p></footer></article> : <p>此篩選下沒有任務，請切換章節或顯示已完成任務。</p>}
+      {selected ? <article className="quest-journal-detail">
+        <small>{selected.category} / {selected.status}</small><h3>{selected.title}</h3>
+        <section><h4>{selected.id === 'current' ? '現在只要做這一步' : '任務目標'}</h4><p>{selected.detail}</p>{selected.progress ? <p className="quest-journal-progress">進度 {selected.progress}</p> : null}
+          {selected.id === 'current' ? <button className="chapter-primary-action" type="button" onClick={() => onNavigate('current')}>帶我去下一步</button> : null}
+        </section>
+        {category === '主線' || selected.id === 'current' ? <ChapterJourney game={game}/> : null}
+        <section><h4>前置條件</h4><p>{selected.requirement}</p></section><section><h4>獎勵／階段成果</h4><p>{selected.reward}</p></section>
+        <footer>{selected.claimId ? <button type="button" onClick={() => onClaim(selected.claimId!)}>領取獎勵</button> : selected.id !== 'current' ? <button type="button" disabled={!selected.destination} onClick={() => { if (selected.destination) onNavigate(selected.destination); }}>{selected.destination ? selected.status === "可回報" ? "前往回報" : selected.status === "可領取" ? "前往領取" : "前往任務" : selected.status === "已完成" ? "已完成" : "任務預覽"}</button> : null}<p>{!selected.destination && selected.status !== "已完成" ? "可先查看後續內容；實際推進依目前主線與解鎖條件。" : "獎勵需依原本流程完成／回報，不會在預覽時自動發放。"}</p></footer>
+      </article> : <p>此篩選下沒有任務，請切換章節或顯示已完成任務。</p>}
     </div>
   </div>;
 }

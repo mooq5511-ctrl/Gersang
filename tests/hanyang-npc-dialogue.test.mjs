@@ -10,6 +10,41 @@ const {npcById,npcGreeting,awardNpcAffinity,hasNpcAffinityReward}=require('../ap
 const {hanyangNpcOptions,hanyangNpcGreeting}=require('../app/hanyang-npc-dialogue.ts');
 const noop=()=>{};
 
+test('merchant travel advice follows settled trade and real Boss victory rather than level',()=>{
+  const game={...freshGame('下一站'),hanyangPrologueStep:'completed'};
+  const advice=()=>hanyangNpcOptions(game,'wang-deokchang')[0].reply;
+  game.hero.level=250;
+  assert.match(advice(),/港口/);
+  game.relicDungeon.clearedRuns=1;
+  assert.match(advice(),/運輸實際結算/);
+  game.trade.trips=1;
+  assert.match(advice(),/第二層/);
+  game.relicDungeon.clearedRuns=0;
+  assert.match(advice(),/沿岸船家/);
+});
+
+test('new chapter explanation is optional and does not grant rewards or accept a quest',()=>{
+  for (const [step,id] of [['arrival','kim-seongho'],['guild','hong-museong'],['completed','wang-deokchang']]) {
+    const game={...freshGame('故事說明'),hanyangPrologueStep:step};
+    const option=hanyangNpcOptions(game,id)[0];
+    assert.ok(option.pages.length>0);
+    const next=action(game,npcById(id),option);
+    for (const key of ['gold','inventory','materials','medicines','hanyangPrologueStep','hanyangPrologueFlags','mercs','trade']) assert.deepEqual(next[key],game[key]);
+    assert.deepEqual(next.npcProgress.activeQuests,game.npcProgress.activeQuests);
+    assert.deepEqual(next.npcProgress.affinity,game.npcProgress.affinity);
+  }
+});
+
+test('explicit journey-fund conversation uses the existing once-only fund action',()=>{
+  const game={...freshGame('啟程資金'),hanyangPrologueStep:'journey-fund'};
+  game.hanyangPrologueFlags={...game.hanyangPrologueFlags,lootSold:true,equipmentEquipped:true};
+  const npc=npcById('wang-deokchang'), option=hanyangNpcOptions(game,npc.id)[0];
+  const next=action(game,npc,option);
+  assert.equal(next.hanyangPrologueFlags.journeyFundClaimed,true);
+  assert.equal(next.hanyangPrologueStep,'medicine');
+  assert.equal(action(next,npc,option).gold,next.gold);
+});
+
 test('actual NPC controller advances handoffs only for the current NPC and story option',()=>{
   for(const [step,id,nextStep,flag] of [
     ['caravan-delivery','wang-deokchang','return','caravanCargoDelivered'],

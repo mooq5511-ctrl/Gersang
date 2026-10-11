@@ -63,6 +63,19 @@ function checkPurchaseWiring(h) {
   assert.equal(nodes(h.render(20),node=>node.type===h.EquipmentPurchaseControl)[2].props.lockedLabel,undefined);
 }
 test('actual city page forwards displayed regional prices, quantities and tier level locks',()=>checkPurchaseWiring(harness()));
+
+test('tutorial auxiliary tools collapse without removing gem or formation actions',()=>{
+  const h=harness();
+  for(const step of ['medicine','guild','completed',undefined]) {
+    const tree=h.render(1,7200,'pharmacy',{game:{gold:7200,hero:{level:1},medicines:{},hanyangPrologueStep:step}});
+    const disclosure=nodes(tree,node=>node.type==='details'&&node.props.className==='merchant-advanced-features')[0];
+    assert.ok(disclosure);
+    assert.equal(disclosure.props.open,step==='completed'||!step);
+    assert.equal(nodes(disclosure,node=>node.type===h.GemWorkshop).length,1);
+    assert.equal(nodes(disclosure,node=>node.type==='button'&&node.props.className?.startsWith('formation-row')).length,2);
+    assert.equal(h.calls.length,0);
+  }
+});
 test('shop wiring assertions detect a broken quote rather than blessing current markup',()=>{
   const broken=source.replace('record.price * currentCity.priceFactor','record.price');
   assert.notEqual(broken,source);

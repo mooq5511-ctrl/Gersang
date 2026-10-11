@@ -64,6 +64,9 @@ export function GuildTerritoryPanel({ territory, heroLevel, gold, inventory, mat
   };
 
   return <div className="guild-territory-panel">
+    <header className="territory-landscape">
+      <div><small>商旅歇腳・整備出發</small><h2>商團駐地</h2><p>建築等級與加成以底下的領地資料為準。</p></div>
+    </header>
     <p className="territory-intro">主角 Lv.{TERRITORY_UNLOCK_LEVEL} 開放經營。Lv.1–10 沿用原有成長，Lv.11–100 以加速曲線衝刺終局獎勵；建造與升級立即完成，永久加成按百分比直接相加，每名角色各自經營領地。</p>
     <div className="territory-summary" aria-label="目前領地加成">
       <span>放置收益 <b>+{Math.round(territoryBonus(territory, "idle") * 100)}%</b></span>

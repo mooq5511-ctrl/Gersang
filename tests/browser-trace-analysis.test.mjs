@@ -31,3 +31,24 @@ test('selected interaction excludes earlier clicks and clips work at the next cl
   assert.equal(analyzeBrowserTrace(trace,{clickIndex:3}).valid,false);
   assert.throws(()=>analyzeBrowserTrace(trace,{clickIndex:-1}),RangeError);
 });
+
+test('first-paint window clips work and excludes later layout and other threads',()=>{
+  const trace={traceEvents:[event('EventDispatch',100000,5000,{args:{data:{type:'click'}}}),
+    event('Paint',101000,500),event('Paint',106000,500,{tid:3}),
+    event('Layout',105000,5000),event('FunctionCall',107000,10000),
+    event('Paint',111000,1000),event('Layout',120000,90000)]};
+  const before=structuredClone(trace),r=analyzeBrowserTrace(trace,{window:'first-paint'});
+  assert.equal(r.valid,true);assert.equal(r.windowDurationMs,12);
+  assert.equal(r.layout.unionMs,5);assert.equal(r.script.unionMs,5);
+  // The window includes the 0.5ms Paint during the click as well as the final 1ms Paint.
+  assert.equal(r.paint.unionMs,1.5);assert.match(r.note,/NOT compositor presentation/);
+  assert.deepEqual(trace,before);
+});
+
+test('missing, incomplete or subsequent-interaction paint is not presentation evidence',()=>{
+  const click=ts=>event('EventDispatch',ts,5000,{args:{data:{type:'click'}}});
+  for(const bad of [[],[event('Paint',106000,1000,{ph:'B'})],[click(108000),event('Paint',109000,1000)],[event('Paint',106000,0)]]){
+    assert.equal(analyzeBrowserTrace({traceEvents:[click(100000),...bad]},{window:'first-paint'}).valid,false);
+  }
+  assert.throws(()=>analyzeBrowserTrace({traceEvents:[]},{window:'unknown'}),RangeError);
+});

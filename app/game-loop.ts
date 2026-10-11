@@ -38,6 +38,9 @@ export type GameTickRolls = {
 export function settleGameLoop(previous: GameState, rolls: GameTickRolls, deps: LoopDependencies): GameState {
   const { now, roll, choice, spawnRoll, encounterCountRoll, retaliationRoll, materialRolls, gearDropRoll, gearChoiceRoll, sealDropRoll, sealChoiceRoll } = rolls;
   previous = pauseHanyangTutorialBattle(previous);
+  // The initial arrival state is still part of the world map, so it follows the
+  // standard caravan income curve instead of the temporary tutorial subsidy.
+  const tutorialIdle = !!previous.hanyangPrologueStep && previous.hanyangPrologueStep !== "completed" && previous.hanyangPrologueStep !== "arrival";
   if (dungeonBusy(previous.dungeon)) {
     const battle = previous.dungeon!;
     // Keep the arena clock moving during respawn so its countdown updates before the next encounter.
@@ -48,10 +51,10 @@ export function settleGameLoop(previous: GameState, rolls: GameTickRolls, deps: 
     next = { ...next, dungeon: { ...next.dungeon!, pauseAt: now } };
     if (next.trade.caravan) next = { ...next, trade: { ...next.trade, caravan: { ...next.trade.caravan, startedAt: next.trade.caravan.startedAt + pause } } };
     if (previous.dungeon!.status === "recovering") return { ...next, idleStamp: now };
-    const idle = settleCaravanIdle(previous.idleStamp, now, Math.max(previous.stage, previous.hero.level), territoryBonus(previous.territory, "idle"));
+    const idle = settleCaravanIdle(previous.idleStamp, now, Math.max(previous.stage, previous.hero.level), territoryBonus(previous.territory, "idle"), tutorialIdle);
     return deps.grantCreditXp({ ...next, idleStamp: idle.stamp, gold: next.gold + idle.gold, credit: next.credit + idle.credit }, idle.credit);
   }
-  const idle = settleCaravanIdle(previous.idleStamp, now, Math.max(previous.stage, previous.hero.level), territoryBonus(previous.territory, "idle"));
+  const idle = settleCaravanIdle(previous.idleStamp, now, Math.max(previous.stage, previous.hero.level), territoryBonus(previous.territory, "idle"), tutorialIdle);
   if (idle.stamp !== previous.idleStamp) previous = deps.grantCreditXp({ ...previous, idleStamp: idle.stamp, gold: previous.gold + idle.gold, credit: previous.credit + idle.credit }, idle.credit);
   const result = advanceTrade(previous.trade, previous.gold, now, { resolveEvents: true });
   if (!result.trips && !result.encounters && !result.tradeEvents.length) return previous;

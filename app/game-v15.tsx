@@ -211,6 +211,7 @@ export default function GameV15() {
             'displayedPower',
             'game',
             'sendCaravan',
+            'setActiveTab',
             'setGame',
             'upgradeCaravan',
             'upgradeTradePort',

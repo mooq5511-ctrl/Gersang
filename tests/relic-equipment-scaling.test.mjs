@@ -17,10 +17,13 @@ const context = vm.createContext({
 vm.runInContext(ts.transpileModule(pureSource.replace(/^export /gm, ''), {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText, context);
 const {freshRelicDungeon,relicDungeonAction} = context;
 
-test('dispatch guidance does not present exploration progress as a manual Boss gate', () => {
-  assert.match(source, /手動討伐不需等探索進度達100%/);
-  assert.match(source, /派遣中的隊伍須先等回報/);
-  assert.match(source, /自動探索仍會先探索再接續挑戰首領/);
+test('Boss guidance distinguishes manual challenge, automatic exploration, and pending dispatch', () => {
+  const guidance = source.match(/<details><summary>單次探索、自動探索與 Boss 討伐有什麼不同？<\/summary><p>([^<]+)<\/p><\/details>/)?.[1];
+  assert.ok(guidance, 'Boss guidance must remain available in the relic panel');
+  const normalizedGuidance = guidance.replace(/[「」『』，。；、\s]/g, '');
+  assert.match(normalizedGuidance, /手動討伐不需等探索進度達100%/);
+  assert.match(normalizedGuidance, /派遣中的隊伍須先等回報/);
+  assert.match(normalizedGuidance, /開啟自動探索會先探索再接續挑戰首領/);
   assert.doesNotMatch(source, /探索進度達 100% 後，才能打開/);
   assert.doesNotMatch(source, /探索進度達 100% 後，依通關次數解鎖下一位/);
 });
@@ -48,11 +51,12 @@ test('direct relic challenge still requires a living party and cannot reset an a
   assert.equal(empty.status, 'idle');
   assert.match(empty.logs[0], /至少 1 名/);
   for (const status of ['boss', 'dispatching']) {
-    const current = { ...state, status, bossHp: 123, bossTurn: 5 };
+    const current = { ...state, status, bossHp: 123, bossTurn: 5, dispatchEndsAt: 20_000 };
     const result = relicDungeonAction(current, 'challenge-boss', 1000, { partyReady: true, partyNames: ['夥伴'] });
     assert.equal(result.status, status);
     assert.equal(result.bossHp, 123);
     assert.equal(result.bossTurn, 5);
+    if (status === 'dispatching') assert.equal(result.dispatchEndsAt, current.dispatchEndsAt);
   }
 });
 

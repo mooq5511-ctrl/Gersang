@@ -26,3 +26,9 @@
 .relic-preparation nav{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 .relic-preparation button{padding:10px 16px;border:1px solid #b7914f;background:#31291c;color:#ffe5a9;cursor:pointer}
 .relic-preparation button:focus-visible{outline:2px solid #81d4fa;outline-offset:3px}
+.relic-dispatch-steps{margin:14px 0;padding-left:26px;line-height:1.8;font-size:16px;list-style:decimal}
+.relic-dispatch-steps li{padding:5px 0;overflow-wrap:anywhere}
+.relic-preparation details summary{cursor:pointer;min-height:44px;display:flex;align-items:center;line-height:1.6}
+.relic-auto-settings>summary{cursor:pointer;min-height:44px;line-height:1.6;color:#ffd980}
+.relic-auto-settings>summary:focus-visible{outline:2px solid #81d4fa;outline-offset:3px}
+.relic-auto-settings[open]>summary{margin-bottom:12px}

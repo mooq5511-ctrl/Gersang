@@ -1,4 +1,5 @@
 import type { GameState } from "./game-state";
+import { settleCaravanIdle } from "./caravan-idle.ts";
 
 /** The short story layer sits on top of the existing battle, inventory and guild systems. */
 export type HanyangPrologueStep =
@@ -57,8 +58,8 @@ export function pauseHanyangTutorialBattle(state: GameState): GameState {
 }
 
 export const HANYANG_PROLOGUE_STEPS: ReadonlyArray<{ step: HanyangPrologueStep; title: string; detail: string }> = [
-  { step: "arrival", title: "初來乍到", detail: "老商人注意到了站在漢陽城門口的你。" },
-  { step: "outskirts", title: "城外走走", detail: "先到城外看看，別讓第一次出門就空手而回。" },
+  { step: "arrival", title: "新掌櫃的第一份委託", detail: "漢陽驛路受阻，商團的遠行只能暫緩。向村長金成浩接下送貨委託，讓商路從第一筆生意重新起步。" },
+  { step: "outskirts", title: "清出藥材車的驛路", detail: "到新手村郊外擊敗 3 隻偷糧狸，再回村長處回報。替藥材車清路，也是替商團賺取第一筆整備本錢。" },
   { step: "first-sale", title: "第一場買賣", detail: "把剛取得的戰利品帶回漢陽，換成真正能用的銀兩。" },
   { step: "journey-fund", title: "啟程之資", detail: "老商人會依傭兵公會的實際價格補足一筆不重複的啟程資金。" },
   { step: "medicine", title: "備妥補給", detail: "前往藥店實際購買 1 瓶金創藥，學會在商路上準備補給。" },
@@ -69,14 +70,14 @@ export const HANYANG_PROLOGUE_STEPS: ReadonlyArray<{ step: HanyangPrologueStep; 
   { step: "bandit-trial", title: "精英黑巾斥候", detail: "黑巾斥候是商路上的精英小怪，不是新手村首領；和第一名夥伴並肩作戰將他擊退。" },
   { step: "return", title: "向村長回報", detail: "商隊貨物已交回，回到村長身邊報告北邊商路的結果。" },
   { step: "departure", title: "踏上商路", detail: "村長已聽完你的回報；確認離開漢陽，正式開啟世界地圖。" },
-  { step: "completed", title: "初入漢陽", detail: "序章完成；漢陽之外的世界現在由你自由探索。" },
+  { step: "completed", title: "漢陽商路重新起步", detail: "序章完成；到港口完成第一趟東海交易，再用所得資源培養護衛，準備第一層遺跡挑戰。" },
 ];
 
 export const HANYANG_PROLOGUE_DIALOGUE = {
-  merchant: ["喂，那邊那個年輕人。", "看你站在城門口東張西望的樣子……第一次來漢陽？", "身上沒幾個錢，倒是覺得天下到處都是機會。"],
+  merchant: ["你就是準備重開商路的新掌櫃？", "先把商團的第一筆生意做穩，再想遠行。", "村長的藥材車還困在驛路上，你的第一份委託就在那裡。"],
   sale: ["至少不是空著手回來。", "打倒敵人只是第一步；真正的商人，得知道怎麼把手裡的東西變成銀兩。"],
   guild: ["一個人在外行走終究太危險。", "拿著這些錢，去傭兵公會看看。能陪你活著回來的人，才是好夥伴。"],
-  ending: ["你知道今天真正賺到的是什麼嗎？不是那些錢。", "東西能賣錢，錢能僱人，人能替你保住貨；這些東西啊，都是連在一起的。", "漢陽只是你的第一站。接下來想去哪，就看你自己了。"],
+  ending: ["你知道今天真正賺到的是什麼嗎？不是那些錢。", "東西能賣錢，錢能僱人，人能替你保住貨；這些東西啊，都是連在一起的。", "漢陽只是第一站。先到港口完成東海交易，再用收益整備護衛，準備第一層遺跡挑戰。"],
 } as const;
 
 export function freshHanyangPrologueFlags(): HanyangPrologueFlags {
@@ -144,7 +145,7 @@ export function claimHanyangJourneyFund(state: GameState, guildPrice: number): G
 
 export function markHanyangCaravanDelivered(state: GameState): GameState {
   if (state.hanyangPrologueStep !== "caravan-delivery" || state.hanyangPrologueFlags.caravanCargoDelivered) return state;
-  return { ...state, hanyangPrologueStep: "return", hanyangPrologueFlags: { ...state.hanyangPrologueFlags, caravanCargoDelivered: true, merchantPriceRevealed: true }, logs: [...state.logs, "商隊貨物已交付王德昌；他提醒你，同樣的貨物送往北方城鎮，價格至少能翻上幾倍。"] };
+  return { ...state, hanyangPrologueStep: "return", hanyangPrologueFlags: { ...state.hanyangPrologueFlags, caravanCargoDelivered: true, merchantPriceRevealed: true }, logs: [...state.logs, "商隊貨物已交付王德昌；他提醒你，先看港口實際報價與結算收益，準備第一趟東海交易。"] };
 }
 
 export function markHanyangReturnReported(state: GameState): GameState {
@@ -169,14 +170,19 @@ export function syncHanyangPrologue(state: GameState, guildPrice: number): GameS
   return next;
 }
 
-export function completeHanyangPrologue(state: GameState): GameState {
+export function completeHanyangPrologue(state: GameState, now = Date.now()): GameState {
   if (state.hanyangPrologueStep !== "departure" || !state.hanyangPrologueFlags.caravanCargoDelivered || state.hanyangPrologueFlags.completionRewardClaimed) return state;
+  const completionRewardGold = 1100;
+  // Close tutorial time before switching rates so a long absence cannot be
+  // retroactively priced as normal income by clicking the departure dialogue.
+  const idle = settleCaravanIdle(state.idleStamp, now, 1, 0, true);
   return {
     ...state,
     hanyangPrologueStep: "completed",
-    gold: state.gold + 1000,
+    gold: state.gold + idle.gold + completionRewardGold,
+    idleStamp: now,
     medicines: { ...state.medicines, healing: (state.medicines.healing || 0) + 1 },
     hanyangPrologueFlags: { ...state.hanyangPrologueFlags, completionRewardClaimed: true, caravanRestored: true, worldMapUnlocked: true },
-    logs: [...state.logs, "《商路之始》完成：獲得 1,000 兩、金創藥 ×1。世界地圖已解鎖，你的商路正式開始。"],
+    logs: [...state.logs, `《商路之始》完成：獲得 ${completionRewardGold.toLocaleString("zh-TW")} 兩、金創藥 ×1。世界地圖已解鎖，你的商路正式開始。`],
   };
 }

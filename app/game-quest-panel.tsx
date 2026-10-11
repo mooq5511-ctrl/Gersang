@@ -13,7 +13,7 @@ type Props = Pick<GameViewModel, "game" | "goToObjective" | "mainObjective" | "o
 
 export function GameQuestPanel({ game, goToObjective, mainObjective, objectiveExpanded, openNpcDialogue, roadmapStages, setActiveTab, setGame, setObjectiveExpanded }: Props) {
 return <><section className="main-objective is-collapsed" aria-label="目前主線目標">
-        <div className="objective-collapsed-row"><strong className="objective-collapsed-label" title={mainObjective.title}>任務・{mainObjective.title}</strong><button type="button" className="objective-collapse-toggle" aria-haspopup="dialog" aria-expanded={objectiveExpanded} aria-label="查看任務詳情" title="查看任務詳情" onClick={() => setObjectiveExpanded(true)}><ChevronDown aria-hidden="true"/></button></div>
+        <div className="objective-collapsed-row"><strong className="objective-collapsed-label" title={mainObjective.title}>下一步・{mainObjective.title}</strong><button type="button" className="objective-go-next" onClick={goToObjective} aria-label={`前往目前目標：${mainObjective.title}`}>前往</button><button type="button" className="objective-collapse-toggle" aria-haspopup="dialog" aria-expanded={objectiveExpanded} aria-label="查看任務詳情" title="查看任務詳情" onClick={() => setObjectiveExpanded(true)}><ChevronDown aria-hidden="true"/></button></div>
       </section>
       <Dialog open={objectiveExpanded} onOpenChange={setObjectiveExpanded}>
         <DialogContent className="game-detail-dialog quest-detail-dialog classic-live-game" overlayClassName="game-detail-overlay" showCloseButton={false}>

@@ -10,16 +10,27 @@ const {getFirstPromotionObjective}=require('../app/first-promotion-objective.ts'
 const noop=()=>{};
 
 function navigate(snapshot, latest=snapshot, mainObjective={title:'黑巾斥候',tab:'battle'}) {
-  let state=latest, tab, updates=0, reveals=0;
+  let state=latest, tab, updates=0, reveals=0, opened;
   const controller=createNavigationController({game:snapshot,mainObjective,
-    openNpcDialogue:noop,setActiveNpcId:noop,setCityService:noop,setNotice:noop,setNpcOpeningLine:noop,setSquadDestination:noop,
+    openNpcDialogue:id=>{opened=id;},setActiveNpcId:noop,setCityService:noop,setNotice:noop,setNpcOpeningLine:noop,setSquadDestination:noop,
     revealBattleTarget:()=>{assert.equal(tab,'battle');reveals++;},
     setActiveTab:value=>{tab=value;},setGame:update=>{updates++;state=update(state);}});
   controller.goToObjective();
-  return {state,tab,updates,reveals};
+  return {state,tab,updates,reveals,opened};
 }
 const fixture=(logs=[])=>({...freshGame('任務前往'),hanyangPrologueStep:'bandit-trial',
   dungeon:{...freshDungeon(),status:'respawning',logs}});
+
+test('arrival and caravan crisis open the actual story NPC without skipping an acceptance',()=>{
+  for (const [step, npc] of [['arrival','kim-seongho'], ['caravan-crisis','wang-deokchang']]) {
+    const game={...freshGame('故事導航'),hanyangPrologueStep:step};
+    const result=navigate(game);
+    assert.equal(result.tab,'map');
+    assert.equal(result.opened,npc);
+    assert.equal(result.updates,0);
+    assert.equal(result.state,game);
+  }
+});
 
 test('respawn or unrelated victories cannot mark the bandit cargo restored',()=>{
   for(const logs of [[],['成功擊敗偷糧狸'],['已撤出黑巾斥候戰鬥']]) {

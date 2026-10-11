@@ -40,3 +40,19 @@ test('integration keeps eleven mercenary roster seats and leaves progression to 
   assert.doesNotMatch(game,/模擬經商|模擬打怪|trainHero/);
   assert.match(loop,/settleCaravanIdle\(previous\.idleStamp, now/);
 });
+
+test('squad keeps essential preparation outside the optional advanced disclosure',()=>{
+  const source=readFileSync(new URL('../app/caravan-status.tsx',import.meta.url),'utf8');
+  const start=source.indexOf('<details className="merchant-advanced-features"');
+  const end=source.indexOf('</details>',start);
+  assert.ok(start>0&&end>start);
+  const advanced=source.slice(start,end);
+  assert.match(advanced,/open=\{!p\.tutorialMode\}/);
+  for(const name of ['guild-rank-entry','guild-skill-entry','wandering-caravan-button','guild-territory-entry'])assert.ok(advanced.includes(name));
+  for(const name of ['mercenary-rest-button','party-formation-button']){
+    assert.ok(source.indexOf(name)<start);
+    assert.ok(!advanced.includes(name));
+  }
+  const page=readFileSync(new URL('../app/game-squad-page.tsx',import.meta.url),'utf8');
+  assert.match(page,/tutorialMode=\{!!game\.hanyangPrologueStep && game\.hanyangPrologueStep !== 'completed'\}/);
+});

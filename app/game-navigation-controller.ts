@@ -29,9 +29,8 @@ type Context = {
 export function createNavigationController({ game, mainObjective, openNpcDialogue, setActiveNpcId, setActiveTab, setCityService, setGame, setNotice, setNpcOpeningLine, setSquadDestination, revealBattleTarget }: Context) {
 function goToObjective() {
     if (game.hanyangPrologueStep === "arrival") {
-      setNpcOpeningLine("村長金成浩神色凝重地望向你：終於等到你了，村外驛路出事了，現在只有你能幫忙！");
-      setActiveNpcId("kim-seongho");
       setActiveTab("map");
+      openNpcDialogue("kim-seongho");
       return;
     }
     if (game.hanyangPrologueStep === "bandit-trial" && syncHanyangReturnProgress(game) !== game) {
@@ -42,8 +41,8 @@ function goToObjective() {
       return;
     }
     if (game.hanyangPrologueStep === "caravan-crisis") {
-      setGame(previous => ({ ...previous, hanyangPrologueStep: "bandit-trial", logs: addLog(previous.logs, "商隊夥計：不好了！北邊商路又出事了，黑巾斥候把路堵住了。") }));
-      setActiveTab("battle");
+      setActiveTab("map");
+      openNpcDialogue("wang-deokchang");
       return;
     }
     if ('npcId' in mainObjective && mainObjective.npcId) {
