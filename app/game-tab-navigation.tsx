@@ -1,6 +1,6 @@
 "use client";
 import { TabsList,TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen,Building2,Castle,Crown,Map,Ship,Users } from "lucide-react";
+import { BookOpen,Building2,Castle,Crown,Map,Ship,Users,ScrollText } from "lucide-react";
 import type { GameViewModel } from './use-game-controller';
 
 type Props = Pick<GameViewModel, "progressiveUnlocks">;
@@ -8,6 +8,7 @@ type Props = Pick<GameViewModel, "progressiveUnlocks">;
 export function GameTabNavigation({ progressiveUnlocks }: Props) {
 return (<TabsList className="nav-list v15-nav">
           <TabsTrigger value="map"><Map />斜角城鎮</TabsTrigger>
+          <TabsTrigger value="tang-prologue"><ScrollText />大唐・無名村</TabsTrigger>
           <TabsTrigger value="battle"><Map />世界地圖</TabsTrigger>
           <TabsTrigger value="squad"><Users />主角與隊伍</TabsTrigger>
           <TabsTrigger value="city"><Castle />四國城市</TabsTrigger>

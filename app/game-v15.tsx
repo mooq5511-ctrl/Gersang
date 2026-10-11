@@ -20,6 +20,7 @@ import { GameRelicPage } from './game-relic-page';
 import { GameSquadPage } from './game-squad-page';
 import { GameTabNavigation } from './game-tab-navigation';
 import { GameTradePage } from './game-trade-page';
+import { TangVillagePrologue } from './tang-village-prologue';
 import './gersang-archive.css';
 import './quest-journal.css';
 import './relic-dungeon.css';
@@ -167,14 +168,14 @@ export default function GameV15() {
         value={view.activeTab}
         onValueChange={(value) => {
           if (!view.visibleTabs.includes(value)) return;
-          if (view.tutorialMapLocked && value !== 'map') return;
+          if (view.tutorialMapLocked && value !== 'map' && value !== 'tang-prologue') return;
           if (
             (view.tutorialBattleLocked || view.tutorialTrialLocked) &&
-            value !== 'battle'
+            value !== 'battle' && value !== 'tang-prologue'
           )
             return;
-          if (view.tutorialCityLocked && value !== 'city') return;
-          if (view.hanyangLockedTab && value !== view.hanyangLockedTab) return;
+          if (view.tutorialCityLocked && value !== 'city' && value !== 'tang-prologue') return;
+          if (view.hanyangLockedTab && value !== view.hanyangLockedTab && value !== 'tang-prologue') return;
           view.setActiveTab(value);
         }}
         className="game-tabs"
@@ -204,6 +205,8 @@ export default function GameV15() {
             'tutorialTrialLocked',
           ])}
         />
+
+        <TangVillagePrologue {...selectGameView(view, ['game', 'setGame'])} />
 
         <GameTradePage
           {...selectGameView(view, [

@@ -15,6 +15,16 @@ import type { CityHallState } from "./city-hall-commissions";
 import type { QuestLedger } from "./adventure-quests";
 import type { RelicDungeonState } from "./relic-dungeon";
 
+/**
+ * 大唐序章是與既有漢陽流程平行的可選故事切片。欄位維持 optional，
+ * 讓舊角色存檔在未進入此內容前保持原樣。
+ */
+export type TangPrologueState = {
+  step: "not-started" | "p01-completed" | "p02-accepted" | "p02-ready-to-return" | "p02-completed";
+  motherMet: boolean;
+  grainPouch: boolean;
+};
+
 /** Persistent save keys. These names are compatibility contracts with existing players. */
 export const PROFILE_INDEX = "bt52_v19_character_profiles";
 export const PROFILE_SAVE_PREFIX = "bt52_v19_character_slot_";
@@ -184,6 +194,8 @@ export type GameState = {
   cityHall: CityHallState;
   /** Village NPC dialogue, affinity, and quest state; persisted with the character. */
   npcProgress: NpcProgress;
+  /** Optional 大唐篇存檔，不改動既有角色與漢陽新手流程。 */
+  tangPrologue?: TangPrologueState;
   lastEncounter: string;
   enemyHp: number;
   formation: string;

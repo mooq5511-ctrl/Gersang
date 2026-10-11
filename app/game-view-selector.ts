@@ -94,6 +94,7 @@ const progressiveUnlocks = newcomerUnlocks(game);
 
 const visibleTabs = [
     "map",
+    "tang-prologue",
     "battle",
     "squad",
     "city",
